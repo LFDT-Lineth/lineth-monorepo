@@ -3,6 +3,7 @@ pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
 pub const profiling = @import("profiling.zig");
 pub const image_relocation = @import("image_relocation.zig");
+pub const r5_mem = @import("r5_mem.zig");
 
 /// Assertion-only: pins the proof types' in-memory layout, which prover-ray's
 /// proof encoder reproduces byte-for-byte. Exported so its comptime checks are

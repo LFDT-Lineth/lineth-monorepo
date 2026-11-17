@@ -385,7 +385,7 @@ pub fn verifyWithWorkspace(
     const entry_claims = entry_claims_buf.slice();
 
     const pcs_challenges = try pcs.deriveChallenges(pcs_system, &recon, &transcript, opening.proof.fri_proof);
-    try pcs.verify(pcs_system, .{
+    try pcs.verifyReconstructed(pcs_system, &recon, .{
         .roots = &bound_roots,
         .entry_claims = entry_claims,
         .zeta = all_coins[zeta_index],
@@ -404,8 +404,8 @@ pub fn verifyWithWorkspace(
     // different values for the same column" gap.
     var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
     var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
-    try routeClaims(pcs_system, recon, pcs_system.witness_map, entry_claims, &derived_witness);
-    try routeClaims(pcs_system, recon, pcs_system.quotient_map, entry_claims, &derived_quotient);
+    try routeClaims(pcs_system, &recon, pcs_system.witness_map, entry_claims, &derived_witness);
+    try routeClaims(pcs_system, &recon, pcs_system.quotient_map, entry_claims, &derived_quotient);
 
     // One slot per expression node of the widest module: the vanishing check
     // evaluates each module's node DAG once into it.
@@ -443,7 +443,7 @@ pub fn verifyWithWorkspace(
 /// error rather than an out-of-bounds panic.
 fn routeClaims(
     comptime system: pcs.System,
-    recon: pcs.Reconstructed(system),
+    recon: *const pcs.Reconstructed(system),
     map: []const pcs.ClaimRef,
     entry_claims: []const []const ext.Ext,
     out: []ext.Ext,
@@ -453,7 +453,7 @@ fn routeClaims(
         // A ClaimRef names a column by its declaration index; the runtime
         // reconstruction resolves it to the canonical entry that column occupies
         // for THIS proof's sizes and manifest.
-        slot.* = try pcs.routedClaim(system, &recon, entry_claims, ref.col_decl_idx, ref.shift);
+        slot.* = try pcs.routedClaim(system, recon, entry_claims, ref.col_decl_idx, ref.shift);
     }
 }
 

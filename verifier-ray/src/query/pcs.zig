@@ -549,47 +549,41 @@ pub fn reconstructWithManifest(
     }
 
     // Canonical enumeration: size DESC, batch ASC (0..num_batches), base rows
-    // then ext rows, position ASC (declaration order within a bucket). We assign
-    // entry_idx as a running counter and record each entry's origin column.
-    // Positions restart at 0 per (batch, size_log2, is_ext); col_position[c] was
-    // precomputed above in a single O(columns) pass — exactly prover GetLayout's
-    // running counter, restricted to one batch. colCodeOf handles the
-    // manifest-less (all-Present) case without touching the empty borrow.
-    const colCodeOf = struct {
-        fn get(m: []const u32, c: usize) u32 {
-            return if (m.len == 0) manifest_present else m[c];
-        }
-    }.get;
-    var entry_idx: usize = 0;
-    var size: i32 = @intCast(system.max_size_log2);
-    while (size >= 0) : (size -= 1) {
-        const size_u8: u8 = @intCast(size);
-        var batch: usize = 0;
-        while (batch < system.num_batches) : (batch += 1) {
-            // Base rows first, then ext rows, each in declaration order.
-            inline for ([_]bool{ false, true }) |want_ext| {
-                for (system.columns, 0..) |col, c| {
-                    if (col.batch_idx != batch) continue;
-                    if (col.is_ext != want_ext) continue;
-                    if (col_size_log2[c] != size_u8) continue;
-                    if (colCodeOf(manifest, c) != manifest_present) {
-                        r.col_to_entry[c] = no_entry;
-                        continue;
-                    }
-
-                    if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
-                    r.entry_size_log2[entry_idx] = size_u8;
-                    r.entry_batch[entry_idx] = @intCast(batch);
-                    r.entry_is_ext[entry_idx] = want_ext;
-                    r.entry_row_idx[entry_idx] = @intCast(col_position[c]);
-                    r.entry_col_decl_idx[entry_idx] = @intCast(c);
-                    r.col_to_entry[c] = @intCast(entry_idx);
-                    entry_idx += 1;
-                }
+    // then ext rows, position ASC (declaration order within a bucket). Each
+    // (batch, size_log2, is_ext) bucket is one contiguous run of entries in that
+    // order, so a column's entry is its bucket's first entry plus its position
+    // in the bucket (col_position, from the pass above): one pass over the
+    // buckets to place them, one over the columns to fill the entries.
+    var bucket_start: [num_batches_cap][system.max_size_log2 + 1][2]usize = undefined;
+    var next_entry: usize = 0;
+    var size: usize = system.max_size_log2 + 1;
+    while (size > 0) {
+        size -= 1;
+        for (0..system.num_batches) |batch| {
+            for (0..2) |ext_idx| {
+                bucket_start[batch][size][ext_idx] = next_entry;
+                next_entry += bucket_count[batch][size][ext_idx];
             }
         }
     }
-    if (entry_idx != num_present) return Error.LayoutOverflow;
+    if (next_entry != num_present or num_present > system.max_entries) return Error.LayoutOverflow;
+
+    for (system.columns, 0..) |col, c| {
+        const code: u32 = if (manifest.len == 0) manifest_present else manifest[c];
+        if (code != manifest_present) {
+            r.col_to_entry[c] = no_entry;
+            continue;
+        }
+        const size_log2 = col_size_log2[c];
+        const ext_idx: usize = if (col.is_ext) 1 else 0;
+        const entry_idx = bucket_start[col.batch_idx][size_log2][ext_idx] + col_position[c];
+        r.entry_size_log2[entry_idx] = size_log2;
+        r.entry_batch[entry_idx] = @intCast(col.batch_idx);
+        r.entry_is_ext[entry_idx] = col.is_ext;
+        r.entry_row_idx[entry_idx] = @intCast(col_position[c]);
+        r.entry_col_decl_idx[entry_idx] = @intCast(c);
+        r.col_to_entry[c] = @intCast(entry_idx);
+    }
 
     r.params = system.envelope_params.restrictTo(r.top_size) catch return Error.RestrictOutOfRange;
     return r;
@@ -1037,7 +1031,15 @@ fn InputQuerySource(comptime system: System) type {
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const recon = try reconstructWithManifest(system, input.module_sizes, input.manifest);
-    const routing = try routeInputRoots(system, &recon, input.roots);
+    return verifyReconstructed(system, &recon, input);
+}
+
+/// `verify` on a layout the caller has already reconstructed. `recon` must be
+/// `reconstructWithManifest(system, input.module_sizes, input.manifest)`; the
+/// full verifier builds it once and shares it with claim routing instead of
+/// rebuilding it here.
+pub fn verifyReconstructed(comptime system: System, recon: *const Reconstructed(system), input: VerifyInput) Error!void {
+    const routing = try routeInputRoots(system, recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
@@ -1096,7 +1098,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
     for (0..routing.tree_count) |tree_idx| {
-        const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
+        const info = try buildInputCapInfo(system, recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
             if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
@@ -1105,7 +1107,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         } else {
             input_frontiers[tree_idx] = try authenticateInputCap(
                 system,
-                &recon,
+                recon,
                 info,
                 input.proof.input_caps[tree_idx],
                 routing.roots[tree_idx],
@@ -1139,6 +1141,15 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var final_buf: [system.envelope_params.num_queries]ext.Ext = undefined;
     var resolved: [system.envelope_params.num_queries]fri.ResolvedQuery = undefined;
 
+    // Everything in the DEEP quotient that does not depend on the query point
+    // (claim points, alias checks, alpha powers, alpha-combined claims) is
+    // built once here instead of once per query, entry and side.
+    var plan: DeepPlan(system) = undefined;
+    if (comptime system.columns.len > 0) {
+        try buildDeepPlan(system, recon, &plan, input.entry_claims, input.zeta, input.fold_alphas, input.deep_alpha, num_rounds);
+    }
+    var deep_acc: [DeepPlan(system).point_cap]DeepAcc = undefined;
+
     for (0..params.num_queries) |query_idx| {
         for (aux_buf[query_idx][0 .. num_rounds + 1]) |*slot| slot.* = null;
         for (rounds_buf[query_idx][0..num_rounds]) |*pair| pair.* = .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() };
@@ -1165,67 +1176,34 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @intCast(num_rounds));
         final_buf[query_idx] = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, final_point);
 
-        // Walk entries grouped by bundle (contiguous same-size runs in canonical
-        // order). For each distinct size we bind the input-tree openings once and
-        // reconstruct the DEEP quotient over that bundle's entries. Guarded by a
-        // comptime column-count check so a column-free System doesn't force
-        // analysis of indexing into an empty `system.columns`.
-        var e0: usize = 0;
-        while (comptime system.columns.len > 0) {
-            if (e0 >= num_entries) break;
-            const size_log2 = recon.entry_size_log2[e0];
-            var e1 = e0;
-            while (e1 < num_entries and recon.entry_size_log2[e1] == size_log2) e1 += 1;
+        // Walk the bundles (contiguous same-size runs in canonical order). For
+        // each we bind the input-tree openings once and reconstruct the DEEP
+        // quotient over that bundle's entries at the query point and its
+        // sibling. Guarded by a comptime column-count check so a column-free
+        // System doesn't force analysis of indexing into an empty
+        // `system.columns`.
+        if (comptime system.columns.len > 0) {
+            for (0..plan.num_bundles) |b| {
+                const bundle = plan.bundles[b];
+                const domain_log_size = params.log_codeword_size - bundle.round;
+                const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            const round = recon.top_size - size_log2;
-            const domain_log_size = params.log_codeword_size - round;
-            const level_size = @as(usize, 1) << @intCast(domain_log_size);
+                const level_pos = query_position >> @intCast(bundle.round);
+                const seed = seedPair(rounds_buf[query_idx][0..num_rounds], bundle.round, num_rounds);
 
-            try bindInputTreeOpenings(system, &recon, source, e0, e1, level_size);
-
-            const alpha_deep: ext.Ext = if (round < num_rounds)
-                input.fold_alphas[round].square()
-            else if (num_rounds > 0)
-                input.fold_alphas[num_rounds - 1]
-            else
-                input.deep_alpha;
-
-            const level_pos = query_position >> @intCast(round);
-            const seed = seedPair(rounds_buf[query_idx][0..num_rounds], round, num_rounds);
-
-            const self_val = try reconstructQueryValueAt(
-                system,
-                &recon,
-                source,
-                e0,
-                e1,
-                size_log2,
-                level_size,
-                input.entry_claims,
-                input.zeta,
-                alpha_deep,
-                fri.domainPointExt(domain_log_size, level_pos),
-                false,
-                seed.self,
-            );
-            const sib_val = try reconstructQueryValueAt(
-                system,
-                &recon,
-                source,
-                e0,
-                e1,
-                size_log2,
-                level_size,
-                input.entry_claims,
-                input.zeta,
-                alpha_deep,
-                fri.domainPointExt(domain_log_size, level_pos ^ 1),
-                true,
-                seed.sibling,
-            );
-            aux_buf[query_idx][round] = .{ .self = self_val, .sibling = sib_val };
-
-            e0 = e1;
+                aux_buf[query_idx][bundle.round] = try reconstructBundlePair(
+                    system,
+                    recon,
+                    &plan,
+                    bundle,
+                    source,
+                    level_size,
+                    fri.domainPointExt(domain_log_size, level_pos),
+                    fri.domainPointExt(domain_log_size, level_pos ^ 1),
+                    seed,
+                    &deep_acc,
+                );
+            }
         }
 
         if (num_rounds == 0) {
@@ -1266,85 +1244,298 @@ fn systemHasMultiShiftEntry(comptime system: System) bool {
     }
 }
 
-/// Per-batch (base, ext) widths within the bundle spanning canonical entries
-/// [e0, e1). Computed at runtime from the reconstructed arrays.
-fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) struct { base: usize, ext: usize } {
-    var base: usize = 0;
-    var ext_width: usize = 0;
-    var e = e0;
-    while (e < e1) : (e += 1) {
-        if (recon.entry_batch[e] != batch_idx) continue;
-        if (recon.entry_is_ext[e]) ext_width += 1 else base += 1;
-    }
-    return .{ .base = base, .ext = ext_width };
-}
+// =============================================================================
+// DEEP quotient reconstruction
+// =============================================================================
+//
+// prover-ray's `reconstructQueryValueAt` combines a bundle's entries [e0, e1)
+// with the running codeword value by Horner in alpha (highest power first,
+// which canonicalLayout makes reverse entry order):
+//
+//   value = running * alpha^m + sum_i alpha^(i - e0) * term_i,   m = e1 - e0,
+//   term_i = sum over distinct claim points p of entry i: (f_i(x) - c_ip) / (x - p).
+//
+// Regrouping by claim point gives the same value:
+//
+//   value = running * alpha^m
+//         + sum_p (sum_{i at p} alpha^(i - e0) * f_i(x) - C_p) / (x - p),
+//   C_p   = sum_{i at p} alpha^(i - e0) * c_ip.
+//
+// The points p, the alias checks, the powers alpha^(i - e0) and C_p do not
+// depend on the query, so `buildDeepPlan` computes them once per proof. Per
+// query and side, an entry then costs one alpha-power times its opened value
+// (6 base multiplies for a base column) and each distinct point costs one
+// inverse, instead of every entry paying for its own claim points, alias
+// scan and inverse.
 
-/// Validates that each batch present in the bundle carries a conjugate pair
-/// matching its declared (base, ext) width at `level_size`. Mirrors
-/// prover-ray's `bindInputTreeOpenings`.
-fn bindInputTreeOpenings(
-    comptime system: System,
-    recon: anytype,
-    source: anytype,
+/// One bundle: a contiguous same-size run of canonical entries.
+const DeepBundle = struct {
     e0: usize,
     e1: usize,
-    level_size: usize,
-) Error!void {
-    // Distinct batches within the bundle, in first-declaration (entry) order.
-    // At most system.num_batches distinct batches can ever appear.
-    var seen: [@max(system.num_batches, 1)]usize = undefined;
-    var count: usize = 0;
-    var e = e0;
-    outer: while (e < e1) : (e += 1) {
-        const b = recon.entry_batch[e];
-        for (seen[0..count]) |s| {
-            if (s == b) continue :outer;
-        }
-        seen[count] = b;
-        count += 1;
+    /// FRI round at which this bundle's level joins.
+    round: u8,
+    /// Range [run_start, run_end) of this bundle's batch runs.
+    run_start: usize,
+    run_end: usize,
+    /// Range [point_start, point_end) of this bundle's distinct claim points.
+    point_start: usize,
+    point_end: usize,
+    /// alpha^(e1 - e0): the running value's weight.
+    alpha_m: ext.Ext,
+};
 
-        const widths = bundleBatchWidths(recon, e0, e1, b);
-        const pair = try source.pairAtLevel(b, level_size);
-        if (pair[0].base.len != widths.base or pair[0].ext.len != widths.ext) return Error.RowShapeMismatch;
-        if (pair[1].base.len != widths.base or pair[1].ext.len != widths.ext) return Error.ConjugateRowShapeMismatch;
-    }
-}
-
-/// Combines the bundle's columns [e0, e1) with `running` at `x`, the same way
-/// prover-ray's `Level.EvalsAt` does. Entries are walked highest-alphaDeep-power
-/// first, which canonicalLayout's assignment makes simply reverse entry order.
-/// Mirrors prover-ray's `reconstructQueryValueAt`.
-fn reconstructQueryValueAt(
-    comptime system: System,
-    recon: anytype,
-    source: anytype,
+/// The entries [e0, e1) of one batch within a bundle (canonical order is
+/// batch-ascending within a bundle, so they are contiguous), with the
+/// (base, ext) row widths the opened row pair must have.
+const BatchRun = struct {
+    batch_idx: usize,
     e0: usize,
     e1: usize,
-    size_log2: u8,
-    level_size: usize,
+    base: usize,
+    ext: usize,
+};
+
+const no_point = std.math.maxInt(u16);
+
+/// Per-query, per-point accumulator of sum alpha^w * f over the point's
+/// entries, for the query point (`self`) and its sibling. Limbs are kept as
+/// unreduced sums of canonical values: each addend is < p < 2^31, so the
+/// sums cannot overflow 64 bits for any realistic entry count (< 2^32).
+const DeepAcc = struct {
+    self: [6]u64,
+    sibling: [6]u64,
+};
+
+fn DeepPlan(comptime system: System) type {
+    return struct {
+        const entry_cap = @max(system.max_entries, 1);
+        const bundle_cap = @as(usize, system.max_size_log2) + 1;
+        /// Total claim slots across all columns; bounds both the slot table
+        /// and the number of distinct points.
+        const slot_cap = blk: {
+            @setEvalBranchQuota(10 * system.columns.len + 1000);
+            var n: usize = 0;
+            for (system.columns) |c| n += c.shifts_len;
+            break :blk @max(n, 1);
+        };
+        pub const point_cap = slot_cap;
+
+        const run_cap = bundle_cap * @max(system.num_batches, 1);
+
+        num_bundles: usize,
+        bundles: [bundle_cap]DeepBundle,
+        runs: [run_cap]BatchRun,
+        /// alpha^(e - e0) of entry e's bundle.
+        weight: [entry_cap]ext.Ext,
+        /// Entry e's claim slots are slot_point[slot_start[e]..][0..shifts_len]:
+        /// the point index of each slot, or `no_point` for a slot aliasing an
+        /// earlier slot of the same entry (counted once, like prover-ray's
+        /// RecoverBatchClaims).
+        slot_start: [entry_cap]usize,
+        slot_point: [slot_cap]u16,
+        /// Distinct claim points zeta * omega_N^shift, their normalized shift
+        /// (for dedup within a bundle) and alpha-combined claim C_p.
+        point: [point_cap]ext.Ext,
+        point_shift: [point_cap]usize,
+        combined_claim: [point_cap]ext.Ext,
+    };
+}
+
+/// Builds the query-independent half of the DEEP reconstruction. Performs the
+/// aliased-claim equality check that `entryDeepTerm` performs per query: two
+/// raw shifts of one entry that normalize to the same runtime row must carry
+/// equal claims (see `entryDeepTerm` for why). zeta != 0 whenever any column
+/// has several shifts (checked by the caller), so two claim points are equal
+/// exactly when their shifts are equal mod the runtime size.
+fn buildDeepPlan(
+    comptime system: System,
+    recon: anytype,
+    plan: *DeepPlan(system),
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
-    alpha_deep: ext.Ext,
-    x: ext.Ext,
-    sibling: bool,
-    running: ext.Ext,
-) Error!ext.Ext {
-    var value = running;
-    var i = e1;
-    while (i > e0) {
-        i -= 1;
-        const batch_idx = recon.entry_batch[i];
-        const pair = try source.pairAtLevel(batch_idx, level_size);
-        const row = if (sibling) pair[1] else pair[0];
-        const row_idx = recon.entry_row_idx[i];
-        const entry_value: ext.Ext = if (recon.entry_is_ext[i]) row.ext[row_idx] else ext.Ext.lift(row.base[row_idx]);
+    fold_alphas: []const ext.Ext,
+    deep_alpha: ext.Ext,
+    num_rounds: u8,
+) Error!void {
+    const Plan = DeepPlan(system);
+    const num_entries = recon.num_entries;
+    plan.num_bundles = 0;
+    var slot: usize = 0;
+    var num_points: usize = 0;
+    var num_runs: usize = 0;
+    var e0: usize = 0;
+    while (e0 < num_entries) {
+        const size_log2 = recon.entry_size_log2[e0];
+        var e1 = e0;
+        while (e1 < num_entries and recon.entry_size_log2[e1] == size_log2) e1 += 1;
+        if (plan.num_bundles == Plan.bundle_cap) return Error.LayoutOverflow;
 
-        const c = system.columns[recon.entry_col_decl_idx[i]];
-        const shifts = system.all_shifts[c.shifts_start..][0..c.shifts_len];
-        const term = try entryDeepTerm(shifts, entry_claims[i], entry_value, size_log2, zeta, x);
-        value = value.mul(alpha_deep).add(term);
+        const round: u8 = recon.top_size - size_log2;
+        const alpha_deep: ext.Ext = if (round < num_rounds)
+            fold_alphas[round].square()
+        else if (num_rounds > 0)
+            fold_alphas[num_rounds - 1]
+        else
+            deep_alpha;
+
+        const order = @as(usize, 1) << @intCast(size_log2);
+        const n: isize = @intCast(order);
+        const omega = field.rootOfUnityBy(order) catch unreachable;
+        const point_start = num_points;
+        const run_start = num_runs;
+        for (e0..e1) |e| {
+            const batch_idx: usize = recon.entry_batch[e];
+            if (num_runs == run_start or plan.runs[num_runs - 1].batch_idx != batch_idx) {
+                // A batch must form one contiguous run within its bundle.
+                for (plan.runs[run_start..num_runs]) |r| {
+                    if (r.batch_idx == batch_idx) return Error.LayoutOverflow;
+                }
+                if (num_runs == Plan.run_cap) return Error.LayoutOverflow;
+                plan.runs[num_runs] = .{ .batch_idx = batch_idx, .e0 = e, .e1 = e, .base = 0, .ext = 0 };
+                num_runs += 1;
+            }
+            const run = &plan.runs[num_runs - 1];
+            run.e1 = e + 1;
+            if (recon.entry_is_ext[e]) run.ext += 1 else run.base += 1;
+        }
+
+        var w = ext.Ext.one();
+        for (e0..e1) |e| {
+            plan.weight[e] = w;
+            const c = system.columns[recon.entry_col_decl_idx[e]];
+            const shifts = system.all_shifts[c.shifts_start..][0..c.shifts_len];
+            const claims = entry_claims[e];
+            if (slot + shifts.len > Plan.slot_cap) return Error.LayoutOverflow;
+            plan.slot_start[e] = slot;
+            for (shifts, 0..) |raw, k| {
+                const shift: usize = @intCast(@mod(raw, n));
+                const aliased = for (shifts[0..k], 0..) |prior_raw, prior_k| {
+                    if (@as(usize, @intCast(@mod(prior_raw, n))) == shift) {
+                        if (!claims[prior_k].eql(claims[k])) return Error.InconsistentAliasedClaim;
+                        break true;
+                    }
+                } else false;
+                if (aliased) {
+                    plan.slot_point[slot + k] = no_point;
+                    continue;
+                }
+                var pi = point_start;
+                while (pi < num_points and plan.point_shift[pi] != shift) pi += 1;
+                if (pi == num_points) {
+                    if (num_points >= no_point) return Error.LayoutOverflow;
+                    plan.point_shift[pi] = shift;
+                    plan.point[pi] = zeta.mulByBase(omega.pow(@intCast(shift)));
+                    plan.combined_claim[pi] = ext.Ext.zero();
+                    num_points += 1;
+                }
+                plan.combined_claim[pi] = plan.combined_claim[pi].add(w.mul(claims[k]));
+                plan.slot_point[slot + k] = @intCast(pi);
+            }
+            slot += shifts.len;
+            w = w.mul(alpha_deep);
+        }
+
+        plan.bundles[plan.num_bundles] = .{
+            .e0 = e0,
+            .e1 = e1,
+            .round = round,
+            .run_start = run_start,
+            .run_end = num_runs,
+            .point_start = point_start,
+            .point_end = num_points,
+            .alpha_m = w,
+        };
+        plan.num_bundles += 1;
+        e0 = e1;
     }
-    return value;
+}
+
+inline fn extLimbs(v: ext.Ext) [6]u64 {
+    return .{ v.B0.a0.value, v.B0.a1.value, v.B1.a0.value, v.B1.a1.value, v.B2.a0.value, v.B2.a1.value };
+}
+
+fn extFromAcc(acc: [6]u64) ext.Ext {
+    const p = @as(u64, field.modulus);
+    return .{
+        .B0 = .{ .a0 = .{ .value = @intCast(acc[0] % p) }, .a1 = .{ .value = @intCast(acc[1] % p) } },
+        .B1 = .{ .a0 = .{ .value = @intCast(acc[2] % p) }, .a1 = .{ .value = @intCast(acc[3] % p) } },
+        .B2 = .{ .a0 = .{ .value = @intCast(acc[4] % p) }, .a1 = .{ .value = @intCast(acc[5] % p) } },
+    };
+}
+
+/// The bundle's DEEP-combined values at the query point `x_self` and its
+/// sibling `x_sibling`, seeded with the running codeword pair `seed`. Equal
+/// to running * alpha^m + sum_i alpha^(i - e0) * entryDeepTerm(i) per side
+/// (see the section comment).
+fn reconstructBundlePair(
+    comptime system: System,
+    recon: anytype,
+    plan: *const DeepPlan(system),
+    bundle: DeepBundle,
+    source: anytype,
+    level_size: usize,
+    x_self: ext.Ext,
+    x_sibling: ext.Ext,
+    seed: fri.Pair,
+    acc: *[DeepPlan(system).point_cap]DeepAcc,
+) Error!fri.Pair {
+    const p = @as(u64, field.modulus);
+    const points = acc[bundle.point_start..bundle.point_end];
+    for (points) |*a| a.* = .{ .self = .{0} ** 6, .sibling = .{0} ** 6 };
+
+    // Each batch's row pair is fetched once per bundle and must have exactly
+    // the bundle's (base, ext) widths for that batch, on both sides. Mirrors
+    // prover-ray's `bindInputTreeOpenings`. The widths also bound every
+    // `row_idx` read below.
+    for (plan.runs[bundle.run_start..bundle.run_end]) |run| {
+        const pair = try source.pairAtLevel(run.batch_idx, level_size);
+        if (pair[0].base.len != run.base or pair[0].ext.len != run.ext) return Error.RowShapeMismatch;
+        if (pair[1].base.len != run.base or pair[1].ext.len != run.ext) return Error.ConjugateRowShapeMismatch;
+
+        for (run.e0..run.e1) |e| {
+            const row_idx = recon.entry_row_idx[e];
+            const w = &plan.weight[e];
+
+            // alpha^w * f for both sides, as canonical limbs.
+            var prod_self: [6]u64 = undefined;
+            var prod_sib: [6]u64 = undefined;
+            if (recon.entry_is_ext[e]) {
+                prod_self = extLimbs(w.mul(pair[0].ext[row_idx]));
+                prod_sib = extLimbs(w.mul(pair[1].ext[row_idx]));
+            } else {
+                const fs = @as(u64, pair[0].base[row_idx].value);
+                const fb = @as(u64, pair[1].base[row_idx].value);
+                const wl = extLimbs(w.*);
+                inline for (0..6) |j| {
+                    prod_self[j] = (wl[j] * fs) % p;
+                    prod_sib[j] = (wl[j] * fb) % p;
+                }
+            }
+
+            const c = system.columns[recon.entry_col_decl_idx[e]];
+            for (plan.slot_point[plan.slot_start[e]..][0..c.shifts_len]) |pi| {
+                if (pi == no_point) continue;
+                const a = &acc[pi];
+                inline for (0..6) |j| {
+                    a.self[j] += prod_self[j];
+                    a.sibling[j] += prod_sib[j];
+                }
+            }
+        }
+    }
+
+    var self_val = seed.self.mul(bundle.alpha_m);
+    var sib_val = seed.sibling.mul(bundle.alpha_m);
+    for (bundle.point_start..bundle.point_end) |pi| {
+        const point = plan.point[pi];
+        const claim = plan.combined_claim[pi];
+        const den_self = x_self.sub(point);
+        const den_sib = x_sibling.sub(point);
+        if (den_self.isZero() or den_sib.isZero()) return Error.ClaimPointOnQueryPoint;
+        self_val = self_val.add(extFromAcc(acc[pi].self).sub(claim).mul(den_self.inverse()));
+        sib_val = sib_val.add(extFromAcc(acc[pi].sibling).sub(claim).mul(den_sib.inverse()));
+    }
+    return .{ .self = self_val, .sibling = sib_val };
 }
 
 /// Sums one entry's DEEP-quotient contribution over its shift schedule:
