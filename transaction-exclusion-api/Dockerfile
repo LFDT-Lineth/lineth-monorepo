@@ -8,6 +8,10 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     mkdir -p logs && \
     chown -R txexclusion:txexclusion /opt/lineth/transaction-exclusion-api
 
+# Compatibility shim: in-repo compose stacks and published develop images still
+# reference the old /opt/consensys/linea layout. Remove once those flip to /opt/lineth.
+RUN mkdir -p /opt/consensys && ln -s /opt/lineth /opt/consensys/linea
+
 COPY --from=libs --chown=txexclusion:txexclusion ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 

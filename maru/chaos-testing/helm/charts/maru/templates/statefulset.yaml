@@ -43,13 +43,13 @@ spec:
             - -jar
             - maru.jar
             - --maru-genesis-file
-            - /opt/lineth/maru/configs/genesis.json
+            - /opt/consensys/maru/configs/genesis.json
             - --config
             {{ if .Values.configFiles.configsDefaultsToml }}
-            - /opt/lineth/maru/configs/configs-defaults.toml
+            - /opt/consensys/maru/configs/configs-defaults.toml
             {{ end }}
             {{ if .Values.configFiles.configsToml }}
-            - /opt/lineth/maru/configs/configs.toml
+            - /opt/consensys/maru/configs/configs.toml
             {{ end }}
           {{- with .Values.resources }}
           resources:
@@ -57,9 +57,9 @@ spec:
           {{- end }}
           volumeMounts:
             - name: data
-              mountPath: /opt/lineth/maru/data
+              mountPath: /opt/consensys/maru/data
             - name: configs
-              mountPath: /opt/lineth/maru/configs
+              mountPath: /opt/consensys/maru/configs
           ports:
             {{- range .Values.service.ports }}
             - name: {{ .name }}

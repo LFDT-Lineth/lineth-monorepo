@@ -66,8 +66,8 @@ configFiles:
     allow-empty-blocks = true
 
     [persistence]
-    data-path="/opt/lineth/maru/data/db"
-    private-key-path="/opt/lineth/maru/configs/private-key.txt"
+    data-path="/opt/consensys/maru/data/db"
+    private-key-path="/opt/consensys/maru/configs/private-key.txt"
 
     [p2p]
     port = 9000

@@ -13,18 +13,18 @@ services:
       - follower-geth
     command: [ 'java',
 #               '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
-#               '-Dvertx.configurationFile=/opt/lineth/maru/configs/vertx-options.json',
+#               '-Dvertx.configurationFile=/opt/consensys/maru/configs/vertx-options.json',
                '-Dlog4j2.configurationFile=configs/log4j.xml',
                '-jar', "maru.jar",
                '--maru-genesis-file', 'configs/genesis.json',
                '--config', 'configs/config.dev.toml' ]
     volumes:
-      - ./maru/config.dev.toml:/opt/lineth/maru/configs/config.dev.toml:ro
-      - ./maru/log4j.xml:/opt/lineth/maru/configs/log4j.xml:ro
-#      - ./maru/vertx-options.json:/opt/lineth/maru/configs/vertx-options.json
-      - ./initialization/genesis-maru.json:/opt/lineth/maru/configs/genesis.json:ro
+      - ./maru/config.dev.toml:/opt/consensys/maru/configs/config.dev.toml:ro
+      - ./maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
+#      - ./maru/vertx-options.json:/opt/consensys/maru/configs/vertx-options.json
+      - ./initialization/genesis-maru.json:/opt/consensys/maru/configs/genesis.json:ro
       - ./maru/0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0.key:/tmp/maru-db/private-key
-      - ./jwt:/opt/lineth/docker/jwt:ro
+      - ./jwt:/opt/consensys/docker/jwt:ro
     ports:
       # Attach the IDE's remote java debugger to localhost:5005 to debug maru
       - "5005:5005"
