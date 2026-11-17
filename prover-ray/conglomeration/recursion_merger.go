@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/node"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"

@@ -51,11 +51,11 @@
 // slot's verifier for both kinds of child and select the child key with a
 // per-child leaf flag. The leaf and internal programs must then have the same
 // chips and columns; they are compiled size-oblivious, so that their heights
-// may differ (see package recursionguests/verifier, and issue #4405 for a
+// may differ (see package recursion/verifier, and issue #4405 for a
 // leaf program much larger than the internal one).
 //
 // A program verifies each child's proof with the in-machine verifier (package
-// recursionguests/verifier) under the child key and folds the public inputs
+// recursion/verifier) under the child key and folds the public inputs
 // the verifier yields, so a child's values enter the node only through its
 // verified proof. The caller chooses the verifier with a verifier.Constructor:
 // verifier.New in production, which fails until the wiop verifier is written
@@ -72,7 +72,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"

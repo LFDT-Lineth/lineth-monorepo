@@ -13,7 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursionguests/verifier"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
