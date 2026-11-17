@@ -1,6 +1,7 @@
 package lineth.conflation.calculators
 
 import linea.domain.BlocksConflation
+import linea.kotlin.toInstantFromEpochSeconds
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.time.Instant
@@ -46,13 +47,13 @@ class BlobTriggerCalculatorByHardForkTimestamp(
   }
 
   override fun appendConflation(conflation: BlocksConflation) {
-    lastProcessedTimestamp = Instant.fromEpochSeconds(conflation.blocks.last().timestamp.toLong())
+    lastProcessedTimestamp = conflation.blocks.last().timestamp.toInstantFromEpochSeconds()
   }
 
   override fun checkTrigger(conflation: BlocksConflation): BlobTrigger? = null
 
   override fun checkOverflow(next: BlocksConflation): BlobTrigger? {
-    val nextTimestamp = Instant.fromEpochSeconds(next.blocks.first().timestamp.toLong())
+    val nextTimestamp = next.blocks.first().timestamp.toInstantFromEpochSeconds()
     val fork = hardForkTimestamps.find { lastProcessedTimestamp < it && nextTimestamp >= it } ?: return null
     log.info("hard fork={} before conflation={}: flushing the open blob", fork, next.intervalString())
     return BlobTrigger.HARD_FORK

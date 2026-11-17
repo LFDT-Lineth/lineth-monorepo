@@ -29,7 +29,7 @@ class GlobalRollupCalculatorV2Test {
     pipeline.feed(a, b, c, d)
     assertThat(pipeline.rollups).hasSize(1)
     pipeline.feed(e)
-    pipeline.blobCalculator.flush()
+    pipeline.blobCalculator.tryFlush()
 
     val (rollup1, rollup2) = pipeline.rollups
     assertThat(rollup1.ends()).containsExactly(3UL, 7UL, 9UL)
@@ -69,7 +69,7 @@ class GlobalRollupCalculatorV2Test {
     val small = conflation(7UL, 8UL, 10_000)
 
     pipeline.feed(a, oversized, small)
-    pipeline.blobCalculator.flush()
+    pipeline.blobCalculator.tryFlush()
 
     assertThat(pipeline.rollups.map { it.ends() }).containsExactly(listOf(3UL), listOf(6UL), listOf(8UL))
   }
@@ -91,7 +91,7 @@ class GlobalRollupCalculatorV2Test {
     val pipeline = Pipeline(rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(1)))
 
     pipeline.feed(conflation(1UL, 2UL, 10_000), conflation(3UL, 6UL, 3 * BLOB_PAYLOAD_CAPACITY))
-    pipeline.blobCalculator.flush()
+    pipeline.blobCalculator.tryFlush()
 
     val (first, spanning) = pipeline.rollups
     assertThat(first.ends()).containsExactly(2UL)
@@ -110,7 +110,7 @@ class GlobalRollupCalculatorV2Test {
     val next = conflation(8UL, 9UL, 5_000)
 
     pipeline.feed(small, spanning, next)
-    pipeline.blobCalculator.flush()
+    pipeline.blobCalculator.tryFlush()
 
     val (first, middle, last) = pipeline.rollups
     assertThat(pipeline.rollups.map { it.ends() }).containsExactly(listOf(2UL), listOf(7UL), listOf(9UL))
@@ -170,16 +170,16 @@ class GlobalRollupCalculatorV2Test {
   fun `resuming after a rollup reproduces the uninterrupted next rollup`() {
     val uninterrupted = Pipeline(rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(3)))
     uninterrupted.feed(a, b, c, d, e)
-    uninterrupted.blobCalculator.flush()
+    uninterrupted.blobCalculator.tryFlush()
     val (rollup1, rollup2) = uninterrupted.rollups
 
     val resumed = Pipeline(
       position = positionAfter(rollup1),
       rollupTriggers = listOf(RollupTriggerCalculatorByConflationCount(3)),
     )
-    assertThat(resumed.blobCalculator.flush()).isFalse() // the shared blob is not re-sealed yet
+    assertThat(resumed.blobCalculator.tryFlush()).isFalse() // the shared blob is not re-sealed yet
     resumed.feed(d, e)
-    resumed.blobCalculator.flush()
+    resumed.blobCalculator.tryFlush()
 
     val resumedRollup2 = resumed.rollups.single()
     assertThat(resumedRollup2.da.blobs).hasSize(3) // the re-sealed shared blob, the blob inside D, and the last
