@@ -56,6 +56,26 @@ fn main<registers, ram>() {
     // Loading blobs data into RAM
     // =============================
 
+
+    // Preliminary check to ensure no-overlaps among blobs
+    for i:u32 = 0; i<blobs_count; i = i + 1 {
+        var blob_offset:Address
+        var blob_size:Length
+        blob_offset, blob_size = blobs_offset_and_size[i]
+        var blob_start:Address = blob_offset
+        var blob_end:Address = blob_offset + blob_size
+        for j:u32 = i+1; j<blobs_count; j = j + 1 {
+            var other_blob_offset:Address
+            var other_blob_size:Length
+            other_blob_offset, other_blob_size = blobs_offset_and_size[j]
+            var other_blob_start:Address = other_blob_offset
+            var other_blob_end:Address = other_blob_offset + other_blob_size
+            if blob_start <= other_blob_end && blob_end >= other_blob_start {
+                fail
+            }
+        }
+    }
+
     var internal_offset:Length = 0 // internal offset to blobs_data
     for i:u32 = 0; i<blobs_count; i = i + 1 {
         var blob_offset:Address
