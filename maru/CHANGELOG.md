@@ -1,8 +1,14 @@
-## [unreleased]
+## [1.6.0-rc1] - 2026-11-18
 
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Remove manual changelog commit
+- *(misc)* Remove manual changelog commit
+- *(maru)* Set default maru image tag as local in compose.dev.yaml
 ## [1.5.0] - 2026-11-03
 
 ### 🚀 Features
