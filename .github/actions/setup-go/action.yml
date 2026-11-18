@@ -2,8 +2,16 @@ name: 'Setup Go with shared cache'
 description: 'Keep setup-go caching on main and restore the same caches without saving on other refs.'
 inputs:
   go-version:
-    description: 'Go version to install'
-    required: true
+    description: >
+      Go version to install. Takes precedence over go-version-file. When neither is set, the
+      highest `go` directive across all go.mod files in the repository is used.
+    default: ''
+  go-version-file:
+    description: >
+      Path to a go.mod (or go.work) file whose `go` directive sets the version to install.
+      Used when go-version is empty; when both are empty, the highest `go` directive across
+      all go.mod files in the repository is used.
+    default: ''
   architecture:
     description: 'Optional target architecture for setup-go'
     default: ''
@@ -16,10 +24,37 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Resolve Go version
+      id: version
+      shell: bash
+      env:
+        GO_VERSION: ${{ inputs.go-version }}
+        GO_VERSION_FILE: ${{ inputs.go-version-file }}
+      run: |
+        # Precedence: go-version, then go-version-file, then the highest go directive in the repo.
+        # A newer toolchain builds modules with older go directives, so the highest one covers
+        # every module with a single install and avoids per-run toolchain downloads.
+        if [ -n "$GO_VERSION" ]; then
+          version="$GO_VERSION"
+        elif [ -n "$GO_VERSION_FILE" ]; then
+          if [ ! -f "$GO_VERSION_FILE" ]; then
+            echo "::error::go-version-file '$GO_VERSION_FILE' not found"
+            exit 1
+          fi
+          version=$(grep -h -m1 -E '^go [0-9]' "$GO_VERSION_FILE" | awk '{ print $2 }')
+        else
+          version=$(find . -name go.mod -not -path '*/node_modules/*' -exec grep -h -m1 -E '^go [0-9]' {} + | awk '{ print $2 }' | sort -V | tail -n 1)
+        fi
+        if [ -z "$version" ]; then
+          echo "::error::Could not determine a Go version (no go-version set and no go directive found)"
+          exit 1
+        fi
+        echo "Using Go $version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
     - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       id: go
       with:
-        go-version: ${{ inputs.go-version }}
+        go-version: ${{ steps.version.outputs.version }}
         architecture: ${{ inputs.architecture }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
         cache: ${{ inputs.cache == 'true' && github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}

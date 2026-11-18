@@ -60,27 +60,12 @@ jobs:
 
       # CodeQL expects every toolchain to be installed before `init` (it records `which go`
       # there and warns if Go changes afterwards), so Go is set up first.
-      - name: Detect Go version
-        if: matrix.language == 'go'
-        id: go-version
-        shell: bash
-        run: |
-          # Highest `go` directive across all modules: a newer toolchain builds modules with
-          # older directives, and this avoids per-run toolchain downloads (the runner image
-          # ships an older Go). Deriving it keeps this in step with go.mod bumps.
-          version=$(find . -name go.mod -not -path '*/node_modules/*' -exec grep -h -m1 -E '^go [0-9]' {} + | awk '{ print $2 }' | sort -V | tail -n 1)
-          if [ -z "$version" ]; then
-            echo "::error::No go.mod with a go directive found"
-            exit 1
-          fi
-          echo "Using Go $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
       - name: Setup Go
         if: matrix.language == 'go'
         uses: ./.github/actions/setup-go
         with:
-          go-version: ${{ steps.go-version.outputs.version }}
+          # No go-version: the action installs the highest go directive across the repo's
+          # modules (a newer toolchain handles older directives), avoiding per-run downloads.
           # CodeQL's dependency-caching already manages the Go module cache.
           cache: "false"
 
