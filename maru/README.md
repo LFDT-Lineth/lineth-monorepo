@@ -62,6 +62,46 @@ determines the QBFT validator address, and startup fails if that address is abse
 Maru never passes the P2P private key to the custom signer factory and never falls back to the local validator key.
 The app owns the returned signer and closes it during shutdown or when startup fails.
 
+## Switching a pre-merge network to PoS (TTD)
+
+A network whose execution layer (EL) starts with its own proof-of-authority consensus can switch to Maru-driven PoS
+once the EL reaches its terminal total difficulty (TTD). Configure it with a `difficultyAwareQbft` fork in the Maru
+genesis file:
+
+```json
+"0": {
+  "type": "difficultyAwareQbft",
+  "blockTimeSeconds": 1,
+  "terminalTotalDifficulty": 49575263,
+  "postTtdConfig": {
+    "validatorSet": ["0x9f31730181441beb67b10efaed5773767ea959bc"],
+    "elFork": "Paris"
+  }
+}
+```
+
+EL clients no longer return `totalDifficulty` in `eth_getBlockBy*` responses (e.g. Besu >= 26.9.0, Geth >= 1.14.11),
+so Maru determines the terminal block itself. It reads the difficulty of the genesis block (`g`, block 0) and of
+block 1 (`d`), assumes every block after genesis has difficulty `d`, and switches to PoS once the EL head reaches the
+first block `n` where `g + n * d >= terminalTotalDifficulty`.
+
+### Caveats
+
+- Only pre-merge chains where every block after genesis has the same difficulty are supported:
+  - QBFT / IBFT 2.0: every block has difficulty 1.
+  - Clique with a single signer that never changes: every block is in-turn with difficulty 2.
+- Not supported: Clique with more than one signer (out-of-turn blocks have difficulty 1), consensus migrations that
+  change the block difficulty, and proof-of-work chains. With such chains the computed terminal block can differ from
+  the EL's, so the network either stalls until Maru switches or Maru switches before the EL accepts PoS blocks.
+- The pre-merge chain is assumed not to reorg, which holds for QBFT / IBFT 2.0 (immediate finality) and in practice
+  for single-signer Clique.
+- `terminalTotalDifficulty` must match the TTD in the EL genesis file, as the EL stops producing pre-merge blocks at
+  its own TTD.
+- Maru logs an error if the EL head has a difficulty other than `d` (or 0 once post-merge), as this breaks the
+  constant difficulty assumption, but still switches at the computed terminal block.
+- If block 1 is already post-merge (difficulty 0) while the genesis difficulty is below `terminalTotalDifficulty`,
+  Maru and EL TTDs do not match: Maru does not switch and logs an error on every poll.
+
 ### Build Docker Image Locally
 
 ```sh

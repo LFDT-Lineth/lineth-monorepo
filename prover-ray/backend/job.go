@@ -1,5 +1,7 @@
 package backend
 
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
+
 // ProofType identifies which guest program to use for a proof request.
 type ProofType string
 
@@ -23,8 +25,12 @@ type Job struct {
 	// ID is an opaque identifier used to correlate the Result.
 	ID string
 
-	// Type selects the guest ELF and any proof-type-specific processing.
+	// Type selects any proof-type-specific processing.
 	Type ProofType
+
+	// GuestProgramID is the Program ID (keccak256 of the guest ELF) of the guest
+	// to run, from the request's guestProgramId.
+	GuestProgramID [32]byte
 
 	// StartBlock and EndBlock identify the block range covered by Payload.
 	// Single-block jobs set both to the same block number.
@@ -37,13 +43,20 @@ type Job struct {
 	// _in_start. Callers supply the guest bytes only and must not add the length
 	// prefix themselves.
 	//
-	// For L2 execution jobs today, Payload is the framed StatelessInput: the
+	// For L2 execution jobs, Payload is the framed StatelessInput in full: the
 	// 0x0001 schema id followed by the SSZ StatelessInput, exactly the output of
-	// utils/ssz.EncodeStatelessInput.
-	//
-	// Multi-block conflation encoding is not yet decided; [Core.Prove] rejects
-	// jobs spanning more than one block.
+	// utils/ssz.EncodeStatelessInput. full rejects jobs spanning more than one
+	// block. dev-zkvm and dev-partial take the whole extended (0x0002) input of
+	// utils/ssz.EncodeExtendedInput, and the guest runs the block range.
 	Payload []byte
+
+	// ShardIndexes lists the trace shards this prover proves, in any order;
+	// empty proves them all. Without sharding ([Config.ShardSize] zero) only
+	// shard 0 exists. The shard count depends on the guest input and is only
+	// known after the job's fast-mode pass, so an index past the end fails the
+	// job. A strict subset of the shards yields [ResultStatusNode], not a final
+	// proof.
+	ShardIndexes []uint
 }
 
 // ResultStatus indicates whether a prove attempt succeeded.
@@ -52,14 +65,16 @@ type ResultStatus string
 const (
 	ResultStatusOK     ResultStatus = "ok"
 	ResultStatusFailed ResultStatus = "failed"
+	// ResultStatusNode is a proof of a strict subset of the trace's shards: a
+	// conglomeration node to be merged elsewhere, not a final proof.
+	// ProofBytes and PublicInputs are empty; Node and NumShards are set.
+	ResultStatusNode ResultStatus = "node"
 )
 
 // PublicInputs carries the 16 public output fields of the coordinator
-// response. Some are read from the guest's 105-byte
-// SszStatelessValidationResult; the rest are computed by the Lineth wrapper
-// (run_l2_execution_guest). Which columns of RISCV-ZKC.bin carry each field,
-// and which come from the wrapper, is not yet established; see
-// zkcdriver/risc5.RegisterPublicInputs.
+// response. dev-zkvm and dev-partial decode them from the guest's 0x0003
+// output, whose hash is all the trace carries (see
+// zkcdriver/risc5.RegisterPublicInputs).
 //
 // Count and field names follow the getZkL2ExecutionProofV1 response schema.
 type PublicInputs struct {
@@ -87,12 +102,23 @@ type Result struct {
 	Status ResultStatus
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
-	// wiop.Proof (wire format not yet decided); for dev-zkvm it is the guest's
-	// 0x0003 output from the ZkC Execute run, which the runner cross-checks
-	// against the native runner. nil when Status is ResultStatusFailed.
+	// wiop.Proof (wire format not yet decided); for dev-partial it is the image of
+	// a devmode proof of the guest output hash; for dev-mock and dev-zkvm it is
+	// the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
+
+	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-zkvm and
+	// dev-partial, for the runner's native runner check. nil in the other modes.
+	GuestOutput []byte
+
+	// Node is the non-root conglomeration node when Status is
+	// ResultStatusNode: the shard proof itself for a single requested shard,
+	// a merged node otherwise. NumShards is the trace's shard count, so that
+	// the party merging the nodes can tell when their coverage is complete.
+	Node      *conglomeration.Node
+	NumShards uint
 
 	// Err is non-nil when Status is ResultStatusFailed.
 	Err error

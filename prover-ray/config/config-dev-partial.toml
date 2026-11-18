@@ -1,0 +1,14 @@
+# dev-partial: the guest runs, its trace is checked against every constraint, and
+# the public inputs come from the guest output, with a devmode proof in place
+# of a real one. The native runner is optional: when set, the guest output is
+# also checked against it (temporary, while the VM is being developed). A real
+# block needs sharding: its trace does not fit in one shard.
+version = "0.0.0-riscv"
+log_level = 4
+guests_dir = "/opt/linea/prover-ray/guests"
+
+[execution]
+prover_mode = "dev-partial"
+requests_root_dir = "/opt/linea/prover-ray/requests"
+native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
+shard_size = 500000

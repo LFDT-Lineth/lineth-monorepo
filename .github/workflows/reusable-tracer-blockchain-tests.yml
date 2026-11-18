@@ -60,7 +60,7 @@ jobs:
         run: ./gradlew :tracer:reference-tests:generateExecutionSpecBlockchainTests -Dorg.gradle.caching=true
 
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
+        uses: dawidd6/action-download-artifact@a92c7ae74cf1df8810783758581e485ac3aaa309 # v28
         if: ${{ inputs.failed_module != '' }}
         with:
           name: failedBlockchainReferenceTests.json

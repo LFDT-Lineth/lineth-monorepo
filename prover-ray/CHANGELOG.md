@@ -3,10 +3,47 @@
 ### 🚀 Features
 
 - *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(prover-ray)* FRI over a fixed maximum domain (#4322)
+- *(prover-ray)* Register program vk to the public inputs (#4309)
+- *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(prover-ray)* Prepare centralized prover (#4242)
+- *(prover-ray)* Conglomerate the shard proofs behind a Merger interface (#4372)
+- *(prover-ray)* Merge conglomeration nodes of one kind only (#4404)
+- *(prover-ray)* Public-input chip for the recursion machine (#4437)
+- *(prover-ray)* Add partial mode for l2 execution (#4455)
+- *(prover-ray)* Remove deduplication (#4435)
+- *(prover-ray)* Check the pipeline config at startup (#4463)
+- *(prover-ray)* Decode dev-zkvm public inputs from the guest output (#4462)
+- *(prover-ray)* Recursion merger with leaf, internal and root node programs (#4429)
+- *(prover-ray)* In-machine verifier interface with a mock (#4438)
+- *(prover-ray)* Bn packed hash (#4458)
 
 ### 🐛 Bug Fixes
 
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
+- *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
+- *(prover-ray)* Fix lookup soundness bug due to improper reuse of th… (#4363)
+- *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
+- *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
+
+### 🚜 Refactor
+
+- *(prover-ray)* Refactor the guest output fetching (#4370)
+- *(prover-ray)* Drop the localvanishing and zkcdriver interners (#4480)
+
+### ⚡ Performance
+
+- *(prover-ray)* Preserve expression sharing through the localvanishing lift (#4155)
+- *(prover-ray)* Parallelise and pool the R5 commits, opening, Lagrange evaluation and lookup (#4202)
+- *(prover-ray)* Evaluate the quotient, log-derivative and grand-product rows with vector programs (#4203)
+- *(prover-ray)* Evaluate each shared verifier subexpression once (#4157)
+- *(prover-ray)* Intern every vanishing on registration (#4476)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [0.2.0] - 2026-10-28
 
 ### 🚀 Features

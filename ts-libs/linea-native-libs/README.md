@@ -13,6 +13,25 @@ Install the required npm package:
 npm install @lfdt-lineth/native-libs
 ```
 
+## Building
+
+The build downloads the native binaries from a `blob-libs` GitHub release and bundles them in `dist/lib`:
+
+```bash
+NATIVE_LIBS_RELEASE_TAG=blob-libs-v3.0.1 pnpm run -F @lfdt-lineth/native-libs build
+```
+
+| Variable                  | Required | Description                                                                                                                                                                |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NATIVE_LIBS_RELEASE_TAG` | Yes      | Release to download the binaries from, for example `blob-libs-v3.0.1`.                                                                                                     |
+| `NATIVE_LIBS_TARGETS`     | No       | Binaries to keep: `all`, or a comma-separated list of `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`. Defaults to the platform of the machine running the build. |
+
+Each build replaces the binaries from previous builds. To bundle binaries for another platform, for example when preparing files for a Linux machine from a Mac:
+
+```bash
+NATIVE_LIBS_RELEASE_TAG=blob-libs-v3.0.1 NATIVE_LIBS_TARGETS=linux-x64,linux-arm64 pnpm run -F @lfdt-lineth/native-libs build
+```
+
 ## Usage
 
 ### Compressor library

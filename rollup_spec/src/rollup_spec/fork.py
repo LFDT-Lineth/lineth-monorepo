@@ -46,14 +46,19 @@ from ethereum.forks.amsterdam.transactions import (
     SetCodeTransaction,
     Transaction,
     decode_transaction,
+    encode_transaction,
     recover_sender,
 )
 from ethereum.forks.amsterdam.fork import (
+    BEACON_ROOTS_ADDRESS,
+    HISTORY_STORAGE_ADDRESS,
     BlockChain,
     apply_body,
     get_last_256_block_hashes,
 )
 from ethereum.forks.amsterdam.bloom import logs_bloom
+# The rollup's block truncation also reads Osaka blocks.
+from ethereum.forks.osaka.blocks import Block as OsakaBlock, Header as OsakaHeader
 from ethereum.forks.amsterdam.block_access_lists import (
     BlockAccessListBuilder,
     hash_block_access_list,
@@ -123,6 +128,8 @@ __all__ = [
     "vm",
     "Block",
     "Header",
+    "OsakaBlock",
+    "OsakaHeader",
     "Log",
     "Withdrawal",
     "AccessListTransaction",
@@ -132,7 +139,10 @@ __all__ = [
     "SetCodeTransaction",
     "Transaction",
     "decode_transaction",
+    "encode_transaction",
     "recover_sender",
+    "BEACON_ROOTS_ADDRESS",
+    "HISTORY_STORAGE_ADDRESS",
     "BlockChain",
     "apply_body",
     "get_last_256_block_hashes",

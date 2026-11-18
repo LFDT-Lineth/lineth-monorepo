@@ -10,3 +10,4 @@
 - *(misc)* Rename gradle plugins (#3729)
 - *(misc)* Fix gradle build correctness bugs (#4044)
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)

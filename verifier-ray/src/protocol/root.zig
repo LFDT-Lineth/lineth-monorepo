@@ -12,6 +12,7 @@ pub const Error = error{
     MissingDynamicModuleSize,
     UnexpectedDynamicModuleSize,
     DynamicModuleSizeTooLarge,
+    DynamicModuleSizeBelowMinimum,
 } || CellError;
 
 pub const Scalar = types.Scalar;
@@ -43,6 +44,14 @@ pub const Spec = struct {
     /// wiop.ColumnSizeMaxSupported). Any module_sizes entry above this is
     /// rejected before it reaches downstream arithmetic.
     column_size_max_supported: usize = 1 << 22,
+    /// Smallest size each dynamic module may declare, in `module_sizes`
+    /// order: prover-ray's `Module.MinRuntimeSize`, the smallest power of two
+    /// N > 2·max|shift| over the shifts at which the module's columns are
+    /// opened. Below it two shifts of a column could coincide modulo N and the
+    /// proof would not have the shape the verifier expects; prover-ray's
+    /// `System.Verify` rejects such sizes (#4288). One entry per dynamic
+    /// module (required when `dynamic_module_count > 0`).
+    dynamic_module_min_sizes: []const usize = &.{},
 };
 
 /// All protocol-level data derived from a proof by the higher-level verifier.
@@ -114,8 +123,9 @@ pub fn replayWithTranscript(
     if (module_sizes.len < spec.dynamic_module_count) return error.MissingDynamicModuleSize;
     if (module_sizes.len > spec.dynamic_module_count) return error.UnexpectedDynamicModuleSize;
 
-    for (module_sizes) |size| {
+    for (module_sizes, spec.dynamic_module_min_sizes) |size, min_size| {
         if (size > spec.column_size_max_supported) return error.DynamicModuleSizeTooLarge;
+        if (size < min_size) return error.DynamicModuleSizeBelowMinimum;
     }
 
     var all_coins: [spec.total_round_coins]Coin = undefined;
@@ -159,4 +169,10 @@ fn validateSpec(comptime spec: Spec) void {
     }
     if (spec.total_round_coins != expected_offset)
         @compileError("spec: total_round_coins must equal sum of round_coin_counts");
+    if (spec.dynamic_module_min_sizes.len != spec.dynamic_module_count)
+        @compileError("spec: dynamic_module_min_sizes must have one entry per dynamic module");
+    for (spec.dynamic_module_min_sizes) |min_size| {
+        if (min_size == 0 or !field.isPowerOfTwo(min_size))
+            @compileError("spec: every dynamic_module_min_sizes entry must be a nonzero power of two");
+    }
 }
