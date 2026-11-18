@@ -15,6 +15,8 @@
 - *(prover-ray)* Remove deduplication (#4435)
 - *(prover-ray)* Check the pipeline config at startup (#4463)
 - *(prover-ray)* Decode dev-zkvm public inputs from the guest output (#4462)
+- *(prover-ray)* Recursion merger with leaf, internal and root node programs (#4429)
+- *(prover-ray)* In-machine verifier interface with a mock (#4438)
 
 ### 🐛 Bug Fixes
 
@@ -35,6 +37,7 @@
 - *(prover-ray)* Parallelise and pool the R5 commits, opening, Lagrange evaluation and lookup (#4202)
 - *(prover-ray)* Evaluate the quotient, log-derivative and grand-product rows with vector programs (#4203)
 - *(prover-ray)* Evaluate each shared verifier subexpression once (#4157)
+- *(prover-ray)* Intern every vanishing on registration (#4476)
 
 ### ⚙️ Miscellaneous Tasks
 
