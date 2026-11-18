@@ -21,11 +21,10 @@ import (
 type bnPackedCircuit struct {
 	Inputs []kbcircuit.Element
 	Output frontend.Variable
-	Domain BNPackedDomain `gnark:"-"`
 }
 
 func (c *bnPackedCircuit) Define(api frontend.API) error {
-	h := NewBNPackedGnarkHasher(api, c.Domain)
+	h := NewBNPackedGnarkHasher(api)
 	h.Write(c.Inputs...)
 	api.AssertIsEqual(h.Sum(), c.Output)
 	return nil
@@ -45,7 +44,7 @@ func TestBNPackedHasherCircuit(t *testing.T) {
 	for _, n := range []int{0, 1, 7, 8, 9, 16, 23} {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			vals := randKoala(n)
-			nh := NewBNPackedHasher(BNPackedLengthSuffix)
+			nh := NewBNPackedHasher()
 			nh.Write(vals...)
 			digest := nh.Sum()
 
@@ -81,7 +80,7 @@ func TestBNPackedLengthSeparation(t *testing.T) {
 	}
 	seen := map[fr.Element]string{}
 	for name, in := range cases {
-		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h := NewBNPackedHasher()
 		h.Write(in...)
 		d := h.Sum()
 		if other, ok := seen[d]; ok {
@@ -96,9 +95,9 @@ func TestBNPackedHasherInjective(t *testing.T) {
 	x.SetUint64(5)
 	var zero field.Element
 
-	h1 := NewBNPackedHasher(BNPackedLengthSuffix)
+	h1 := NewBNPackedHasher()
 	h1.Write(x)
-	h2 := NewBNPackedHasher(BNPackedLengthSuffix)
+	h2 := NewBNPackedHasher()
 	h2.Write(zero, x)
 	a, b := h1.Sum(), h2.Sum()
 	require.False(t, a.Equal(&b))
@@ -237,7 +236,7 @@ func TestBNPackedNativeMatchesByteReference(t *testing.T) {
 		if n > 0 {
 			vals[0].SetUint64(2130706432)
 		}
-		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h := NewBNPackedHasher()
 		h.Write(vals...)
 		got, want := h.Sum(), bnPackedSumBytesReference(vals)
 		require.True(t, got.Equal(&want), "n=%d", n)
@@ -247,7 +246,7 @@ func TestBNPackedNativeMatchesByteReference(t *testing.T) {
 func BenchmarkBNPackedNative(b *testing.B) {
 	vals := randKoala(512)
 	b.Run("elements", func(b *testing.B) {
-		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h := NewBNPackedHasher()
 		h.Write(vals...)
 		b.ReportAllocs()
 		for b.Loop() {

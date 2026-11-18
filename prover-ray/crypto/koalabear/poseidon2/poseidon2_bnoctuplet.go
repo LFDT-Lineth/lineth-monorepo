@@ -76,7 +76,7 @@ type BNOctupletMDHasher struct {
 
 // NewBNOctupletMDHasher returns an empty BN-packed leaf hasher.
 func NewBNOctupletMDHasher() *BNOctupletMDHasher {
-	return &BNOctupletMDHasher{h: NewBNPackedHasher(BNPackedLengthSuffix)}
+	return &BNOctupletMDHasher{h: NewBNPackedHasher()}
 }
 
 // Reset clears the buffer.
@@ -221,7 +221,7 @@ type BNOctupletGnarkMDHasher struct {
 // NewBNOctupletGnarkMDHasher returns an empty in-circuit BN-packed leaf
 // hasher.
 func NewBNOctupletGnarkMDHasher(api frontend.API) *BNOctupletGnarkMDHasher {
-	return &BNOctupletGnarkMDHasher{api: api, h: NewBNPackedGnarkHasher(api, BNPackedLengthSuffix)}
+	return &BNOctupletGnarkMDHasher{api: api, h: NewBNPackedGnarkHasher(api)}
 }
 
 // Reset clears the buffer.

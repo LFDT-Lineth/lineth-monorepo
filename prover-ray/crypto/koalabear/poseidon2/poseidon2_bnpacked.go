@@ -49,29 +49,14 @@ const (
 // Native
 // ---------------------------------------------------------------------------
 
-// BNPackedDomain selects how the input length n (number of KoalaBear
-// elements, not packed elements) is bound into a BN-packed Merkle-Damgard
-// digest. It is explicit so that a transcript mode can be added later.
-type BNPackedDomain int
-
-const (
-	// BNPackedLengthSuffix starts at 0 and absorbs n as a final block, after
-	// the data. Costs one extra permutation; works for any length known at
-	// the end of hashing.
-	BNPackedLengthSuffix BNPackedDomain = iota
-)
-
 // BNPackedHasher is the native counterpart of [BNPackedGnarkHasher].
 type BNPackedHasher struct {
-	domain BNPackedDomain
 	buffer []field.Element
 }
 
-// NewBNPackedHasher returns a new native BN-packed hasher.
-func NewBNPackedHasher(domain BNPackedDomain) *BNPackedHasher {
-	checkBNPackedDomain(domain)
-	return &BNPackedHasher{domain: domain}
-}
+// NewBNPackedHasher returns a new native BN-packed hasher. The input length n
+// is absorbed as a final block.
+func NewBNPackedHasher() *BNPackedHasher { return &BNPackedHasher{} }
 
 // Reset clears the buffer.
 func (h *BNPackedHasher) Reset() { h.buffer = h.buffer[:0] }
@@ -109,12 +94,6 @@ func (h *BNPackedHasher) Sum() fr.Element {
 	}
 	state = bnPackedCompress(state, length) // n is absorbed as a final block
 	return state
-}
-
-func checkBNPackedDomain(domain BNPackedDomain) {
-	if domain != BNPackedLengthSuffix {
-		panic("poseidon2: unsupported BN-packed domain separation mode")
-	}
 }
 
 func bnPackedCompress(state, block fr.Element) fr.Element {
@@ -170,14 +149,13 @@ func bnPackChunk(xs []field.Element) fr.Element {
 type BNPackedGnarkHasher struct {
 	api      frontend.API
 	koalaAPI *circuit.KoalaBearAPI
-	domain   BNPackedDomain
 	buffer   []circuit.Element
 }
 
-// NewBNPackedGnarkHasher creates a new in-circuit BN-packed hasher.
-func NewBNPackedGnarkHasher(api frontend.API, domain BNPackedDomain) *BNPackedGnarkHasher {
-	checkBNPackedDomain(domain)
-	return &BNPackedGnarkHasher{api: api, koalaAPI: circuit.NewAPI(api), domain: domain}
+// NewBNPackedGnarkHasher creates a new in-circuit BN-packed hasher. The input
+// length n is absorbed as a final block.
+func NewBNPackedGnarkHasher(api frontend.API) *BNPackedGnarkHasher {
+	return &BNPackedGnarkHasher{api: api, koalaAPI: circuit.NewAPI(api)}
 }
 
 // Reset clears the buffer.
