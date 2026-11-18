@@ -141,6 +141,9 @@ start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
 start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
+# Pre-create bind-mounted host dirs and make them world-writable: Docker
+# creates missing mount sources as root:root, which the non-root (uid 1000)
+# containers cannot write to (e.g. prover-ray's /data/prover/riscv).
 start-env:
 	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
@@ -148,6 +151,9 @@ start-env:
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
+	mkdir -p tmp/local/prover/riscv tmp/local/prover-ray/guests tmp/local/traces/v2/conflated; \
+	chmod -R a+rwX tmp/local; \
+
 	$(MAKE) seed-deny-list; \
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	poll=0; \
