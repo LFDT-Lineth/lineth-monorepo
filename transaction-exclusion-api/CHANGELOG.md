@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.0.1-rc1] - 2026-11-18
 
 ### 🚜 Refactor
 
