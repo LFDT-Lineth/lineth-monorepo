@@ -297,7 +297,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 		}
 		inputCapInfos[treeIdx] = info
 		inputFrontiers[treeIdx] = authenticateInputCapGnark(
-			kapi, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx],
+			kapi, pcs.Params.MerkleHash, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx],
 		)
 	}
 
@@ -308,7 +308,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 		depth := pcs.Params.merkleCapDepth(int(pcs.Params.LogCodewordSize - j))
 		runningFrontiers[j] = authenticateCapGnark(
-			kapi, proof.FRIProof.RoundCaps[j-1], depth, proof.FRIProof.RoundRoots[j-1],
+			kapi, pcs.Params.MerkleHash, proof.FRIProof.RoundCaps[j-1], depth, proof.FRIProof.RoundRoots[j-1],
 		)
 	}
 
@@ -553,7 +553,7 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 		if len(branch.Siblings) == 0 {
 			panic(fmt.Sprintf("fri: pcs.VerifyGnark: query %d round %d: branch carries no sibling", queryIdx, j))
 		}
-		authenticateToCapGnark(api, branch, posBits[j:], vq.runningFrontiers[j])
+		authenticateToCapGnark(api, pcs.Params.MerkleHash, branch, posBits[j:], vq.runningFrontiers[j])
 		rq.Rounds[j] = gnarkInputPair{
 			Self:    octupletToExtGnark(api, branch.Leaf),
 			Sibling: octupletToExtGnark(api, branch.Siblings[len(branch.Siblings)-1]),
@@ -880,7 +880,7 @@ func levelIndexGnark(numLevels, levelSize int) (int, error) {
 // tables are revealed, and the heap slot each of their row pairs occupies, is
 // fixed by the shape and stays native.
 func authenticateInputCapGnark(
-	api *circuit.KoalaBearAPI, info inputCapInfo, treeCap GnarkInputCap, shape Shape,
+	api *circuit.KoalaBearAPI, hash MerkleHash, info inputCapInfo, treeCap GnarkInputCap, shape Shape,
 	root circuit.Octuplet,
 ) []circuit.Octuplet {
 	if info.depth == 0 {
@@ -923,11 +923,11 @@ func authenticateInputCapGnark(
 		groups := shapeAtSize.groups()
 		for pairIdx := range len(table.Rows) / 2 {
 			pair := GnarkRowPair{table.Rows[2*pairIdx], table.Rows[2*pairIdx+1]}
-			injections[levelStart+pairIdx] = hashAuxPairGroupsGnark(api, pair, groups, evenFirst)
+			injections[levelStart+pairIdx] = hashAuxPairGroupsGnark(api, hash, pair, groups, evenFirst)
 		}
 	}
 
-	assertOctupletEqual(api, recoverCapRootGnark(api, treeCap.Nodes, injections), root)
+	assertOctupletEqual(api, recoverCapRootGnark(api, hash, treeCap.Nodes, injections), root)
 	return treeCap.Nodes
 }
 
@@ -961,7 +961,7 @@ func authenticateInputQueryGnark(
 		}
 		// leafIndex = position / (codewordSize / numLeaves): drop the low bits.
 		idxBits := posBits[int(p.LogCodewordSize)-numLevels:]
-		authenticateInputToCapGnark(api, branch, idxBits, frontiers[i], depth, infos[i].levelGroups)
+		authenticateInputToCapGnark(api, p.MerkleHash, branch, idxBits, frontiers[i], depth, infos[i].levelGroups)
 	}
 }
 
@@ -975,7 +975,7 @@ func authenticateInputQueryGnark(
 // levelGroups[level] lists the groups of the pair opened at that level; groups
 // at the bottom level select pair leaves, as in the native method.
 func authenticateInputToCapGnark(
-	api *circuit.KoalaBearAPI, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
+	api *circuit.KoalaBearAPI, hash MerkleHash, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
 	frontier []circuit.Octuplet, depth int, levelGroups [][]GroupShape,
 ) {
 	numLevels := len(branch.Leaves)
@@ -986,15 +986,15 @@ func authenticateInputToCapGnark(
 	}
 	var ancestor circuit.Octuplet
 	if bottomGroups != nil {
-		digests := hashAuxPairGroupsGnark(api, bottom, bottomGroups, idxBits[0])
+		digests := hashAuxPairGroupsGnark(api, hash, bottom, bottomGroups, idxBits[0])
 		ancestor = digests[0]
 		for _, digest := range digests[1:] {
-			ancestor = poseidon2.KoalagnarkCompress(api, ancestor, digest)
+			ancestor = hash.compressGnark(api, ancestor, digest)
 		}
 	} else {
-		ancestor = hashRowOpeningGnark(api, bottom[0])
-		sibling := hashRowOpeningGnark(api, bottom[1])
-		ancestor = foldOneLevelGnark(api, ancestor, sibling, nil, nil, idxBits[0])
+		ancestor = hashRowOpeningGnark(api, hash, bottom[0])
+		sibling := hashRowOpeningGnark(api, hash, bottom[1])
+		ancestor = foldOneLevelGnark(api, hash, ancestor, sibling, nil, nil, idxBits[0], false)
 	}
 
 	for level := numLevels - 2; level >= depth; level-- {
@@ -1006,26 +1006,34 @@ func authenticateInputToCapGnark(
 		if level < len(levelGroups) {
 			groups = levelGroups[level]
 		}
-		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[level-depth], aux, groups, idxBits[numLevels-1-level])
+		ancestor = foldOneLevelGnark(
+			api, hash, ancestor, branch.Siblings[level-depth], aux, groups, idxBits[numLevels-1-level], false)
 	}
 	assertOctupletEqual(api, ancestor, selectFrontierNodeGnark(api, frontier, idxBits[numLevels-depth:numLevels]))
 }
 
 // foldOneLevelGnark mirrors [foldOneLevel]. isOdd is the current position bit:
-// when set, the ancestor is the right child.
+// when set, the ancestor is the right child. rawChildren is set when both
+// children are raw octuplets rather than digests (see
+// [MerkleHash.compressLeavesGnark]).
 func foldOneLevelGnark(
-	api *circuit.KoalaBearAPI, ancestor, sibling circuit.Octuplet, aux *GnarkRowPair, groups []GroupShape,
-	isOdd frontend.Variable,
+	api *circuit.KoalaBearAPI, hash MerkleHash, ancestor, sibling circuit.Octuplet, aux *GnarkRowPair, groups []GroupShape,
+	isOdd frontend.Variable, rawChildren bool,
 ) circuit.Octuplet {
 	var left, right circuit.Octuplet
 	for i := range left {
 		left[i] = api.Select(isOdd, sibling[i], ancestor[i])
 		right[i] = api.Select(isOdd, ancestor[i], sibling[i])
 	}
-	res := poseidon2.KoalagnarkCompress(api, left, right)
+	var res circuit.Octuplet
+	if rawChildren {
+		res = hash.compressLeavesGnark(api, left, right)
+	} else {
+		res = hash.compressGnark(api, left, right)
+	}
 	if aux != nil {
-		for _, digest := range hashAuxPairGroupsGnark(api, *aux, groups, isOdd) {
-			res = poseidon2.KoalagnarkCompress(api, res, digest)
+		for _, digest := range hashAuxPairGroupsGnark(api, hash, *aux, groups, isOdd) {
+			res = hash.compressGnark(api, res, digest)
 		}
 	}
 	return res
@@ -1046,7 +1054,7 @@ func splitRowOpeningGnark(row GnarkRowOpening, groups []GroupShape) []GnarkRowOp
 // hashAuxPairGroupsGnark mirrors [hashAuxPairGroups]. Row widths are
 // structural in the circuit, so a mismatch panics while the circuit is built.
 func hashAuxPairGroupsGnark(
-	api *circuit.KoalaBearAPI, pair GnarkRowPair, groups []GroupShape, isOdd frontend.Variable,
+	api *circuit.KoalaBearAPI, hash MerkleHash, pair GnarkRowPair, groups []GroupShape, isOdd frontend.Variable,
 ) []circuit.Octuplet {
 	groups = sizeGroups(len(pair[0].Base), len(pair[0].Ext), groups)
 	var baseWidth, extWidth int
@@ -1064,14 +1072,14 @@ func hashAuxPairGroupsGnark(
 	sibling := splitRowOpeningGnark(pair[1], groups)
 	res := make([]circuit.Octuplet, len(groups))
 	for i := range groups {
-		res[i] = hashAuxPairGnark(api, GnarkRowPair{self[i], sibling[i]}, isOdd)
+		res[i] = hashAuxPairGnark(api, hash, GnarkRowPair{self[i], sibling[i]}, isOdd)
 	}
 	return res
 }
 
 // hashRowOpeningGnark mirrors [hashRowOpening].
-func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) circuit.Octuplet {
-	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
+func hashRowOpeningGnark(api *circuit.KoalaBearAPI, hash MerkleHash, row GnarkRowOpening) circuit.Octuplet {
+	h := hash.newLeafHasherGnark(api)
 	absorbLeafHeaderGnark(api, h, len(row.Base), len(row.Ext))
 	h.Write(rowOpeningElementsGnark(row)...)
 	return h.Sum()
@@ -1080,9 +1088,9 @@ func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) circuit
 // hashAuxPairGnark mirrors [hashAuxPair]: rows are absorbed even-first, so the
 // order depends on the (variable) position bit and is resolved element-wise.
 func hashAuxPairGnark(
-	api *circuit.KoalaBearAPI, pair GnarkRowPair, isOdd frontend.Variable,
+	api *circuit.KoalaBearAPI, hash MerkleHash, pair GnarkRowPair, isOdd frontend.Variable,
 ) circuit.Octuplet {
-	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
+	h := hash.newLeafHasherGnark(api)
 	absorbLeafHeaderGnark(api, h, len(pair[0].Base), len(pair[0].Ext))
 	first := rowOpeningElementsGnark(pair[0])
 	second := rowOpeningElementsGnark(pair[1])
@@ -1101,7 +1109,7 @@ func hashAuxPairGnark(
 }
 
 // absorbLeafHeaderGnark mirrors [absorbLeafHeader].
-func absorbLeafHeaderGnark(api *circuit.KoalaBearAPI, h *poseidon2.KoalagnarkMDHasher, baseWidth, extWidth int) {
+func absorbLeafHeaderGnark(api *circuit.KoalaBearAPI, h gnarkLeafHasher, baseWidth, extWidth int) {
 	var tag field.Element
 	tag.SetUint64(leafDomainTag)
 	h.Write(

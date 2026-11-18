@@ -72,7 +72,7 @@ func randomMerkleCase(t *testing.T, seed uint64, depth, maxInj int) merkleCase {
 			branch.AuxSiblings[lvl] = append(branch.AuxSiblings[lvl], field.Octuplet(d))
 		}
 	}
-	require.NoError(t, branch.AuthenticateToCap(c.index, []field.Octuplet{field.Octuplet(c.root)}),
+	require.NoError(t, branch.AuthenticateToCap(fri.MerkleHashKoalaBear, c.index, []field.Octuplet{field.Octuplet(c.root)}),
 		"the test's root must be ray's")
 	return c
 }
@@ -141,7 +141,7 @@ func TestMerklePath(t *testing.T) {
 			}
 			return res
 		}
-		tree := fri.NewTree([][]field.Octuplet{nil, level(2), level(4), nil, level(16)})
+		tree := fri.NewTree(fri.MerkleHashKoalaBear, [][]field.Octuplet{nil, level(2), level(4), nil, level(16)})
 		const idx = 11
 		branch := tree.OpenBranch(idx)
 		c := merkleCase{leaf: Cell(branch.Leaf), index: idx, root: Cell(tree.Root()), inj: make([][]Cell, len(branch.Siblings))}
@@ -427,7 +427,7 @@ func groupDigests(table fri.MultiSizeTable, size, j int) []Cell {
 	for _, g := range sized.Groups {
 		alone := make(fri.MultiSizeTable, size+1)
 		alone[size] = fri.SizedTable{Base: sized.Base[base : base+g.BaseWidth], Groups: []fri.GroupShape{{BaseWidth: g.BaseWidth}}}
-		res = append(res, Cell(alone.Merkleize().OpenBranch(j).Leaf))
+		res = append(res, Cell(alone.Merkleize(fri.MerkleHashKoalaBear).OpenBranch(j).Leaf))
 		base += g.BaseWidth
 	}
 	return res
@@ -459,7 +459,7 @@ func groupedCase(t *testing.T, table fri.MultiSizeTable, tree *fri.Tree, j int) 
 // claimed consistently, by the proof.
 func TestMerklePathGrouped(t *testing.T) {
 	table := groupedTree()
-	tree := table.Merkleize()
+	tree := table.Merkleize(fri.MerkleHashKoalaBear)
 	for j := range tree.NumLeaves() {
 		c := groupedCase(t, table, tree, j)
 		require.Len(t, c.inj[2], 2, "two groups injected at the level of 4 nodes")
@@ -503,7 +503,7 @@ func TestMerklePathChaining(t *testing.T) {
 			leaves[i][k] = field.NewElement(rnd.Uint64())
 		}
 	}
-	tree := fri.NewTree([][]field.Octuplet{nil, nil, nil, leaves})
+	tree := fri.NewTree(fri.MerkleHashKoalaBear, [][]field.Octuplet{nil, nil, nil, leaves})
 	m := &Machine{}
 	var in []Cell
 	input := func(c Cell) int {
