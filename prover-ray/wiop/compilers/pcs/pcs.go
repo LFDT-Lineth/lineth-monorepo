@@ -84,8 +84,12 @@ type compileOptions struct {
 	elisionEnabled bool
 	moduleGroups   bool
 	fixedFRIDomain bool
-	// bnPackedMerkle selects [fri.MerkleHashBNPacked] (see [WithMerkleHash]).
-	bnPackedMerkle bool
+	// merkleHash is the selected Merkle hash (see [WithMerkleHash]);
+	// [fri.MerkleHashKoalaBear] when unset.
+	merkleHash fri.MerkleHash
+	// merkleHashSet records an explicit [WithMerkleHash], so an explicit
+	// KoalaBear is told apart from the unset default.
+	merkleHashSet bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -301,15 +305,7 @@ func WithMerkleHash(hash fri.MerkleHash) Option {
 	if hash.Validate() != nil {
 		utils.Panic("unknown Merkle hash %v", hash)
 	}
-	return func(o *compileOptions) { o.bnPackedMerkle = hash == fri.MerkleHashBNPacked }
-}
-
-// merkleHash is the selected [fri.MerkleHash].
-func (o compileOptions) merkleHash() fri.MerkleHash {
-	if o.bnPackedMerkle {
-		return fri.MerkleHashBNPacked
-	}
-	return fri.MerkleHashKoalaBear
+	return func(o *compileOptions) { o.merkleHash, o.merkleHashSet = hash, true }
 }
 
 // WithSizeOblivious makes the proof's structure independent of the dynamic
@@ -370,12 +366,20 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
-	if cfg.bnPackedMerkle && state.consumed && !pre.bnPackedMerkle {
-		return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with the consumed compile with %v",
-			cfg.merkleHash(), pre.merkleHash())
+	if cfg.merkleHashSet && cfg.merkleHash != pre.merkleHash {
+		if state.consumed {
+			return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with the consumed compile with %v",
+				cfg.merkleHash, pre.merkleHash)
+		}
+		if pre.merkleHashSet {
+			return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with preconfigured %v",
+				cfg.merkleHash, pre.merkleHash)
+		}
 	}
 	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
-	cfg.bnPackedMerkle = cfg.bnPackedMerkle || pre.bnPackedMerkle
+	if !cfg.merkleHashSet {
+		cfg.merkleHash, cfg.merkleHashSet = pre.merkleHash, pre.merkleHashSet
+	}
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -534,7 +538,7 @@ func MerkleHash(sys *wiop.System) fri.MerkleHash {
 	if !state.consumed {
 		return fri.MerkleHashKoalaBear
 	}
-	return state.merkleHash()
+	return state.merkleHash
 }
 
 // FRIStaticParams returns the FRI envelope parameters of sys (sized to
@@ -703,7 +707,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 		fixedFRIDomain:  cfg.fixedFRIDomain,
 		friNumQueries:   cfg.friNumQueries,
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
-		merkleHash:      cfg.merkleHash(),
+		merkleHash:      cfg.merkleHash,
 		logRSBlowup:     logBlowup,
 		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
 	}

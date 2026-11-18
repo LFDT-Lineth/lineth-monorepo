@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/require"
@@ -282,6 +283,43 @@ func TestConfigure_RSBlowup(t *testing.T) {
 		Compile(sys, WithFRINumQueries(2))
 		require.ErrorContains(t, Configure(sys, WithRSBlowup(4)), "RS blowup 4 conflicts with preconfigured 2",
 			"the consumed default blowup must be frozen")
+	})
+}
+
+// TestConfigure_MerkleHash checks how explicit and unset Merkle hash choices
+// combine: an unset one inherits, and two explicit ones must match, even when
+// one of them is the KoalaBear default.
+func TestConfigure_MerkleHash(t *testing.T) {
+	t.Run("unset inherits", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithMerkleHash(fri.MerkleHashBNPacked)))
+		Compile(sys, WithFRINumQueries(2))
+		require.Equal(t, fri.MerkleHashBNPacked, MerkleHash(sys))
+	})
+	t.Run("explicit default conflicts", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithMerkleHash(fri.MerkleHashBNPacked)))
+		require.ErrorContains(t, Validate(sys, WithMerkleHash(fri.MerkleHashKoalaBear)),
+			"pcs: WithMerkleHash(koalabear-poseidon2) conflicts with preconfigured bn-packed-poseidon2")
+	})
+	t.Run("explicit BN conflicts with explicit default", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithMerkleHash(fri.MerkleHashKoalaBear)))
+		require.ErrorContains(t, Validate(sys, WithMerkleHash(fri.MerkleHashBNPacked)),
+			"pcs: WithMerkleHash(bn-packed-poseidon2) conflicts with preconfigured koalabear-poseidon2")
+	})
+	t.Run("matching", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		require.NoError(t, Configure(sys, WithMerkleHash(fri.MerkleHashBNPacked)))
+		Compile(sys, WithFRINumQueries(2), WithMerkleHash(fri.MerkleHashBNPacked))
+		require.Equal(t, fri.MerkleHashBNPacked, MerkleHash(sys))
+	})
+	t.Run("consumed default", func(t *testing.T) {
+		sys, _, _ := newPCSTestSystem()
+		Compile(sys, WithFRINumQueries(2))
+		require.ErrorContains(t, Validate(sys, WithMerkleHash(fri.MerkleHashBNPacked)),
+			"pcs: WithMerkleHash(bn-packed-poseidon2) conflicts with the consumed compile with koalabear-poseidon2")
+		require.NoError(t, Validate(sys, WithMerkleHash(fri.MerkleHashKoalaBear)), "restating the consumed default is fine")
 	})
 }
 
