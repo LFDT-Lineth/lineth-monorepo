@@ -287,8 +287,22 @@ func logBench(t *testing.T, rec benchBlock) {
 		if len(s.OverLimit) > 0 {
 			over = fmt.Sprintf(", OVER THE LIMIT: %v", s.OverLimit)
 		}
-		top := s.Largest[0]
-		t.Logf("  shard %3d: trace %7.1f s %5.1f GB, check %7.1f s %5.1f GB, %d cells, largest %s %d rows%s",
-			s.Index, s.Trace.Sec, s.Trace.PeakRSSGB, s.Check.Sec, s.Check.PeakRSSGB, s.Cells, top.Name, top.Rows, over)
+		// A failed trace has no module.
+		largest := "no module"
+		if len(s.Largest) > 0 {
+			largest = fmt.Sprintf("largest %s %d rows", s.Largest[0].Name, s.Largest[0].Rows)
+		}
+		t.Logf("  shard %3d: trace %7.1f s %5.1f GB, check %7.1f s %5.1f GB, %d cells, %s%s",
+			s.Index, s.Trace.Sec, s.Trace.PeakRSSGB, s.Check.Sec, s.Check.PeakRSSGB, s.Cells, largest, over)
 	}
+}
+
+// TestLogBench_FailedTrace checks that a shard whose trace failed, so with no
+// module, is logged.
+func TestLogBench_FailedTrace(t *testing.T) {
+	logBench(t, benchBlock{
+		Block:       "block.ssz",
+		Result:      "error in trace: boom",
+		ShardsStats: []benchShard{{Index: 3, Trace: benchStep{Name: "error in trace: boom"}}},
+	})
 }
