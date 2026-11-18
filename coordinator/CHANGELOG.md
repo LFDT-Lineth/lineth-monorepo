@@ -1,4 +1,4 @@
-## [unreleased]
+## [2.4.0-rc1] - 2026-11-18
 
 ### 🚀 Features
 
