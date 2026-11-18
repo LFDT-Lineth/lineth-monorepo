@@ -17,6 +17,7 @@
 - *(prover-ray)* Decode dev-zkvm public inputs from the guest output (#4462)
 - *(prover-ray)* Recursion merger with leaf, internal and root node programs (#4429)
 - *(prover-ray)* In-machine verifier interface with a mock (#4438)
+- *(prover-ray)* Bn packed hash (#4458)
 
 ### 🐛 Bug Fixes
 
