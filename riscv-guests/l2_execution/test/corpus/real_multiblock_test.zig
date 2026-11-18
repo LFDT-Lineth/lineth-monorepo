@@ -49,13 +49,13 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
 
     const fixture_bytes = try fixture_gen.buildEngineeredInput(alloc);
     const decoded_input = try l2_execution_ssz.decodeInput(alloc, fixture_bytes);
-    try testing.expect(decoded_input.payloads.len >= 3);
+    try testing.expect(decoded_input.payloads.items.len >= 3);
 
     // Independently decode every payload's vanilla stateless input so every expectation below is
     // derived from the fixture's own real bytes rather than a hardcoded literal — the same
     // discipline `l2_execution_range_test.zig`'s own scenarios follow.
-    const stateless_inputs = try alloc.alloc(input.StatelessInput, decoded_input.payloads.len);
-    for (decoded_input.payloads, 0..) |payload, i| stateless_inputs[i] = try ssz_decode.decode(alloc, payload.stateless_input_ssz);
+    const stateless_inputs = try alloc.alloc(input.StatelessInput, decoded_input.payloads.items.len);
+    for (decoded_input.payloads.items, 0..) |payload, i| stateless_inputs[i] = try ssz_decode.decode(alloc, payload.stateless_input_ssz.bytes);
 
     // Sanity on the fixture itself: a genuine multi-block, real-child range (not unrelated blocks
     // masquerading as a range) — every block's number is exactly one more than the previous, and
