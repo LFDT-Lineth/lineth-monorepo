@@ -1,4 +1,5 @@
-//! Builds a block dataset in the shape of the EF blockchain tests from a JSON-RPC endpoint.
+//! Builds a block dataset in the shape of the EF blockchain tests from a JSON-RPC endpoint whose
+//! blocks are Osaka or Amsterdam blocks.
 //!
 //! `fetch_blocks --rpc-url URL --first N --last N --output PATH` downloads the blocks
 //! `first..last` with full transaction objects, rebuilds every header and transaction as RLP and
@@ -158,6 +159,13 @@ fn field(object: Value, name: []const u8) !Value {
     return object.object.get(name) orelse fail("missing field {s}", .{name});
 }
 
+/// Whether `object` has the field `name` with a value other than null.
+fn hasField(object: Value, name: []const u8) bool {
+    if (object != .object) return false;
+    const value = object.object.get(name) orelse return false;
+    return value != .null;
+}
+
 fn text(value: Value) ![]const u8 {
     if (value != .string) return fail("expected a string, found {s}", .{@tagName(value)});
     return value.string;
@@ -218,9 +226,12 @@ fn hexHash(a: Allocator, hash: [32]u8) ![]u8 {
 
 // -- re-encoding ---------------------------------------------------------------------------------
 
-/// The fields of the header the RPC reports, in header order, as RLP items.
+/// The fields of the header the RPC reports, in header order, as RLP items: Osaka's 21, and for a
+/// block that reports a block access list hash, Amsterdam's 23, which add that hash and the slot
+/// number.
 fn headerItems(a: Allocator, block: Value) ![][]u8 {
-    const items = try a.alloc([]u8, 21);
+    const amsterdam = hasField(block, "blockAccessListHash");
+    const items = try a.alloc([]u8, if (amsterdam) 23 else 21);
     const raw_fields = [_]struct { usize, []const u8 }{
         .{ 0, "parentHash" },       .{ 1, "sha3Uncles" },   .{ 2, "miner" },            .{ 3, "stateRoot" },
         .{ 4, "transactionsRoot" }, .{ 5, "receiptsRoot" }, .{ 6, "logsBloom" },        .{ 12, "extraData" },
@@ -233,6 +244,10 @@ fn headerItems(a: Allocator, block: Value) ![][]u8 {
         .{ 11, "timestamp" }, .{ 15, "baseFeePerGas" }, .{ 17, "blobGasUsed" }, .{ 18, "excessBlobGas" },
     };
     for (integer_fields) |entry| items[entry[0]] = try integerItem(a, block, entry[1]);
+    if (amsterdam) {
+        items[21] = try rawItem(a, block, "blockAccessListHash");
+        items[22] = try integerItem(a, block, "slotNumber");
+    }
     return items;
 }
 
