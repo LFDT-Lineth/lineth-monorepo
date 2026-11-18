@@ -25,7 +25,7 @@ pub const RawPair = struct { self: [6]u32, sibling: [6]u32 };
 pub const fold_cases = [_]FoldCase{
     .{
         .name = "single_level_3rounds",
-        .params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 0, .num_queries = 1 },
+        .params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
         .fold_alphas = &.{ .{ 7, 0, 0, 0, 0, 0 }, .{ 11, 0, 0, 0, 0, 0 }, .{ 17, 0, 0, 0, 0, 0 } },
         .round_roots = &.{ .{ 1503149432, 380418181, 1223702784, 519253104, 1450947468, 1189824450, 2046021059, 1095007226 }, .{ 1559958242, 1649082880, 1896083092, 698469895, 1870263476, 277089838, 624376519, 229237959 } },
         .final_poly = &.{.{ 0, 0, 0, 0, 0, 0 }},
@@ -36,7 +36,7 @@ pub const fold_cases = [_]FoldCase{
     },
     .{
         .name = "two_levels_3rounds",
-        .params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 0, .num_queries = 1 },
+        .params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
         .fold_alphas = &.{ .{ 7, 0, 0, 0, 0, 0 }, .{ 11, 0, 0, 0, 0, 0 }, .{ 17, 0, 0, 0, 0, 0 } },
         .round_roots = &.{ .{ 1503149432, 380418181, 1223702784, 519253104, 1450947468, 1189824450, 2046021059, 1095007226 }, .{ 1559958242, 1649082880, 1896083092, 698469895, 1870263476, 277089838, 624376519, 229237959 } },
         .final_poly = &.{.{ 0, 0, 0, 0, 0, 0 }},

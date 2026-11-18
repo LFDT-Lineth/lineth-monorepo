@@ -80,17 +80,22 @@ class FinalizationMonitorImpl(
         try {
           finalizationHandler.handleUpdate(finalizationUpdate)
             .thenApply { }
-        } catch (th: Throwable) {
-          log.error(
-            "Finalization handler={} failed. errorMessage={}",
-            handlerName,
-            th.message,
-            th,
-          )
+            .exceptionally { th -> logHandlerFailure(handlerName, th) }
+        } catch (e: Exception) {
+          logHandlerFailure(handlerName, e)
           SafeFuture.completedFuture(Unit)
         }
       }
     }.thenApply {}
+  }
+
+  private fun logHandlerFailure(handlerName: String, error: Throwable) {
+    log.error(
+      "Finalization handler={} failed. errorMessage={}",
+      handlerName,
+      error.message,
+      error,
+    )
   }
 
   private fun getFinalizationUpdate(

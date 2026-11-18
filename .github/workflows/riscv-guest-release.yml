@@ -52,6 +52,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
+        with:
+          needs-zkevm-fixtures: ${{ inputs.guest == 'l2-execution' }}
       - name: Verify Program ID staging
         run: zig test riscv-guests/build_common/program_id.zig
       - name: Test and compile selected guest

@@ -8,7 +8,11 @@
 # and read responses from the matching responses/ folders. The prover-ray config
 # (config/prover-ray/prover-ray-config.toml) points each pipeline at those paths.
 #
-# No prover-assets mount: the native runner and guest ELF are bundled in the image.
+# The native runner is bundled in the image. Guest ELFs are mounted read-only at
+# /opt/linea/prover-ray/guests, like the legacy prover-assets. Stage the bundled
+# one with
+#   prover-ray/scripts/stage-guest.sh <image> tmp/local/prover-ray/guests
+# and give the coordinator the Program ID it prints.
 # Logs go to stdout (container logs), so no /logs mount is needed.
 services:
   prover-ray:
@@ -23,6 +27,7 @@ services:
     volumes:
       - ../tmp/local/:/data/
       - ./config/prover-ray/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro
+      - ../tmp/local/prover-ray/guests:/opt/linea/prover-ray/guests:ro
     # No network entry: prover-ray only shares files via the /data bind mount and
     # logs to stdout, so nothing connects to it. Add `networks: [ linea ]` only if
     # your spec requires every service on that network.

@@ -67,6 +67,7 @@ download-zkc-testdata: download-zkc-mod
 docker-build:
 	$(DOCKER) build -f Dockerfile \
 		--build-context riscv-guests=$(REPO_ROOT)/riscv-guests \
+		--build-context licenses=$(REPO_ROOT) \
 		-t $(IMAGE_NAME):$(IMAGE_TAG) \
 		.
 

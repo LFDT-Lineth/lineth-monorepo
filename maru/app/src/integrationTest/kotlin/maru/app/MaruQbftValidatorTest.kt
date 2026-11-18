@@ -16,6 +16,7 @@ import maru.consensus.validation.SCEP256SealVerifier
 import maru.core.Validator
 import maru.crypto.PrivateKeyGenerator
 import maru.p2p.NoOpP2PNetwork
+import maru.p2p.testutils.NetworkUtil.findStablePorts
 import maru.test.cluster.MaruCluster
 import maru.test.cluster.NodeRole
 import maru.test.cluster.configureLoggers
@@ -39,6 +40,7 @@ import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
 import testutils.Checks.verifyBlockTimeWithAGapOn
 import testutils.SpyingP2PNetwork
+import kotlin.time.Duration.Companion.seconds
 
 class MaruQbftValidatorTest {
   private lateinit var cluster: MaruCluster
@@ -61,13 +63,22 @@ class MaruQbftValidatorTest {
 
     // Single validator without P2P peering: QBFT messages are captured by the spying network
     spyingP2pNetwork = SpyingP2PNetwork(NoOpP2PNetwork)
+    // `Maru works if Besu stops mid flight` restarts this Besu node on the same RPC ports (Besu writes the bound ports
+    // back into its configs), which Maru keeps using. They are picked outside the OS ephemeral range so that no other
+    // socket can take them while Besu is down.
+    val (besuJsonRpcPort, besuEngineRpcPort) = findStablePorts(2).map { it.toInt() }
     cluster = MaruCluster()
       .addNode(NodeRole.Sequencer, withBesuEl = true) { nodeBuilder ->
         nodeBuilder
           .withNodeKey(validatorKeyData.prefixedPrivateKey)
+          .besuRpcPorts(jsonRpcPort = besuJsonRpcPort, engineRpcPort = besuEngineRpcPort)
           .withP2pNetwork(spyingP2pNetwork)
           .withSyncingConfig(TestSyncingConfigs.validator)
-          .withFastQbft()
+          // roundExpiry >> blockTime: with the 1s default, a scheduling hiccup under test parallelism
+          // can fire the round timer just before an on-time block import cancels it, emitting a
+          // spurious RoundChange that `Maru is producing blocks ...` rightly rejects. 5s keeps the
+          // assertion meaningful without racing block production.
+          .withFastQbft(roundExpiry = 5.seconds)
           .maruConfig { it.copy(allowEmptyBlocks = false, p2p = null) }
       }.start()
   }

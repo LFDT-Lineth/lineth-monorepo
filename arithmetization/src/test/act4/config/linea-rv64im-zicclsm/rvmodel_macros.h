@@ -29,11 +29,9 @@
 #define RVMODEL_IO_INIT(_R1, _R2, _R3)
 
 // Print a NUL-terminated string by issuing the Linux RISC-V `write` syscall
-// (a7=64, a0=fd, a1=buf, a2=count). Our zkc interpreter (see
-// `process_syscall` in `instruction_processing/i_type.zkc`) recognises
-// syscall 64 and dumps the buffer as space-separated %x bytes on the
-// printf channel — zkc has no `%c` format specifier, so failure messages
-// surface as hex codes (decode with e.g. `printf '\\x%s' XX XX ...`).
+// (a7=64, a0=fd, a1=buf, a2=count). The zkc interpreter (`process_syscall` in
+// arithmetization/src/main/riscv/interpreter.zkc) routes fd 1 (STDOUT) to the
+// debug printf channel as plain text, one `%c` per byte, followed by a newline.
 //
 // Per the framework contract (cf. tests/env/sail_macros.h), _STR_PTR is a
 // register that already holds the pointer to the string. _R1/_R2/_R3 are

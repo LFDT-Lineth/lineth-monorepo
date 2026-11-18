@@ -170,7 +170,7 @@ func TestLagrangeEval_CellEvalPoint_Round(t *testing.T) {
 	assert.Equal(t, r1, le.Round())
 }
 
-// ---- LagrangeEval with PaddingDirectionLeft (covers evalLagrangePaddedBaseBase) ----
+// ---- LagrangeEval with PaddingDirectionLeft ----
 
 func TestLagrangeEval_PaddingLeft_SelfAssign_Check(t *testing.T) {
 	sys := wiop.NewSystemf("leLeft")
@@ -313,8 +313,9 @@ func TestEvalLagrangePaddedExtBase(t *testing.T) {
 	evalWithBaseZ(t, wiop.PaddingDirectionRight, true)
 }
 
-// TestEvalLagrangePaddedExtExt: extension data, left padding, extension z (coin).
-func TestEvalLagrangePaddedExtExt(t *testing.T) {
+// TestEvalLagrangeExtDataExtPoint: extension data, left padding, extension z
+// (a coin, evaluated by the shared-weights path).
+func TestEvalLagrangeExtDataExtPoint(t *testing.T) {
 	sys := wiop.NewSystemf("extExt")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()

@@ -238,16 +238,15 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 		predecBaseInput    = inputs[predecoding.InstructionBaseInput]
 		predecDecodedInput = inputs[predecoding.DecodedInput]
 		//
-		entryBytes              = entry.Bytes()
-		metadataBytes           = metadata.Bytes()
-		dataBytes               = data.Bytes()
-		predecBaseInputBytes    = predecBaseInput.Bytes()
-		predecDecodedInputBytes = predecDecodedInput.Bytes()
+		entryBytes           = entry.Bytes()
+		metadataBytes        = metadata.Bytes()
+		dataBytes            = data.Bytes()
+		predecBaseInputBytes = predecBaseInput.Bytes()
 	)
-	if len(entryBytes) != 12 || len(metadataBytes)%12 != 0 {
+	if len(entryBytes) != 8 || len(metadataBytes)%8 != 0 {
 		return fmt.Errorf("invalid encoded ELF input lengths")
 	}
-	metadataRecords := splitHexRecords(metadataBytes, 12, "_")
+	metadataRecords := splitHexRecords(metadataBytes, 8, "_")
 	dataRecords, err := splitBlobData(dataBytes, metadataBytes)
 	if err != nil {
 		return err
@@ -255,7 +254,7 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 	if _, err := fmt.Fprintln(output, "{"); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s_%s\",\n", elfmapping.EntryPointAndBlobsCountInput, hex.EncodeToString(entryBytes[:8]), hex.EncodeToString(entryBytes[8:])); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s_%s\",\n", elfmapping.EntryPointAndBlobsCountInput, hex.EncodeToString(entryBytes[:4]), hex.EncodeToString(entryBytes[4:])); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", elfmapping.BlobsOffsetAndSizeInput, strings.Join(metadataRecords, "____")); err != nil {
@@ -272,7 +271,7 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.InstructionBaseInput, hex.EncodeToString(predecBaseInputBytes)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", predecoding.DecodedInput, hex.EncodeToString(predecDecodedInputBytes)); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", predecoding.DecodedInput, predecDecodedInput.String()); err != nil {
 		return err
 	}
 	_, err = fmt.Fprintln(output, "}")
@@ -284,7 +283,7 @@ func splitHexRecords(data []byte, size int, fieldSeparator string) []string {
 	for len(data) != 0 {
 		record := data[:size]
 		if fieldSeparator == "_" {
-			records = append(records, hex.EncodeToString(record[:8])+"_"+hex.EncodeToString(record[8:]))
+			records = append(records, hex.EncodeToString(record[:4])+"_"+hex.EncodeToString(record[4:]))
 		} else {
 			records = append(records, hex.EncodeToString(record))
 		}
@@ -296,8 +295,8 @@ func splitHexRecords(data []byte, size int, fieldSeparator string) []string {
 func splitBlobData(data, metadata []byte) ([]string, error) {
 	var records []string
 	for len(metadata) != 0 {
-		size := uint64(binary.BigEndian.Uint32(metadata[8:12]))
-		metadata = metadata[12:]
+		size := uint64(binary.BigEndian.Uint32(metadata[4:8]))
+		metadata = metadata[8:]
 		if size > uint64(len(data)) {
 			return nil, fmt.Errorf("blob metadata exceeds encoded data")
 		}

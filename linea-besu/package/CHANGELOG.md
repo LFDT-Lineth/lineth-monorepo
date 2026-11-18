@@ -3,6 +3,10 @@
 ### 🐛 Bug Fixes
 
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [2.3.2] - 2026-10-26
 
 ### ⚙️ Miscellaneous Tasks

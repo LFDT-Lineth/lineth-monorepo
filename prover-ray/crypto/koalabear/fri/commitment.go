@@ -1,9 +1,11 @@
 package fri
 
 import (
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"math/bits"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/bufpool"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
@@ -11,20 +13,26 @@ import (
 // leafDomainTag domain-separates Merkle leaves so a table with the same row
 // values but a different (BaseWidth, ExtWidth) shape hashes to a different
 // digest. Without this, e.g. an all-zero base row and an all-zero ext row
-// collide, letting two structurally distinct commitments share a Merkle root
-// and get deduplicated inside inputOpeningRoots.
+// collide, letting two structurally distinct commitments share a Merkle root.
 const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 
 // absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
 // before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
 // ([hashRowOpening]) MUST call this identically or roots will not
 // reconstruct.
-func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
+//
+// The widths make a leaf's element stream decode in one way only: exactly
+// baseWidth base values, then extWidth blocks of 6 extension coordinates (see
+// [writeRowElements]). The header encodes the shape but not the order in which
+// the columns were declared; see writeRowElements for why that is not needed.
+func absorbLeafHeader(h leafHasher, baseWidth, extWidth int) {
 	var tag, b, e field.Element
 	tag.SetUint64(leafDomainTag)
 	b.SetUint64(uint64(baseWidth))
 	e.SetUint64(uint64(extWidth))
-	h.WriteElements(tag, b, e)
+	h.WriteElement(tag)
+	h.WriteElement(b)
+	h.WriteElement(e)
 }
 
 // CommitterState collects the data that are built during the commitment phase
@@ -39,6 +47,12 @@ type CommitterState struct {
 // Commit commits to a sorted list of tables. The table must satisfy the format
 // expected by [MultiSizeTable.checkWellFormedness] with a K of 1.
 func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
+	return CommitWithHash(MerkleHashKoalaBear, encoders, witness)
+}
+
+// CommitWithHash is [Commit] with the given Merkle hash. The verifier must use
+// a PCS whose [Params.MerkleHash] is the same.
+func CommitWithHash(hash MerkleHash, encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	k, err := witness.checkWellFormedness()
 	if err != nil {
@@ -50,7 +64,7 @@ func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 	}
 
 	encoded := witness.Encode(encoders)
-	tree := encoded.Merkleize()
+	tree := encoded.Merkleize(hash)
 
 	return CommitterState{
 		EncodedTable: encoded,
@@ -67,61 +81,85 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
-		// One contiguous slab per size, pre-sliced per column: per-column
-		// codeword allocations are large objects that contend on the page heap
-		// and the kernel fault path under 96-way parallelism (measured >90%
-		// system time on a cold one-shot wide commit).
+		// The codewords come from the field pools, to which
+		// [CommitterState.Release] returns them, so that commits reuse their
+		// memory. They hold stale values; the encoders overwrite every element.
 		N := int(encoders[i].Domain.Cardinality)
-		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
-		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
+		encoded[i].Base = pooledColumns(&field.BasePool, len(table[i].Base), N)
+		encoded[i].Ext = pooledColumns(&field.ExtPool, len(table[i].Ext), N)
 		encoded[i].Groups = table[i].Groups
 	}
 
-	// Each row's RS encode is an independent per-row FFT writing a disjoint
-	// output slice, so flatten (size, base/ext, row) into work items and encode
-	// them in parallel. gnark's FFT barely parallelizes at these row sizes, so
-	// the parallelism must be across rows; fft.WithNbTasks(1) keeps each FFT
-	// single-threaded so the outer parallelism isn't nested.
+	// Each row's RS encode is an independent FFT writing a disjoint output
+	// slice. Row costs span several orders of magnitude (sizes 2^0 .. 2^22,
+	// base or extension), so the rows are encoded largest first, each FFT
+	// getting a share of the CPUs proportional to its cost.
 	type encodeItem struct {
 		i, k int
 		ext  bool
 	}
-	var work []encodeItem
+	var (
+		work  []encodeItem
+		costs []int
+	)
 	for i := range table {
-		for k := range table[i].Base {
-			work = append(work, encodeItem{i: i, k: k})
-		}
+		N := int(encoders[i].Domain.Cardinality)
+		cost := N * max(1, bits.Len(uint(N)))
 		for k := range table[i].Ext {
 			work = append(work, encodeItem{i: i, k: k, ext: true})
+			costs = append(costs, 6*cost)
+		}
+		for k := range table[i].Base {
+			work = append(work, encodeItem{i: i, k: k})
+			costs = append(costs, cost)
 		}
 	}
-	encodeOpts := []fft.Option{fft.WithNbTasks(1)}
-	parallel.Execute(len(work), func(start, end int) {
-		for w := start; w < end; w++ {
-			it := work[w]
-			if it.ext {
-				encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
-			} else {
-				encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
-			}
+	parallel.ExecuteLargestFirst(costs, func(w, workers int) {
+		it := work[w]
+		encodeOpts := []fft.Option{fft.WithNbTasks(workers)}
+		if it.ext {
+			encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
+		} else {
+			encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
 		}
 	})
 
 	return encoded
 }
 
-// slabColumns allocates count columns of n elements as sub-slices of one
-// contiguous slab, each capped so a column cannot grow into its neighbor.
-func slabColumns[T any](count, n int) [][]T {
+// pooledColumns takes count columns of n elements from pool, in parallel:
+// columns allocated afresh are zeroed by the goroutine allocating them.
+func pooledColumns[T any](pool *bufpool.Pool[T], count, n int) [][]T {
 	columns := make([][]T, count)
-	if count == 0 {
-		return columns
-	}
-	slab := make([]T, count*n)
-	for k := range columns {
-		columns[k] = slab[k*n : (k+1)*n : (k+1)*n]
-	}
+	parallel.Execute(count, func(start, end int) {
+		for k := start; k < end; k++ {
+			columns[k] = pool.Get(n)
+		}
+	})
 	return columns
+}
+
+// Release returns the codewords and the Merkle tree nodes of st to the field
+// pools. st must not be used afterwards, and none of its slices may still be
+// referenced. An opening proof only holds copies of them: the functions that
+// read a committed state into a proof, [openEncodedRow] (rows, also for the
+// revealed input tables), [Tree.OpenBranchToDepth] (siblings), [Tree.OpenCap]
+// and [PCS.openInputCaps] (cap nodes), copy what they return. A change that
+// makes one of them return a sub-slice of the codewords or of Tree.Nodes
+// breaks pooling: the next proof would overwrite the earlier proof's data.
+func (st *CommitterState) Release() {
+	for _, sized := range st.EncodedTable {
+		for _, col := range sized.Base {
+			field.BasePool.Put(col)
+		}
+		for _, col := range sized.Ext {
+			field.ExtPool.Put(col)
+		}
+	}
+	if st.Tree != nil {
+		field.OctupletPool.Put(st.Tree.Nodes)
+	}
+	st.EncodedTable, st.Tree = nil, nil
 }
 
 // Merkleize merkleizes the table using Poseidon2. Every table but the bottom
@@ -139,7 +177,9 @@ func slabColumns[T any](count, n int) [][]T {
 // group's digest with the other groups' digests chained after it,
 // C(…C(h_1, h_2)…, h_m). The tree is then one level shorter, and the opening
 // proof keeps its shape.
-func (table MultiSizeTable) Merkleize() *Tree {
+//
+// The nodes are hashed with the given Merkle hash.
+func (table MultiSizeTable) Merkleize(hash MerkleHash) *Tree {
 
 	bottom := len(table) - 1
 	if table[bottom].NumRows() == 0 {
@@ -160,33 +200,39 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		}
 		numLeaves = size / 2
 	}
-	tree := allocTree(numLeaves)
+	tree := allocPooledTree(hash, numLeaves)
 	leaves := tree.Nodes[numLeaves-1:]
 	if pairLeaves {
-		hashPairLeaves(table[bottom].groupViews(), leaves)
+		hashPairLeaves(hash, table[bottom].groupViews(), leaves)
 	} else {
-		hashSizedLeaves(table[bottom], false, leaves)
+		hashSizedLeaves(hash, table[bottom], false, leaves)
 	}
 
 	// Every table but the bottom is digested as conjugate pairs, one tree
 	// depth shallower than its own size: a table of encoded height s yields,
 	// per group, s/2 auxiliary leaves attached at the level holding s/2 nodes.
+	// The tables of the other sizes are independent: they are digested
+	// concurrently, largest first, each over the CPUs as well, so that the
+	// many small ones do not each wait for a parallel pass of their own.
 	injections := make([][][]field.Octuplet, utils.Log2Ceil(numLeaves))
-	for i := range bottom {
-		if table[i].NumRows() == 0 {
-			continue
-		}
-		s := table[i].Size()
-		if s == 1 {
-			continue
-		}
-		level := utils.Log2Ceil(s / 2)
-		for _, group := range table[i].groupViews() {
-			digests := make([]field.Octuplet, s/2)
-			hashSizedLeaves(group, true, digests)
-			injections[level] = append(injections[level], digests)
+	var sizes []int
+	for i := bottom - 1; i >= 0; i-- {
+		if table[i].NumRows() != 0 && table[i].Size() > 1 {
+			sizes = append(sizes, i)
 		}
 	}
+	parallel.ExecuteDynamic(len(sizes), func(k int) {
+		i := sizes[k]
+		s := table[i].Size()
+		// Each size owns its own level, so only this task writes it.
+		groups := table[i].groupViews()
+		level := make([][]field.Octuplet, len(groups))
+		for g, group := range groups {
+			level[g] = make([]field.Octuplet, s/2)
+			hashSizedLeaves(hash, group, true, level[g])
+		}
+		injections[utils.Log2Ceil(s/2)] = level
+	})
 
 	tree.buildLevels(injections)
 	return tree
@@ -195,17 +241,17 @@ func (table MultiSizeTable) Merkleize() *Tree {
 // hashPairLeaves writes the pair-leaf digests of the bottom groups into leaves:
 // leaf j is the first group's digest of rows (2j, 2j+1), with the next groups'
 // digests chained after it.
-func hashPairLeaves(groups []SizedTable, leaves []field.Octuplet) {
-	hashSizedLeaves(groups[0], true, leaves)
+func hashPairLeaves(hash MerkleHash, groups []SizedTable, leaves []field.Octuplet) {
+	hashSizedLeaves(hash, groups[0], true, leaves)
 	if len(groups) == 1 {
 		return
 	}
 	digests := make([]field.Octuplet, len(leaves))
 	for _, group := range groups[1:] {
-		hashSizedLeaves(group, true, digests)
+		hashSizedLeaves(hash, group, true, digests)
 		parallel.Execute(len(leaves), func(start, end int) {
 			for j := start; j < end; j++ {
-				leaves[j] = poseidon2.Compress(leaves[j], digests[j])
+				leaves[j] = hash.compress(leaves[j], digests[j])
 			}
 		})
 	}
@@ -213,23 +259,34 @@ func hashPairLeaves(groups []SizedTable, leaves []field.Octuplet) {
 
 // chainDigests is the pair-leaf node of one position: the first digest with
 // the others chained after it, C(…C(d_1, d_2)…, d_m).
-func chainDigests(digests []field.Octuplet) field.Octuplet {
+func chainDigests(hash MerkleHash, digests []field.Octuplet) field.Octuplet {
 	res := digests[0]
 	for _, d := range digests[1:] {
-		res = poseidon2.Compress(res, d)
+		res = hash.compress(res, d)
 	}
 	return res
 }
 
 // writeRowElements absorbs one row into hasher without resetting or summing,
 // so a caller can digest several rows into one combined value.
-func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
+//
+// All base values come first, then the 6 coordinates of each extension value
+// (see [extLimbs]), whatever order the columns were declared in: the table
+// only has a Base and an Ext list (the wiop PCS compiler splits a round's
+// columns by kind, see its commitVectors). Rounds declared [a, E] and [E, a]
+// therefore hash identically. This is not an ambiguity a prover can use: the
+// verifier does not learn the column order from the digest, it derives every
+// column's slot from the compiled layout, which the proof cannot change. A
+// second reading of the same digest would need a second layout inside the same
+// verifier. The one place a verifier compares different tables against one
+// root, root dedup in inputOpeningRoots, is covered by the shape in the leaf
+// header (see [absorbLeafHeader]).
+func writeRowElements(hasher leafHasher, t SizedTable, row int) {
 	for k := range t.Base {
-		hasher.WriteElements(t.Base[k][row])
+		hasher.WriteElement(t.Base[k][row])
 	}
 	for k := range t.Ext {
-		limbs := extLimbs(t.Ext[k][row])
-		hasher.WriteElements(limbs[:]...)
+		hasher.WriteExt(t.Ext[k][row])
 	}
 }
 

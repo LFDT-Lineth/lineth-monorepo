@@ -133,3 +133,10 @@ notable still-open design questions, grouped by section:
 | §3. Cryptographic Compilation | Drafted |
 | §4. Proof Composition | Drafted |
 | §5. Precompiles | **Not started** |
+---
+
+## Other documents
+
+These are not part of the specification.
+
+- [`prover-modes.md`](prover-modes.md): the prover modes, what each one runs, and which are ready for each proof layer.

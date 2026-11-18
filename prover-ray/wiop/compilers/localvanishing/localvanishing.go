@@ -15,11 +15,11 @@
 //     [wiop.ColumnPosition] leaf.
 //  2. Determines the anchor row min = the smallest position seen across
 //     those leaves.
-//  3. Creates (or reuses, via a per-(module, anchor) cache) a
-//     [wiop.LagrangeSelector] L_min on the module: the public indicator that
-//     is 1 at row min and 0 elsewhere. Unlike a committed column, the selector
-//     carries no assignment — it is evaluated from the module's runtime size,
-//     so the lift works for dynamic-size modules as well as static ones.
+//  3. Creates a [wiop.LagrangeSelector] L_min on the module: the public
+//     indicator that is 1 at row min and 0 elsewhere. Unlike a committed
+//     column, the selector carries no assignment — it is evaluated from the
+//     module's runtime size, so the lift works for dynamic-size modules as
+//     well as static ones. Equal selectors are merged on registration.
 //  4. Rewrites the expression: every [wiop.ColumnPosition]{c, p} leaf
 //     becomes c.View().Shift(p − min). Evaluating the rewritten expression
 //     at row x of the domain reads column c at row (x + p − min) mod n;
@@ -29,6 +29,10 @@
 //     by the global-quotient compiler, which evaluates the selector
 //     analytically on the quotient coset and at the verifier's point.
 //  6. Marks the original scalar vanishing as reduced.
+//
+// The rewrite visits each distinct node once (see [wiop.EditExpression]), so
+// it is linear and its output is a DAG. Registering the result interns it
+// against the module's other vanishings (see [wiop.Module.NewVanishingManual]).
 //
 // At row min the product evaluates to the original local predicate; at
 // every other row the Lagrange factor is zero. The new vanishing therefore
@@ -56,14 +60,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
-
-// lagrangeKey identifies a Lagrange column by (module, anchor row). Cached
-// across a single Compile call so identical anchors share one precomputed
-// column.
-type lagrangeKey struct {
-	modIdx int
-	anchor int
-}
 
 // Compile reduces every unreduced scalar [wiop.Vanishing] across all modules
 // of sys to an equivalent multi-valued vanishing via the Lagrange trick. See
@@ -93,44 +89,24 @@ func Compile(sys *wiop.System) {
 	}
 
 	compCtx := sys.Context.Childf("local-vanishing")
-	selectors := make(map[lagrangeKey]*wiop.LagrangeSelector)
-
 	for _, w := range work {
-		ctx := compCtx.Childf("m%d-v%d", w.mIdx, w.vIdx)
-		reduce(ctx, w.m, w.mIdx, w.v, selectors)
+		reduce(compCtx.Childf("m%d-v%d", w.mIdx, w.vIdx), w.m, w.v)
 	}
 }
 
 // reduce performs the Lagrange × shifted-expression rewrite for a single
 // scalar vanishing.
-func reduce(
-	ctx *wiop.ContextFrame,
-	m *wiop.Module,
-	mIdx int,
-	v *wiop.Vanishing,
-	cache map[lagrangeKey]*wiop.LagrangeSelector,
-) {
-	positions := collectColumnPositions(v.Expression)
-	if len(positions) == 0 {
+func reduce(ctx *wiop.ContextFrame, m *wiop.Module, v *wiop.Vanishing) {
+	anchor, ok := minColumnPosition(v.Expression)
+	if !ok {
 		panic(fmt.Sprintf(
 			"wiop/compilers/localvanishing: %s: scalar vanishing has no column references; nothing to lift",
 			v.Context().Path(),
 		))
 	}
 
-	anchor := positions[0]
-	for _, p := range positions {
-		if p < anchor {
-			anchor = p
-		}
-	}
-
-	key := lagrangeKey{mIdx, anchor}
-	lagSel, ok := cache[key]
-	if !ok {
-		lagSel = wiop.NewLagrangeSelector(m, anchor)
-		cache[key] = lagSel
-	}
+	// Equal selectors are merged when the lifted vanishing is registered.
+	lagSel := wiop.NewLagrangeSelector(m, anchor)
 
 	shifted := wiop.EditExpression(v.Expression, func(
 		curr wiop.Expression, newChildren []wiop.Expression,
@@ -157,17 +133,28 @@ func reduce(
 	v.MarkAsReduced()
 }
 
-// collectColumnPositions returns every position appearing in a ColumnPosition
-// leaf of expr. *Cell and *CoinField leaves are allowed and pass through
-// unchanged into the lifted expression: the global compiler broadcasts them
-// (base or extension) as constants across the coset.
-func collectColumnPositions(expr wiop.Expression) []int {
-	var positions []int
+// minColumnPosition returns the smallest position appearing in a
+// ColumnPosition leaf of expr, and false when there is none. *Cell and
+// *CoinField leaves are allowed and pass through unchanged into the lifted
+// expression: the global compiler broadcasts them (base or extension) as
+// constants across the coset. Shared nodes are visited once.
+func minColumnPosition(expr wiop.Expression) (int, bool) {
+	var (
+		anchor  int
+		found   bool
+		visited = make(map[wiop.Expression]struct{})
+	)
 	var walk func(e wiop.Expression)
 	walk = func(e wiop.Expression) {
+		if _, ok := visited[e]; ok {
+			return
+		}
+		visited[e] = struct{}{}
 		switch t := e.(type) {
 		case *wiop.ColumnPosition:
-			positions = append(positions, t.Position)
+			if !found || t.Position < anchor {
+				anchor, found = t.Position, true
+			}
 		case *wiop.ArithmeticOperation:
 			for _, op := range t.Operands {
 				walk(op)
@@ -176,5 +163,5 @@ func collectColumnPositions(expr wiop.Expression) []int {
 		}
 	}
 	walk(expr)
-	return positions
+	return anchor, found
 }

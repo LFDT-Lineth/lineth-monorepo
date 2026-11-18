@@ -3,13 +3,13 @@ include "../../common/constants.zkc"
 
 fn write_8<ram>(address:Address, value:u8) -> () {
     var boffset:u2
-    var woffset:u62
+    var woffset:u30
     var tmp0:u8, tmp1:u8, tmp2:u8, tmp3:u8
     var word:u32
     //
     woffset::boffset = address
     // Read four bytes
-    tmp3::tmp2::tmp1::tmp0 = ram[woffset as u64]
+    tmp3::tmp2::tmp1::tmp0 = ram[woffset as Address]
     //
     switch boffset {
         case 0: {
@@ -26,24 +26,24 @@ fn write_8<ram>(address:Address, value:u8) -> () {
         }
     }
     //
-    ram[woffset as u64] = word
+    ram[woffset as Address] = word
 }
 
 fn write_16<ram>(address:Address, value:u16) -> () {
     var boffset:u2
-    var woffset:u62
+    var woffset:u30
     var hi:u16, lo:u16
     //
     woffset::boffset = address
     //
     switch boffset {
         case 0: {
-            hi::lo = ram[woffset as u64]
-            ram[woffset as u64] = hi::value
+            hi::lo = ram[woffset as Address]
+            ram[woffset as Address] = hi::value
         }
         case 2: {
-            hi::lo = ram[woffset as u64]
-            ram[woffset as u64] = value::lo
+            hi::lo = ram[woffset as Address]
+            ram[woffset as Address] = value::lo
         }
         default: {
             // Case 1, 3 and default case are collapse to reduce the number of instructions. 
@@ -59,12 +59,12 @@ fn write_16<ram>(address:Address, value:u16) -> () {
 
 fn write_32<ram>(address:Address, value:u32) -> () {
     var boffset:u2
-    var woffset:u62
+    var woffset:u30
     //
     woffset::boffset = address
     // check for aligned write
     if boffset == 0 {
-        ram[woffset as u64] = value
+        ram[woffset as Address] = value
         return
     }
     // unaligned case
@@ -78,7 +78,7 @@ fn write_32<ram>(address:Address, value:u32) -> () {
 
 fn write_64<ram>(address:Address, value:u64) -> () {
     var boffset:u2
-    var woffset:u62
+    var woffset:u30
     var lo:u32, hi:u32
     // decompose value
     hi::lo = value
@@ -86,8 +86,8 @@ fn write_64<ram>(address:Address, value:u64) -> () {
     woffset::boffset = address
     // check for aligned write
     if boffset == 0 {
-        ram[woffset as u64] = lo
-        ram[(woffset + 1) as u64] = hi
+        ram[woffset as Address] = lo
+        ram[(woffset + 1) as Address] = hi
         return
     }
     // unaligned case

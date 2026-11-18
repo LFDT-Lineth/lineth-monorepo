@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -152,9 +153,9 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	var tree layerTree
 	if st.running == nil {
-		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1)}
+		tree = zeroLayerTree{height: int(st.p.LogCodewordSize - j - 1), hash: st.p.MerkleHash}
 	} else {
-		tree = buildTreeExt(st.running)
+		tree = buildTreeExt(st.p.MerkleHash, st.running)
 	}
 	st.trees[j+1] = tree
 	root := tree.Root()
@@ -181,10 +182,12 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		}
 	}
 
-	for k := range st.p.NumQueries {
-		s := openedPositions[k]
-		st.RunningQueries[k] = st.openRunningQueryExt(s, capDepths)
-	}
+	// Queries only read the committed layers, so they are opened concurrently.
+	parallel.Execute(int(st.p.NumQueries), func(start, end int) {
+		for k := start; k < end; k++ {
+			st.RunningQueries[k] = st.openRunningQueryExt(openedPositions[k], capDepths)
+		}
+	})
 
 	return st.Proof
 }

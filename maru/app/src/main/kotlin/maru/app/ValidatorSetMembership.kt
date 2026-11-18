@@ -43,7 +43,8 @@ internal object ValidatorSetMembership {
         }
       throw IllegalArgumentException(
         "$signerDescription address ${validator.address.encodeHex()} " +
-          "is not present in any configured validator set",
+          "is not present in any configured validator set " +
+          "(validators=${validatorsFromAllForks.map { it.address.encodeHex() }})",
       )
     }
   }

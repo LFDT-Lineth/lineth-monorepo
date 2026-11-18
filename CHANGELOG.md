@@ -45,6 +45,11 @@
 - *(coordinator)* RISC-V rollup proof coordinator — chunk assembly + proof submission (#3967)
 - *(coordinator)* Added BlobSubmitterV2 interface and implementation (#3673)
 - *(coordinator)* Generic AggregationsDaoG and AggregationV2 for RISC-V aggregation proofs (#4174)
+- *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
+- *(maru)* Add support of self-calculating terminal total difficulty (#4295)
+- *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+- *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
+- *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
 
 ### 🐛 Bug Fixes
 
@@ -106,6 +111,10 @@
 - *(prover)* Handle zero modulus in MODEXP (#4307)
 - *(misc, riscv-guest, prover, coordinator)* Changing the spec to allow zero rolling hash and message number for the L2 Message Service (#4314)
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)
+- *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
+- *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+- *(postman)* Optimize docker image (#4424)
+- *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
 
 ### 🚜 Refactor
 
@@ -210,3 +219,6 @@
 - *(misc)* Update copyright holder to Consensys Incorporated (#4244)
 - *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
 - *(deps)* Refresh dependencies (#4323)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
+- *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
+- *(deps)* Bump Node.js to 24.22.3 (#4457)
