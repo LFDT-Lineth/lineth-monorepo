@@ -35,16 +35,15 @@ type benchCase struct {
 	maxShards uint
 }
 
-// benchPlan is the benchmark plan, smallest block first. The shard counts are
-// at 500000 instructions per shard. 17M is too big to run in full: its first
-// shards give the memory before the first shard and the time per shard.
+// benchPlan is the benchmark plan, smallest block first, every block in full.
+// The shard counts are at 500000 instructions per shard.
 var benchPlan = []benchCase{
 	{"stateless_input.ssz", 0},            // 4 shards
 	{"block_amsterdam_175k.ssz", 0},       // 57 shards
 	{"block_amsterdam_786k.ssz", 0},       // 96 shards
 	{"block_amsterdam_51584_500k.ssz", 0}, // 113 shards
 	{"block_amsterdam_52861_2M.ssz", 0},   // 272 shards
-	{"block_amsterdam_52866_17M.ssz", 5},  // not counted, maybe 1000 or more
+	{"block_amsterdam_52866_17M.ssz", 0},  // not counted, maybe 1000 or more
 }
 
 // The environment of a block process, set by [TestDevPartial_Benchmark].
