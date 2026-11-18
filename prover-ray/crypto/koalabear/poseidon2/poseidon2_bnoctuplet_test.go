@@ -8,6 +8,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/test"
@@ -153,4 +154,29 @@ func TestBNCompressOctupletConstraints(t *testing.T) {
 	}
 	emu, bn := marginal(true), marginal(false)
 	t.Logf("node compress (marginal per node): emulated=%d  bn-octuplet=%d  (%.1fx)", emu, bn, float64(emu)/float64(bn))
+}
+
+type bnDigestSplitCircuit struct {
+	D frontend.Variable
+}
+
+func (c *bnDigestSplitCircuit) Define(api frontend.API) error {
+	BNDigestToOctupletGnark(api, c.D)
+	return nil
+}
+
+// TestBNDigestToOctupletRejectsNonCanonical checks that the circuit rejects
+// the split of d + r, which also fits in 254 bits for small d and would give
+// another octuplet than the native encoding of d.
+func TestBNDigestToOctupletRejectsNonCanonical(t *testing.T) {
+	w := &bnDigestSplitCircuit{D: 5}
+	require.NoError(t, test.IsSolved(&bnDigestSplitCircuit{}, w, ecc.BN254.ScalarField()))
+
+	// Replace the hint with one that splits d + r instead of d.
+	plusR := func(m *big.Int, in, out []*big.Int) error {
+		return bnDigestSplitHint(m, []*big.Int{new(big.Int).Add(in[0], fr.Modulus())}, out)
+	}
+	err := test.IsSolved(&bnDigestSplitCircuit{}, w, ecc.BN254.ScalarField(),
+		test.WithReplacementHint(solver.GetHintID(bnDigestSplitHint), plusR))
+	require.ErrorContains(t, err, "rangecheck")
 }

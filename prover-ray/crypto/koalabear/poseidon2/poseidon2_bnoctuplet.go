@@ -114,11 +114,10 @@ func bnDigestSplitHint(_ *big.Int, in, out []*big.Int) error {
 
 // BNDigestToOctupletGnark mirrors [BNDigestToOctuplet]. The limbs are
 // range-checked to 30 bits and the high part to 14 bits, and d is recomposed
-// from them. The integer recomposition is below 2^254, which exceeds the
-// BN254 modulus r, so d and d + r may both decompose when d + r < 2^254; the
-// prover can then pick between two octuplets. This does not weaken binding:
-// any octuplet it outputs is a function of d, and reaching a committed root
-// from a different one needs a Poseidon2 collision.
+// from them. The integer recomposition can reach 2^254, which exceeds the
+// BN254 modulus r, so both d and d + r would decompose when d + r < 2^254.
+// The decomposition is therefore also checked to be below r, which makes it
+// the unique one and keeps the circuit in agreement with the native encoding.
 func BNDigestToOctupletGnark(api frontend.API, d frontend.Variable) circuit.Octuplet {
 	out, err := api.Compiler().NewHint(bnDigestSplitHint, bnDigestNbLimbs+1, d)
 	if err != nil {
@@ -126,17 +125,50 @@ func BNDigestToOctupletGnark(api frontend.API, d frontend.Variable) circuit.Octu
 	}
 	rc := rangecheck.New(api)
 	var (
-		acc = out[bnDigestNbLimbs]
-		o   circuit.Octuplet
+		high                   = out[bnDigestNbLimbs]
+		low  frontend.Variable = 0
+		o    circuit.Octuplet
 	)
-	rc.Check(out[bnDigestNbLimbs], bnDigestHighBits)
+	rc.Check(high, bnDigestHighBits)
 	for i := range bnDigestNbLimbs {
 		rc.Check(out[i], bnDigestLimbBits)
-		acc = api.Add(api.Mul(acc, 1<<bnDigestLimbBits), out[i])
+		low = api.Add(api.Mul(low, 1<<bnDigestLimbBits), out[i])
 		o[i] = circuit.WrapFrontendVariable(out[i])
 	}
-	api.AssertIsEqual(acc, d)
+	// high*2^240 + low = d (mod r).
+	api.AssertIsEqual(api.Add(api.Mul(high, bnTwoPowOctupletCapacity), low), d)
+	// high*2^240 + low < r as integers, so the split is the one of d, not of
+	// d + r.
+	assertBelowModulus(api, rc, high, low)
 	return o
+}
+
+// bnTwoPowOctupletCapacity is 2^240, the number of values an octuplet digest
+// encoding can hold (8 limbs of 30 bits).
+var bnTwoPowOctupletCapacity = new(big.Int).Lsh(big.NewInt(1), bnDigestLimbBits*bnDigestNbLimbs)
+
+// assertBelowModulus asserts high*2^240 + low < r, where high < 2^14 and
+// low < 2^240 are already range-checked. With r = rHigh*2^240 + rLow, this
+// holds iff high < rHigh, or high = rHigh and low < rLow.
+func assertBelowModulus(api frontend.API, rc frontend.Rangechecker, high, low frontend.Variable) {
+	r := fr.Modulus()
+	// rHigh = r >> 240, the top 14 bits of r, split as high is.
+	rHigh := new(big.Int).Rsh(r, bnDigestLimbBits*bnDigestNbLimbs)
+	// rLow = r - rHigh*2^240 = r mod 2^240, the low 240 bits of r, split as
+	// low is.
+	rLow := new(big.Int).Sub(r, new(big.Int).Mul(rHigh, bnTwoPowOctupletCapacity))
+
+	// high <= rHigh: rHigh - high wraps around r when high > rHigh.
+	diffHigh := api.Sub(rHigh, high)
+	rc.Check(diffHigh, bnDigestHighBits)
+
+	// diffLow = rLow - 1 - low (mod r) is < 2^240 iff low < rLow: for
+	// low >= rLow it wraps around r to a value >= r - 2^240 > 2^240.
+	diffLow := api.Sub(new(big.Int).Sub(rLow, big.NewInt(1)), low)
+	// low < rLow is only needed when high = rHigh; when high < rHigh any low
+	// is fine. The range check therefore runs on diffLow if high = rHigh, and
+	// on the constant 0 otherwise, which always passes.
+	rc.Check(api.Select(api.IsZero(diffHigh), diffLow, 0), bnDigestLimbBits*bnDigestNbLimbs)
 }
 
 // BNPackOctupletGnark mirrors [BNPackOctuplet] for any octuplet. Each limb is
