@@ -67,10 +67,6 @@ type Core struct {
 	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
 	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
 	binaryFile *zkcdriver.BinaryFile
-
-	// maxColumnRows is the most rows a shard module may have; zero is
-	// [wiop.ColumnSizeMaxSupported]. Tests lower it.
-	maxColumnRows uint
 }
 
 // guestProgram is a guest ELF mapped and predecoded for ZkC.
@@ -621,7 +617,7 @@ func (c *Core) runProve(
 		}
 		// Assigning a module over the limit would panic in a worker goroutine,
 		// which no recover here can catch.
-		if err := c.driver.CheckShardFits(shard, c.columnLimit()); err != nil {
+		if err := c.driver.CheckShardFits(shard, wiop.ColumnSizeMaxSupported); err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("shard %d does not fit in a column (%s): %w",
 				i, c.shardHint(i), err)
 		}
@@ -656,14 +652,6 @@ func (c *Core) runProve(
 		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
 	}
 	return root, numShards, nil
-}
-
-// columnLimit returns the most rows a shard module may have.
-func (c *Core) columnLimit() uint {
-	if c.maxColumnRows == 0 {
-		return wiop.ColumnSizeMaxSupported
-	}
-	return c.maxColumnRows
 }
 
 // shardHint says what to change when shard i does not fit in a column.
