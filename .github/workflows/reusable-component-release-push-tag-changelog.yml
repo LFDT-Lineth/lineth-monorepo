@@ -57,7 +57,7 @@ jobs:
   release-component:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     # upload_changelog never creates the release bot token, so it needs no environment.
-    environment: ${{ !inputs.create_pull_request && !inputs.upload_changelog && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval') || '' }}
+    environment: ${{ !inputs.create_pull_request && !inputs.upload_changelog && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot') || '' }}
     permissions:
       contents: write
       pull-requests: write
