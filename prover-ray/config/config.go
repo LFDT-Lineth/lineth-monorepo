@@ -45,9 +45,8 @@ type Execution struct {
 	ShardSize uint64 `mapstructure:"shard_size"`
 	// ShardWorkers is the number of shards traced and proved at the same time;
 	// zero or one is one at a time. Each shard in progress needs about 30 to
-	// 35 GiB for a real block, on top of the trace checkpoints: measured in
-	// dev-partial on the test blocks, with 500000 instructions per shard (see
-	// docs/prover-modes.md). It needs shard_size, and dev-mock and dev-zkvm
+	// 35 GiB, on top of the trace checkpoints, measured on the blocks listed in
+	// docs/prover-modes.md. It needs shard_size, and dev-mock and dev-zkvm
 	// ignore it.
 	ShardWorkers int `mapstructure:"shard_workers"`
 }

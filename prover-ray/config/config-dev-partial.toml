@@ -11,7 +11,7 @@ guests_dir = "/opt/linea/prover-ray/guests"
 prover_mode = "dev-partial"
 requests_root_dir = "/opt/linea/prover-ray/requests"
 shard_size = 500000
-# Shards traced and checked at the same time. Each needs about 30 to 35 GiB
-# for a real block, on top of the trace checkpoints: measured on the test
-# blocks with 500000 instructions per shard (see docs/prover-modes.md).
+# Shards traced and checked at the same time. Each needs about 30 to 35 GiB,
+# on top of the trace checkpoints, measured on the blocks listed in
+# docs/prover-modes.md.
 shard_workers = 1
