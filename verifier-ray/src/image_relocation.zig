@@ -27,6 +27,9 @@ pub const Error = error{
     MisalignedImage,
 };
 
+/// Where the ZkC guest's input region starts: the address proof images are encoded for.
+pub const guest_base: usize = 0x08800000;
+
 /// Returns an encoded absolute pointer's byte offset within its image.
 pub fn imageOffset(encoded_pointer: u64, encoded_base: usize) Error!usize {
     if (encoded_pointer < encoded_base) return error.PointerBeforeImage;

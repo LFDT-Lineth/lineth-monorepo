@@ -1,9 +1,12 @@
-//! Tests for the shared l2-execution proof codec: the output frame, round-trips of each type and
-//! the encoder's bounds. The SSZ rules themselves are tested once in `ssz_test.zig`.
+//! Tests for the shared l2-execution proof codec: the reference output bytes, the output frame,
+//! round-trips of each type and the encoder's bounds. The SSZ rules themselves are tested once in
+//! `ssz_test.zig`.
 
 const std = @import("std");
 
 const l2_execution_proof = @import("core_serde").l2_execution_proof;
+
+const reference_output = @embedFile("l2_execution_output.ssz");
 
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
@@ -36,6 +39,28 @@ fn samplePublicInputs() l2_execution_proof.L2ExecutionProofPublicInput {
         .tx_froms_hash = repeat32(0x07),
         .block_count = 3,
         .l2_messaging_blocks_offsets = .{ .items = &sample_offsets },
+    };
+}
+
+/// The public inputs of the spec's reference l2-execution response, one filler value per field.
+fn referencePublicInputs() l2_execution_proof.L2ExecutionProofPublicInput {
+    return .{
+        .parent_block_hash = repeat32(0x0a),
+        .end_block_hash = repeat32(0x0b),
+        .end_block_number = 1000503,
+        .end_block_timestamp = 1763000123,
+        .l2_l1_messages = .{ .items = &sample_messages },
+        .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
+        .end_l1_l2_bridge_rolling_hash_message_number = 5,
+        .dynamic_chain_config_hash = repeat32(0xc0),
+        .parent_ftx_rolling_hash = repeat32(0x04),
+        .parent_ftx_number = 15,
+        .end_ftx_rolling_hash = repeat32(0x05),
+        .end_processed_ftx_number = 18,
+        .filtered_addresses = .{ .items = &sample_filtered },
+        .tx_froms_hash = repeat32(0x07),
+        .block_count = 3,
+        .l2_messaging_blocks_offsets = .{ .items = &.{} },
     };
 }
 
@@ -101,6 +126,23 @@ test "output is the commitment to its frame followed by the frame: the l2-execut
     var frame_hash: [32]u8 = undefined;
     std.crypto.hash.sha3.Keccak256.hash(out[32..], &frame_hash, .{});
     try std.testing.expectEqualSlices(u8, &frame_hash, out[0..32]);
+}
+
+test "the output for the reference public inputs is the reference bytes" {
+    const alloc = std.testing.allocator;
+    const out = try l2_execution_proof.encodeOutput(alloc, referencePublicInputs());
+    defer alloc.free(out);
+    try std.testing.expectEqualSlices(u8, reference_output, out);
+}
+
+test "the reference output decodes to the reference public inputs" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const frame = reference_output[32..];
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, frame[0..2]);
+    const decoded = try l2_execution_proof.decodePublicInputs(arena.allocator(), frame[2..]);
+    try expectPublicInputsEqual(referencePublicInputs(), decoded);
 }
 
 test "hashPublicInputs is the commitment at the head of the output" {
