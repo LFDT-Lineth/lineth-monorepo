@@ -20,8 +20,8 @@ pub const MAX_STATELESS_INPUT_BYTES: usize = 1 << 30;
 pub const MAX_TX_BYTES: usize = 1 << 30;
 
 /// System-contract addresses handed to the execution engine (field order = wire order, and matches
-/// zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis config. Not
-/// part of the `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier.
+/// zesu's `input.SystemContracts`). Supplied by the coordinator from the node's genesis config.
+/// See Readme.md §2.1 for which are hashed into `dynamicChainConfigHash`.
 pub const SystemContracts = struct {
     beacon_roots: [20]u8,
     history_storage: [20]u8,

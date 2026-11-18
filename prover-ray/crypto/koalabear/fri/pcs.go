@@ -113,7 +113,8 @@
 //   - (iii) empty shift list is an error (every committed row is
 //     opened at least once).
 //   - (iv)  duplicate shifts inside a row's shift list is an error.
-//   - (v)   no cross-batch dedup; caller is responsible.
+//   - (v)   every batch gets its own input tree, even when roots coincide;
+//     batches are never merged.
 //   - (vi)  caller picks batch order. Convention: setup batches at
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
@@ -255,27 +256,6 @@ func (shape Shape) grouped() bool {
 // groups returns the groups of this size (one group of every row by default).
 func (s SizedShape) groups() []GroupShape {
 	return sizeGroups(s.BaseWidth, s.ExtWidth, s.Groups)
-}
-
-// sameGrouping reports whether two shapes split every size into the same
-// groups. Batches that share a commitment must agree on it, since the grouping
-// fixes how that commitment's rows were hashed.
-func sameGrouping(a, b Shape) bool {
-	if len(a) != len(b) || a.grouped() != b.grouped() {
-		return false
-	}
-	for i := range a {
-		ga, gb := a[i].groups(), b[i].groups()
-		if len(ga) != len(gb) {
-			return false
-		}
-		for j := range ga {
-			if ga[j] != gb[j] {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // BatchShifts describes which rotation shifts each row of each
@@ -586,8 +566,9 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 type OpeningProof struct {
 	// InputQueries[k] contains one row-carrying opening per input tree for query k.
 	InputQueries []InputQuery
-	// InputCaps contains one authenticated cap per distinct input tree, in the
-	// same canonical order as the tree openings inside InputQueries.
+	// InputCaps contains one authenticated cap per input tree (one per opened
+	// batch), in the same canonical order as the tree openings inside
+	// InputQueries.
 	InputCaps []InputCap
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
@@ -1329,18 +1310,15 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 		return nil, err
 	}
 	// Sizes in decreasing order (canonicalLayout's order), batches in order
-	// within a size: the commitments in order of first appearance.
-	seen := make(map[field.Octuplet]bool)
+	// within a size: one input tree per batch, in order of first appearance.
+	// Batches are never merged, even when their roots coincide.
+	seen := make(map[int]bool)
 	var inputs []CommitterState
 	for _, bundle := range openingsLayout {
-		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
-			continue
-		}
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
-			root := committed.Tree.Root()
-			if !seen[root] {
-				seen[root] = true
+			if !seen[entry.BatchIdx] {
+				seen[entry.BatchIdx] = true
 				inputs = append(inputs, committed)
 			}
 		}
@@ -1708,7 +1686,7 @@ type VerifyInputs struct {
 //
 //  1. Shape validation for Roots/Shapes/Shifts and claimed values.
 //  2. Canonical-layout build from Shapes + Shifts.
-//  3. Per query: authenticate each deduped input opening once, bind top and
+//  3. Per query: authenticate each batch's input opening once, bind top and
 //     auxiliary rows from those branches, authenticate each running FRI layer
 //     against its committed root, and resolve all fold values.
 //  4. checkFolds: pure fold-recurrence arithmetic over the resolved values.
@@ -1752,14 +1730,12 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	inputShapes := make([]Shape, len(inputRoots))
 	for batchIdx, treeIdx := range inputIndexByBatch {
-		if treeIdx < 0 {
-			continue
-		}
-		if inputShapes[treeIdx] == nil {
+		// The PCS allows empty batches, e.g. a batch whose columns were all
+		// elided upstream. Such a batch has no layout entries, hence no input
+		// tree, and treeIdx is -1: skip it. Otherwise each tree belongs to
+		// exactly one batch.
+		if treeIdx >= 0 {
 			inputShapes[treeIdx] = in.Shapes[batchIdx]
-		} else if !sameGrouping(inputShapes[treeIdx], in.Shapes[batchIdx]) {
-			return fmt.Errorf("fri: pcs.Verify: batch %d shares input tree %d but groups its rows differently",
-				batchIdx, treeIdx)
 		}
 	}
 	inputFrontiers := make([][]field.Octuplet, len(inputRoots))
@@ -2026,23 +2002,20 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
+// inputOpeningRoots assigns every opened batch its own input tree, in order of
+// first appearance in the layout. Batches are never merged by root value.
 func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
-	indexByRoot := make(map[field.Octuplet]int)
-	inputRoots := make(QueryLayerRoots, 0)
+	inputRoots := make(QueryLayerRoots, 0, len(roots))
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
-			root := roots[batchIdx]
-			if idx, ok := indexByRoot[root]; ok {
-				indexByBatch[batchIdx] = idx
-				continue
+			if indexByBatch[batchIdx] < 0 {
+				indexByBatch[batchIdx] = len(inputRoots)
+				inputRoots = append(inputRoots, roots[batchIdx])
 			}
-			indexByBatch[batchIdx] = len(inputRoots)
-			indexByRoot[root] = len(inputRoots)
-			inputRoots = append(inputRoots, root)
 		}
 	}
 	return inputRoots, indexByBatch

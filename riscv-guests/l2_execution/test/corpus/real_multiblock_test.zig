@@ -103,8 +103,8 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
     try testing.expectEqualSlices(u8, &expected_tx_froms_hash, &output.public_inputs.tx_froms_hash);
 
     // dynamic_chain_config_hash: a deterministic Linea-layer formula over known values (chain_id,
-    // coinbase, l2MessageServiceAddress, base fee) — independently recomputed, not trusted from
-    // the pipeline under test.
+    // base fee, coinbase, l2MessageServiceAddress and the hashed system contracts) — independently
+    // recomputed, not trusted from the pipeline under test.
     const chain_config = l2_execution_ssz.ChainConfig{
         .l2_message_service_address = decoded_input.chain_config.l2_message_service_address,
         .coinbase = decoded_input.chain_config.coinbase,

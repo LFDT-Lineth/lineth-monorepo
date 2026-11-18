@@ -73,13 +73,13 @@ func blockPath(name string) string {
 	return filepath.Join(guestTestdata, name)
 }
 
-// realGuestCore builds a dev-partial Core for the real l2-execution guest, with
-// the settings of the environment variables of [TestDevPartial_Integration], and
-// returns the guest's Program ID and the block files to run.
-func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
+// realGuest skips the test unless REAL_GUEST_TESTS is set, and writes the real
+// l2-execution guest ELF, or the one GUEST_ELF names, to a guests folder. It
+// returns the folder and the guest's Program ID.
+func realGuest(t *testing.T) (string, [32]byte) {
 	t.Helper()
 	if os.Getenv("REAL_GUEST_TESTS") == "" {
-		t.Skip("set REAL_GUEST_TESTS=1 to run the real guest tests (heavy: traces real blocks)")
+		t.Skip("set REAL_GUEST_TESTS=1 to run the real guest tests (heavy: runs real blocks)")
 	}
 	elfPath := os.Getenv("GUEST_ELF")
 	if elfPath == "" {
@@ -88,7 +88,16 @@ func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
 	elf, err := os.ReadFile(elfPath) //nolint:gosec // G703: test-controlled path
 	require.NoError(t, err, "reading guest ELF")
 	dir := t.TempDir()
-	id := writeGuest(t, dir, elf)
+	return dir, writeGuest(t, dir, elf)
+}
+
+// realGuestCore builds a dev-partial Core for the real l2-execution guest, with
+// the settings of the environment variables of [TestDevPartial_Integration], and
+// returns the guest's Program ID and the block files to run.
+func realGuestCore(t *testing.T) (*Core, [32]byte, []string) {
+	t.Helper()
+	dir, id := realGuest(t)
+	var err error
 	// A real block does not fit in one shard: some module has more rows than
 	// a column can hold.
 	shardSize := uint64(500000)

@@ -68,6 +68,8 @@ pub const linea_errors = error{
     BlobTransactionsNotSupported,
     WithdrawalsNotSupported,
     UnsupportedFork,
+    BeaconRootsAddressNotMainnet,
+    HistoryStorageAddressNotMainnet,
 
     ForcedTxOutOfOrder,
     ForcedTxDeadlineExceeded,
@@ -111,6 +113,8 @@ pub fn exitCode(err: anyerror) ExitCode {
         error.BlobTransactionsNotSupported,
         error.WithdrawalsNotSupported,
         error.UnsupportedFork,
+        error.BeaconRootsAddressNotMainnet,
+        error.HistoryStorageAddressNotMainnet,
         => .policy_reject,
 
         error.ForcedTxOutOfOrder,

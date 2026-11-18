@@ -11,8 +11,9 @@ from .fork import (
     ProtocolFork,
 )
 from ethereum.state import Address
+from ethereum.utils.byte import left_pad_zero_bytes
 from dataclasses import dataclass, field
-from ethereum_types.numeric import U64, Uint
+from ethereum_types.numeric import U64, U256, Uint
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.bytes import Bytes, Bytes32
 from ethereum_rlp import rlp
@@ -30,9 +31,9 @@ class SystemContracts:
     Addresses of the system contracts the execution engine calls or reads
     around every block (EIP-4788, EIP-2935, EIP-6110, EIP-7002, EIP-7251,
     EIP-8282). They come from the chain's genesis configuration and are
-    supplied as a proof-range input. They are NOT part of the
-    `dynamicChainConfigHash` preimage, which is anchored in the L1 verifier's
-    chain configuration.
+    supplied as a proof-range input.
+
+    See §2.1 for which are hashed into `dynamicChainConfigHash`.
 
     Field order is the wire order.
     """
@@ -52,10 +53,7 @@ class ChainConfig:
 
     `baseFee` is NOT part of this struct: the guest takes it from a block
     header (the first block in the range) and asserts every other block in
-    the range carries the same `base_fee_per_gas`. The four-input
-    `dynamicChainConfigHash` is then computed from `chainID`, `coinbase`,
-    `l2MessageServiceAddress`, and that extracted `baseFee`;
-    `system_contracts` is excluded from the hash.
+    the range carries the same `base_fee_per_gas`.
     """
     l2_message_service_address: Address
     coinbase: Address
@@ -64,18 +62,24 @@ class ChainConfig:
 
     def hash(self, base_fee: Uint) -> Hash32:
         """
-        Hash the dynamic chain configuration exposed by the l2-execution proof:
-
-            keccak256(uint256_be(chainID) || coinbase || L2MessageServiceContract || uint256_be(baseFee))
-
-        `base_fee` is supplied at hash time by the caller (it is sourced from
-        the block header — see §2.1). `system_contracts` is not hashed.
+        `dynamicChainConfigHash` (§2.1): keccak256 over one 32-byte word per
+        field, in the L1 verifier's chain-configuration parameter order.
+        `base_fee` is sourced from the block header by the caller.
         """
+        sc = self.system_contracts
+        uints = (self.chain_id, base_fee)
+        addresses = (
+            self.coinbase,
+            self.l2_message_service_address,
+            sc.deposit,
+            sc.withdrawal_request,
+            sc.consolidation_request,
+            sc.builder_deposit_request,
+            sc.builder_exit_request,
+        )
         return keccak256(
-            int(self.chain_id).to_bytes(32, "big") +
-            bytes(self.coinbase) +
-            bytes(self.l2_message_service_address) +
-            int(base_fee).to_bytes(32, "big")
+            b"".join(U256(v).to_be_bytes32() for v in uints)
+            + b"".join(left_pad_zero_bytes(a, 32) for a in addresses)
         )
 
 class ForcedTransactionAcceptance(Enum):
