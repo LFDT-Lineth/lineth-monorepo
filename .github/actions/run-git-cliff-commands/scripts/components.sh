@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Single source of truth for each component's git-cliff SCOPES and
-# INCLUDE_PATH. Sourced by component-info.sh.
+# Single source of truth for each component's git-cliff SCOPES, INCLUDE_PATH
+# and the folder hosting its CHANGELOG.md. Sourced by component-info.sh and
+# update-unreleased-changelogs.sh.
 #
-# To add/change a component's scopes or include-path, edit this file only —
-# every workflow that passes `component-name` to the run-git-cliff-commands
-# action (or a reusable workflow wrapping it) picks the values up automatically.
+# To add/change a component's scopes, include-path or changelog folder, edit
+# this file only — every workflow that passes `component-name` to the
+# run-git-cliff-commands action (or a reusable workflow wrapping it) picks the
+# values up automatically. New components must also be added to
+# .github/path-filters/changelog.yml so their changes are detected.
 
 # component_scopes NAME — regex alternation of conventional-commit scopes.
 component_scopes() {
@@ -19,6 +22,43 @@ component_scopes() {
     tx-exclusion-api)     echo "tx-exclusion-api|deps|misc" ;;
     linea-besu-package)   echo "linea-besu|tracer|sequencer|deps|misc" ;;
     linea)                echo "coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc" ;;
+    *)
+      echo "components.sh: unknown component '$1'" >&2
+      return 1
+      ;;
+  esac
+}
+
+# component_names — every known component, one per line. Used as the default
+# component set by update-unreleased-changelogs.sh; keep in sync with the
+# case statements below and .github/path-filters/changelog.yml.
+component_names() {
+  printf '%s\n' \
+    "coordinator" \
+    "maru" \
+    "prover" \
+    "prover-ray" \
+    "riscv-l2-execution" \
+    "riscv-rollup" \
+    "postman" \
+    "tx-exclusion-api" \
+    "linea-besu-package" \
+    "linea"
+}
+
+# component_folder NAME — folder hosting the component's CHANGELOG.md.
+component_folder() {
+  case "$1" in
+    coordinator)        echo "coordinator" ;;
+    maru)               echo "maru" ;;
+    prover)             echo "prover" ;;
+    prover-ray)         echo "prover-ray" ;;
+    riscv-l2-execution) echo "riscv-guests/l2_execution" ;;
+    riscv-rollup)       echo "riscv-guests/rollup" ;;
+    postman)            echo "postman" ;;
+    tx-exclusion-api)   echo "transaction-exclusion-api" ;;
+    linea-besu-package) echo "linea-besu/package" ;;
+    linea)              echo "." ;;
     *)
       echo "components.sh: unknown component '$1'" >&2
       return 1

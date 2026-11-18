@@ -145,23 +145,17 @@ jobs:
     with:
       languages: ${{ needs.plan.outputs.codeql-languages }}
 
-  component-changelog-upload:
+  component-changelog-update:
     # Push-only: never run on manual dispatch, which could otherwise push
     # changelog commits to main via the release bot.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [plan]
-    uses: ./.github/workflows/component-changelog-upload.yml
-
-  component-changelog-commit:
-    # Skip when no component changed: there is nothing to commit.
-    if: >
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.component-changelog-upload.outputs.has_changes == 'true'
-    needs: [component-changelog-upload]
     permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/component-changelog-commit.yml
+      # GITHUB_TOKEN stays read-only: the changelog commit push authenticates
+      # as the release-bot GitHub App, whose token is minted inside the
+      # workflow only after the git-cliff generation phase has finished.
+      contents: read
+    uses: ./.github/workflows/component-changelog-update.yml
     secrets: inherit
 
   # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
