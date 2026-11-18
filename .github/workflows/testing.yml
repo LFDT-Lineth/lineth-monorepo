@@ -232,25 +232,3 @@ jobs:
           name: codecov-jvm-tests
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  # If all jobs are skipped, the workflow will still succeed.
-  always_succeed:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    if: >
-      inputs.coordinator_changed == 'false' &&
-      inputs.prover_changed == 'false' &&
-      inputs.prover_ray_changed == 'false' &&
-      inputs.rollup_spec_changed == 'false' &&
-      inputs.native_yield_automation_service_changed == 'false' &&
-      inputs.lido_governance_monitor_changed == 'false' &&
-      inputs.postman_changed == 'false' &&
-      inputs.transaction_exclusion_api_changed == 'false' &&
-      inputs.staterecovery_changed == 'false' &&
-      inputs.smart_contracts_changed == 'false' &&
-      inputs.linea_sequencer_changed == 'false' &&
-      inputs.tracer_changed == 'false' &&
-      inputs.constraints_changed == 'false' &&
-      inputs.maru_changed == 'false'
-    steps:
-      - name: Ensure Workflow Success
-        run: echo "All jobs were skipped, but workflow succeeds."
