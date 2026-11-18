@@ -6,7 +6,7 @@ services:
   maru:
     # make build-local-image
     # MARU_TAG=local make docker-run-stack
-    image: consensys/maru:${MARU_TAG:-local}
+    image: consensys/maru:${MARU_TAG:-1.6.0-rc1-20261118-c800dbe}
     container_name: maru
     depends_on:
       - sequencer
