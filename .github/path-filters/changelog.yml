@@ -1,5 +1,6 @@
-# Changelog component filters for .github/workflows/component-changelog-upload.yml
-# (dorny/paths-filter). Each key must also appear in that workflow's component map.
+# Changelog component filters for .github/workflows/component-changelog-update.yml
+# (dorny/paths-filter). Each key must also have scopes/include-path/folder entries in
+# .github/actions/run-git-cliff-commands/scripts/components.sh.
 coordinator:
   - 'coordinator/**'
 riscv-l2-execution:

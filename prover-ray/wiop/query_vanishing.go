@@ -141,7 +141,14 @@ func (m *Module) NewVanishingManual(ctx *ContextFrame, expr Expression, position
 // newVanishing is the shared implementation used by [Module.NewVanishing] and
 // [Module.NewVanishingManual]. It constructs the [Vanishing], appends it to
 // the module's Vanishings list, and returns it.
+//
+// expr is stored interned (see [exprInterner]), so equal subexpressions of the
+// module's vanishings share one pointer, whichever compiler built them.
 func (m *Module) newVanishing(ctx *ContextFrame, expr Expression, positions []int) *Vanishing {
+	if m.interner == nil {
+		m.interner = newExprInterner()
+	}
+	expr = m.interner.intern(expr)
 	v := &Vanishing{
 		baseQuery: baseQuery{
 			context:     ctx,

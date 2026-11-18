@@ -87,7 +87,7 @@ func newPairLeavesPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture 
 func TestPairLeavesTree(t *testing.T) {
 	witness := pairLeavesWitness(rand.New(utils.NewRandSource(8)))
 	encoded := witness.Encode(makeEncoders(4, 2))
-	tree := encoded.Merkleize()
+	tree := encoded.Merkleize(MerkleHashKoalaBear)
 
 	groupsOf := func(table SizedTable) []SizedTable {
 		groups := sizeGroups(len(table.Base), len(table.Ext), table.Groups)
@@ -121,7 +121,7 @@ func TestPairLeavesTree(t *testing.T) {
 			injections[level] = append(injections[level], digests)
 		}
 	}
-	want := allocTree(len(leaves))
+	want := allocTree(MerkleHashKoalaBear, len(leaves))
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "pair-leaf root must follow its definition")
@@ -134,7 +134,7 @@ func TestPairLeavesTree(t *testing.T) {
 		Groups: []GroupShape{{ExtWidth: 1}},
 	}
 	enc := single.Encode(makeEncoders(3, 2))
-	singleTree := enc.Merkleize()
+	singleTree := enc.Merkleize(MerkleHashKoalaBear)
 	for j := range singleTree.NumLeaves() {
 		require.Equal(t, referenceGroupDigest(enc[2], j), singleTree.Nodes[singleTree.NumLeaves()-1+j])
 	}
@@ -145,7 +145,7 @@ func TestPairLeavesTree(t *testing.T) {
 		Groups: []GroupShape{{BaseWidth: 1}},
 	}}
 	tinyEnc := tiny.Encode(makeEncoders(1, 2))
-	tinyTree := tinyEnc.Merkleize()
+	tinyTree := tinyEnc.Merkleize(MerkleHashKoalaBear)
 	require.Equal(t, 1, tinyTree.NumLevel())
 	require.Equal(t, referenceGroupDigest(tinyEnc[0], 0), tinyTree.Root())
 }
