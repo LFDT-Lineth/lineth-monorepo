@@ -85,8 +85,8 @@ func censusOf(exprs []wiop.Expression) nodeCensus {
 	return nodeCensus{occurrences: occurrences, distinct: len(distinct)}
 }
 
-// TestInterningSharesCompoundSubexpressions measures what the zkcdriver
-// interning cache removes on the real RISC-V system, at the two points the
+// TestInterningSharesCompoundSubexpressions measures what interning removes
+// from zkcdriver's constraints on the real RISC-V system, at the two points the
 // acceptance criteria of #4034 name: straight after [zkcdriver.Define], and
 // over the non-reduced vanishings left by localvanishing+global, which is what
 // the quotient pass binds.
@@ -162,106 +162,6 @@ func TestInterningSharesCompoundSubexpressions(t *testing.T) {
 	require.NotZero(t, afterTotal.occurrences)
 	assert.Less(t, afterTotal.distinct, afterTotal.occurrences,
 		"sharing did not survive localvanishing+global: the quotient pass binds a pure tree")
-}
-
-// TestInterningIsExhaustiveWithinEachModule asserts the interning invariant
-// itself rather than the saving it produces: within one module, two nodes that
-// denote the same value are the same pointer. Anything left over is a key that
-// failed to match — a leaf allocated past the cache, or a compound keyed on
-// operands that were not yet canonical.
-func TestInterningIsExhaustiveWithinEachModule(t *testing.T) {
-
-	serialized := riscvConstraints(t)
-	sys := buildRiscvSystem(t, serialized)
-
-	for _, module := range sys.Modules {
-
-		byKey := map[string]wiop.Expression{}
-		leaks := 0
-
-		var walk func(e wiop.Expression)
-		walk = func(e wiop.Expression) {
-			key := structuralKey(e)
-			if prev, ok := byKey[key]; ok {
-				if prev != e {
-					leaks++
-				}
-			} else {
-				byKey[key] = e
-			}
-			if op, ok := e.(*wiop.ArithmeticOperation); ok {
-				for _, operand := range op.Operands {
-					walk(operand)
-				}
-			}
-		}
-		for _, v := range module.Vanishings {
-			walk(v.Expression)
-		}
-
-		assert.Zerof(t, leaks,
-			"module %s: %d nodes denote a value that already has a different canonical pointer",
-			module.Context.Path(), leaks)
-	}
-}
-
-// TestLiftedLocalConstraintsAreInterned covers the local-constraint half of
-// #4034's acceptance criteria. The rewrite that lifts a local vanishing to its
-// anchor position allocates fresh nodes throughout — [wiop.Column.At] for the
-// leaves, [wiop.DefaultConstruct] for the compounds — so it is re-interned, to
-// let local vanishings pinned at the same anchor share their lifted subtrees.
-//
-// The criterion as written ("distinct lifted nodes shared by >=2 local
-// vanishings, per module") cannot be observed on the RISC-V arithmetization:
-// it declares exactly one local constraint per module, so no two of them can
-// share anything by construction. What is asserted here instead is the
-// property that produces the sharing when a module does carry several — that
-// within one lifted tree, every structurally identical node is one pointer.
-//
-// This is a real check rather than a tautology: the lift maps each distinct
-// (column, shift) onto a distinct (column, position), so a leaf repeated in
-// the source expression stays repeated in the lifted one. Without re-interning
-// those repeats are distinct pointers.
-func TestLiftedLocalConstraintsAreInterned(t *testing.T) {
-
-	serialized := riscvConstraints(t)
-	sys := buildRiscvSystem(t, serialized)
-
-	locals := 0
-	for _, module := range sys.Modules {
-		for _, v := range module.Vanishings {
-			// A lifted local vanishing is the scalar one: its ColumnViews were
-			// replaced by ColumnPositions, which are FieldPromises.
-			if v.Expression.IsMultiValued() {
-				continue
-			}
-			locals++
-
-			// Every structurally identical node in the lifted tree must be the
-			// same pointer, leaves included.
-			byKey := map[string]wiop.Expression{}
-			var walk func(e wiop.Expression)
-			walk = func(e wiop.Expression) {
-				key := structuralKey(e)
-				if prev, ok := byKey[key]; ok {
-					assert.Samef(t, prev, e,
-						"lifted local vanishing %s: node %s occurs as two distinct pointers",
-						v.Context().Path(), key)
-				} else {
-					byKey[key] = e
-				}
-				if op, ok := e.(*wiop.ArithmeticOperation); ok {
-					for _, operand := range op.Operands {
-						walk(operand)
-					}
-				}
-			}
-			walk(v.Expression)
-		}
-	}
-
-	t.Logf("local constraints: checked %d lifted local vanishings", locals)
-	require.NotZero(t, locals, "expected the RISC-V system to declare local constraints")
 }
 
 // structuralKey renders an expression by structure alone, so that two nodes
@@ -562,9 +462,10 @@ func measureLiftedSharing(sys *wiop.System) map[string]liftedSharing {
 
 // TestLiftedVanishingsShareStructure covers issue #4035: the lift that
 // localvanishing applies to each local vanishing must preserve the sharing
-// zkcdriver's interning established. It asserts that no lifted node denotes a
-// value already carried by a different pointer of the module, and that lifted
-// trees share compound nodes with the module's other vanishings.
+// that registering zkcdriver's constraints established. It asserts that no
+// lifted node denotes a value already carried by a different pointer of the
+// module, and that lifted trees share compound nodes with the module's other
+// vanishings.
 func TestLiftedVanishingsShareStructure(t *testing.T) {
 
 	serialized := riscvConstraints(t)
@@ -589,7 +490,9 @@ func TestLiftedVanishingsShareStructure(t *testing.T) {
 
 // TestCompiledVanishingsAreInterned checks, on the RISC-V system after the
 // full compilation, that each module's vanishings carry each value by one
-// pointer, whichever pass built them. verifier-ray's codegen relies on it.
+// pointer, whichever pass built them. Vanishings are append-only, so this
+// covers both the set registered by Define and the lifted local constraints.
+// verifier-ray's codegen relies on it.
 func TestCompiledVanishingsAreInterned(t *testing.T) {
 
 	serialized := riscvConstraints(t)
