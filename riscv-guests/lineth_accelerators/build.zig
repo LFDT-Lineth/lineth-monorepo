@@ -10,15 +10,18 @@
 //!   some_module.addImport("lineth_zkvm_accel", dep.module("lineth_accelerators"));
 //!
 //! The `zkvm_accelerators` module declares the `zkvm_*` and `lineth_zkvm_*` symbols that the guests'
-//! own code calls (hashing, blob verification); the providers below define them.
+//! own code calls (hashing, blob verification); the providers below define them. Every importer in
+//! a program takes it from the instance without `-Dzkvm-provide`, so the program holds one copy.
 //!
-//! `-Dzkvm-provide=true` additionally exposes the crypto surface zesu's extern backend needs:
-//! `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine archive for the target),
-//! `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`. `-Dkeccak-accel=true`
-//! makes `zkvm_provide` export the prover-accelerated keccak instead of the standard Zig one, and
-//! `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine` (default) or `std`. zesu and
-//! Constantine are lazy dependencies behind `-Dzkvm-provide`, fetched and built only for consumers
-//! that pass it. A consumer that opts in takes every module from the same dependency instance:
+//! `-Dzkvm-provide=true` additionally exposes the crypto surface zesu's extern backend needs, for
+//! the program's final link: `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine
+//! archive for the target), `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`.
+//! `-Dkeccak-accel=true` makes `zkvm_provide` export the prover-accelerated keccak instead of the
+//! standard Zig one, and `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine`
+//! (default) or `std`. The provider instance is the one place these choices take effect: the build
+//! fails when they reach an instance without `-Dzkvm-provide`, or when a program takes
+//! `zkvm_accelerators` from the provider instance. zesu and Constantine are lazy dependencies
+//! behind `-Dzkvm-provide`, fetched and built only for consumers that pass it:
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize, .@"zkvm-provide" = true });
 
 const std = @import("std");
@@ -36,7 +39,7 @@ pub fn build(b: *std.Build) void {
     // `-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
     const zkvm_provide = b.option(bool, "zkvm-provide", "Expose the zkvm_provide, guest_crypto and secp256k1_std modules (fetches zesu, builds Constantine)") orelse false;
-    const crypto = common.CryptoOptions.parse(b);
+    const crypto = common.CryptoOptions.parseIfSet(b);
 
     const accelerators = b.addModule("lineth_accelerators", .{
         .root_source_file = b.path("src/root.zig"),
@@ -44,13 +47,23 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    _ = b.addModule("zkvm_accelerators", .{
-        .root_source_file = b.path("src/zkvm_accelerators.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    if (zkvm_provide) addCryptoProviders(b, accelerators, target, optimize, crypto);
+    if (zkvm_provide) {
+        addCryptoProviders(b, accelerators, target, optimize, crypto orelse .{});
+        _ = b.addModule("zkvm_accelerators", .{
+            .root_source_file = b.path("src/zkvm_accelerators_provider_instance.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    } else {
+        if (crypto != null) std.process.fatal("lineth_accelerators: -Dkeccak-accel and -Dsecp256k1-backend " ++
+            "configure zkvm_provide and apply with -Dzkvm-provide=true only; set them on the instance whose " ++
+            "zkvm_provide the program links", .{});
+        _ = b.addModule("zkvm_accelerators", .{
+            .root_source_file = b.path("src/zkvm_accelerators.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+    }
 }
 
 /// The `zkvm_provide`, `guest_crypto` and `secp256k1_std` modules for `target`. The freestanding
