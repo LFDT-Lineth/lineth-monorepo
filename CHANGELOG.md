@@ -48,6 +48,8 @@
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+- *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
+- *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
 
 ### 🐛 Bug Fixes
 
