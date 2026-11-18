@@ -23,9 +23,11 @@
 // wire bytes) is still stubbed and returns [ErrNotImplemented].
 //
 // With sharding ([Config.ShardSize]), the shard proofs of a job are reduced to
-// one node by a [conglomeration.Merger]; only a mock exists, which dev-partial
-// uses, so a sharded job in full returns [ErrNotImplemented] until the
-// recursion machine lands. The modes are described in docs/prover-modes.md.
+// one node by a [conglomeration.Merger]: dev-partial uses
+// [conglomeration.MockMerger]; full has none, as
+// [conglomeration.RecursionMerger] needs the in-machine verifier, so a sharded
+// job in full returns [ErrNotImplemented]. The modes are described in
+// docs/prover-modes.md.
 //
 // [wiop.Materialize] is not yet wired in [New].
 package backend
