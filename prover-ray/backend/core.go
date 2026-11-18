@@ -652,6 +652,24 @@ func (c *Core) runProve(
 func (c *Core) proveShards(
 	ctx context.Context, lazyTrace zkcdriver.LazyTrace, indexes []uint, reducer *conglomeration.Reducer,
 ) error {
+	return c.runShards(ctx, indexes, func(ctx context.Context, i uint) error {
+		node, err := c.proveOneShard(ctx, lazyTrace, i)
+		if err != nil {
+			return err
+		}
+		// Add reports a merge that failed meanwhile: stop rather than prove
+		// shards whose result is already lost.
+		if err := reducer.Add(node); err != nil {
+			return fmt.Errorf("merging after shard %d: %w", i, err)
+		}
+		return nil
+	})
+}
+
+// runShards calls run on each shard of indexes, [Config.ShardWorkers] at a
+// time, and logs each shard done. The first failure stops the shards not
+// started yet, and is the error returned.
+func (c *Core) runShards(ctx context.Context, indexes []uint, run func(context.Context, uint) error) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var (
@@ -680,15 +698,8 @@ func (c *Core) proveShards(
 				wg.Done()
 			}()
 			start := time.Now()
-			node, err := c.proveOneShard(ctx, lazyTrace, i)
-			if err != nil {
+			if err := run(ctx, i); err != nil {
 				fail(err)
-				return
-			}
-			// Add reports a merge that failed meanwhile: stop rather than
-			// prove shards whose result is already lost.
-			if err := reducer.Add(node); err != nil {
-				fail(fmt.Errorf("merging after shard %d: %w", i, err))
 				return
 			}
 			logrus.Infof("Shard %d done in %s: %d of %d",

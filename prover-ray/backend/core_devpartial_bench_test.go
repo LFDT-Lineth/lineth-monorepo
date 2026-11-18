@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ const (
 )
 
 // benchWorkersEnv sets the number of shards in progress at once, instead of
-// benchWorkers. 1 checks the shards one at a time and records each of them.
+// benchWorkers. 1 checks the shards one at a time, with the memory of each step.
 const benchWorkersEnv = "BENCH_SHARD_WORKERS"
 
 // benchWorkers is the number of shards in progress at once, the same for
@@ -77,6 +78,10 @@ const benchUnfinished = "did not finish"
 
 // benchPass is the result of a block that passed.
 const benchPass = "pass"
+
+// benchOverLimit is the result of a block with a shard over the column limit.
+// The other shards are still checked.
+const benchOverLimit = "over the column limit"
 
 // benchFastPass is the name of the step that splits the trace into shards.
 const benchFastPass = "fast pass"
@@ -128,10 +133,11 @@ type benchModule struct {
 // peak memory of each step and the result. Each block runs in its own process,
 // so that a block killed for lack of memory is reported and the next one still
 // runs. The shards are traced and checked benchWorkers at a time, with the Go
-// memory limit at 90% of the machine. With BENCH_SHARD_WORKERS=1 they are checked one at a time and each
-// is recorded: its size, and a shard with a module over
-// [wiop.ColumnSizeMaxSupported] rows is reported and not checked, as its
-// assignment would panic. Same settings as [TestDevPartial_Integration]
+// memory limit at 90% of the machine, or one at a time with the memory of each
+// step with BENCH_SHARD_WORKERS=1. Each shard is recorded with its size. A
+// shard with a module over [wiop.ColumnSizeMaxSupported] rows is reported and
+// not checked, as its assignment would panic, and the other shards still run.
+// Same settings as [TestDevPartial_Integration]
 // (GUEST_ELF, DEV_PARTIAL_SHARD_SIZE). The report goes to BENCH_DIR, by default
 // a new folder in the home folder: report.md, bench.jsonl, and the record and
 // log of each block. Linux only (peak memory is read from /proc).
@@ -335,23 +341,7 @@ func benchDevPartial(
 	workers = benchShardWorkers(workers, rec.NumShards)
 	rec.Workers = workers
 	if workers > 1 && sharded && maxShards == 0 {
-		// The steps of the shards overlap, so they are measured as one.
-		c.cfg.ShardWorkers = workers
-		totalKB, _ := procKB("/proc/meminfo", "MemTotal:")
-		debug.SetMemoryLimit(int64(0.9 * totalKB * 1024))
-		indexes := make([]uint, rec.NumShards)
-		for i := range indexes {
-			indexes[i] = uint(i)
-		}
-		err := benchRun(&rec.Steps, benchShardsStep, func() error {
-			return c.proveShards(context.Background(), lazyTrace, indexes, reducer)
-		})
-		save()
-		if err != nil {
-			return err.Error()
-		}
-		rec.ShardsRun = rec.NumShards
-		return benchMerge(c, rec, reducer, out, save)
+		return benchShardsParallel(t, c, lazyTrace, workers, reducer, out, rec, save)
 	}
 
 	var pub wiop.PublicInput
@@ -360,39 +350,21 @@ func benchDevPartial(
 		if maxShards > 0 && i >= maxShards {
 			return fmt.Sprintf("stopped after %d shards", maxShards)
 		}
-		stats := benchShard{Index: i}
-		var shard zkcdriver.Shard
-		stats.Trace = benchStepOf("trace", func() error {
-			var err error
-			shard, err = traceShard(lazyTrace, i)
-			return err
-		})
-		if strings.HasPrefix(stats.Trace.Name, "error") {
-			rec.ShardsStats = append(rec.ShardsStats, stats)
-			return stats.Trace.Name
-		}
-		benchShardSize(c, shard, &stats)
-		if len(stats.OverLimit) > 0 {
-			rec.ShardsStats = append(rec.ShardsStats, stats)
-			save()
-			result = "over the column limit"
-			continue
-		}
-		var proof wiop.Proof
-		stats.Check = benchStepOf("check", func() error {
-			var err error
-			proof, pub, err = c.proveShard(shard)
-			return err
-		})
+		stats, node, err := benchShardRun(t, c, lazyTrace, i, benchStepOf)
 		rec.ShardsStats = append(rec.ShardsStats, stats)
 		save()
-		if strings.HasPrefix(stats.Check.Name, "error") {
-			return stats.Check.Name
+		if err != nil {
+			return err.Error()
+		}
+		if node == nil {
+			result = benchOverLimit
+			continue
 		}
 		t.Logf("shard %d done: trace %.1f s, check %.1f s, peak %.1f GB: %d of %d",
 			i, stats.Trace.Sec, stats.Check.Sec, max(stats.Trace.PeakRSSGB, stats.Check.PeakRSSGB), i+1, rec.NumShards)
+		pub = node.Pub
 		if sharded {
-			if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
+			if err := reducer.Add(*node); err != nil {
 				return err.Error()
 			}
 		}
@@ -408,6 +380,89 @@ func benchDevPartial(
 		return err.Error()
 	}
 	return result
+}
+
+// benchShardsParallel runs [benchShardRun] on all the shards, workers at a
+// time, with the worker pool of [Core.Prove], then merges them. The shards
+// overlap, so each records its time only, and the memory is that of all the
+// shards as one step.
+func benchShardsParallel(
+	t *testing.T, c *Core, lazyTrace zkcdriver.LazyTrace, workers int,
+	reducer *conglomeration.Reducer, out []byte, rec *benchBlock, save func(),
+) string {
+	t.Helper()
+	c.cfg.ShardWorkers = workers
+	totalKB, _ := procKB("/proc/meminfo", "MemTotal:")
+	old := debug.SetMemoryLimit(int64(0.9 * totalKB * 1024))
+	defer debug.SetMemoryLimit(old)
+	indexes := make([]uint, rec.NumShards)
+	for i := range indexes {
+		indexes[i] = uint(i)
+	}
+	var mu sync.Mutex
+	result := benchPass
+	err := benchRun(&rec.Steps, benchShardsStep, func() error {
+		return c.runShards(context.Background(), indexes, func(_ context.Context, i uint) error {
+			stats, node, err := benchShardRun(t, c, lazyTrace, i, benchTime)
+			mu.Lock()
+			rec.ShardsStats = append(rec.ShardsStats, stats)
+			if node == nil && err == nil {
+				result = benchOverLimit
+			}
+			mu.Unlock()
+			if node == nil {
+				return err
+			}
+			if err := reducer.Add(*node); err != nil {
+				return fmt.Errorf("merging after shard %d: %w", i, err)
+			}
+			return nil
+		})
+	})
+	slices.SortFunc(rec.ShardsStats, func(a, b benchShard) int { return cmp.Compare(a.Index, b.Index) })
+	rec.ShardsRun = uint(len(rec.ShardsStats))
+	save()
+	if err != nil {
+		return err.Error()
+	}
+	if result != benchPass {
+		return result
+	}
+	return benchMerge(c, rec, reducer, out, save)
+}
+
+// benchShardRun traces shard i and records its size, then checks it, unless a
+// module is over the column limit: its assignment would panic. measure runs
+// and records each step. The node is nil when the shard is not checked.
+func benchShardRun(
+	t *testing.T, c *Core, lazyTrace zkcdriver.LazyTrace, i uint, measure func(string, func() error) benchStep,
+) (benchShard, *conglomeration.Node, error) {
+	t.Helper()
+	stats := benchShard{Index: i}
+	var shard zkcdriver.Shard
+	stats.Trace = measure("trace", func() error {
+		var err error
+		shard, err = traceShard(lazyTrace, i)
+		return err
+	})
+	if strings.HasPrefix(stats.Trace.Name, "error") {
+		return stats, nil, errors.New(stats.Trace.Name)
+	}
+	benchShardSize(c, shard, &stats)
+	if len(stats.OverLimit) > 0 {
+		t.Logf("shard %d: %v over the column limit, not checked", i, stats.OverLimit)
+		return stats, nil, nil
+	}
+	node := conglomeration.Node{Coverage: []uint{i}}
+	stats.Check = measure("check", func() error {
+		var err error
+		node.Proof, node.Pub, err = c.proveShard(shard)
+		return err
+	})
+	if strings.HasPrefix(stats.Check.Name, "error") {
+		return stats, nil, errors.New(stats.Check.Name)
+	}
+	return stats, &node, nil
 }
 
 // benchMerge runs the last merges and the root checks of the mock merger,
@@ -477,9 +532,17 @@ func benchStepOf(name string, step func() error) benchStep {
 	runtime.GC()
 	debug.FreeOSMemory()
 	resetPeakRSS()
+	s := benchTime(name, step)
+	s.PeakRSSGB = peakRSSGB()
+	return s
+}
+
+// benchTime runs one step and returns its time only, for steps that run at the
+// same time as others. On an error the name becomes "error in <name>: <error>".
+func benchTime(name string, step func() error) benchStep {
 	start := time.Now()
 	err := step()
-	s := benchStep{Name: name, Sec: time.Since(start).Seconds(), PeakRSSGB: peakRSSGB()}
+	s := benchStep{Name: name, Sec: time.Since(start).Seconds()}
 	if err != nil {
 		s.Name = fmt.Sprintf("error in %s: %v", name, err)
 	}
@@ -562,15 +625,17 @@ func renderBenchReport(machine string, recs []benchBlock) string {
 			}
 		}
 		run := max(r.ShardsRun, uint(len(r.ShardsStats)))
-		switch {
-		case len(r.ShardsStats) > 0:
+		if len(r.ShardsStats) > 0 {
 			perShard = benchDuration(shardsSec / float64(len(r.ShardsStats)))
 			largest = fmt.Sprintf("%s %d rows", top.Name, top.Rows)
-		case run > 0:
+		}
+		// In parallel the shards overlap: the time per shard is the shards
+		// step over the shards.
+		if parallelSec > 0 && run > 0 {
 			perShard = benchDuration(parallelSec / float64(run))
 		}
 		estimate := "-"
-		if n := len(r.ShardsStats); n > 0 && uint(n) < r.NumShards {
+		if n := len(r.ShardsStats); n > 0 && uint(n) < r.NumShards && parallelSec == 0 {
 			estimate = benchDuration(stepsSec + shardsSec/float64(n)*float64(r.NumShards))
 		}
 		peak := max(r.ProcessPeakGB, r.PeakRSSGB)
