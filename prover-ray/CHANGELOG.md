@@ -30,6 +30,7 @@
 ### 🚜 Refactor
 
 - *(prover-ray)* Refactor the guest output fetching (#4370)
+- *(prover-ray)* Drop the localvanishing and zkcdriver interners (#4480)
 
 ### ⚡ Performance
 
