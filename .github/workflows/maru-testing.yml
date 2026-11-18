@@ -30,7 +30,8 @@ jobs:
   run-tests:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    # update to on demand runner to avoid mid run termination and flakiness
+    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xl-od
     name: maru tests
     steps:
       - name: Checkout
