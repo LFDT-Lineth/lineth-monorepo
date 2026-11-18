@@ -66,6 +66,14 @@ jobs:
       - name: Lint sdk-ethers
         run: pnpm -F @lfdt-lineth/sdk run lint
 
+      - name: Check published packages ship the license files
+        run: |
+          for pkg in sdk-core sdk-viem; do
+            (cd "ts-libs/sdk/${pkg}" && npm pack --dry-run --json) \
+              | jq -e '[.[0].files[].path] | (index("LICENSE-APACHE") != null) and (index("LICENSE-MIT") != null)' >/dev/null \
+              || { echo "::error::${pkg} does not pack LICENSE-APACHE and LICENSE-MIT"; exit 1; }
+          done
+
       - name: Compute coverage artifact tag
         id: cov-tag
         shell: bash

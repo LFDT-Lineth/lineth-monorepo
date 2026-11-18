@@ -29,6 +29,12 @@ type CoinRouting struct {
 	// every round to stay byte-exact with the prover. Counted in the same order as the proof's
 	// module_sizes (VanishingSystem dynamic-module order).
 	DynamicModuleCount int
+	// DynamicModuleMinSizes[i] is prover-ray's Module.MinRuntimeSize of the
+	// module at module_sizes[i] (DynamicModuleOrder): the smallest power of two
+	// N > 2·max|shift| over the module's openings. prover-ray's System.Verify
+	// rejects a proof declaring a smaller size (#4288), and so does the Zig
+	// verifier, before replaying the transcript.
+	DynamicModuleMinSizes []int
 }
 
 // BuildCoinRouting extracts the protocol-level coin layout from a compiled
@@ -61,6 +67,14 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 	// `Runtime.AdvanceRound` uses, which iterates `sys.Modules` in module-index
 	// order (NOT verifier-action-registration order). See DynamicModuleOrder.
 	out.DynamicModuleCount = len(DynamicModuleOrder(sys))
+
+	minSizes := sys.MinRuntimeSizes()
+	for k, m := range sys.Modules {
+		if !m.IsDynamic() {
+			continue
+		}
+		out.DynamicModuleMinSizes = append(out.DynamicModuleMinSizes, minSizes[k])
+	}
 
 	return out, nil
 }

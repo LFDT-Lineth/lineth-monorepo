@@ -9,6 +9,7 @@ package maru.app
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
 import maru.config.SyncingConfig
+import maru.p2p.testutils.NetworkUtil.findStablePorts
 import maru.test.cluster.MaruCluster
 import maru.test.cluster.NodeRole
 import maru.test.cluster.assertSameCanonicalElChain
@@ -41,6 +42,11 @@ class MaruValidatorTest {
   private val followerBesuNode: BesuNode get() = cluster.besuNode("follower")
 
   private fun setupCluster(syncingConfig: SyncingConfig = TestSyncingConfigs.default) {
+    // The sequencer's Besu node is restarted on the same RPC ports (see stopSequencerBesuAndBuildNewOne), so they
+    // are picked outside the OS ephemeral range: otherwise, while Besu is down, the released ports can be taken by
+    // any other socket on the host (e.g. port-0 binds from concurrent tests, or Maru's own reconnection attempts
+    // self-connecting to the port), making the restart fail with "Address already in use".
+    val (sequencerJsonRpcPort, sequencerEngineRpcPort) = findStablePorts(2).map { it.toInt() }
     // The follower is added first so that its Besu node is the Besu cluster's bootnode.
     // This way in the tests where the sequencer's Besu node is restarted, it can still peer within the cluster.
     // As the follower is started before the sequencer, it is the sequencer that statically peers with the follower.
@@ -55,6 +61,7 @@ class MaruValidatorTest {
         nodeBuilder.maruConfig { it.copy(allowEmptyBlocks = false) }
         nodeBuilder.withFastPeering().withFastQbft().withSyncingConfig(syncingConfig)
         nodeBuilder.staticPeers(listOf("follower"))
+        nodeBuilder.besuRpcPorts(jsonRpcPort = sequencerJsonRpcPort, engineRpcPort = sequencerEngineRpcPort)
       }.start()
 
     log.info("Nodes are peered")

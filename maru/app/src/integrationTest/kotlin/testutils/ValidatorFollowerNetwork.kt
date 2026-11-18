@@ -9,6 +9,7 @@ package testutils
 import linea.testing.besu.BesuTransactionsHelper
 import maru.app.MaruApp
 import maru.config.SyncingConfig
+import maru.p2p.testutils.NetworkUtil.findStablePorts
 import maru.test.cluster.MaruCluster
 import maru.test.cluster.NodeBuilder
 import maru.test.cluster.NodeRole
@@ -60,6 +61,12 @@ class ValidatorFollowerNetwork {
     payloadValidationEnabled: Boolean = true,
     validatorP2pPort: UInt = 0u,
   ) {
+    // Besu writes the ports it bound back into its RPC configs, so [startBesuNodes] restarts both Besu nodes on the
+    // same JSON-RPC and Engine API ports, which the Maru nodes keep using. They are picked outside the OS ephemeral
+    // range: otherwise, while Besu is down, the released ports can be taken by any other socket on the host (e.g.
+    // port-0 binds from concurrent tests) for longer than the restart retries, failing with "Address already in use".
+    val (validatorJsonRpcPort, validatorEngineRpcPort, followerJsonRpcPort, followerEngineRpcPort) =
+      findStablePorts(4).map { it.toInt() }
     cluster
       .addNode(VALIDATOR, addBesu = true) { nodeBuilder ->
         nodeBuilder
@@ -67,12 +74,14 @@ class ValidatorFollowerNetwork {
           .withNetworkDefaults(syncingConfig)
           .withFastQbft()
           .maruConfig { it.copy(p2p = it.p2p!!.copy(port = validatorP2pPort)) }
+          .besuRpcPorts(jsonRpcPort = validatorJsonRpcPort, engineRpcPort = validatorEngineRpcPort)
       }.addNode(FOLLOWER, addBesu = true) { nodeBuilder ->
         nodeBuilder
           .withRole(NodeRole.Follower)
           .withNetworkDefaults(syncingConfig)
           .staticPeers(listOf(VALIDATOR))
           .payloadValidation(payloadValidationEnabled)
+          .besuRpcPorts(jsonRpcPort = followerJsonRpcPort, engineRpcPort = followerEngineRpcPort)
       }.start()
 
     log.info("Nodes are peered")

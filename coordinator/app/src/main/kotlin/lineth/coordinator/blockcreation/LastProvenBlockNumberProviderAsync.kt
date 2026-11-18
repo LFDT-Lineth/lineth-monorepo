@@ -22,8 +22,8 @@ class BatchesRepoBasedLastProvenBlockNumberProvider(
   latestL1FinalizedBlock: Long,
   private val batchesRepository: BatchesRepository,
 ) : LastProvenBlockNumberProviderAsync, LastProvenBlockNumberProviderSync, LatestL1FinalizedBlockProviderSync {
-  private var latestL1FinalizedBlock: AtomicLong = AtomicLong(latestL1FinalizedBlock)
-  private var lastProvenBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
+  private val latestL1FinalizedBlock: AtomicLong = AtomicLong(latestL1FinalizedBlock)
+  private val lastProvenBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> {
     latestL1FinalizedBlock.set(blockNumber)

@@ -91,7 +91,8 @@ docker-build-maru:
 		--dockerfile maru/app/Dockerfile \
 		--context maru/app \
 		--build-context libs=./maru/app/build/install/app/lib/ \
-		--build-context maru=./maru/app/build/libs/
+		--build-context maru=./maru/app/build/libs/ \
+		--build-context licenses=.
 
 # .github/workflows/postman-build-and-publish.yml
 docker-build-postman:
@@ -116,7 +117,8 @@ docker-build-prover-ray:
 		--image-name consensys/lineth-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
-		--build-context riscv-guests=riscv-guests/
+		--build-context riscv-guests=riscv-guests/ \
+		--build-context licenses=.
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:

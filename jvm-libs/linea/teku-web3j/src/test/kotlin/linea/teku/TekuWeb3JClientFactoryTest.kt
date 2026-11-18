@@ -18,6 +18,7 @@ import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV3
 import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.unsigned.UInt64
+import tech.pegasys.teku.spec.datastructures.execution.PowBlock
 import java.net.InetSocketAddress
 import java.net.URI
 import java.net.URL
@@ -87,6 +88,18 @@ class TekuWeb3JClientFactoryTest {
    */
   private fun Web3JClient.forkChoiceUpdated() = forkChoiceUpdatedV3(forkChoiceState, Optional.of(payloadAttributes))
 
+  /**
+   * Teku caps `eth_getBlockByNumber` at a hardcoded 1s (`Constants.EL_ENGINE_NON_BLOCK_EXECUTION_TIMEOUT`), overriding
+   * the client's configured timeout, and maps a timeout to a null block instead of failing the future. A cold first
+   * call on a loaded CI runner can exceed that, so retry a few times before concluding the block could not be fetched.
+   */
+  private fun Web3JClient.powChainHeadWithRetries(attempts: Int = POW_CHAIN_HEAD_ATTEMPTS): PowBlock? {
+    repeat(attempts) {
+      powChainHead.get(5, TimeUnit.SECONDS)?.let { return it }
+    }
+    return null
+  }
+
   @Test
   fun `serializes engine params as hex strings and decodes the result`() {
     respond(FORK_CHOICE_UPDATED_RESPONSE)
@@ -113,7 +126,13 @@ class TekuWeb3JClientFactoryTest {
     val parentHash = "0x" + "22".repeat(32)
     respond("""{"jsonrpc":"2.0","id":1,"result":{"hash":"$hash","parentHash":"$parentHash","timestamp":"0x2a"}}""")
     val client = client()
-    val block = client.powChainHead.get(5, TimeUnit.SECONDS)
+    val block = client.powChainHeadWithRetries()
+    assertThat(block)
+      .withFailMessage {
+        "powChainHead returned null in all $POW_CHAIN_HEAD_ATTEMPTS attempts: each request either exceeded Teku's 1s " +
+          "eth_getBlockByNumber timeout or failed to decode"
+      }.isNotNull()
+    block!!
     assertThat(block.blockHash.toHexString()).isEqualTo(hash)
     assertThat(block.blockTimestamp.longValue()).isEqualTo(42L)
     assertThat(client.endpoint).isEqualTo(endpoint.toString())
@@ -188,6 +207,8 @@ class TekuWeb3JClientFactoryTest {
      * `EL_ENGINE_BLOCK_EXECUTION_TIMEOUT` so the assertion cannot be satisfied by that timeout instead of by `close`.
      */
     private const val CLOSE_CANCELLATION_TIMEOUT_MS = 4_000L
+
+    private const val POW_CHAIN_HEAD_ATTEMPTS = 5
 
     private val FORK_CHOICE_UPDATED_RESPONSE =
       """

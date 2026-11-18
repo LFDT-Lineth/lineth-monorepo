@@ -93,11 +93,14 @@ class MaruMultiValidatorFaultToleranceTest {
     log.info("Restarting validator 2")
     network.restartValidator(2, peerIndexes = listOf(0, 1))
 
-    // Wait for all 3 active validators before reading their blocks.
+    // Wait for all 3 active validators before reading their blocks. Recovery after quorum loss
+    // rides out QBFT's exponential round backoff (roundExpiryCoefficient=2.0: rounds expire after
+    // 1s, 2s, 4s, 8s, 16s...), so under CI contention this needs the same 240s budget this class
+    // already uses for waitForConsecutiveRound0Blocks.
     network.waitForBlockHeight(
       0..2,
       targetHeight = heightAfterStop + STABLE_BLOCKS.toULong(),
-      timeout = 90.seconds,
+      timeout = 240.seconds,
     )
 
     network.checkValidatorsHaveSameBlocks(0..2, heightAfterStop + 1uL, STABLE_BLOCKS.toULong())

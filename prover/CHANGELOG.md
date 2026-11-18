@@ -3,6 +3,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(deps)* Bump the go_modules group across 1 directory with 2 updates (#4258)
+- *(misc)* Ship license files and metadata in all published artifacts (#4336)
 ## [1.0.8] - 2026-10-26
 
 ### 🐛 Bug Fixes

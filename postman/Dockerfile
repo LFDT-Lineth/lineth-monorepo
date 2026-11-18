@@ -1,6 +1,6 @@
-ARG NODE_VERSION=24.22.1
+ARG NODE_VERSION=24.22.3
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-trixie-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -45,26 +45,26 @@ COPY ./ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 COPY ./ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 
-# Build and create production deployment
+# Build and create production deployment.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
-FROM node:${NODE_VERSION}-slim AS production
+# Distroless Node.js runtime (no shell, no package manager), running as the nonroot user (uid 65532).
+# Pinned by digest because distroless publishes no per-version tags; this digest ships Node v24.22.3
+# (distroless commit 48b5c0455fb00d6ea7223f1fc6862c46da736556).
+# To update: docker buildx imagetools inspect gcr.io/distroless/nodejs24-debian13:nonroot
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9fc11f6ee65993285c0fe3c4c9bbc4fd275fd4470572f58834ce490df91056e3 AS production
 
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
 # Copy only production dependencies and built files
-# Note: Using slim (Debian/glibc) instead of alpine (musl) for compatibility
-# with the prebuilt native blob_compressor Go library that's dynamically linked against glibc
-COPY --from=builder --chown=node:node /usr/src/app/prod/postman ./postman
+COPY --from=builder --chown=nonroot:nonroot /usr/src/app/prod/postman ./postman
+COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
-# Run as non-root user
-USER node
-
-# Use exec form for proper signal handling
-CMD ["node", "./postman/dist/src/main.js"]
+# The image entrypoint is the node binary.
+CMD ["./postman/dist/src/main.js"]
 
 # Build-time metadata as defined at http://label-schema.org
 # Values are injected by scripts/docker/build-image.sh.
@@ -79,4 +79,5 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
 	org.label-schema.vendor="ConsenSys" \
 	org.label-schema.version=$VERSION \
-	org.label-schema.schema-version="1.0"
+	org.label-schema.schema-version="1.0" \
+	org.opencontainers.image.licenses="MIT OR Apache-2.0"

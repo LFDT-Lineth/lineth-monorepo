@@ -87,6 +87,10 @@ on Linux run `docker run --privileged --rm tonistiigi/binfmt --install arm64`).
   build. Each first-party Dockerfile declares those three `ARG`s and turns them
   into `org.label-schema.*` labels, so images are traceable to a commit. A
   caller-supplied `--build-arg` of the same name still wins.
+* **Licenses** — a locally loaded image must carry the
+  `org.opencontainers.image.licenses` label and `/licenses/LICENSE-APACHE` and
+  `/licenses/LICENSE-MIT`, otherwise the build fails. Downstream images that do
+  not ship them pass `--no-license-check` (`LICENSE_CHECK=false`).
 * **Artifacts** — `--save-to FILE` runs `docker save … | gzip` on the primary
   image, which CI uploads as a workflow artifact.
 
@@ -101,6 +105,8 @@ upload.
 2. Add a matching `docker-build-<name>` target in [`images.mk`](./images.mk)
    with the same Dockerfile, context, build args and build contexts, and append
    it to `DOCKER_IMAGE_TARGETS`.
+3. In the Dockerfile, copy `LICENSE-APACHE` and `LICENSE-MIT` to `/licenses/`
+   and set the `org.opencontainers.image.licenses` label.
 
 The workflow and the make target hold the per-image recipe independently — when
 you change one, change the other.
@@ -119,7 +125,7 @@ make docker-build-prover-ray
 One image includes the Go prover, native runner, and guest ELF. The runner and
 guest are both compiled from `riscv-guests` at the same commit, so every image
 build checks their compatibility; the smoke test runs one `dev-zkvm` prove that
-cross-checks the guest's commitment against the runner's. Docker installs Nim/LLVM
+checks the guest's output against the runner's. Docker installs Nim/LLVM
 in the builder stage to compile the Constantine dependency; these tools are not
 required on the host or in the final runtime image. The coordinator's Program ID
 must match the bundled ELF (Keccak-256 of the complete ELF).

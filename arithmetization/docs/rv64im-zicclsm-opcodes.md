@@ -229,6 +229,12 @@ No new opcodes. This extension is a profile feature indicating that the hart sup
 
 ---
 
+## Guest address space
+
+XLEN is 64, but guest addresses are 32-bit: every byte a LOAD, STORE, JAL, JALR or branch reaches must lie below 2^32. Registers and ALU results keep the full 64 bits; only the effective address (`rs1 + imm`, or the new `pc`) is narrowed, with a checked cast. An access or jump that reaches 2^32 or above, including a misaligned access that crosses it, makes the trace unprovable instead of wrapping. See [Guest address space](../src/test/README.md#guest-address-space) for the memory layout and the guest toolchain requirements.
+
+---
+
 ## Summary counts
 
 

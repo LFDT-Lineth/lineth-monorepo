@@ -79,22 +79,6 @@ func registerSharedRandomness(sys *wiop.System, opt compileOptions) (alpha, beta
 	return alpha, beta
 }
 
-// GetSharedRandomnessSeed returns the god-given value of the shared randomness
-// that was provided by [AssignSharedRandomnessSeed].
-func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
-	var gamma field.Octuplet
-	for i := range gamma {
-		c, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
-		if pos < 0 {
-			utils.Panic("wiop/compilers/messagebus: GetSharedRandomnessSeed: missing gamma-%d", i)
-		}
-		// This calls panics if the cell is not a base-field element. But if it
-		// was correctly registered by [registerSharedRandomness], it must be.
-		gamma[i] = rt.GetCellValue(c).AsBase()
-	}
-	return gamma
-}
-
 // HasSharedRandomness reports whether sys was compiled with shared randomness
 // and therefore carries a γ to assign. An assignment path that does not choose
 // compiler options (such as zkcdriver) uses this to decide whether
@@ -103,6 +87,32 @@ func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 func HasSharedRandomness(sys *wiop.System) bool {
 	_, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedPI, 0)
 	return pos >= 0
+}
+
+// limbCell returns the public-input cell carrying limb i of the role tagged
+// tag (γ, [SharedRandomnessSeedPI], or the shard's contribution,
+// [SharedRandomnessSeedContributionPI]), with its position in the public
+// inputs. A missing or extension-field cell means the wizard is ill-defined
+// rather than the proof invalid, which is why both are panics;
+// [HasSharedRandomness] answers the former in advance.
+func limbCell(sys *wiop.System, tag wiop.PublicInputTag, i int) (*wiop.Cell, int) {
+	cell, pos := sys.LookupPublicInputByTag(tag, i)
+	if pos < 0 {
+		utils.Panic("wiop/compilers/messagebus: missing public input %s_%d", tag, i)
+	}
+	if cell.IsExtension() {
+		utils.Panic("wiop/compilers/messagebus: %s_%d must not be an extension-field value", tag, i)
+	}
+	return cell, pos
+}
+
+// readLimbs fills out with the limbs of the role tagged tag, read from the
+// public inputs pub of a proof over sys.
+func readLimbs(sys *wiop.System, tag wiop.PublicInputTag, pub wiop.PublicInput, out []field.Element) {
+	for i := range out {
+		_, pos := limbCell(sys, tag, i)
+		out[i] = pub[pos].AsBase()
+	}
 }
 
 // AssignSharedRandomnessSeed writes γ into the public-input cells declared by
@@ -121,15 +131,38 @@ func HasSharedRandomness(sys *wiop.System) bool {
 // Panics if sys was compiled without shared randomness, since there is then no
 // cell to write to; [HasSharedRandomness] answers that question in advance.
 func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
-	for i := range NumSharedRandomness {
-		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
-		if pos < 0 {
-			utils.Panic("wiop/compilers/messagebus: AssignSharedRandomnessSeed: missing gamma-%d", i)
-		}
-		if cell.IsExtension() {
-			utils.Panic("the shared randomness cell should not be an extension-field value")
-		}
+	for i := range gamma {
+		cell, _ := limbCell(rt.System, SharedRandomnessSeedPI, i)
 		rt.AssignCell(cell, field.ElemFromBase(gamma[i]))
+	}
+}
+
+// GetSharedRandomnessSeed returns γ read from the public inputs pub of a proof
+// over sys. Panics if sys was compiled without shared randomness.
+func GetSharedRandomnessSeed(sys *wiop.System, pub wiop.PublicInput) field.Octuplet {
+	var gamma field.Octuplet
+	readLimbs(sys, SharedRandomnessSeedPI, pub, gamma[:])
+	return gamma
+}
+
+// GetSharedRandomnessContribution returns the contribution to the shared
+// randomness read from the public inputs pub of a proof over sys: the shard's
+// own for a shard proof, the sum of the shards' for a conglomeration node.
+// Panics if sys was compiled without shared randomness.
+func GetSharedRandomnessContribution(sys *wiop.System, pub wiop.PublicInput) multisethashing.MSetHash {
+	var contribution multisethashing.MSetHash
+	readLimbs(sys, SharedRandomnessSeedContributionPI, pub, contribution[:])
+	return contribution
+}
+
+// SetSharedRandomnessContribution writes contribution into the public inputs
+// pub of a proof over sys: the inverse of [GetSharedRandomnessContribution],
+// for a cross-shard layer building the public inputs of a node from its
+// children's. Panics if sys was compiled without shared randomness.
+func SetSharedRandomnessContribution(sys *wiop.System, pub wiop.PublicInput, contribution multisethashing.MSetHash) {
+	for i, c := range contribution {
+		_, pos := limbCell(sys, SharedRandomnessSeedContributionPI, i)
+		pub[pos] = field.ElemFromBase(c)
 	}
 }
 
@@ -157,26 +190,13 @@ func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 	return multisethashing.Hash(com)
 }
 
-// contributionCell returns the public-input cell carrying limb i of the shared
-// randomness contribution. A missing or extension-field cell means the wizard is
-// ill-defined rather than the proof invalid, which is why both are panics.
-func contributionCell(sys *wiop.System, i int) *wiop.Cell {
-	cell, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedContributionPI, i)
-	if pos < 0 {
-		utils.Panic("wiop/compilers/messagebus: missing contribution-%d", i)
-	}
-	if cell.IsExtension() {
-		utils.Panic("wiop/compilers/messagebus: contribution-%d must not be an extension-field value", i)
-	}
-	return cell
-}
-
 // Check implements the [VerifierAction] interface for
 // [SharedRandomnessContributionChecker].
 func (*SharedRandomnessContributionChecker) Check(rt *wiop.Runtime) error {
 	contribution := sharedRandomnessContribution(rt)
 	for i := range contribution {
-		if contribution[i] != rt.GetCellValue(contributionCell(rt.System, i)).AsBase() {
+		cell, _ := limbCell(rt.System, SharedRandomnessSeedContributionPI, i)
+		if contribution[i] != rt.GetCellValue(cell).AsBase() {
 			return fmt.Errorf(
 				"wiop/compilers/messagebus: SharedRandomnessContributionChecker: mismatch in contribution-%d", i)
 		}

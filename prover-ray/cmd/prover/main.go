@@ -2,6 +2,7 @@
 //
 //	prover --config <toml>                                 watch the queues, prove each request
 //	prover prove --config <toml> --in <req> --out <resp>   prove one request, exit with a code
+//	prover program-id --elf <guest ELF>                    print the guest Program ID
 //
 // Config is a TOML file (--config or CONFIG_FILE). The queue adapter runs each
 // request in a "prover prove" child. --in and --out also accept "-" for stdin
@@ -21,6 +22,7 @@ import (
 	"syscall"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/guests"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
@@ -37,6 +39,9 @@ func main() {
 func run(args []string) error {
 	if len(args) > 0 && args[0] == "prove" {
 		return runProve(args[1:])
+	}
+	if len(args) > 0 && args[0] == "program-id" {
+		return runProgramID(args[1:], os.Stdout)
 	}
 	return runAdapter(args)
 }
@@ -67,7 +72,8 @@ type pipeline struct {
 	mode            backend.ProverMode
 	requestsRootDir string
 	nativeRunnerBin string
-	guestELF        string
+	shardSize       uint64
+	guestsDir       string
 	priority        int
 }
 
@@ -87,7 +93,8 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
-			guestELF:        cfg.Execution.GuestELF,
+			shardSize:       cfg.Execution.ShardSize,
+			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
 	case backend.ProofTypeRollup:
@@ -97,6 +104,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Rollup.ProverMode),
 			requestsRootDir: cfg.Rollup.RequestsRootDir,
+			guestsDir:       cfg.GuestsDir,
 			priority:        1,
 		}, true
 	case backend.ProofTypeRollupAggregation:
@@ -106,6 +114,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Aggregation.ProverMode),
 			requestsRootDir: cfg.Aggregation.RequestsRootDir,
+			guestsDir:       cfg.GuestsDir,
 			priority:        2,
 		}, true
 	}
@@ -115,7 +124,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // buildRunner builds the request-to-response runner for one pipeline, backed by an
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: p.mode, GuestELFPath: p.guestELF})
+	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}
@@ -143,20 +152,9 @@ func runAdapter(args []string) error {
 		return fmt.Errorf("invalid config %q: %w", path, err)
 	}
 
-	var queues []filesystem.Queue
-	for _, t := range proofTypes {
-		p, ok := pipelineFor(cfg, t)
-		if !ok {
-			continue
-		}
-		if !p.mode.Valid() {
-			return fmt.Errorf("invalid prover_mode %q for %s", p.mode, t)
-		}
-		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
-		if p.mode.IsDev() {
-			logrus.Warnf("prover-ray %s in DEV mode %q against %s: responses are NOT real proofs",
-				t, p.mode, p.requestsRootDir)
-		}
+	queues, err := pipelineQueues(cfg, path)
+	if err != nil {
+		return err
 	}
 
 	self, err := os.Executable()
@@ -173,6 +171,31 @@ func runAdapter(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	return adapter.Run(ctx)
+}
+
+// pipelineQueues checks every configured pipeline of the config read from path
+// and returns their queues. It logs the warnings of the checks.
+func pipelineQueues(cfg *config.Config, path string) ([]filesystem.Queue, error) {
+	var queues []filesystem.Queue
+	for _, t := range proofTypes {
+		p, ok := pipelineFor(cfg, t)
+		if !ok {
+			continue
+		}
+		warnings, err := checkPipeline(t, p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid config %q: %w", path, err)
+		}
+		for _, w := range warnings {
+			logrus.Warn(w)
+		}
+		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
+		if p.mode.IsDev() {
+			logrus.Warnf("prover-ray %s in DEV mode %q against %s: responses are NOT real proofs",
+				t, p.mode, p.requestsRootDir)
+		}
+	}
+	return queues, nil
 }
 
 // resolveWorkerID picks the worker id from the flag, then WORKER_ID, then the
@@ -240,7 +263,7 @@ func runProve(args []string) error {
 		defer func() { os.Stdout = respOut }()
 	}
 
-	cfg, _, err := loadConfig(*configPath)
+	cfg, path, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
@@ -252,8 +275,10 @@ func runProve(args []string) error {
 	if !ok {
 		return fmt.Errorf("proof type %q is not configured", proofType)
 	}
-	if !p.mode.Valid() {
-		return fmt.Errorf("invalid prover_mode %q for %s", p.mode, proofType)
+	// The adapter logs the warnings at startup. They are not logged here, as
+	// this runs for every job.
+	if _, err := checkPipeline(proofType, p); err != nil {
+		return fmt.Errorf("invalid config %q: %w", path, err)
 	}
 	runner, err := buildRunner(cfg.Version, p)
 	if err != nil {
@@ -339,4 +364,24 @@ func writeResponse(outPath string, stdout io.Writer, data []byte) error {
 		return fmt.Errorf("writing response file: %w", err)
 	}
 	return nil
+}
+
+// runProgramID prints the guest Program ID of an ELF: the 0x-prefixed keccak256
+// of its bytes.
+func runProgramID(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("prover program-id", flag.ContinueOnError)
+	elfPath := fs.String("elf", "", "guest ELF to compute the Program ID of (required)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *elfPath == "" {
+		return fmt.Errorf("--elf is required")
+	}
+	elf, err := os.ReadFile(*elfPath)
+	if err != nil {
+		return fmt.Errorf("reading guest ELF: %w", err)
+	}
+	id := guests.ProgramID(elf)
+	_, err = fmt.Fprintf(out, "0x%x\n", id[:])
+	return err
 }

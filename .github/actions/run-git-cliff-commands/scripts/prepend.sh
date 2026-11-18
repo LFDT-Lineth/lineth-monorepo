@@ -3,7 +3,10 @@
 # CHANGELOG.md, dropping any stale [unreleased] block first.
 #
 # Inputs (env):  COMPONENT, CLIFF_CONFIG, INCLUDE_PATHS (multi-line),
-#                FOLDER_NAME (dir holding CHANGELOG.md),
+#                FOLDER_NAME (dir holding CHANGELOG.md; optional — defaults to
+#                            COMPONENT's component_folder entry in components.sh,
+#                            the single source of truth. Pass only to override,
+#                            e.g. riscv-guests/<guest_dir>),
 #                GENERATE_WITH_NEXT_TAG (true|false, default false),
 #                NEXT_VERSION (required when GENERATE_WITH_NEXT_TAG=true),
 #                TARGET_REF (optional; branch to fast-forward before writing, to dodge a
@@ -18,10 +21,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 . "${SCRIPT_DIR}/lib.sh"
+# shellcheck source=components.sh
+. "${SCRIPT_DIR}/components.sh"
 
 : "${COMPONENT:?COMPONENT is required}"
 : "${CLIFF_CONFIG:?CLIFF_CONFIG is required}"
-: "${FOLDER_NAME:?FOLDER_NAME is required}"
+# Default to the component's CHANGELOG.md folder from components.sh (single
+# source of truth); FOLDER_NAME is only an explicit override.
+FOLDER_NAME="${FOLDER_NAME:-$(component_folder "${COMPONENT}")}"
 GENERATE_WITH_NEXT_TAG="${GENERATE_WITH_NEXT_TAG:-false}"
 NEXT_VERSION="${NEXT_VERSION:-}"
 DRY_RUN="${DRY_RUN:-false}"
