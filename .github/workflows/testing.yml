@@ -154,16 +154,14 @@ jobs:
   jacoco-report:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Generate Jacoco Coverage Report
-    # Run if at least one JVM test job completed (whether passed, failed, or cancelled)
-    # Don't run if all test jobs were skipped due to no changes
+    # Run only when every JVM test job that ran passed, and at least one ran.
+    # After a failed or cancelled test job the report is incomplete or missing, so
+    # this job would fail too. "Re-run failed jobs" re-runs it with the fixed tests.
     if: |
-      always() && (
-        needs.coordinator.result != 'skipped' ||
-        needs.linea-sequencer.result != 'skipped' ||
-        needs.maru.result != 'skipped' ||
-        needs.staterecovery.result != 'skipped' ||
-        needs.transaction-exclusion-api.result != 'skipped'
-      )
+      !cancelled() &&
+      contains(needs.*.result, 'success') &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     needs:
       - coordinator
       - linea-sequencer
