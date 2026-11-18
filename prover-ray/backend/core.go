@@ -209,10 +209,6 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 	if err != nil {
 		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
 	}
-	bin, err := binf.MarshalBinary()
-	if err != nil {
-		return nil, fmt.Errorf("encoding R5 arithmetization: %w", err)
-	}
 
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
@@ -220,7 +216,11 @@ func newDevPartial(cfg Config, mode ProverMode) (*Core, error) {
 		logrus.Warnf("dev-partial without shard_size: a real block does not fit in one shard")
 	}
 	settings := zkcdriver.Settings{TraceRound: 1, ShardSize: cfg.ShardSize}
-	driver := zkcdriver.NewZkCDriver(sys, settings, bytes.NewReader(bin))
+	// Not encoded and decoded: that would make the paged RAM flat.
+	driver, err := zkcdriver.NewZkCDriverFromBinaryFile(sys, settings, binf)
+	if err != nil {
+		return nil, fmt.Errorf("loading R5 arithmetization: %w", err)
+	}
 	risc5.RegisterPublicInputs(sys)
 	// Every pass but the PCS, as in full. Without a PCS no column data enters
 	// the transcript, so every coin is fixed and the same on every shard: fine

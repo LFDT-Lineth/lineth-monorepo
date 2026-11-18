@@ -88,6 +88,24 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	if errS != nil {
 		panic(errS)
 	}
+	return newZkCDriver(sys, settings, binf, metadata)
+}
+
+// NewZkCDriverFromBinaryFile is [NewZkCDriver] for constraints already
+// compiled in memory. It skips encoding and decoding them: zkc (v1.2.36) drops
+// the paged flag of memories when encoding, so the paged RAM would come back
+// flat, and every sharding checkpoint would copy all of it.
+func NewZkCDriverFromBinaryFile(sys *wiop.System, settings Settings, binf *BinaryFile) (*ZkCDriver, error) {
+	header := binf.Header()
+	metadata, err := header.GetMetaData()
+	if err != nil {
+		return nil, errors.New("corrupt metadata in binary constraints file")
+	}
+	return newZkCDriver(sys, settings, binf, metadata), nil
+}
+
+// newZkCDriver declares the columns and the constraints of binf in sys.
+func newZkCDriver(sys *wiop.System, settings Settings, binf *BinaryFile, metadata typed.Map) *ZkCDriver {
 	// Extract the AIR constraints from the binary file
 	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
