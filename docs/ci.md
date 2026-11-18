@@ -200,6 +200,21 @@ Docker images are built during PR CI so they can be used for E2E, but they are o
 - On PRs: runs are cancelled in-progress when a new commit is pushed (saves runner cost).
 - On `main`: runs are never cancelled; all runs complete in order.
 
+### When a job fails
+
+Use **Re-run failed jobs**, not **Re-run all jobs**. GitHub re-runs the failed jobs and the jobs that depend on them, and keeps every result that already passed. Re-running all jobs repeats `plan`, CodeQL and every passing test on fresh runners.
+
+The Jacoco coverage report only runs when every JVM test job that ran passed, so it is skipped after a test failure and runs again when the failed tests are re-run.
+
+These failures are not caused by your change. Re-run the failed jobs:
+
+| Log shows | Cause |
+|---|---|
+| `The runner has received a shutdown signal` | The self-hosted runner was stopped mid-job. |
+| `Execution failed for task ':spotlessInternalRegisterDependencies'` / `Cannot fingerprint input property 'steps'` | An intermittent Spotless plugin error during Gradle setup. |
+
+If a test fails, passes on re-run, and you didn't change it, report it as flaky.
+
 ---
 
 ## Reusable Workflow Naming Conventions
