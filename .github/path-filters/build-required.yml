@@ -1,0 +1,10 @@
+# Docs-only detection for the `plan` job in .github/workflows/main.yml (dorny/paths-filter).
+# The step sets predicate-quantifier: every, so has-changes-requiring-build is true when a changed
+# file matches none of the exclusions below; append to the list to skip more file types.
+has-changes-requiring-build:
+  - '!**/*.md'
+  - '!**/*.mdx'
+  - '!**/docs/**'
+  - '!docs/**'
+  - '!contracts/token-generation-event/**'
+  - '!.github/workflows/codeql.yml'

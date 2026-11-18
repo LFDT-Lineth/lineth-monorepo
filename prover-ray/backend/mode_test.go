@@ -24,10 +24,10 @@ func TestNew_InvalidMode(t *testing.T) {
 }
 
 func TestNew_EmptyModeDefaultsToFull(t *testing.T) {
-	// Empty mode resolves to full, which fails opening the empty circuit bin path.
+	// Empty mode resolves to full, which needs a guests folder.
 	_, err := New(Config{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "circuit bin")
+	assert.Contains(t, err.Error(), `prover mode "full"`)
 }
 
 func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {
@@ -43,22 +43,13 @@ func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {
 		"only the batch end block is set; other public inputs stay zero")
 }
 
-func TestProve_UnwiredModes_ReturnBlockerError(t *testing.T) {
-	// dev-zkvm's Core.Prove runs the guest under Execute, so it is not here.
-	for _, mode := range []ProverMode{ProverModePartial} {
-		c := &Core{mode: mode}
-		result := c.Prove(context.Background(), Job{ID: "job"})
-		assert.Equal(t, ResultStatusFailed, result.Status, mode)
-		require.Error(t, result.Err, mode)
-		assert.ErrorIs(t, result.Err, ErrNotImplemented, mode)
-	}
-}
-
 func TestProverMode_Helpers(t *testing.T) {
 	assert.True(t, ProverModeDevMock.IsDev())
 	assert.True(t, ProverModeDevZkVM.IsDev())
 	assert.False(t, ProverModeFull.IsDev())
-	assert.False(t, ProverModePartial.IsDev())
+	assert.True(t, ProverModeDevPartial.IsDev(), "dev-partial returns a devmode proof, not a real one")
+	assert.Equal(t, "dev-partial", string(ProverModeDevPartial))
+	assert.False(t, ProverMode("partial").Valid(), "partial is now dev-partial")
 
 	assert.False(t, ProverModeDevMock.needsArtifacts())
 	assert.True(t, ProverModeFull.needsArtifacts())

@@ -2,15 +2,13 @@ package lineth.coordination
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Consumer
+import kotlin.math.max
 
 class MaxLongCache(initialValue: Long) : Consumer<Long> {
   private val cachedMax: AtomicLong = AtomicLong(initialValue)
 
-  @Synchronized
   override fun accept(newValue: Long) {
-    if (newValue > cachedMax.get()) {
-      cachedMax.set(newValue)
-    }
+    cachedMax.accumulateAndGet(newValue) { current, new -> max(current, new) }
   }
 
   fun get(): Long {

@@ -3,6 +3,13 @@ description: >
   Toolchain for building and host-testing the riscv-guests packages. Installs the Zig version pinned
   in riscv-guests/.zigversion, plus Nim and LLVM for the Constantine crypto backend.
 
+inputs:
+  needs-zkevm-fixtures:
+    description: >
+      Whether the job reads the EF zkevm fixtures (corpus and reference tests). When true, the job's
+      ZKEVM_FIXTURES_DIR is a cached copy, restored on every ref and saved only from main.
+    default: 'false'
+
 runs:
   using: 'composite'
   steps:
@@ -25,7 +32,7 @@ runs:
         make -C riscv-guests install-constantine-deps
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-    # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
+    # Zig package fetches (zesu, zesu-zkvm) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
       uses: ./.github/actions/cache
       with:
@@ -33,6 +40,19 @@ runs:
         key: riscv-guests-zig-pkg-${{ hashFiles('riscv-guests/**/build.zig.zon') }}
         restore-keys: |
           riscv-guests-zig-pkg-
+
+    # The Makefiles fetch the fixtures into ZKEVM_FIXTURES_DIR, the directory cached here.
+    - name: Set EF zkevm fixtures directory
+      if: ${{ inputs.needs-zkevm-fixtures == 'true' }}
+      shell: bash
+      run: echo "ZKEVM_FIXTURES_DIR=$RUNNER_TEMP/zkevm-fixtures" >> "$GITHUB_ENV"
+
+    - name: Cache EF zkevm fixtures
+      if: ${{ inputs.needs-zkevm-fixtures == 'true' }}
+      uses: ./.github/actions/cache
+      with:
+        path: ${{ env.ZKEVM_FIXTURES_DIR }}
+        key: riscv-guests-zkevm-fixtures-${{ hashFiles('riscv-guests/build_common/zkevm_fixtures_pin.mk') }}
 
     # Compile cache (the Makefiles pass --cache-dir <guest>/.zig-cache). Restoring it turns the
     # multi-minute zesu graph rebuild into a no-op; zig's cache is content-addressed, so a stale

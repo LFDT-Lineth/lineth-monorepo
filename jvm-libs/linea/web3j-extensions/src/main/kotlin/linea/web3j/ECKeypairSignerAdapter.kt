@@ -30,7 +30,7 @@ class ECKeypairSignerAdapter(
   }
 
   override fun getPrivateKey(): BigInteger {
-    throw RuntimeException("Key is managed by delegated Signer: $signerDelegate!")
+    throw UnsupportedOperationException("Key is managed by delegated Signer: $signerDelegate!")
   }
 
   override fun sign(transaction: ByteArray): ECDSASignature {

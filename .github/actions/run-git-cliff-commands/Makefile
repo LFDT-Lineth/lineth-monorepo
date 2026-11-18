@@ -18,13 +18,19 @@
 #   make -f .github/actions/run-git-cliff-commands/Makefile changelog-dry-run \
 #       COMPONENT=coordinator
 #
+# To regenerate [Unreleased] CHANGELOG.md sections exactly as the
+# component-changelog-update workflow does on main (this WRITES the files;
+# default COMPONENTS: all):
+#
+#   make -f .github/actions/run-git-cliff-commands/Makefile update-unreleased-changelogs \
+#       COMPONENTS=coordinator,maru,postman
+#
 # SCOPES/INCLUDE_PATH default to the COMPONENT's entry in scripts/components.sh
 # but can still be overridden explicitly, e.g. to preview a scope/path change
 # before committing it to components.sh:
 #
 #   make -f .github/actions/run-git-cliff-commands/Makefile prepend-dry-run \
 #       COMPONENT=linea-besu-package \
-#       FOLDER_NAME=linea-besu/package \
 #       SCOPES='linea-besu|tracer|sequencer|deps|misc' \
 #       INCLUDE_PATH=$'tracer/**\ntracer-constraints/**\nlinea-besu/besu/**'
 #
@@ -56,9 +62,11 @@ GENERATE_WITH_NEXT_TAG ?= true
 # otherwise break the '\'-continued shell command.
 export INCLUDE_PATH SCOPES TEMPLATE COMPONENT RELEASE_TAG_SUFFIX
 export FOLDER_NAME GENERATE_WITH_NEXT_TAG
+export MAX_PARALLEL
 
 .PHONY: help paths render version changelog prepend component-info \
-        version-dry-run changelog-dry-run prepend-dry-run
+        version-dry-run changelog-dry-run prepend-dry-run \
+        update-unreleased-changelogs
 
 help:
 	@echo 'Targets:'
@@ -71,7 +79,11 @@ help:
 	@echo '  version-dry-run    preview next version (COMPONENT, optionally INCLUDE_PATH/SCOPES to override)'
 	@echo '  changelog-dry-run  preview changelog    (COMPONENT, optionally INCLUDE_PATH/SCOPES to override)'
 	@echo '  prepend-dry-run    preview prepended CHANGELOG.md, file untouched'
-	@echo '                     (COMPONENT, FOLDER_NAME, optionally INCLUDE_PATH/SCOPES to override)'
+	@echo '                     (COMPONENT; FOLDER_NAME/INCLUDE_PATH/SCOPES to override)'
+	@echo '  update-unreleased-changelogs'
+	@echo '                     regenerate [Unreleased] CHANGELOG.md sections as CI does;'
+	@echo '                     WRITES the files (COMPONENTS=comma-separated, default all;'
+	@echo '                     MAX_PARALLEL to override the concurrency cap)'
 
 # --- thin wrappers used by the composite action (env-driven) --------------
 
@@ -94,6 +106,20 @@ prepend:
 component-info:
 	@test -n "$$COMPONENT" || { echo 'COMPONENT is required (COMPONENT=...)' >&2; exit 1; }
 	@$(SCRIPTS_DIR)/component-info.sh
+
+COMMA := ,
+
+# Regenerate the [Unreleased] CHANGELOG.md section of COMPONENTS
+# (comma-separated; default: all components) in parallel on this machine —
+# exactly what component-changelog-update.yml runs on pushes to main. Unlike
+# the *-dry-run targets this WRITES the files (it never commits or pushes);
+# review with 'git diff' afterwards.
+# GENERATE_WITH_NEXT_TAG is forced to false to match CI, which prepends under
+# an [unreleased] header (and because prepend.sh requires NEXT_VERSION when
+# GENERATE_WITH_NEXT_TAG=true, which only the dry-run plumbing computes).
+update-unreleased-changelogs:
+	@GENERATE_WITH_NEXT_TAG=false $(SCRIPTS_DIR)/update-unreleased-changelogs.sh \
+	  $(subst $(COMMA), ,$(COMPONENTS))
 
 # resolve-component-info COMPONENT [SCOPES] [INCLUDE_PATH] -> "scopes|include_path"
 # include_path lines are '\'-joined so the pair fits on one line for $(shell ...).
@@ -130,10 +156,10 @@ changelog-dry-run:
 	   $(SCRIPTS_DIR)/changelog.sh
 
 # Preview the CHANGELOG.md that `prepend` would produce, without writing the
-# file or touching the git remote.
+# file or touching the git remote. FOLDER_NAME defaults to the component's
+# component_folder entry in scripts/components.sh; pass it only to override.
 prepend-dry-run:
 	@test -n "$$COMPONENT"   || { echo 'COMPONENT is required (COMPONENT=...)'     >&2; exit 1; }
-	@test -n "$$FOLDER_NAME" || { echo 'FOLDER_NAME is required (FOLDER_NAME=...)' >&2; exit 1; }
 	@$(call resolve_component_info,$$COMPONENT) \
 	 include_paths="$$(INCLUDE_PATH="$$include_path" $(SCRIPTS_DIR)/paths.sh)"; \
 	 config="$$(SCOPES="$$scopes" $(SCRIPTS_DIR)/render.sh | sed 's/^config=//')"; \

@@ -3,6 +3,8 @@ from typing import Iterable, List, Sequence, Tuple
 
 from ethereum.crypto.hash import Hash32, keccak256
 from .fork import (
+    BEACON_ROOTS_ADDRESS,
+    HISTORY_STORAGE_ADDRESS,
     BlobTransaction,
     FeeMarketTransaction,
     Log,
@@ -323,11 +325,17 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
 
     The per-block state transition is delegated to the underlying engine
     (`execute_stateless_input`); this function adds only the Lineth logic on top —
-    conflation-level linking, the empty-`executionRequests` policy, forced
-    transactions, L2->L1 messages, and the L1->L2 bridge rolling hash.
+    conflation-level linking, the empty-`executionRequests` and no-blob-transaction
+    policies, forced transactions, L2->L1 messages, and the L1->L2 bridge rolling hash.
     """
     if len(execution_input.payloads) == 0:
         raise Exception("l2-execution proof must cover at least one payload")
+    # Not in `dynamicChainConfigHash`, so pinned to mainnet (§2.1).
+    system_contracts = execution_input.chain_config.system_contracts
+    if system_contracts.beacon_roots != BEACON_ROOTS_ADDRESS:
+        raise Exception("beacon roots contract must be the mainnet address")
+    if system_contracts.history_storage != HISTORY_STORAGE_ADDRESS:
+        raise Exception("history storage contract must be the mainnet address")
 
     # Parse each vanilla stateless input ONCE via the underlying engine's parser
     # (e.g. Zesu); the parsed objects are shared between execution and the Lineth
@@ -376,6 +384,13 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         requests = stateless_input.new_payload_request.execution_requests
         if requests.deposits or requests.withdrawals or requests.consolidations:
             raise Exception("execution requests are not supported by this rollup")
+
+        # ── Lineth policy: this rollup carries no EIP-4844 blob transactions, as a type-3
+        # transaction or as an Engine API versioned hash ──
+        if stateless_input.new_payload_request.versioned_hashes or any(
+            tx_rlp[:1] == b"\x03" for tx_rlp in parse_payload_transaction_rlps(payload)
+        ):
+            raise Exception("blob transactions are not supported by this rollup")
 
         # ── Linea policy: no beacon-chain withdrawals — this is an L2 rollup, not L1 ──
         if payload.withdrawals:

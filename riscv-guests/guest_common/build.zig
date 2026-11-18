@@ -1,5 +1,5 @@
-//! Builds the `guest_common` module. `zig build` checks compilation of the package; `zig build
-//! test` runs its unit tests.
+//! Builds the `guest_common` (generic primitives) and `core_serde` (cross-guest wire contracts)
+//! modules. `zig build` checks compilation of the package; `zig build test` runs its unit tests.
 
 const std = @import("std");
 const common = @import("build_common");
@@ -16,30 +16,61 @@ pub fn build(b: *std.Build) void {
     // `-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    _ = b.addModule("guest_common", .{
+    const shared = Shared.init(b, target, optimize);
+    const guest_common = b.addModule("guest_common", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{ shared.ssz, shared.accelerators },
+    });
+    _ = b.addModule("core_serde", .{
+        .root_source_file = b.path("src/core_serde.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{ .{ .name = "guest_common", .module = guest_common }, shared.accelerators },
     });
 
     // ── Native unit tests ────────────────────────────────────────────────────
     // Like every other `b.addTest` artifact in this tree, these run on the native host: a
     // freestanding riscv64 target has no OS to run a `std.testing` binary against.
     const native_target = b.resolveTargetQuery(.{});
-    const ssz_mod = b.createModule(.{
-        .root_source_file = b.path("src/ssz.zig"),
+    const native_shared = Shared.init(b, native_target, .Debug);
+    const guest_common_native_mod = common.createPackageModule(b, native_target, .Debug, &.{ native_shared.ssz, native_shared.accelerators });
+    const core_serde_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/core_serde.zig"),
         .target = native_target,
         .optimize = .Debug,
+        .imports = &.{ .{ .name = "guest_common", .module = guest_common_native_mod }, native_shared.accelerators },
     });
 
     const test_step = b.step("test", "Run native Zig unit tests for guest_common's shared primitives");
-    const ssz_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/ssz_test.zig"),
-            .target = native_target,
-            .optimize = .Debug,
-        }),
+    const tests = common.addTests(b, test_step, .{
+        .target = native_target,
+        .imports = &.{
+            .{ .name = "guest_common", .module = guest_common_native_mod },
+            .{ .name = "core_serde", .module = core_serde_native_mod },
+        },
+    }, .{});
+    tests.get("test/l2_execution_proof_test.zig").?.root_module.addAnonymousImport("l2_execution_output.ssz", .{
+        .root_source_file = b.path("../../prover-ray/utils/ssz/testdata/l2_execution_output.ssz"),
     });
-    ssz_tests.root_module.addImport("guest_common_ssz", ssz_mod);
-    test_step.dependOn(&b.addRunArtifact(ssz_tests).step);
+    const crypto = common.HostCrypto.forTarget(b, native_target, .{}) orelse return;
+    crypto.linkAll(tests);
 }
+
+/// The imports the sources name, for one target: the SSZ library and the accelerator calls. Every
+/// consumer's instance of the dependencies has the same options, so one compilation holds each
+/// module once.
+const Shared = struct {
+    ssz: std.Build.Module.Import,
+    accelerators: std.Build.Module.Import,
+
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) Shared {
+        const ssz = b.dependency("ssz", .{ .target = target, .optimize = optimize });
+        const accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
+        return .{
+            .ssz = .{ .name = "ssz", .module = ssz.module("ssz.zig") },
+            .accelerators = .{ .name = "zkvm_accelerators", .module = accelerators.module("zkvm_accelerators") },
+        };
+    }
+};

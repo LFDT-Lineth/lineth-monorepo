@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
@@ -82,11 +84,11 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 			wantErr: "overflows address space",
 		},
 		{
-			name: "alignment overflow",
+			name: "above 4 GiB",
 			blobs: []elfmapping.Blob{{
-				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
+				Address: math.MaxUint32 - 4, Data: []byte{1, 2}, Executable: true,
 			}},
-			wantErr: "aligning executable span",
+			wantErr: "outside the 32-bit address space",
 		},
 	}
 	for _, test := range tests {
@@ -99,16 +101,33 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 	}
 }
 
+func TestDecodedInputsPreserveExactRowLength(t *testing.T) {
+	// Exercise every final-byte alignment, including empty and byte-aligned tables.
+	for records := 0; records <= 8; records++ {
+		decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
+			Address: 0x1000, Data: make([]byte, records*4), Executable: true,
+		}}})
+		if err != nil {
+			t.Fatalf("Predecode(%d records): %v", records, err)
+		}
+		input := decoded.EncodeInputs()[DecodedInput]
+		want := bit.NewArray(append([]byte(nil), decoded.Decoded...), uint(records*87), bit.BigEndian)
+		if !input.Equals(want) {
+			t.Errorf("%d records: input = %s, want %s", records, input.String(), want.String())
+		}
+	}
+}
+
 func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 	var (
-		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 2, 3}}
+		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 		first         = program.EncodeInputs()
 		second        = program.EncodeInputs()
 		firstDecoded  = first[DecodedInput]
 		secondDecoded = second[DecodedInput]
 	)
 	//
-	if got := first[InstructionBaseInput]; binary.BigEndian.Uint64(got.Bytes()) != program.InstructionBase {
+	if got := first[InstructionBaseInput]; uint64(binary.BigEndian.Uint32(got.Bytes())) != program.InstructionBase {
 		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
 	}
 	//
@@ -116,6 +135,35 @@ func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
 	if secondDecoded.Bytes()[0] != 1 || program.Decoded[0] != 1 {
 		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
 	}
+}
+
+func TestBitsPerRowOfModuleDecoded(t *testing.T) {
+	compiled, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("get compiled R5 arithmetizaton: %v", err)
+	}
+	//
+	pg := compiled.ExecutionProgram()
+	//
+	if m, ok := pg.HasModule(DecodedInput); ok {
+		var (
+			sumLength uint = 0
+			decoded        = pg.Module(m)
+		)
+		// Iterate output columns of decoded module
+		for _, o := range decoded.Outputs() {
+			sumLength += o.Bitwidth().Unwrap()
+		}
+		// Check that sum matches constant
+		if sumLength != BitsPerRowOfModuleDecoded {
+			t.Fatalf("bits-per-row mismatch for module \"decoded\", expected %d got %d",
+				BitsPerRowOfModuleDecoded, sumLength)
+		}
+		//
+		return
+	}
+	// Catch situation where decoded module does not exist
+	t.Fatalf("compiled R5 arithmetization has no %q input", DecodedInput)
 }
 
 type memoryBlob struct {
@@ -394,7 +442,7 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivwWB},
 		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
 		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
-		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
+		{name: "removed write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeInvalid},
 		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
 		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeInvalid},
 		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
@@ -423,9 +471,6 @@ func TestRtypeOpForRd(t *testing.T) {
 	}
 	if got := rtypeOpForRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
 		t.Fatalf("rtypeOpForRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
-	}
-	if got := rtypeOpForRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
-		t.Fatalf("rtypeOpForRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
 	}
 }
 
@@ -686,7 +731,7 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
-		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
+		{name: "removed write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeInvalid},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

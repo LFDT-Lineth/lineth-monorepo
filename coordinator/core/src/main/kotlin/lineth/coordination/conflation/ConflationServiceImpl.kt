@@ -14,7 +14,6 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.PriorityBlockingQueue
-import java.util.concurrent.TimeUnit
 
 class ConflationServiceImpl(
   private val calculator: BlockConflationCalculator,
@@ -127,13 +126,16 @@ class ConflationServiceImpl(
         break
       }
 
-      nextAvailableBlock = blocksToConflate.poll(100, TimeUnit.MILLISECONDS)
+      // non-blocking: the head was just peeked under the same lock, so poll() returns it
+      val blockToConflate = checkNotNull(blocksToConflate.poll()) {
+        "conflation queue head disappeared: expected block=$nextBlockNumberToConflate"
+      }
       log.trace(
         "block {} removed from conflation queue and sent to calculator",
-        nextAvailableBlock?.block?.number,
+        blockToConflate.block.number,
       )
-      calculator.newBlock(nextAvailableBlock.blockCounters)
-      nextBlockNumberToConflate = nextAvailableBlock.block.number + 1u
+      calculator.newBlock(blockToConflate.blockCounters)
+      nextBlockNumberToConflate = blockToConflate.block.number + 1u
       nextAvailableBlock = blocksToConflate.peek()
     }
   }

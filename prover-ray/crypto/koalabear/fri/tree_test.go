@@ -59,7 +59,7 @@ func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 			leaves[i] = field.PseudoRandExt(prng)
 		}
 		octs := mapExtToOctuplet(leaves)
-		tree := buildTreeExt(leaves)
+		tree := buildTreeExt(MerkleHashKoalaBear, leaves)
 
 		if tree.NumLeaves() != n {
 			t.Fatalf("n=%d: NumLeaves=%d, want %d", n, tree.NumLeaves(), n)
@@ -79,14 +79,14 @@ func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 				t.Fatalf("n=%d idx=%d: deepest sibling is not the adjacent leaf idx^1", n, idx)
 			}
 
-			if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+			if err := branch.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier); err != nil {
 				t.Fatalf("n=%d idx=%d: AuthenticateToCap: %v", n, idx, err)
 			}
 
 			// Tampering the leaf must break authentication.
 			bad := branch
 			bad.Leaf = field.PseudoRandOctuplet(prng)
-			if err := bad.AuthenticateToCap(idx, frontier); err == nil {
+			if err := bad.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier); err == nil {
 				t.Fatalf("n=%d idx=%d: tampered leaf authenticated", n, idx)
 			}
 		}
@@ -96,17 +96,17 @@ func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 func TestMerkleCapAuthenticatesBranches(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(19))
 	leaves := field.VecPseudoRandExt(prng, 16)
-	tree := buildTreeExt(leaves)
+	tree := buildTreeExt(MerkleHashKoalaBear, leaves)
 	height := tree.NumLevel() - 1
 
 	for depth := 1; depth < height; depth++ {
 		treeCap := tree.OpenCap(depth)
-		if err := treeCap.Authenticate(depth, tree.Root()); err != nil {
+		if err := treeCap.Authenticate(MerkleHashKoalaBear, depth, tree.Root()); err != nil {
 			t.Fatalf("depth %d: authenticate cap: %v", depth, err)
 		}
 		for idx := range leaves {
 			branch := tree.OpenBranchToDepth(idx, depth)
-			if err := branch.AuthenticateToCap(idx, treeCap.Nodes); err != nil {
+			if err := branch.AuthenticateToCap(MerkleHashKoalaBear, idx, treeCap.Nodes); err != nil {
 				t.Fatalf("depth %d index %d: authenticate branch: %v", depth, idx, err)
 			}
 		}
@@ -115,13 +115,13 @@ func TestMerkleCapAuthenticatesBranches(t *testing.T) {
 
 func TestMerkleCapAuthenticatesAuxiliaryPrefix(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(23))
-	tree := NewTree([][]field.Octuplet{
+	tree := NewTree(MerkleHashKoalaBear, [][]field.Octuplet{
 		pseudoRandOctuplets(prng, 1),
 		nil,
 		pseudoRandOctuplets(prng, 4),
 	})
 	treeCap := tree.OpenCap(2)
-	if err := treeCap.Authenticate(2, tree.Root()); err != nil {
+	if err := treeCap.Authenticate(MerkleHashKoalaBear, 2, tree.Root()); err != nil {
 		t.Fatalf("authenticate cap: %v", err)
 	}
 	if treeCap.Aux[0] == nil {
@@ -134,7 +134,7 @@ func TestMerkleCapAuthenticatesAuxiliaryPrefix(t *testing.T) {
 	if tree.Root() != original {
 		t.Fatal("mutating cap auxiliary digest changed tree root")
 	}
-	if err := treeCap.Authenticate(2, tree.Root()); err == nil {
+	if err := treeCap.Authenticate(MerkleHashKoalaBear, 2, tree.Root()); err == nil {
 		t.Fatal("tampered cap authenticated")
 	}
 }
@@ -149,7 +149,7 @@ func pseudoRandOctuplets(prng *rand.Rand, n int) []field.Octuplet {
 
 func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(29))
-	tree := buildTreeExt(field.VecPseudoRandExt(prng, 8))
+	tree := buildTreeExt(MerkleHashKoalaBear, field.VecPseudoRandExt(prng, 8))
 	treeCap := tree.OpenCap(2)
 
 	badLength := treeCap
@@ -164,20 +164,20 @@ func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 	badNode := treeCap
 	badNode.Nodes = append([]field.Octuplet(nil), treeCap.Nodes...)
 	badNode.Nodes[0] = field.PseudoRandOctuplet(prng)
-	if err := badNode.Authenticate(2, tree.Root()); err == nil {
+	if err := badNode.Authenticate(MerkleHashKoalaBear, 2, tree.Root()); err == nil {
 		t.Fatal("tampered cap node authenticated")
 	}
 
 	branch := tree.OpenBranchToDepth(3, 2)
 	branch.Siblings[0] = field.PseudoRandOctuplet(prng)
-	if err := branch.AuthenticateToCap(3, treeCap.Nodes); err == nil {
+	if err := branch.AuthenticateToCap(MerkleHashKoalaBear, 3, treeCap.Nodes); err == nil {
 		t.Fatal("tampered branch authenticated")
 	}
 }
 
 func TestMerkleCapAuthenticatesDepthZero(t *testing.T) {
 	root := field.PseudoRandOctuplet(rand.New(utils.NewRandSource(31)))
-	if err := (MerkleCap{}).Authenticate(0, root); err != nil {
+	if err := (MerkleCap{}).Authenticate(MerkleHashKoalaBear, 0, root); err != nil {
 		t.Fatalf("depth-zero cap should authenticate the trusted root: %v", err)
 	}
 }
@@ -240,7 +240,7 @@ func multiInjectionTree(prng *rand.Rand, height int, counts []int) (*Tree, [][][
 			injections[level] = append(injections[level], injected)
 		}
 	}
-	tree := allocTree(len(bottom))
+	tree := allocTree(MerkleHashKoalaBear, len(bottom))
 	copy(tree.Nodes[len(bottom)-1:], bottom)
 	tree.buildLevels(injections)
 	return tree, injections
@@ -251,18 +251,28 @@ func multiInjectionTree(prng *rand.Rand, height int, counts []int) (*Tree, [][][
 // alike, with zero, one and several injections per level.
 func TestTreeChainsSeveralInjections(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(11))
-	const height = 7 // levels of 1..64 nodes: below and above batchLanes
-	tree, injections := multiInjectionTree(prng, height, []int{2, 0, 3, 1, 0, 2, 3})
-
-	for level := range height {
-		for j := range 1 << level {
-			k := 1<<level - 1 + j
-			want := poseidon2.Compress(tree.Nodes[2*k+1], tree.Nodes[2*k+2])
-			for _, injected := range injections[level] {
-				want = poseidon2.Compress(want, injected[j])
-			}
-			if tree.Nodes[k] != want {
-				t.Fatalf("level %d node %d does not match the injection chain", level, j)
+	for _, tc := range []struct {
+		height     int
+		injections []int
+	}{
+		// Levels of 1..64 nodes: below and above batchLanes.
+		{7, []int{2, 0, 3, 1, 0, 2, 3}},
+		// Levels of up to 2048 nodes: the deep ones are hashed subtree by
+		// subtree in parallel (minParallelTreeLevel).
+		{12, []int{1, 0, 2, 0, 3, 1, 0, 2, 3, 1, 2, 3}},
+	} {
+		height := tc.height
+		tree, injections := multiInjectionTree(prng, height, tc.injections)
+		for level := range height {
+			for j := range 1 << level {
+				k := 1<<level - 1 + j
+				want := poseidon2.Compress(tree.Nodes[2*k+1], tree.Nodes[2*k+2])
+				for _, injected := range injections[level] {
+					want = poseidon2.Compress(want, injected[j])
+				}
+				if tree.Nodes[k] != want {
+					t.Fatalf("height %d level %d node %d does not match the injection chain", height, level, j)
+				}
 			}
 		}
 	}
@@ -282,11 +292,11 @@ func TestBranchAuthenticatesSeveralInjections(t *testing.T) {
 		frontier := tree.Nodes[1<<depth-1 : 1<<(depth+1)-1]
 		for idx := range tree.NumLeaves() {
 			branch := tree.OpenBranchToDepth(idx, depth)
-			if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+			if err := branch.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier); err != nil {
 				t.Fatalf("depth %d leaf %d: %v", depth, idx, err)
 			}
 			if depth == 0 {
-				if err := branch.AuthenticateToCap(idx, root); err != nil {
+				if err := branch.AuthenticateToCap(MerkleHashKoalaBear, idx, root); err != nil {
 					t.Fatalf("leaf %d against the root: %v", idx, err)
 				}
 			}
@@ -300,19 +310,19 @@ func TestBranchAuthenticatesSeveralInjections(t *testing.T) {
 		}
 		tampered := tree.OpenBranch(5)
 		tampered.AuxSiblings[level][0][0].SetUint64(1234)
-		if tampered.AuthenticateToCap(5, root) == nil {
+		if tampered.AuthenticateToCap(MerkleHashKoalaBear, 5, root) == nil {
 			t.Fatalf("level %d: tampered injection accepted", level)
 		}
 		dropped := tree.OpenBranch(5)
 		dropped.AuxSiblings[level] = dropped.AuxSiblings[level][1:]
-		if dropped.AuthenticateToCap(5, root) == nil {
+		if dropped.AuthenticateToCap(MerkleHashKoalaBear, 5, root) == nil {
 			t.Fatalf("level %d: dropped injection accepted", level)
 		}
 		if len(injected) > 1 {
 			swapped := tree.OpenBranch(5)
 			swapped.AuxSiblings[level][0], swapped.AuxSiblings[level][1] =
 				swapped.AuxSiblings[level][1], swapped.AuxSiblings[level][0]
-			if swapped.AuthenticateToCap(5, root) == nil {
+			if swapped.AuthenticateToCap(MerkleHashKoalaBear, 5, root) == nil {
 				t.Fatalf("level %d: reordered injections accepted", level)
 			}
 		}
@@ -334,7 +344,7 @@ func TestCapRootSeveralInjections(t *testing.T) {
 			injections[k] = tree.injectedInto(k)
 		}
 		nodes := tree.Nodes[frontierStart : 2*frontierStart+1]
-		if capRoot(nodes, injections) != tree.Root() {
+		if capRoot(MerkleHashKoalaBear, nodes, injections) != tree.Root() {
 			t.Fatalf("depth %d: capRoot does not rebuild the root", depth)
 		}
 	}
