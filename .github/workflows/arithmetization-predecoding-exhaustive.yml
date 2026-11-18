@@ -1,23 +1,19 @@
 name: Predecoding exhaustive decoder check
 
 # Decodes all 2^32 words with the Go decoder and checks every record against
-# riscv-opcodes and constants.zkc (TestDecodeAllWords). Runs only when the
-# decoder, the constants it numbers against, or this workflow change.
+# riscv-opcodes and constants.zkc (TestDecodeAllWords). Runs on every change
+# under arithmetization/, or to this workflow.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - 'arithmetization/gopkg/predecoding/**'
-      - 'arithmetization/src/main/common/constants.zkc'
-      - 'arithmetization/go.mod'
+      - 'arithmetization/**'
       - '.github/workflows/arithmetization-predecoding-exhaustive.yml'
   push:
     branches:
       - main
     paths:
-      - 'arithmetization/gopkg/predecoding/**'
-      - 'arithmetization/src/main/common/constants.zkc'
-      - 'arithmetization/go.mod'
+      - 'arithmetization/**'
       - '.github/workflows/arithmetization-predecoding-exhaustive.yml'
   workflow_dispatch:
 

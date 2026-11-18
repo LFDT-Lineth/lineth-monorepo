@@ -4,24 +4,56 @@ package predecoding
 //
 // Claim: for each of the 2^32 words, decodeInstruction writes the record an
 // independent reference says it should.
-//   - Which words are instructions, and their operands (rd, rs1, rs2, imm),
-//     come from riscv64asm, which is generated from the official riscv-opcodes
-//     tables.
+//   - Which instruction a word encodes (if any), and its operands (rd, rs1,
+//     rs2, imm), come from riscv64asm, which is generated from the official
+//     riscv-opcodes tables.
 //   - compute_op numbers come from constants.zkc, the file the interpreter uses.
-//   - The instruction -> compute_op mapping (spec table) and the x0-folding
-//     rule are Lineth design choices, restated here. This test cannot tell
-//     whether that design is right: what a compute_op *does* is checked by
-//     executing programs (the ACT4 suite), not here.
+//   - The instruction -> compute_op mapping (spec table), the x0-folding rule
+//     and the custom-1 rules are Lineth design choices, restated in this test
+//     (see "What it does not check").
 //
-// How this relates to ACT4. ACT4 runs a few dozen RISC-V certification programs
-// through the decoder AND the interpreter, so it checks results, but only for
-// the words those programs contain, and all of them are valid instructions.
-// This test checks the decoder alone, on every word: other registers and
-// immediates, and the malformed or reserved encodings ACT4 never feeds in. A
-// failure here names the field that is wrong, where an ACT4 failure only says
-// that some result is wrong. Each catches bugs the other misses.
+// The rules, one per kind of word (see checkWord):
+//   - Not an RV64IM instruction (riscv64asm rejects it, or decodes it to an
+//     instruction missing from the spec table): the decoder must reject it
+//     (compute_op 255). E.g. 0x00007003 (LOAD with funct3 = 111, undefined),
+//     and 0x00000000 (low bits 00: a 16-bit compressed encoding; Lineth has no
+//     C extension).
+//   - Exception: a non-RV64IM word in a knownExtras group, which the decoder
+//     accepts on purpose. The group's count must match exactly.
+//     E.g. 0x0000100f (FENCE.I, from the Zifencei extension) -> NO_OP.
+//   - RV64IM instruction: the decoder must accept it with the same compute_op.
+//     E.g. 0x003100b3 (add x1, x2, x3) -> RTYPE_ADD_WB.
+//   - RV64IM instruction marked fold in the spec table (ALU ops, loads, LUI,
+//     AUIPC) with rd = x0, and FENCE always: the decoder must emit NO_OP, and
+//     the other fields are not compared. E.g. 0x00310033 (add x0, x2, x3) -> NO_OP.
+//   - JAL/JALR: rd = x0 gives the jump-only compute_op, any other rd the _WB
+//     one. E.g. 0x00008067 (ret = jalr x0, 0(x1)) -> ITYPE_JALR.
+//   - Otherwise the whole record must match: rd, rs1, rs2 and imm as a 64-bit
+//     value (sign-extended wherever RISC-V sign-extends it), with unused fields
+//     0. E.g. 0xfff10093 (addi x1, x2, -1) -> imm = 0xffffffffffffffff.
+//   - Custom-1 (Lineth's precompiles; riscv64asm doesn't know them):
+//     funct7 = 0 with funct3 0/1 -> KECCAK/POSEIDON2 with rd, rs1, rs2 and no
+//     x0 folding; any other custom-1 word must be rejected.
 //
-// A failure names the instruction and the field that differs, with a sample word.
+// What it does not check. Three things are defined in this test, from the same
+// design the decoder implements: the spec table (which instructions count as
+// RV64IM, their compute_op names and x0-folding flags), the custom-1 rules, and the knownExtras
+// counts (measured from the decoder, not taken from a spec). If one of them and
+// the decoder share the same mistake, the test passes. Nothing checks them
+// against an external source; only the instruction encodings and operands come
+// from riscv64asm, and the numbers from constants.zkc. ACT4 covers part of that gap
+// by executing the instructions its programs contain.
+//
+// How this relates to ACT4. ACT4 runs 64 RISC-V certification programs through
+// the decoder AND the interpreter, so it checks results, but only for the words
+// those programs contain, and all of them are valid instructions. This test
+// checks the decoder alone, on every word: other registers and immediates, and
+// the malformed or reserved encodings ACT4 never feeds in. Each catches bugs
+// the other misses.
+//
+// A mismatch on an instruction is reported with its name, whether the
+// compute_op or the operands differ, and a sample word. Over-accepted words are
+// grouped by opcode, funct3 and compute_op, and checked against knownExtras.
 
 import (
 	"encoding/binary"
@@ -38,8 +70,9 @@ import (
 )
 
 // knownExtras lists the words the decoder accepts although they are not RV64IM
-// instructions, with their exact counts. All are reserved or malformed
-// encodings that no compiler emits. Any change to this set fails the test, so a
+// instructions, with their exact counts. They are reserved or malformed
+// encodings, or instructions from extensions Lineth doesn't implement
+// (FENCE.I, CBO.*), which a compiler targeting RV64IM does not emit. Any change to this set fails the test, so a
 // new over-acceptance cannot slip in unnoticed.
 //
 // How the entries were derived: a full run with an empty map reports every
