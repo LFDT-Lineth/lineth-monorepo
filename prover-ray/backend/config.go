@@ -25,4 +25,10 @@ type Config struct {
 	// [conglomeration.RecursionMerger] has its in-machine verifier, so every
 	// sharded job fails with [ErrNotImplemented]. Leave it zero in production.
 	ShardSize uint64
+
+	// ShardWorkers is the number of shards traced and proved at the same time.
+	// Zero or one proves them one at a time. Each shard in progress needs its
+	// own memory: about 30 to 35 GiB for a real block, on top of the trace
+	// checkpoints.
+	ShardWorkers int
 }
