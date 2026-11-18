@@ -10,6 +10,8 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -657,6 +659,7 @@ func (c *Core) proveShards(
 		errOnce sync.Once
 		failed  error
 		slots   = make(chan struct{}, max(c.cfg.ShardWorkers, 1))
+		done    atomic.Int64
 	)
 	fail := func(err error) {
 		errOnce.Do(func() {
@@ -676,6 +679,7 @@ func (c *Core) proveShards(
 				<-slots
 				wg.Done()
 			}()
+			start := time.Now()
 			node, err := c.proveOneShard(ctx, lazyTrace, i)
 			if err != nil {
 				fail(err)
@@ -685,7 +689,10 @@ func (c *Core) proveShards(
 			// prove shards whose result is already lost.
 			if err := reducer.Add(node); err != nil {
 				fail(fmt.Errorf("merging after shard %d: %w", i, err))
+				return
 			}
+			logrus.Infof("Shard %d done in %s: %d of %d",
+				i, time.Since(start).Round(100*time.Millisecond), done.Add(1), len(indexes))
 		}()
 	}
 	wg.Wait()

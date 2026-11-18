@@ -389,6 +389,8 @@ func benchDevPartial(
 		if strings.HasPrefix(stats.Check.Name, "error") {
 			return stats.Check.Name
 		}
+		t.Logf("shard %d done: trace %.1f s, check %.1f s, peak %.1f GB: %d of %d",
+			i, stats.Trace.Sec, stats.Check.Sec, max(stats.Trace.PeakRSSGB, stats.Check.PeakRSSGB), i+1, rec.NumShards)
 		if sharded {
 			if err := reducer.Add(conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}); err != nil {
 				return err.Error()

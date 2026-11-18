@@ -3,7 +3,9 @@ package backend
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -13,6 +15,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -208,6 +212,39 @@ func TestProveDevPartial_ParallelShards(t *testing.T) {
 	got := parallelCore(t, dir, id, 4).Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, got.Status, "prove err: %v", got.Err)
 	assert.Equal(t, want, got, "the number of workers should not change the result")
+}
+
+// TestProveDevPartial_ParallelShards_LogsProgress checks that each shard done
+// is logged with the number of shards done so far, as they finish in any order.
+func TestProveDevPartial_ParallelShards_LogsProgress(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c := parallelCore(t, dir, id, 4)
+	hook := new(logrustest.Hook)
+	old := logrus.StandardLogger().ReplaceHooks(logrus.LevelHooks{})
+	logrus.AddHook(hook)
+	t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(old) })
+
+	result := c.Prove(context.Background(), devPartialJob(id))
+	require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
+
+	progress := regexp.MustCompile(`^Shard \d+ done in \S+: (\d+) of (\d+)$`)
+	var done []string
+	total := ""
+	for _, e := range hook.AllEntries() {
+		if m := progress.FindStringSubmatch(e.Message); m != nil {
+			done = append(done, m[1])
+			total = m[2]
+		}
+	}
+	require.NotEmpty(t, done, "no progress line")
+	want := make([]string, len(done))
+	for i := range want {
+		want[i] = strconv.Itoa(i + 1)
+	}
+	assert.Equal(t, want, done, "one line per shard, counted 1 to the total")
+	assert.Equal(t, strconv.Itoa(len(done)), total)
 }
 
 // TestProveDevPartial_ParallelShards_BrokenConstraint checks that a shard
