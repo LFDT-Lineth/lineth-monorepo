@@ -22,15 +22,19 @@ func TestRenderBenchReport(t *testing.T) {
 	recs := []benchBlock{
 		{
 			Block: "full.ssz", NumShards: 2, Result: benchPass, ProcessPeakGB: 40,
-			Steps:       []benchStep{{Name: "execute", Sec: 5}, {Name: benchFastPass, Sec: 60, PeakRSSGB: 30}},
+			Steps:       []benchStep{{Name: benchExecuteStep, Sec: 5}, {Name: benchFastPass, Sec: 60, PeakRSSGB: 30}},
 			ShardsStats: []benchShard{shard(0, 10, 100), shard(1, 20, 300)},
 		},
 		{
 			Block: "big.ssz", NumShards: 100, MaxShards: 2, Result: "stopped after 2 shards",
-			Steps:       []benchStep{{Name: "execute", Sec: 10}, {Name: benchFastPass, Sec: 90}},
+			Steps:       []benchStep{{Name: benchExecuteStep, Sec: 10}, {Name: benchFastPass, Sec: 90}},
 			ShardsStats: []benchShard{shard(0, 30, 10), shard(1, 30, 10)},
 		},
 		{Block: "oom.ssz", Result: "killed by SIGKILL, most likely out of memory"},
+		{
+			Block: "par.ssz", NumShards: 10, ShardsRun: 10, Workers: 8, Result: benchPass,
+			Steps: []benchStep{{Name: benchExecuteStep, Sec: 5}, {Name: benchFastPass, Sec: 10}, {Name: benchShardsStep, Sec: 20}},
+		},
 	}
 	report := renderBenchReport("Machine: test", recs)
 
@@ -44,6 +48,20 @@ func TestRenderBenchReport(t *testing.T) {
 	assert.Contains(t, report, "| big.ssz | 2 of 100 | stopped after 2 shards |")
 	assert.Contains(t, report, "1h41m40s")
 	assert.Contains(t, report, "| oom.ssz | 0 of 0 | killed by SIGKILL, most likely out of memory |")
+	// One shard at a time unless the record says otherwise.
+	assert.Contains(t, report, "| 0 | - | 1 |", "the full block, with 1 worker")
+	// In parallel, the time per shard is the shards step over the shards,
+	// with no per-shard sizes.
+	assert.Contains(t, report, "| par.ssz | 10 of 10 | pass |")
+	assert.Contains(t, report, "| 2s | - | 0 | - | 8 |")
+}
+
+// TestBenchShardWorkers checks the number of shards in progress at once: the
+// workers asked for, no more than the shards, at least 1.
+func TestBenchShardWorkers(t *testing.T) {
+	assert.Equal(t, 10, benchShardWorkers(10, 272))
+	assert.Equal(t, 4, benchShardWorkers(10, 4), "no more workers than shards")
+	assert.Equal(t, 1, benchShardWorkers(0, 10), "at least one worker")
 }
 
 // TestBenchChildFailure checks how the end of a block process that wrote no

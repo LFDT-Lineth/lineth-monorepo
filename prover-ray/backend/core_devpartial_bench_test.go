@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"cmp"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,6 +54,23 @@ const (
 	benchRecordEnv    = "BENCH_RECORD"
 )
 
+// benchWorkersEnv sets the number of shards in progress at once, instead of
+// benchWorkers. 1 checks the shards one at a time and records each of them.
+const benchWorkersEnv = "BENCH_SHARD_WORKERS"
+
+// benchWorkers is the number of shards in progress at once, the same for
+// every block so that the blocks compare, and a round number so that the gain
+// is easy to read. 17M fits on r8a.24xlarge (742 GiB): its checkpoints take
+// ~200 GiB, and a shard in progress needs up to ~32 GiB.
+const benchWorkers = 10
+
+// benchShardsStep is the name of the step that traces and checks the shards
+// in parallel.
+const benchShardsStep = "shards"
+
+// benchExecuteStep is the name of the step that runs the guest for its output.
+const benchExecuteStep = "execute"
+
 // benchUnfinished is the result of a block until it ends: a block process
 // killed before the end leaves it in its record.
 const benchUnfinished = "did not finish"
@@ -70,7 +88,9 @@ type benchBlock struct {
 	InputBytes    int          `json:"inputBytes"`
 	ShardSize     uint64       `json:"shardSize"`
 	NumShards     uint         `json:"numShards"`
+	ShardsRun     uint         `json:"shardsRun"`
 	MaxShards     uint         `json:"maxShards"`
+	Workers       int          `json:"workers"`
 	Result        string       `json:"result"`
 	TotalSec      float64      `json:"totalSec"`
 	PeakRSSGB     float64      `json:"peakRssGb"`
@@ -105,9 +125,11 @@ type benchModule struct {
 
 // TestDevPartial_Benchmark runs dev-partial step by step on the blocks of
 // [benchPlan], as [Core.Prove] does, and reports for each block the time and
-// peak memory of each step, the size of each shard and the result. Each block
-// runs in its own process, so that a block killed for lack of memory is
-// reported and the next one still runs. A shard with a module over
+// peak memory of each step and the result. Each block runs in its own process,
+// so that a block killed for lack of memory is reported and the next one still
+// runs. The shards are traced and checked benchWorkers at a time, with the Go
+// memory limit at 90% of the machine. With BENCH_SHARD_WORKERS=1 they are checked one at a time and each
+// is recorded: its size, and a shard with a module over
 // [wiop.ColumnSizeMaxSupported] rows is reported and not checked, as its
 // assignment would panic. Same settings as [TestDevPartial_Integration]
 // (GUEST_ELF, DEV_PARTIAL_SHARD_SIZE). The report goes to BENCH_DIR, by default
@@ -237,6 +259,11 @@ func benchOneBlock(t *testing.T, block string) {
 	require.NoError(t, err)
 	maxShards, err := strconv.ParseUint(os.Getenv(benchMaxShardsEnv), 10, 32)
 	require.NoError(t, err, "parsing "+benchMaxShardsEnv)
+	workers := benchWorkers
+	if s := os.Getenv(benchWorkersEnv); s != "" {
+		workers, err = strconv.Atoi(s)
+		require.NoError(t, err, "parsing "+benchWorkersEnv)
+	}
 	extended, err := os.ReadFile(blockPath(block)) //nolint:gosec // G703: test-controlled path
 	require.NoError(t, err, "reading block file")
 
@@ -258,7 +285,7 @@ func benchOneBlock(t *testing.T, block string) {
 		require.NoError(t, os.WriteFile(os.Getenv(benchRecordEnv), line, 0o600)) //nolint:gosec // G703: test-controlled path
 	}
 	save()
-	result := benchDevPartial(t, core, g, extended, uint(maxShards), &rec, save)
+	result := benchDevPartial(t, core, g, extended, uint(maxShards), workers, &rec, save)
 	rec.Result = result
 	save()
 	logBench(t, rec)
@@ -266,16 +293,17 @@ func benchOneBlock(t *testing.T, block string) {
 
 // benchDevPartial runs the steps of dev-partial on one input, records them in
 // rec, calls save after each step, and returns the result: "pass", "over the
-// column limit", "stopped after N shards", or the error.
+// column limit", "stopped after N shards", or the error. workers is the number
+// of shards in progress at once.
 func benchDevPartial(
-	t *testing.T, c *Core, g guestProgram, extended []byte, maxShards uint, rec *benchBlock, save func(),
+	t *testing.T, c *Core, g guestProgram, extended []byte, maxShards uint, workers int, rec *benchBlock, save func(),
 ) string {
 	t.Helper()
 	inputs, err := c.encodeGuestInputs(Job{Payload: extended}, g)
 	require.NoError(t, err)
 
 	var out []byte
-	err = benchRun(&rec.Steps, "execute", func() error {
+	err = benchRun(&rec.Steps, benchExecuteStep, func() error {
 		var err error
 		out, _, err = executeGuestPublicInputs(c.driver.BinaryFile, inputs)
 		return err
@@ -304,6 +332,28 @@ func benchDevPartial(
 	if sharded {
 		reducer = conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
 	}
+	workers = benchShardWorkers(workers, rec.NumShards)
+	rec.Workers = workers
+	if workers > 1 && sharded && maxShards == 0 {
+		// The steps of the shards overlap, so they are measured as one.
+		c.cfg.ShardWorkers = workers
+		totalKB, _ := procKB("/proc/meminfo", "MemTotal:")
+		debug.SetMemoryLimit(int64(0.9 * totalKB * 1024))
+		indexes := make([]uint, rec.NumShards)
+		for i := range indexes {
+			indexes[i] = uint(i)
+		}
+		err := benchRun(&rec.Steps, benchShardsStep, func() error {
+			return c.proveShards(context.Background(), lazyTrace, indexes, reducer)
+		})
+		save()
+		if err != nil {
+			return err.Error()
+		}
+		rec.ShardsRun = rec.NumShards
+		return benchMerge(c, rec, reducer, out, save)
+	}
+
 	var pub wiop.PublicInput
 	result := benchPass
 	for i := range rec.NumShards {
@@ -344,27 +394,45 @@ func benchDevPartial(
 				return err.Error()
 			}
 		}
+		rec.ShardsRun = i + 1
 	}
 	if result != benchPass {
 		return result
 	}
 	if sharded {
-		err := benchRun(&rec.Steps, "merge", func() error {
-			root, err := reducer.Close(func(children []conglomeration.Node) (conglomeration.Node, error) {
-				return c.merger.Finalize(children, rec.NumShards)
-			})
-			pub = root.Pub
-			return err
-		})
-		save()
-		if err != nil {
-			return err.Error()
-		}
+		return benchMerge(c, rec, reducer, out, save)
 	}
 	if _, err := c.devmodePublicInputs(pub, out[:guestOutputHashSize]); err != nil {
 		return err.Error()
 	}
 	return result
+}
+
+// benchMerge runs the last merges and the root checks of the mock merger,
+// then reads the public inputs from the root.
+func benchMerge(c *Core, rec *benchBlock, reducer *conglomeration.Reducer, out []byte, save func()) string {
+	var pub wiop.PublicInput
+	err := benchRun(&rec.Steps, "merge", func() error {
+		root, err := reducer.Close(func(children []conglomeration.Node) (conglomeration.Node, error) {
+			return c.merger.Finalize(children, rec.NumShards)
+		})
+		pub = root.Pub
+		return err
+	})
+	save()
+	if err != nil {
+		return err.Error()
+	}
+	if _, err := c.devmodePublicInputs(pub, out[:guestOutputHashSize]); err != nil {
+		return err.Error()
+	}
+	return benchPass
+}
+
+// benchShardWorkers returns the number of shards in progress at once: the
+// workers asked for, no more than the shards, at least 1.
+func benchShardWorkers(workers int, shards uint) int {
+	return max(1, min(workers, int(shards)))
 }
 
 // benchShardSize records the cells, the largest modules and the modules over
@@ -465,15 +533,18 @@ func renderBenchReport(machine string, recs []benchBlock) string {
 	var b strings.Builder
 	b.WriteString("# dev-partial benchmark\n\n" + machine + "\n\n")
 	b.WriteString("| Block | Shards run | Result | Time | Peak memory | Fast pass | Time per shard " +
-		"| Largest module | Shards over the limit | Full time (estimated) |\n")
-	b.WriteString("|---|---|---|---|---|---|---|---|---|---|\n")
+		"| Largest module | Shards over the limit | Full time (estimated) | Workers |\n")
+	b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|\n")
 	for _, r := range recs {
 		fastPass := "-"
-		var stepsSec float64
+		var stepsSec, parallelSec float64
 		for _, s := range r.Steps {
 			stepsSec += s.Sec
-			if s.Name == benchFastPass {
+			switch s.Name {
+			case benchFastPass:
 				fastPass = fmt.Sprintf("%s, %.1f GB", benchDuration(s.Sec), s.PeakRSSGB)
+			case benchShardsStep:
+				parallelSec = s.Sec
 			}
 		}
 		perShard, largest, over := "-", "-", 0
@@ -488,19 +559,22 @@ func renderBenchReport(machine string, recs []benchBlock) string {
 				over++
 			}
 		}
-		run := uint(len(r.ShardsStats))
-		if run > 0 {
-			perShard = benchDuration(shardsSec / float64(run))
+		run := max(r.ShardsRun, uint(len(r.ShardsStats)))
+		switch {
+		case len(r.ShardsStats) > 0:
+			perShard = benchDuration(shardsSec / float64(len(r.ShardsStats)))
 			largest = fmt.Sprintf("%s %d rows", top.Name, top.Rows)
+		case run > 0:
+			perShard = benchDuration(parallelSec / float64(run))
 		}
 		estimate := "-"
-		if run > 0 && run < r.NumShards {
-			estimate = benchDuration(stepsSec + shardsSec/float64(run)*float64(r.NumShards))
+		if n := len(r.ShardsStats); n > 0 && uint(n) < r.NumShards {
+			estimate = benchDuration(stepsSec + shardsSec/float64(n)*float64(r.NumShards))
 		}
 		peak := max(r.ProcessPeakGB, r.PeakRSSGB)
-		fmt.Fprintf(&b, "| %s | %d of %d | %s | %s | %.1f GB | %s | %s | %s | %d | %s |\n",
+		fmt.Fprintf(&b, "| %s | %d of %d | %s | %s | %.1f GB | %s | %s | %s | %d | %s | %d |\n",
 			r.Block, run, r.NumShards, benchCell(r.Result), benchDuration(r.TotalSec), peak,
-			fastPass, perShard, largest, over, estimate)
+			fastPass, perShard, largest, over, estimate, max(r.Workers, 1))
 	}
 	return b.String()
 }
@@ -518,8 +592,8 @@ func benchCell(s string) string {
 // logBench logs the record of one block in a readable form.
 func logBench(t *testing.T, rec benchBlock) {
 	t.Helper()
-	t.Logf("%s: %d bytes, %d shards of %d instructions, result %q, %.0f s, peak %.1f GB",
-		rec.Block, rec.InputBytes, rec.NumShards, rec.ShardSize, rec.Result, rec.TotalSec, rec.PeakRSSGB)
+	t.Logf("%s: %d bytes, %d shards of %d instructions, %d workers, result %q, %.0f s, peak %.1f GB",
+		rec.Block, rec.InputBytes, rec.NumShards, rec.ShardSize, max(rec.Workers, 1), rec.Result, rec.TotalSec, rec.PeakRSSGB)
 	for _, s := range rec.Steps {
 		t.Logf("  %-12s %8.1f s %6.1f GB", s.Name, s.Sec, s.PeakRSSGB)
 	}
