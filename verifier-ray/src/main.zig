@@ -10,13 +10,11 @@ const verifier = verifier_ray.verifier;
 const image_relocation = verifier_ray.image_relocation;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
-const is_aggregator = main_config.aggregator;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = main_config.input_path ++ "";
-const native_pair_input_path: [:0]const u8 = main_config.pair_input_path ++ "";
 const input_guest_base = image_relocation.guest_base;
 
 extern const _in_start: u8;
@@ -53,13 +51,8 @@ pub fn main() noreturn {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
 
-    if (comptime is_aggregator) {
-        const pair = loadNativePairInput();
-        exitNative(runVerifierPair(pair));
-    } else {
-        const input = loadNativeInput();
-        exitNative(runVerifier(input));
-    }
+    const input = loadNativeInput();
+    exitNative(runVerifier(input));
 }
 
 // The main entry point for the R5 zkVM smoke test. This is separate from the
@@ -73,18 +66,12 @@ fn r5_main() callconv(.c) noreturn {
         unreachable;
     }
 
-    if (comptime is_aggregator) {
-        // the aggregator pair image is linked at `_in_start` by the zkc JSON input writer
-        const pair = loadR5PairInput();
-        exitR5(runVerifierPair(pair));
-    } else {
-        // load the input depending on the running mode (embedded by the zkVM or at compile time)
-        const input = loadR5Input();
+    // load the input depending on the running mode (embedded by the zkVM or at compile time)
+    const input = loadR5Input();
 
-        // run the verifier smoke test with the loaded input
-        const res = runVerifier(input);
-        exitR5(res);
-    }
+    // run the verifier smoke test with the loaded input
+    const res = runVerifier(input);
+    exitR5(res);
 }
 
 // We have standard entry point convention for R5 zkvm. Export the symbol so that the linker can find it.
@@ -109,27 +96,6 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
         // if the verifier fails, return a non-zero exit code
         return 1;
     };
-    return 0; // success
-}
-
-fn runVerifierPair(pair: verifier.AggregatorInput) u8 {
-    // the aggregator entry point never embeds its input at build time; it always
-    // verifies against the real compiled riscv system.
-    verifier.verifyPairWithWorkspace(
-        riscv_system.system_0_spec,
-        riscv_system.system_0_systems,
-        pair.a.*,
-        pair.b.*,
-        &verifier_workspace,
-    ) catch {
-        // if the verifier fails, return a non-zero exit code
-        return 1;
-    };
-    if (comptime is_r5_zkvm) {
-        var output: [verifier.pairStatementEncodedLen(riscv_system.system_0_public_input.refs.len)]u8 = undefined;
-        verifier.encodePairStatement(pair.a.public_inputs, &output) catch return 1;
-        lineth_accel.write_output(&output, output.len);
-    }
     return 0; // success
 }
 
@@ -186,24 +152,6 @@ fn loadNativeInput() *const verifier.VerifyInput {
     return @ptrCast(@alignCast(img.ptr));
 }
 
-// The aggregator pair image is the two-pointer `AggregatorInput` header (see
-// `verifier.AggregatorInput` / `proof_abi.zig`) followed by its two
-// `VerifyInput` sub-images, all encoded absolute for `input_guest_base`. It is
-// mapped like the single-proof image; the header pointers and each sub-image
-// are rebased relative to their own start addresses.
-fn loadNativePairInput() verifier.AggregatorInput {
-    if (comptime !is_supported_native) {
-        @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
-    }
-
-    // Relocate, then validate at the mapped layout (see `loadNativeInput`).
-    const img = mapNativeImage(native_pair_input_path);
-    image_relocation.rebasePair(img.ptr, img.len, input_guest_base, @intFromPtr(img.ptr)) catch exitNative(1);
-    const base = @intFromPtr(img.ptr);
-    const pair = image_relocation.validatePair(img.ptr, img.len, base) catch exitNative(1);
-    return .{ .a = @ptrFromInt(base + pair.a), .b = @ptrFromInt(base + pair.b) };
-}
-
 fn loadR5Input() *const verifier.VerifyInput {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 verifier path currently supports only R5 zkVM target");
@@ -219,22 +167,6 @@ fn loadR5Input() *const verifier.VerifyInput {
     const input: [*]const u8 = @ptrCast(&_in_start);
     image_relocation.validateImage(input, @intFromPtr(&_in_end) - input_start, input_start) catch exitR5(1);
     return @ptrCast(@alignCast(input));
-}
-
-fn loadR5PairInput() verifier.AggregatorInput {
-    if (comptime !is_r5_zkvm) {
-        @compileError("R5 verifier path currently supports only R5 zkVM target");
-    }
-
-    // The zkc JSON input writer places the pair image bytes directly at
-    // `_in_start`, already relocated for GuestBase: a two-pointer
-    // `AggregatorInput` header followed by its two `VerifyInput` sub-images.
-    // The header is untrusted, so `validatePair` reads it as raw integers and
-    // validates both members; only then are the typed pointers formed.
-    const input_start = @intFromPtr(&_in_start);
-    const input: [*]const u8 = @ptrCast(&_in_start);
-    const pair = image_relocation.validatePair(input, @intFromPtr(&_in_end) - input_start, input_start) catch exitR5(1);
-    return .{ .a = @ptrFromInt(input_start + pair.a), .b = @ptrFromInt(input_start + pair.b) };
 }
 
 fn exitNative(code: u8) noreturn {

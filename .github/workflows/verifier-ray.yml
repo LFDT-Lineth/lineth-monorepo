@@ -89,10 +89,6 @@ jobs:
         working-directory: verifier-ray
         run: make build-release
 
-      - name: R5 aggregator build
-        working-directory: verifier-ray
-        run: make build-r5-aggregator
-
       - name: Verifier-ray tests
         working-directory: verifier-ray
         run: make test
@@ -100,10 +96,6 @@ jobs:
       - name: Native verifier passing smoke test
         working-directory: verifier-ray
         run: make run-passing
-
-      - name: Native aggregator smoke test
-        working-directory: verifier-ray
-        run: make run-aggregator
 
       # - name: Native verifier failing smoke test
       #   working-directory: verifier-ray

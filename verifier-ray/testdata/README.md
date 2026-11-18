@@ -28,15 +28,6 @@ Both are generated from proving `zkc_r5.AllInOneGuestELF` (the one guest in
 M-extension + custom-precompile surface in a single witness) against the
 real `arithmetization/src/main/riscv/main.zkc` interpreter circuit.
 
-The two-proof aggregator pair image (the same honest proof encoded twice
-behind a two-pointer header — see `codegen/aggregator_image.go`) is derived
-from `riscv_proof_image.bin` by `codegen/generate-aggregator-image` and is not
-committed either (it is ~2x the single image). `make generate-testdata` writes it:
-
-```text
-testdata/riscv_proof_pair_image.bin
-```
-
 Refresh generated Zig fixtures from `verifier-ray/` with:
 
 ```bash

@@ -538,17 +538,6 @@ type fixtureCase struct {
 	// different dynamic-module size, verified against the same baked
 	// PcsSystem. Multi-size cases only: hasAlt is the multi-size predicate.
 	alt *proofFixture
-	// altDifferentStatement is a second honest proof of the same compiled
-	// protocol, at the SAME size, whose public-input statement deliberately
-	// differs from honest's — the one fixture that exercises verifyPair's
-	// "two individually valid proofs, different statements" rejection.
-	altDifferentStatement *proofFixture
-	// altSameStatement is a second honest proof of the same compiled protocol
-	// carrying the SAME public-input statement as honest (as opposed to
-	// altDifferentStatement) — the positive counterpart, pinning that
-	// verifyPair accepts two independently-proven proofs whose statements
-	// genuinely agree, not just when both happen to be empty.
-	altSameStatement *proofFixture
 }
 
 type vanishingProofView struct {
@@ -766,32 +755,6 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
 
-		// altDifferentStatement is a SECOND HONEST proof — genuinely reproven,
-		// not tampered — whose opened cell is 31 instead of 30. verifyPair's
-		// consistency check must reject (honest, altDifferentStatement) even
-		// though each individually verifies: this is the only fixture that
-		// exercises the "two individually valid proofs, different statements"
-		// rejection path (see verify_pair_test.zig). It is NOT stored in `alt`:
-		// that slot means "different size", and this proof has the same size.
-		altDifferentAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 31, 40))) }
-		altDifferentFixture, err := buildProofFixture(sys, altDifferentAssign, "PublicInput", "OpenedCellPublicInput", "altDifferentStatement")
-		if err != nil {
-			return nil, nil, err
-		}
-		cases[last].altDifferentStatement = &altDifferentFixture
-
-		// altSameStatement is a THIRD independently-proven proof — different
-		// witness rounds/openings from honest (a distinct proving run, not a
-		// copy), but assigned to open the SAME cell value (30). Pins that
-		// verifyPair accepts a pair of genuinely different proofs whose public
-		// statements happen to agree, closing the gap the empty-statement
-		// multi-size cases (which agree only trivially) cannot cover.
-		altSameAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(11, 21, 30, 41))) }
-		altSameFixture, err := buildProofFixture(sys, altSameAssign, "PublicInput", "OpenedCellPublicInput", "altSameStatement")
-		if err != nil {
-			return nil, nil, err
-		}
-		cases[last].altSameStatement = &altSameFixture
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
@@ -1714,17 +1677,6 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.alt != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
 	}
-	// The altDifferentStatement honest proof: same size, different public-input
-	// statement, verified against the SAME System's .pcs.
-	if tc.altDifferentStatement != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt_different_statement", idx), *tc.altDifferentStatement)
-	}
-	// The altSameStatement honest proof: an independent proving run whose
-	// public-input statement matches honest's, verified against the SAME
-	// System's .pcs.
-	if tc.altSameStatement != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt_same_statement", idx), *tc.altSameStatement)
-	}
 	fmt.Fprintf(
 		out,
 		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
@@ -1936,25 +1888,18 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 
-	// Three optional second-proof getters, each gated by its has<suffix>:
-	//   getInputAlt                   — different dynamic-module SIZE (multi-size
-	//                                   cases only; hasAlt is the multi-size
-	//                                   predicate)
-	//   getInputAltDifferentStatement — same size, different public-input
-	//                                   statement (OpenedCellPublicInput)
-	//   getInputAltSameStatement      — independently re-proven, same statement
-	// All are checked against the SAME case systems (verify_case_i_systems.pcs)
-	// as the primary proof — one baked System verifying a second,
-	// differently-shaped or differently-witnessed proof.
+	// The optional second-proof getter, gated by hasAlt: getInputAlt is a
+	// proof at a different dynamic-module SIZE (multi-size cases only; hasAlt
+	// is the multi-size predicate), checked against the SAME case systems
+	// (verify_case_i_systems.pcs) as the primary proof — one baked System
+	// verifying a second, differently-shaped proof.
 	writeAltGetter(out, cases, "Alt", "alt", "alt input", func(tc fixtureCase) *proofFixture { return tc.alt })
-	writeAltGetter(out, cases, "AltDifferentStatement", "alt_different_statement", "altDifferentStatement input", func(tc fixtureCase) *proofFixture { return tc.altDifferentStatement })
-	writeAltGetter(out, cases, "AltSameStatement", "alt_same_statement", "altSameStatement input", func(tc fixtureCase) *proofFixture { return tc.altSameStatement })
 }
 
 // writeAltGetter emits a `getInput<suffix>`/`has<suffix>` pair gated by
-// whether `get(tc)` is non-nil for each case. The three pairs differ only in
-// the suffix, the zig identifier field prefix baked into their `_input` const
-// names (written by writeVerifyProof), and the compile-error label.
+// whether `get(tc)` is non-nil for each case. `fieldPrefix` is the zig
+// identifier prefix baked into the `_input` const names (written by
+// writeVerifyProof) and `missingLabel` the compile-error label.
 func writeAltGetter(out *bytes.Buffer, cases []fixtureCase, suffix, fieldPrefix, missingLabel string, get func(fixtureCase) *proofFixture) {
 	fmt.Fprintf(out, "pub fn getInput%s(comptime index: usize) verifier.VerifyInput {\n", suffix)
 	fmt.Fprintln(out, "    return switch (index) {")
