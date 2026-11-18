@@ -25,7 +25,7 @@ import (
 // 2^124 for a native KoalaBear octuplet).
 //
 // To hash an octuplet again (a Merkle node), it is packed back into one BN254
-// element with [BNPackKoala]'s 31-bit slots, o[0] highest. The 31-bit slots
+// element with [bnPackChunk]'s 31-bit slots, o[0] highest. The 31-bit slots
 // keep the packing injective for any canonical octuplet, not only for digest
 // encodings, since some trees use non-digest octuplets as leaves (e.g. the
 // FRI layers' extension values).

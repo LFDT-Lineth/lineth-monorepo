@@ -29,14 +29,12 @@ import (
 //
 //	sum_i x_i * 2^(31*(k-1-i))
 //
-// The length n (number of KoalaBear elements) is bound into the digest, as
-// otherwise e.g. [x] and [0, x] would collide. How is selected by a
-// [BNPackedDomain]: n as the initial chaining value (free, leaves only) or n
-// absorbed as a final block (one extra permutation).
+// The length n (number of KoalaBear elements) is absorbed as a final block,
+// as otherwise e.g. [x] and [0, x] would collide.
 //
 // The digest is a single BN254 element; it is NOT compatible with
-// [MDHasher]/[KoalagnarkMDHasher] digests. It exists so that the two
-// approaches can be compared.
+// [MDHasher]/[KoalagnarkMDHasher] digests. Merkle nodes are hashed with
+// [BNNodeCompress] / [BNNodeCompressGnark].
 
 const (
 	// BNPackedBitsPerKoala is the number of bits reserved for each KoalaBear
@@ -57,23 +55,10 @@ const (
 type BNPackedDomain int
 
 const (
-	// BNPackedLengthInIV starts the Merkle-Damgard chain at n instead of 0
-	// and absorbs no length block. This is free (n is a compile-time constant
-	// in the circuit) and saves one permutation per hash compared with
-	// [BNPackedLengthSuffix].
-	//
-	// ONLY valid for one-shot hashes whose length is known before absorbing
-	// starts, i.e. Merkle leaves. It does NOT work for a Fiat-Shamir
-	// transcript, which has no total length up front.
-	//
-	// Empty inputs are rejected. A leaf can only be confused with a Merkle
-	// node ([BNNodeCompress], same compression function) if some node's left
-	// child digest equals a small integer n, i.e. by finding a preimage.
-	BNPackedLengthInIV BNPackedDomain = iota
 	// BNPackedLengthSuffix starts at 0 and absorbs n as a final block, after
 	// the data. Costs one extra permutation; works for any length known at
 	// the end of hashing.
-	BNPackedLengthSuffix
+	BNPackedLengthSuffix BNPackedDomain = iota
 )
 
 // BNPackedHasher is the native counterpart of [BNPackedGnarkHasher].
@@ -118,29 +103,17 @@ func (h *BNPackedHasher) Sum() fr.Element {
 	n := len(h.buffer)
 	var length, state fr.Element
 	length.SetUint64(uint64(n))
-	if h.domain == BNPackedLengthInIV {
-		checkBNPackedNonEmpty(n)
-		state = length // length enters here: n is the initial chaining value
-	}
 	for start := 0; start < n; start += BNPackedNbKoalaPerLimb {
 		end := min(start+BNPackedNbKoalaPerLimb, n)
 		state = bnPackedCompress(state, bnPackChunk(h.buffer[start:end]))
 	}
-	if h.domain == BNPackedLengthSuffix {
-		state = bnPackedCompress(state, length) // length enters here: n is absorbed as a final block
-	}
+	state = bnPackedCompress(state, length) // n is absorbed as a final block
 	return state
 }
 
 func checkBNPackedDomain(domain BNPackedDomain) {
-	if domain != BNPackedLengthInIV && domain != BNPackedLengthSuffix {
+	if domain != BNPackedLengthSuffix {
 		panic("poseidon2: unsupported BN-packed domain separation mode")
-	}
-}
-
-func checkBNPackedNonEmpty(n int) {
-	if n == 0 {
-		panic("poseidon2: BN-packed hasher with length in IV cannot hash an empty input")
 	}
 }
 
@@ -153,15 +126,11 @@ func bnPackedCompress(state, block fr.Element) fr.Element {
 	return x[1]
 }
 
-// BNPackKoala packs KoalaBear elements into BN254 elements, 8 per element
-// (the last chunk may be shorter), using the layout described above.
-func BNPackKoala(xs []field.Element) []fr.Element {
-	res := make([]fr.Element, 0, (len(xs)+BNPackedNbKoalaPerLimb-1)/BNPackedNbKoalaPerLimb)
-	for start := 0; start < len(xs); start += BNPackedNbKoalaPerLimb {
-		end := min(start+BNPackedNbKoalaPerLimb, len(xs))
-		res = append(res, bnPackChunk(xs[start:end]))
-	}
-	return res
+// BNNodeCompress is the Merkle node hash for BN-packed trees: gnark-crypto's
+// width-2 BN254 Poseidon2 compression, P2(left, right)[1] + right. It matches
+// gnark std's Permutation.Compress, see [BNNodeCompressGnark].
+func BNNodeCompress(left, right fr.Element) fr.Element {
+	return bnPackedCompress(left, right)
 }
 
 // bnPackChunk packs up to 8 KoalaBear elements into one BN254 element without
@@ -228,31 +197,16 @@ func (h *BNPackedGnarkHasher) WriteOctuplet(data ...circuit.Octuplet) {
 
 // Sum returns the BN254 digest of the buffered elements. It does not modify
 // the buffer.
-//
-// The length n is a compile-time constant, so with [BNPackedLengthInIV] the
-// initial chaining value costs no constraints.
 func (h *BNPackedGnarkHasher) Sum() frontend.Variable {
 	n := len(h.buffer)
 	perm, err := stdperm.NewPoseidon2(h.api)
 	if err != nil {
 		panic(err)
 	}
-	var iv frontend.Variable = 0
-	// if the mode is [BNPackedLengthInIV], the initial chaining value is n, which is a
-	// compile-time constant, so it costs no constraints.
-	if h.domain == BNPackedLengthInIV {
-		// empty inputs are rejected, as the initial chaining value is n
-		checkBNPackedNonEmpty(n)
-		// length enters here: n is the initial chaining value
-		iv = n
-	}
-	md := gnarkhash.NewMerkleDamgardHasher(h.api, perm, iv)
+	md := gnarkhash.NewMerkleDamgardHasher(h.api, perm, 0)
 	md.Write(h.pack()...)
-	// if the mode is [BNPackedLengthSuffix], the length n is absorbed as a final block, which costs one extra permutation.
-	if h.domain == BNPackedLengthSuffix {
-		// length enters here: n is absorbed as a final block
-		md.Write(n)
-	}
+	// n is absorbed as a final block, which costs one extra permutation
+	md.Write(n)
 	return md.Sum()
 }
 
@@ -260,8 +214,18 @@ func (h *BNPackedGnarkHasher) pack() []frontend.Variable {
 	return packKoalaCanonical(h.api, h.koalaAPI, h.buffer)
 }
 
+// BNNodeCompressGnark is the in-circuit Merkle node hash for BN-packed trees,
+// matching [BNNodeCompress]: gnark std's width-2 Poseidon2 compression.
+func BNNodeCompressGnark(api frontend.API, left, right frontend.Variable) frontend.Variable {
+	perm, err := stdperm.NewPoseidon2(api)
+	if err != nil {
+		panic(err)
+	}
+	return perm.Compress(left, right)
+}
+
 // packKoalaCanonical packs KoalaBear elements into native BN254 variables, 8
-// per variable, with the layout of [BNPackKoala]. Each element is first
+// per variable, with the layout of [bnPackChunk]. Each element is first
 // brought to its canonical value in [0, p) by [canonicalKoala]: this keeps
 // the encoding unique (x and x+p must not hash differently) and guarantees
 // each slot fits in 31 bits.
@@ -328,8 +292,7 @@ func reducedLimb(koalaAPI *circuit.KoalaBearAPI, e circuit.Element) frontend.Var
 }
 
 // canonicalKoala returns the canonical value x in [0, p) of a KoalaBear
-// element as a native variable. This is "Option A" of the hashing report,
-// following SP1's reduceWithMaxBits.
+// element as a native variable, following SP1's reduceWithMaxBits.
 //
 // After the weak Reduce, gnark constrains the single 31-bit limb, so
 // v < 2^31 < 2p and the quotient q = floor(v/p) is 0 or 1 (B = 31). We then

@@ -42,48 +42,37 @@ func randKoala(n int) []field.Element {
 }
 
 func TestBNPackedHasherCircuit(t *testing.T) {
-	domains := map[string]BNPackedDomain{"lengthInIV": BNPackedLengthInIV, "lengthSuffix": BNPackedLengthSuffix}
-	for name, domain := range domains {
-		for _, n := range []int{0, 1, 7, 8, 9, 16, 23} {
-			if n == 0 && domain == BNPackedLengthInIV {
-				continue // rejected, see TestBNPackedLengthInIVRejectsEmpty
+	for _, n := range []int{0, 1, 7, 8, 9, 16, 23} {
+		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
+			vals := randKoala(n)
+			nh := NewBNPackedHasher(BNPackedLengthSuffix)
+			nh.Write(vals...)
+			digest := nh.Sum()
+
+			circuit := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n)}
+			witness := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Output: digest}
+			for i := range vals {
+				witness.Inputs[i] = kbcircuit.NewElementFromKoala(vals[i])
 			}
-			t.Run(fmt.Sprintf("%s/n=%d", name, n), func(t *testing.T) {
-				vals := randKoala(n)
-				nh := NewBNPackedHasher(domain)
-				nh.Write(vals...)
-				digest := nh.Sum()
+			require.NoError(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
 
-				circuit := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Domain: domain}
-				witness := &bnPackedCircuit{Inputs: make([]kbcircuit.Element, n), Output: digest, Domain: domain}
-				for i := range vals {
-					witness.Inputs[i] = kbcircuit.NewElementFromKoala(vals[i])
-				}
-				require.NoError(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()))
-
-				// wrong digest must fail
-				var bad = digest
-				bad.SetUint64(42)
-				witness.Output = bad
-				require.ErrorContains(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()), "bnPackedCircuit).Define")
-			})
-		}
+			// wrong digest must fail
+			var bad = digest
+			bad.SetUint64(42)
+			witness.Output = bad
+			require.ErrorContains(t, test.IsSolved(circuit, witness, ecc.BN254.ScalarField()), "bnPackedCircuit).Define")
+		})
 	}
 }
 
-func TestBNPackedLengthInIVRejectsEmpty(t *testing.T) {
-	require.PanicsWithValue(t, "poseidon2: BN-packed hasher with length in IV cannot hash an empty input",
-		func() { NewBNPackedHasher(BNPackedLengthInIV).Sum() })
-}
-
-// TestBNPackedLengthInIVSeparation checks that inputs of different lengths
-// that zero padding would otherwise confuse get different digests, and that
-// the two domain modes give different digests.
-func TestBNPackedLengthInIVSeparation(t *testing.T) {
+// TestBNPackedLengthSeparation checks that inputs of different lengths that
+// zero padding would otherwise confuse get different digests.
+func TestBNPackedLengthSeparation(t *testing.T) {
 	var x, zero field.Element
 	x.SetUint64(5)
 	chunk := randKoala(8)
 	cases := map[string][]field.Element{
+		"[]":          {},
 		"[x]":         {x},
 		"[0, x]":      {zero, x},
 		"[x, 0]":      {x, zero},
@@ -92,16 +81,13 @@ func TestBNPackedLengthInIVSeparation(t *testing.T) {
 	}
 	seen := map[fr.Element]string{}
 	for name, in := range cases {
-		for _, domain := range []BNPackedDomain{BNPackedLengthInIV, BNPackedLengthSuffix} {
-			h := NewBNPackedHasher(domain)
-			h.Write(in...)
-			d := h.Sum()
-			key := fmt.Sprintf("%s (domain %d)", name, domain)
-			if other, ok := seen[d]; ok {
-				t.Fatalf("collision between %s and %s", key, other)
-			}
-			seen[d] = key
+		h := NewBNPackedHasher(BNPackedLengthSuffix)
+		h.Write(in...)
+		d := h.Sum()
+		if other, ok := seen[d]; ok {
+			t.Fatalf("collision between %s and %s", name, other)
 		}
+		seen[d] = name
 	}
 }
 
@@ -274,4 +260,24 @@ func BenchmarkBNPackedNative(b *testing.B) {
 			_ = bnPackedSumBytesReference(vals)
 		}
 	})
+}
+
+type bnNodeCircuit struct {
+	Left, Right, Output frontend.Variable
+}
+
+func (c *bnNodeCircuit) Define(api frontend.API) error {
+	api.AssertIsEqual(BNNodeCompressGnark(api, c.Left, c.Right), c.Output)
+	return nil
+}
+
+func TestBNNodeCompressCircuitMatchesNative(t *testing.T) {
+	var l, r fr.Element
+	_, _ = l.SetRandom()
+	_, _ = r.SetRandom()
+	out := BNNodeCompress(l, r)
+	require.NoError(t, test.IsSolved(&bnNodeCircuit{},
+		&bnNodeCircuit{Left: l, Right: r, Output: out}, ecc.BN254.ScalarField()))
+	require.ErrorContains(t, test.IsSolved(&bnNodeCircuit{},
+		&bnNodeCircuit{Left: r, Right: l, Output: out}, ecc.BN254.ScalarField()), "bnNodeCircuit).Define")
 }
