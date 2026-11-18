@@ -298,7 +298,7 @@ func WithFixedFRIDomain() Option {
 // The in-circuit KoalaBear recursion verifies KoalaBear trees only, so a
 // System whose proof is verified by the recursion must keep the default.
 func WithMerkleHash(hash fri.MerkleHash) Option {
-	if hash > fri.MerkleHashBNPacked {
+	if hash.Validate() != nil {
 		utils.Panic("unknown Merkle hash %v", hash)
 	}
 	return func(o *compileOptions) { o.bnPackedMerkle = hash == fri.MerkleHashBNPacked }

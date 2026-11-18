@@ -29,6 +29,10 @@ const (
 	// it is much cheaper than emulating KoalaBear Poseidon2. Natively it is
 	// slower and has no batched path.
 	MerkleHashBNPacked
+
+	// merkleHashLast is one past the last valid Merkle hash. New modes go
+	// before it, so [MerkleHash.Validate] needs no change.
+	merkleHashLast
 )
 
 // leafHasher is the leaf hashing interface shared by both modes.
@@ -49,8 +53,9 @@ func (m MerkleHash) String() string {
 	}
 }
 
-func (m MerkleHash) validate() error {
-	if m > MerkleHashBNPacked {
+// Validate returns an error when m is not a known Merkle hash.
+func (m MerkleHash) Validate() error {
+	if m >= merkleHashLast {
 		return fmt.Errorf("fri: unknown Merkle hash %v", m)
 	}
 	return nil

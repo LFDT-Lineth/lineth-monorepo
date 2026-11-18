@@ -64,7 +64,7 @@ func LogFinalPolySize(log2Size uint8) Option {
 // WithMerkleHash sets the hash of the Merkle trees (see [MerkleHash]).
 func WithMerkleHash(hash MerkleHash) Option {
 	return func(c *Params) error {
-		if err := hash.validate(); err != nil {
+		if err := hash.Validate(); err != nil {
 			return err
 		}
 		c.MerkleHash = hash
