@@ -37,8 +37,7 @@ Note. We use '.' to represent '0'.
 |---------------------|--------|----------|--------|-----------|
 
 The field accelerator is an ECALL, not a custom opcode, so the predecoder needs no change for it.
-`field/field.zkc` implements it. Its `#[native]` functions and u384 registers are not supported
-by `zkc exec --gogen` yet.
+`field/field.zkc` implements it.
 
 |---------------------|--------|-------------------------------------------------------------|
 | ECALL               | status | registers                                                   |
