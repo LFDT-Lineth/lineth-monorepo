@@ -43,6 +43,11 @@ type Execution struct {
 	// shard does not fit in a column. full does not support sharding yet.
 	// dev-mock and dev-zkvm ignore it.
 	ShardSize uint64 `mapstructure:"shard_size"`
+	// ShardWorkers is the number of shards traced and proved at the same time;
+	// zero or one is one at a time. Each shard in progress needs about 30 to
+	// 35 GiB for a real block, on top of the trace checkpoints. It needs
+	// shard_size, and dev-mock and dev-zkvm ignore it.
+	ShardWorkers int `mapstructure:"shard_workers"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
@@ -82,6 +87,9 @@ func (c *Config) validate() error {
 	}
 	if c.Execution.ProverMode == "" {
 		return fmt.Errorf("execution.prover_mode must be set")
+	}
+	if c.Execution.ShardWorkers < 0 {
+		return fmt.Errorf("execution.shard_workers must not be negative")
 	}
 	for name, p := range map[string]Pipeline{"rollup": c.Rollup, "aggregation": c.Aggregation} {
 		if p.Configured() && p.ProverMode == "" {

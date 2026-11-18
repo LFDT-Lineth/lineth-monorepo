@@ -61,24 +61,24 @@ func (l layers) allows(t backend.ProofType) bool {
 }
 
 // settings says how a mode treats each [execution] setting.
-type settings struct{ nativeRunner, shardSize use }
+type settings struct{ nativeRunner, shardSize, shardWorkers use }
 
 // modeSettings says how each mode treats the [execution] settings:
 //
-//	mode                 native_runner_bin  shard_size
-//	dev-mock             ignored            ignored
-//	dev-zkvm             optional           ignored
-//	dev-partial          optional           optional
-//	full                 ignored            optional
-//	dev-full-dummy-wrap  -                  -           (planned, aggregation only)
+//	mode                 native_runner_bin  shard_size  shard_workers
+//	dev-mock             ignored            ignored     ignored
+//	dev-zkvm             optional           ignored     ignored
+//	dev-partial          optional           optional    optional
+//	full                 ignored            optional    optional
+//	dev-full-dummy-wrap  -                  -           -              (planned, aggregation only)
 var modeSettings = map[backend.ProverMode]settings{
-	backend.ProverModeDevMock:    {nativeRunner: ignored, shardSize: ignored},
-	backend.ProverModeDevZkVM:    {nativeRunner: optional, shardSize: ignored},
-	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional},
-	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional},
+	backend.ProverModeDevMock:    {nativeRunner: ignored, shardSize: ignored, shardWorkers: ignored},
+	backend.ProverModeDevZkVM:    {nativeRunner: optional, shardSize: ignored, shardWorkers: ignored},
+	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional, shardWorkers: optional},
+	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional, shardWorkers: optional},
 	// Planned, not a mode yet. It runs on aggregation only, so the
 	// [execution] settings do not apply to it.
-	// backend.ProverModeDevFullDummyWrap: {nativeRunner: ignored, shardSize: ignored},
+	// backend.ProverModeDevFullDummyWrap: {nativeRunner: ignored, shardSize: ignored, shardWorkers: ignored},
 }
 
 // sectionNames are the config sections of the proof types.
@@ -121,6 +121,12 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 	}
 	if uses.shardSize == ignored && p.shardSize > 0 {
 		warn("shard_size")
+	}
+	switch {
+	case uses.shardWorkers == ignored && p.shardWorkers > 0:
+		warn("shard_workers")
+	case p.shardWorkers > 0 && p.shardSize == 0:
+		warnings = append(warnings, "execution.shard_workers is ignored without execution.shard_size: there is one shard")
 	}
 	if uses.nativeRunner == ignored && runnerSet {
 		warn("native_runner_bin")

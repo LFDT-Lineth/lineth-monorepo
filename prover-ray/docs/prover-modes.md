@@ -44,6 +44,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 ### dev-partial
 
 - Runs the guest and traces it, in pieces called shards when `shard_size` is set. A real block needs it.
+- `shard_workers` sets how many shards are traced and checked at the same time (default: one). Each needs about 30 to 35 GiB for a real block, on top of the trace checkpoints.
 - Checks every shard against every constraint, compiled as in `full` but without the commitment (PCS).
 - With shards, the mock conglomeration checks that:
   - the shards agree on the guest output;
@@ -70,7 +71,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 
 - The native runner runs the same guest code outside the VM.
 - Set it with `native_runner_bin` in `[execution]`, as a path or a name found on `PATH`: optional in `dev-zkvm` and `dev-partial`. When it is set in these two modes, the prover does not start if it cannot be run.
-- `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size`. The prover logs a warning at startup when an ignored setting is set.
+- `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size` and `shard_workers`. The prover logs a warning at startup when an ignored setting is set.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
 
 Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.
