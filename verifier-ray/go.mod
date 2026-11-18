@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261118113852-df362b34d957
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -44,4 +44,12 @@ require (
 tool (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization/cmd/elf_to_json
 	github.com/LFDT-Lineth/zkc/cmd/zkc
+)
+
+// verifier-ray builds against the prover-ray (and arithmetization) checked out
+// next to it, not a pinned pseudo-version: the generated verifier systems must
+// track prover-ray HEAD.
+replace (
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization => ../arithmetization
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../prover-ray
 )

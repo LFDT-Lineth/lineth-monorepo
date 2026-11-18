@@ -7,9 +7,10 @@ on:
       - main
     paths:
       - 'verifier-ray/**'
-      # Keep prover-ray off this trigger for now: verifier-ray uses a pinned
-      # known-good prover-ray version and updates it manually to save CI runtime.
-      # - 'prover-ray/**'
+      # verifier-ray builds against prover-ray HEAD (go.mod `replace`), so a
+      # prover-ray change can make the generated verifier assets stale;
+      # `make verify-testdata` below fails on that.
+      - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
       # - 'arithmetization/src/test/main.go'
@@ -20,9 +21,10 @@ on:
       - main
     paths:
       - 'verifier-ray/**'
-      # Keep prover-ray off this trigger for now: verifier-ray uses a pinned
-      # known-good prover-ray version and updates it manually to save CI runtime.
-      # - 'prover-ray/**'
+      # verifier-ray builds against prover-ray HEAD (go.mod `replace`), so a
+      # prover-ray change can make the generated verifier assets stale;
+      # `make verify-testdata` below fails on that.
+      - 'prover-ray/**'
       # Keep arithmetization integration dependencies documented but non-blocking
       # while the RISC-V/zkc pipeline is still moving quickly.
       # - 'arithmetization/src/test/main.go'
