@@ -7,8 +7,7 @@ a benchmark-only Zig guest or a benchmark-specific zkc runner.
 ## Fixture Model
 
 The executable imports `testdata/generated/verify.zig` as typed comptime data.
-The profiler runs every generated verifier case. For each case it builds the R5
-binary with:
+Each profiled case is built into the R5 binary with:
 
 ```bash
 -Dembedded-spec=<N> -Dembedded-input=valid
@@ -22,21 +21,16 @@ exist yet in verifier-ray.
 
 ## What Is Measured
 
-For each case, the profiling runner calls the Makefile's `profile-zkc-case`
-target. That target owns the R5 build flags, ELF-to-JSON conversion, zkc input
-origin, and shared zkc runner invocation.
+The Makefile's `profile-zkc-case` target owns the R5 build flags, ELF-to-JSON
+conversion, zkc input origin, and shared zkc runner invocation. The shared
+runner prints the normal interpreter trace; the useful lines are:
 
-The shared runner prints the normal interpreter trace. The Go profiling tool
-streams that output and keeps only:
-
-- the latest `clock cycle: <N>` line, used as the final interpreted cycle count;
-- `VERIFIER-MARK <phase> <value>` writes, used as phase checkpoints;
+- the latest `clock cycle: <N>` line, the final interpreted cycle count;
+- `VERIFIER-MARK <phase> <value>` writes, the phase checkpoints;
 - the final marker value, currently total Poseidon2 compressions for the case.
 
-The full zkc trace is not written to disk by the report generator. Only the
-compact CSV report is stored. Invalid cases are intentionally excluded: their
-cycle counts depend on the particular failure path and are not useful for
-comparing verifier phase costs.
+Invalid cases are not worth profiling: their cycle counts depend on the
+particular failure path and are not useful for comparing verifier phase costs.
 
 ## Profiling Markers
 
@@ -69,20 +63,9 @@ syscalls themselves add overhead.
 
 ## Commands
 
-Profile every generated valid case:
+Profile one generated valid case (`N` indexes the cases in
+`testdata/generated/verify.zig`):
 
 ```bash
-make profile-zkc
-```
-
-By default the report is written to:
-
-```text
-bench/verifier-profile.csv
-```
-
-Use the profiler directly to choose a different output path:
-
-```bash
-go run bench/verifier_profile/main.go -out=<path>
+make profile-zkc-case EMBEDDED_INPUT=valid EMBEDDED_SPEC=<N>
 ```

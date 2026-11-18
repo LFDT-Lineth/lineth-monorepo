@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 build-r5-aggregator run run-passing run-failing run-failing-expected run-aggregator test test-zig test-generated-zig test-codegen generate-testdata generate-devmode-system generate-large-pcs-benchmark profile-large-pcs verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-aggregator zkc-verify-devmode zkc-trace-devmode profile-zkc-case profile-zkc clean
+.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 build-r5-aggregator run run-passing run-failing run-failing-expected run-aggregator test test-zig test-generated-zig test-codegen generate-testdata generate-devmode-system verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-aggregator zkc-verify-devmode zkc-trace-devmode profile-zkc-case clean
 
 RISCV_SYSTEM ?= testdata/generated/riscv_system.zig
 ZIG_OUT ?= zig-out
@@ -55,8 +55,6 @@ help:
 		'  test-zig              Generate testdata and run Zig tests' \
 		'  test-codegen          Run Go codegen tests' \
 		'  generate-testdata     Generate testdata for Zig tests' \
-		'  generate-large-pcs-benchmark  Generate the ignored 2^19 PCS benchmark fixture' \
-		'  profile-large-pcs      Run the standalone PCS verifier under zkc and report RISC-V cycles' \
 		'  verify-testdata       Verify generated testdata is up to date with git (for CI)' \
 		'  zkc-build             Build the R5 ELF and generate the zkc JSON input' \
 		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter against testdata/riscv_proof_image.bin' \
@@ -65,7 +63,6 @@ help:
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
 		'  build-r5-aggregator   Build the two-proof aggregator for the Lineth R5 zkVM target' \
 		'  zkc-verify-aggregator Run the aggregator through the zkc RISC-V interpreter against the pair image' \
-		'  profile-zkc           Profile every generated verifier case and write a compact CSV report' \
 		'  clean                 Remove Zig build artifacts' \
 		'zkc variables:' \
 		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
@@ -160,18 +157,6 @@ generate-devmode-system:
 $(DEVMODE_SYSTEM) $(DEVMODE_PROOF_IMAGE): codegen/devmode_bootstrap.go codegen/generate-devmode-system/main.go
 	cd codegen/generate-devmode-system && go run .
 
-# Opt-in only: the output is under zig-out/ and is not part of normal testdata
-# generation or CI. The generator self-checks the proof with prover-ray before
-# emitting the verifier-facing Zig literal.
-generate-large-pcs-benchmark:
-	cd testdata/generate/fri && go run . -large-pcs
-
-# Opt-in only: this builds a PCS-only R5 guest and runs it through zkc with the
-# Poseidon2 accelerator enabled. The generated fixture and guest artifacts are
-# ignored under zig-out/ and are not part of CI.
-profile-large-pcs: generate-large-pcs-benchmark
-	cd bench/bench_pcs && go run run.go
-
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
 
@@ -218,10 +203,6 @@ profile-zkc-case: $(PROOF_IMAGE)
 		-Dverifier-profiling=true -Dr5-marks=true
 	$(ELF_TO_JSON) "$(abspath $(R5_BIN))" $(IN_BYTES) > $(R5_JSON)
 	@$(ZKC) exec "$(abspath $(R5_JSON))" "$(abspath $(ZKC_MAIN))"
-
-profile-zkc: generate-testdata
-	go run bench/verifier_profile/main.go \
-		-out=bench/verifier-profile.csv
 
 clean:
 	rm -rf .zig-cache zig-out
