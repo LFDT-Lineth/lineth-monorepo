@@ -185,7 +185,7 @@ func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Oct
 
 	// Scalar tail: the final nbLeaves%16 leaves that do not fill a group.
 	if tail := nbGroups * simdLanes; tail < nbLeaves {
-		hasher := poseidon2.NewMDHasher()
+		hasher := hash.newLeafHasher()
 		for j := tail; j < nbLeaves; j++ {
 			out[j] = l.hashLeafScalar(hasher, t, j)
 		}

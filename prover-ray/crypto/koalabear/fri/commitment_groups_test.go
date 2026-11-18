@@ -103,7 +103,7 @@ func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 // written out from the leaf format: header, then both rows.
 func referenceGroupDigest(group SizedTable, j int) field.Octuplet {
 	h := poseidon2.NewMDHasher()
-	absorbLeafHeader(h, len(group.Base), len(group.Ext))
+	absorbLeafHeader(koalaLeafHasher{h}, len(group.Base), len(group.Ext))
 	for _, row := range []int{2 * j, 2*j + 1} {
 		for _, col := range group.Base {
 			h.WriteElements(col[row])

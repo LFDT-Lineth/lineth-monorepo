@@ -30,7 +30,9 @@ func absorbLeafHeader(h leafHasher, baseWidth, extWidth int) {
 	tag.SetUint64(leafDomainTag)
 	b.SetUint64(uint64(baseWidth))
 	e.SetUint64(uint64(extWidth))
-	h.WriteElements(tag, b, e)
+	h.WriteElement(tag)
+	h.WriteElement(b)
+	h.WriteElement(e)
 }
 
 // CommitterState collects the data that are built during the commitment phase
@@ -284,11 +286,10 @@ func chainDigests(hash MerkleHash, digests []field.Octuplet) field.Octuplet {
 // header (see [absorbLeafHeader]).
 func writeRowElements(hasher leafHasher, t SizedTable, row int) {
 	for k := range t.Base {
-		hasher.WriteElements(t.Base[k][row])
+		hasher.WriteElement(t.Base[k][row])
 	}
 	for k := range t.Ext {
-		limbs := extLimbs(t.Ext[k][row])
-		hasher.WriteElements(limbs[:]...)
+		hasher.WriteExt(t.Ext[k][row])
 	}
 }
 

@@ -35,11 +35,35 @@ const (
 	merkleHashLast
 )
 
-// leafHasher is the leaf hashing interface shared by both modes.
+// leafHasher is the leaf hashing interface shared by both modes. Its write
+// methods take values, not slices: a slice (or variadic) argument passed
+// through an interface call escapes, which would cost one heap allocation per
+// written element.
 type leafHasher interface {
 	Reset()
-	WriteElements(elmts ...field.Element)
+	WriteElement(e field.Element)
+	WriteExt(e field.Ext)
 	SumDigest() field.Octuplet
+}
+
+// koalaLeafHasher adapts [poseidon2.MDHasher] to [leafHasher].
+type koalaLeafHasher struct{ *poseidon2.MDHasher }
+
+func (h koalaLeafHasher) WriteElement(e field.Element) { h.WriteElements(e) }
+
+func (h koalaLeafHasher) WriteExt(e field.Ext) {
+	limbs := extLimbs(e)
+	h.WriteElements(limbs[:]...)
+}
+
+// bnLeafHasher adapts [poseidon2.BNOctupletMDHasher] to [leafHasher].
+type bnLeafHasher struct{ *poseidon2.BNOctupletMDHasher }
+
+func (h bnLeafHasher) WriteElement(e field.Element) { h.WriteElements(e) }
+
+func (h bnLeafHasher) WriteExt(e field.Ext) {
+	limbs := extLimbs(e)
+	h.WriteElements(limbs[:]...)
 }
 
 func (m MerkleHash) String() string {
@@ -66,9 +90,9 @@ func (m MerkleHash) batched() bool { return m == MerkleHashKoalaBear }
 
 func (m MerkleHash) newLeafHasher() leafHasher {
 	if m == MerkleHashBNPacked {
-		return poseidon2.NewBNOctupletMDHasher()
+		return bnLeafHasher{poseidon2.NewBNOctupletMDHasher()}
 	}
-	return poseidon2.NewMDHasher()
+	return koalaLeafHasher{poseidon2.NewMDHasher()}
 }
 
 // compress is the two-to-one node compression C.

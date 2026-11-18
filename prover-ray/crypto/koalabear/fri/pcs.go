@@ -1468,11 +1468,10 @@ func hashAuxPair(hash MerkleHash, pair RowPair, selfIsEven bool) field.Octuplet 
 // declaration order of the columns needs no encoding.
 func writeRowOpeningElements(hasher leafHasher, row RowOpening) {
 	for _, base := range row.Base {
-		hasher.WriteElements(base)
+		hasher.WriteElement(base)
 	}
 	for _, ext := range row.Ext {
-		limbs := extLimbs(ext)
-		hasher.WriteElements(limbs[:]...)
+		hasher.WriteExt(ext)
 	}
 }
 
