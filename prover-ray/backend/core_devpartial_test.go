@@ -175,6 +175,82 @@ func TestProveDevPartial_Sharded(t *testing.T) {
 	assert.Equal(t, want, got, "sharding should not change the result")
 }
 
+// parallelShardSize splits the test guest into enough shards for several
+// workers.
+const parallelShardSize = 100
+
+// parallelCore is a sharded dev-partial core for guest id checking workers
+// shards at a time. It checks that the trace has more shards than workers.
+func parallelCore(t *testing.T, dir string, id [32]byte, workers int) *Core {
+	t.Helper()
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: parallelShardSize, ShardWorkers: workers})
+	require.NoError(t, err)
+	g, err := c.loadGuest(id)
+	require.NoError(t, err)
+	inputs, err := c.encodeGuestInputs(devPartialJob(id), g)
+	require.NoError(t, err)
+	lazyTrace, err := c.driver.TryTraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs})
+	require.NoError(t, err)
+	require.Greater(t, lazyTrace.Len(), uint(workers), "the trace should have more shards than workers")
+	return c
+}
+
+// TestProveDevPartial_ParallelShards checks that checking several shards at a
+// time gives the result of checking them one at a time.
+func TestProveDevPartial_ParallelShards(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	job := devPartialJob(id)
+
+	want := parallelCore(t, dir, id, 1).Prove(context.Background(), job)
+	require.Equal(t, ResultStatusOK, want.Status, "prove err: %v", want.Err)
+	got := parallelCore(t, dir, id, 4).Prove(context.Background(), job)
+	require.Equal(t, ResultStatusOK, got.Status, "prove err: %v", got.Err)
+	assert.Equal(t, want, got, "the number of workers should not change the result")
+}
+
+// TestProveDevPartial_ParallelShards_BrokenConstraint checks that a shard
+// breaking a constraint still fails the job when shards are checked in
+// parallel.
+func TestProveDevPartial_ParallelShards_BrokenConstraint(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c := parallelCore(t, dir, id, 4)
+	inv := interpreterColumn(t, c, "(inv ")
+	tamper := tamperAfterTrace(t, c)
+	tamper.f = func(rt *wiop.Runtime) {
+		setInterpreterRows(t, rt, []*wiop.Column{inv}, func(rows []field.Element, row int) {
+			one := field.One()
+			rows[row].Add(&rows[row], &one)
+		})
+	}
+
+	result := c.Prove(context.Background(), devPartialJob(id))
+	assert.Equal(t, ResultStatusFailed, result.Status)
+	assert.ErrorContains(t, result.Err, "global quotient check failed")
+}
+
+// TestRunProve_ParallelShards_Cancelled checks that a cancelled context stops
+// a parallel run before any shard.
+func TestRunProve_ParallelShards_Cancelled(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c := parallelCore(t, dir, id, 4)
+	g, err := c.loadGuest(id)
+	require.NoError(t, err)
+	inputs, err := c.encodeGuestInputs(devPartialJob(id), g)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err = c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, nil)
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorContains(t, err, "before shard 0")
+}
+
 // TestProveDevPartial_Sharded_UnbalancedBus checks that with sharding, where no
 // shard checks its own message bus, dev-partial still rejects a trace that
 // unbalances the bus: the mock merger checks it across the shards.
