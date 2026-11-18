@@ -619,7 +619,7 @@ func (c *Core) runProve(
 		// which no recover here can catch.
 		if err := c.driver.CheckShardFits(shard, wiop.ColumnSizeMaxSupported); err != nil {
 			return conglomeration.Node{}, 0, fmt.Errorf("shard %d does not fit in a column (%s): %w",
-				i, c.shardHint(i), err)
+				i, c.shardSizeHint(i), err)
 		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
@@ -654,8 +654,8 @@ func (c *Core) runProve(
 	return root, numShards, nil
 }
 
-// shardHint says what to change when shard i does not fit in a column.
-func (c *Core) shardHint(i uint) string {
+// shardSizeHint says what to change when shard i does not fit in a column.
+func (c *Core) shardSizeHint(i uint) string {
 	switch {
 	case c.cfg.ShardSize == 0:
 		return "set shard_size to split the trace into shards"

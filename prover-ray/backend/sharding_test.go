@@ -159,9 +159,9 @@ func TestProveFull_Subset_ReturnsNode(t *testing.T) {
 	require.Equal(t, uint(3), res.NumShards)
 }
 
-// TestShardHint checks what the error says to change when a shard does not
+// TestShardSizeHint checks what the error says to change when a shard does not
 // fit in a column.
-func TestShardHint(t *testing.T) {
+func TestShardSizeHint(t *testing.T) {
 	cases := map[string]struct {
 		shardSize uint64
 		shard     uint
@@ -174,7 +174,7 @@ func TestShardHint(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			c := &Core{cfg: Config{ShardSize: tc.shardSize}}
-			require.Contains(t, c.shardHint(tc.shard), tc.want)
+			require.Contains(t, c.shardSizeHint(tc.shard), tc.want)
 		})
 	}
 }
