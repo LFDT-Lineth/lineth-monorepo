@@ -23,9 +23,6 @@ pub const Error = error{
     OutOfMemory,
 };
 
-/// The address the proof images are encoded for.
-pub const image_base: usize = 0x08800000;
-
 const hash_cells = 32;
 const vk_limbs = 8;
 comptime {
@@ -73,7 +70,7 @@ pub const Verifier = struct {
         const image = self.image[0..proof.len];
         @memcpy(image, proof);
         const address = @intFromPtr(image.ptr);
-        verifier_ray.image_relocation.rebase(image.ptr, image.len, image_base, address);
+        verifier_ray.image_relocation.rebase(image.ptr, image.len, verifier_ray.image_relocation.guest_base, address);
         verifier_ray.image_relocation.validateImage(image.ptr, image.len, address) catch return error.RecursiveProofRejected;
         const input: *const verifier.VerifyInput = @ptrCast(@alignCast(image.ptr));
         verifier.verifyWithWorkspace(devmode_system.system_0_spec, devmode_system.system_0_systems, input.proof, &cells, self.workspace) catch return error.RecursiveProofRejected;

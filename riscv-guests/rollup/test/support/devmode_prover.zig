@@ -6,7 +6,6 @@
 const std = @import("std");
 
 const paths = @import("prover_paths");
-const rollup = @import("rollup");
 const verifier_ray = @import("verifier_ray");
 
 const Allocator = std.mem.Allocator;
@@ -68,7 +67,7 @@ pub fn commitmentOffset(allocator: Allocator, image: []const u8) !usize {
     defer allocator.free(copy);
     @memcpy(copy, image);
     const address = @intFromPtr(copy.ptr);
-    verifier_ray.image_relocation.rebase(copy.ptr, copy.len, rollup.recursion.image_base, address);
+    verifier_ray.image_relocation.rebase(copy.ptr, copy.len, verifier_ray.image_relocation.guest_base, address);
     const input: *const verifier.VerifyInput = @ptrCast(@alignCast(copy.ptr));
     for (input.proof.rounds) |*round| {
         if (round.commitment) |*commitment| return @intFromPtr(commitment) - address;
