@@ -4,7 +4,7 @@
 //! module, `src/main.zig` the guest entry point), the standalone-ELF link (entry stub + memory
 //! layout, shared because every guest links the same way), the crypto-provider options and the
 //! accelerator package they select, the host build of the `zkvm_*` crypto providers that native
-//! tests and tools link, and small utilities.
+//! tests and tools link, the host module that runs a guest ELF under zkc, and small utilities.
 //!
 //! Anything tied to a specific workload stays in the guest that uses it. In particular the zesu /
 //! EVM-execution wiring (executor + SSZ module imports) lives in l2-execution's build.zig: the
@@ -169,6 +169,15 @@ fn nativeRoot(b: *std.Build, root_file: []const u8, native: NativeOptions) *std.
         .target = native.target,
         .optimize = native.optimize,
         .imports = native.imports,
+    });
+}
+
+/// The host module that runs a guest ELF under zkc (`zkc.zig`).
+pub fn zkcModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.dependency("build_common", .{}).path("zkc.zig"),
+        .target = target,
+        .optimize = optimize,
     });
 }
 

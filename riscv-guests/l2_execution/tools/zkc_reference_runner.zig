@@ -6,6 +6,7 @@ const host_machine = @import("support").host_machine;
 const zkc_machine = @import("support").zkc_machine;
 const execution_spec_suite = @import("support").execution_spec_suite;
 const smoke_suite = @import("support").smoke_suite;
+const zkc = @import("zkc");
 
 const label = "ZkC guest vs host and execution-spec fixture ground truth";
 const usage =
@@ -48,7 +49,7 @@ pub fn main(init: std.process.Init) !void {
     var prefix: ?[]const u8 = null;
     var elf_path: ?[]const u8 = null;
     var makefile: ?[]const u8 = null;
-    var target: []const u8 = "elf-exec";
+    var target_name: []const u8 = "elf-exec";
     var flags: ?[]const u8 = null;
     var fork_filter: ?[]const u8 = null;
     var report_only = false;
@@ -66,7 +67,7 @@ pub fn main(init: std.process.Init) !void {
         } else if (options_enabled and std.mem.eql(u8, arg, "--makefile")) {
             makefile = takeValue(args, &i, arg);
         } else if (options_enabled and std.mem.eql(u8, arg, "--zkc-target")) {
-            target = takeValue(args, &i, arg);
+            target_name = takeValue(args, &i, arg);
         } else if (options_enabled and std.mem.eql(u8, arg, "--zkc-flags")) {
             flags = takeValue(args, &i, arg);
         } else if (options_enabled and std.mem.eql(u8, arg, "--fork")) {
@@ -87,9 +88,8 @@ pub fn main(init: std.process.Init) !void {
         } else try operands.append(init.gpa, arg);
     }
     if (operands.items.len == 0) fatal("missing PATH operand");
-    if (!std.mem.eql(u8, target, "elf-exec") and !std.mem.eql(u8, target, "elf-trace")) {
+    const target = std.meta.stringToEnum(zkc.Target, target_name) orelse
         fatal("--zkc-target must be elf-exec or elf-trace");
-    }
 
     if (prefix != null and elf_path != null) fatal("--install-prefix and --elf are mutually exclusive");
     const elf = if (elf_path) |path|
@@ -102,7 +102,7 @@ pub fn main(init: std.process.Init) !void {
     const temp_dir = try makeTempDir(init);
     defer cleanupTempDir(init, temp_dir);
 
-    var zkc = zkc_machine.ZkcMachine{
+    var machine = zkc_machine.ZkcMachine{
         .elf = elf,
         .makefile = makefile orelse fatal("missing --makefile"),
         .target = target,
@@ -111,11 +111,11 @@ pub fn main(init: std.process.Init) !void {
     };
     var host = host_machine.HostMachine{};
     var execution_spec = execution_spec_suite.Suite(zkc_machine.ZkcMachine){
-        .machine = &zkc,
+        .machine = &machine,
         .policy = .skip_linea_unsupported,
         .fork_filter = fork_filter,
     };
-    var smoke = smoke_suite.Suite(host_machine.HostMachine, zkc_machine.ZkcMachine){ .host = &host, .candidate = &zkc };
+    var smoke = smoke_suite.Suite(host_machine.HostMachine, zkc_machine.ZkcMachine){ .host = &host, .candidate = &machine };
     var suite = CompositeSuite(@TypeOf(execution_spec), @TypeOf(smoke)){
         .execution_spec = &execution_spec,
         .smoke = &smoke,

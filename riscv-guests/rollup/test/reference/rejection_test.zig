@@ -39,8 +39,11 @@ fn requestOf(a: Allocator, blocks: []const usize, options: scenario.Options) !Re
     return scenario.build(a, try scenario.chainConflations(a, blocks), options);
 }
 
-fn flip(bytes: []const u8, index: usize) void {
-    @constCast(bytes)[index] ^= 0x01;
+/// A copy of `bytes` with the low bit of `bytes[index]` flipped.
+fn flipped(a: Allocator, bytes: []const u8, index: usize) ![]u8 {
+    const copy = try a.dupe(u8, bytes);
+    copy[index] ^= 0x01;
+    return copy;
 }
 
 // ── The shape of the request ─────────────────────────────────────────────────────────────────────
@@ -207,8 +210,8 @@ test "calldata that does not hash to its chunk hash is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .kind = .calldata }} });
-    flip(request.chunks[0].calldata_bytes.bytes, 0);
+    var request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .kind = .calldata }} });
+    request.chunks[0].calldata_bytes = .{ .bytes = try flipped(a, request.chunks[0].calldata_bytes.bytes, 0) };
     try expectRejected(error.ChunkHashMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
@@ -227,8 +230,10 @@ test "a blob with an element of 2^254 or more is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try requestOf(a, &.{1}, .{});
-    @constCast(request.chunks[0].blob_bytes.bytes)[0] |= 0x40;
+    var request = try requestOf(a, &.{1}, .{});
+    const blob = try a.dupe(u8, request.chunks[0].blob_bytes.bytes);
+    blob[0] |= 0x40;
+    request.chunks[0].blob_bytes = .{ .bytes = blob };
     try expectRejected(error.NonCanonicalBlob, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
@@ -257,8 +262,8 @@ test "a blob proof that does not open the commitment is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try requestOf(a, &.{1}, .{});
-    flip(request.chunks[0].kzg_proof.bytes, 47);
+    var request = try requestOf(a, &.{1}, .{});
+    request.chunks[0].kzg_proof = .{ .bytes = try flipped(a, request.chunks[0].kzg_proof.bytes, 47) };
     try expectRejected(error.BlobKzgMismatch, guest_errors.CODE_BLOB_KZG, a, request);
 }
 
@@ -267,9 +272,9 @@ test "a blob that is not the one its commitment commits to is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try requestOf(a, &.{1}, .{});
+    var request = try requestOf(a, &.{1}, .{});
     // The low bit of the first element changes the blob and keeps it a canonical packing.
-    flip(request.chunks[0].blob_bytes.bytes, 31);
+    request.chunks[0].blob_bytes = .{ .bytes = try flipped(a, request.chunks[0].blob_bytes.bytes, 31) };
     try expectRejected(error.BlobKzgMismatch, guest_errors.CODE_BLOB_KZG, a, request);
 }
 

@@ -107,7 +107,8 @@ const Host = struct {
         });
         const deps = Deps.init(b, target, optimize, zesu, accelerators);
         const package = common.createPackageModule(b, target, optimize, deps.package);
-        const support = supportModule(b, target, optimize, deps, package, zlob);
+        const zkc = common.zkcModule(b, target, optimize);
+        const support = supportModule(b, target, optimize, deps, package, zlob, zkc);
 
         const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
         return .{
@@ -122,6 +123,7 @@ const Host = struct {
                     .{ .name = "guest_crypto", .module = accelerators.module("guest_crypto") },
                     .{ .name = "secp256k1_std", .module = accelerators.module("secp256k1_std") },
                     .{ .name = "support", .module = support },
+                    .{ .name = "zkc", .module = zkc },
                     .{ .name = "zlob", .module = zlob.module("zlob") },
                 } }),
             },
@@ -141,6 +143,7 @@ fn supportModule(
     deps: Deps,
     package: *std.Build.Module,
     zlob: *std.Build.Dependency,
+    zkc: *std.Build.Module,
 ) *std.Build.Module {
     const support = b.createModule(.{
         .root_source_file = b.path("test/support/root.zig"),
@@ -150,6 +153,7 @@ fn supportModule(
             .{ .name = "l2_execution", .module = package },
             .{ .name = "core_serde", .module = deps.core_serde },
             .{ .name = "guest_crypto", .module = deps.accelerators.module("guest_crypto") },
+            .{ .name = "zkc", .module = zkc },
             .{ .name = "zlob", .module = zlob.module("zlob") },
         } }),
     });

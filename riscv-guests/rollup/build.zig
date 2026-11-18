@@ -233,6 +233,7 @@ fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
     crypto.link(tools.get("fetch_blocks").?);
+    tools.get("zkc_smoke").?.root_module.addImport("zkc", common.zkcModule(b, host.native.target, host.native.optimize));
     return tools;
 }
 
