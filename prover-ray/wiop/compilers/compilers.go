@@ -193,7 +193,10 @@ func resolve(opts []Option, allowHooks bool) (*options, *[PCS + 1]passHooks, err
 
 // apply records the resolved pass selections on sys. Every selection is
 // validated against the System's existing ones before any is written, so a
-// conflicting option set leaves the System untouched.
+// conflicting option set leaves the selections untouched. The one exception is
+// FixDynamicModuleSizes: it must run before the validators, which read module
+// sizes, so a later validation error leaves the modules pinned. Callers
+// discard the System on error rather than retrying on it.
 func (cfg *options) apply(sys *wiop.System) error {
 	// Fixing sizes comes first: the option validators and every pass read the
 	// module sizes.
@@ -242,7 +245,10 @@ func (cfg *options) apply(sys *wiop.System) error {
 // passes, and a later [CompileFull], consume them: defaults stay unset until
 // the first consuming pass freezes them, and a pass receiving previously
 // configured values merges them instead of overriding. Conflicting or invalid
-// options are returned as errors before sys is mutated.
+// options are returned as errors before any selection is recorded. With
+// [FixDynamicModuleSizes], a size map that is valid on its own is applied
+// before the other options are validated, so an error from them leaves the
+// dynamic modules pinned: discard sys on error instead of retrying on it.
 //
 // Typical standalone use:
 //
