@@ -74,7 +74,7 @@ func TestRunner_UnknownGuestIsInvalidInput(t *testing.T) {
 	t.Run("dev-zkvm", func(t *testing.T) {
 		runner, err := NewRunner(&mockProver{result: unknown}, testProverVersion,
 			WithMode(backend.ProverModeDevZkVM),
-			WithNativeRunnerBin(fakeRunnerJSONSSZ(t, devZkVMRunnerJSON, devZkVMCommitment)))
+			WithNativeRunnerBin(fakeNativeRunner(t, guestOutput)))
 		require.NoError(t, err)
 
 		result := runner.Run(context.Background(),

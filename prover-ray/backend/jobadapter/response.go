@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 )
 
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
@@ -57,21 +56,6 @@ func newExecutionResponse(
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     publicInputs(result.PublicInputs),
-		ProgramVk:        hexBytes(programVk),
-	}
-}
-
-// newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-zkvm): the public inputs, a placeholder marker proof (dev-zkvm
-// produces no real proof), and the echoed programVk.
-func newExecutionResponseFromNative(
-	out nativerunner.Output, proverVersion string, programVk []byte,
-) executionResponse {
-	return executionResponse{
-		ProverVersion:    proverVersion,
-		ProofHex:         hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
-		StartBlockNumber: out.StartBlockNumber,
-		PublicInputs:     publicInputs(out.PublicInputs),
 		ProgramVk:        hexBytes(programVk),
 	}
 }

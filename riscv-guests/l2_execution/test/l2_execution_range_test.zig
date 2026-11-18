@@ -203,7 +203,7 @@ test "a realistic 2-block range produces every public-input field exactly" {
     try testing.expectEqual(ROLLING_HASH_NUMBER_2, output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ROLLING_HASH_2, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
 
-    // Chain config hash over the range's real address/coinbase/chainId, at the range's base fee.
+    // Chain config hash over the range's real chain config, at the range's base fee.
     const chain_config = l2_execution_ssz.ChainConfig{
         .l2_message_service_address = plan.l2_message_service_address,
         .coinbase = plan.coinbase,
@@ -348,6 +348,21 @@ test "an unsupported fork is rejected" {
     const blocks = [_]conflation_plan.BlockPlan{ .{}, .{ .active_fork_idx = 0x11 } };
     const plan = conflation_plan.ConflationPlan{ .blocks = &blocks };
     try plan.expectReject(arena.allocator(), error.UnsupportedFork);
+}
+
+test "non-mainnet beacon roots or history storage contracts are rejected" {
+    const cases = .{
+        .{ "beacon_roots", error.BeaconRootsAddressNotMainnet },
+        .{ "history_storage", error.HistoryStorageAddressNotMainnet },
+    };
+    inline for (cases) |case| {
+        var arena = std.heap.ArenaAllocator.init(testing.allocator);
+        defer arena.deinit();
+        var system_contracts = (conflation_plan.ConflationPlan{}).system_contracts;
+        @field(system_contracts, case[0]) = @splat(0xee);
+        const plan = conflation_plan.ConflationPlan{ .system_contracts = system_contracts };
+        try plan.expectReject(arena.allocator(), case[1]);
+    }
 }
 
 test "a range with no rolling-hash update reports a zero end pair" {
