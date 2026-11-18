@@ -69,11 +69,13 @@ import (
 	"golang.org/x/arch/riscv64/riscv64asm"
 )
 
-// knownExtras lists the words the decoder accepts although they are not RV64IM
-// instructions, with their exact counts. They are reserved or malformed
+// knownExtras lists, with exact counts, the groups of words the decoder accepts
+// although they are not RV64IM instructions. They are reserved or malformed
 // encodings, or instructions from extensions Lineth doesn't implement
-// (FENCE.I, CBO.*), which a compiler targeting RV64IM does not emit. Any change to this set fails the test, so a
-// new over-acceptance cannot slip in unnoticed.
+// (FENCE.I, CBO.*), which a compiler targeting RV64IM does not emit. If the
+// decoder's extras differ from this map in any way (a new group, a changed
+// count, a group no longer accepted), the test fails, so a new over-acceptance
+// cannot slip in unnoticed.
 //
 // How the entries were derived: a full run with an empty map reports every
 // "extra" group with its count. To regenerate, empty the map and rerun. The
