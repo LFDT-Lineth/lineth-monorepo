@@ -417,6 +417,26 @@ func TestVerifierUnsupported(t *testing.T) {
 	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
 	_, err = NewVerifier(&Machine{}, sys)
 	require.ErrorContains(t, err, "dynamic")
+
+	// Without a PCS, nothing binds the proof's values to the columns.
+	noPCS := wiop.NewSystemf("no-pcs")
+	rNoPCS := noPCS.NewRound()
+	mNoPCS := noPCS.NewSizedModule(noPCS.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	cNoPCS := mNoPCS.NewColumn(noPCS.Context.Childf("a"), rNoPCS)
+	mNoPCS.NewVanishing(noPCS.Context.Childf("v"), wiop.Mul(cNoPCS.View(), cNoPCS.View()))
+	_, err = NewVerifier(&Machine{}, noPCS)
+	require.ErrorContains(t, err, "PCS", "an uncompiled system")
+	_, err = newVerifier(&Machine{}, noPCS, true)
+	require.ErrorContains(t, err, "unreduced", "an uncompiled system, the PCS skipped")
+	require.NoError(t, compilers.CompileFull(noPCS, compilers.WithoutPCS()))
+	_, err = NewVerifier(&Machine{}, noPCS)
+	require.ErrorContains(t, err, "PCS", "a system compiled without a PCS")
+
+	// No coin is drawn before the first round.
+	early := wiop.NewSystemf("early-coin")
+	early.NewRound().NewCoinField(early.Context.Childf("coin"))
+	_, err = newVerifier(&Machine{}, early, true)
+	require.ErrorContains(t, err, "round 0")
 }
 
 // nativeFailures returns the types of the inner system's verifier actions but

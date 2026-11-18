@@ -30,13 +30,13 @@ func (v *Verifier) checkGlobal(gv *global.Verifier) error {
 	}
 	ev := &evaluator{
 		v: v, r: v.coin(gv.EvalCoin),
-		views: map[viewKey]int{}, memo: map[wiop.Expression]int{}, pows: map[int]int{},
+		views: map[viewKey]int{}, memo: map[wiop.Expression]int{}, pows: map[int]int{}, anns: map[int]int{},
 	}
 	for i, cv := range gv.WitnessViews {
 		ev.views[viewKey{cv.Column.Context.ID, cv.ShiftingOffset}] = v.cell(gv.WitnessClaims[i])
 	}
 	rn := ev.pow(n)
-	annihilator := v.m.Sub(rn, v.scalar(field.One()))
+	annihilator := ev.annihilator(n)
 	coin := v.coin(gv.MergeCoin)
 	for _, bkt := range gv.Buckets {
 		if len(bkt.QuotientClaims) == 0 || len(bkt.Vanishings) == 0 {
@@ -74,6 +74,7 @@ type evaluator struct {
 	views map[viewKey]int
 	memo  map[wiop.Expression]int
 	pows  map[int]int // n → r^n
+	anns  map[int]int // n → r^n − 1
 }
 
 // pow returns r^n, n a power of two, by squarings.
@@ -91,6 +92,17 @@ func (ev *evaluator) pow(n int) int {
 	}
 	ev.pows[n] = p
 	return p
+}
+
+// annihilator returns r^n − 1, computed once per domain size: the global check
+// and every Lagrange selector of the domain share it.
+func (ev *evaluator) annihilator(n int) int {
+	if a, ok := ev.anns[n]; ok {
+		return a
+	}
+	a := ev.v.m.Sub(ev.pow(n), ev.v.scalar(field.One()))
+	ev.anns[n] = a
+	return a
 }
 
 // root returns ω_n^k, k resolved modulo n (negative positions index from the
@@ -138,7 +150,7 @@ func (ev *evaluator) lagrange(ls *wiop.LagrangeSelector) int {
 	nInv.Inverse(&nInv)
 	c.Mul(&w, &nInv)
 	m := ev.v.m
-	num := m.Mul(m.Sub(ev.pow(n), ev.v.scalar(field.One())), ev.v.scalar(c))
+	num := m.Mul(ev.annihilator(n), ev.v.scalar(c))
 	return m.Div(num, m.Sub(ev.r, ev.v.scalar(w)))
 }
 

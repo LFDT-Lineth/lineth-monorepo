@@ -46,6 +46,7 @@ type Verifier struct {
 type verifierInput struct {
 	cell  *wiop.Cell
 	round int // the commitment's round, if cell is nil
+	pub   int // the cell's index in sys.PublicInputs, -1 if it is not a public input
 }
 
 // NewVerifier builds in m the verifier of sys's proofs. sys must be compiled
@@ -56,10 +57,26 @@ func NewVerifier(m *Machine, sys *wiop.System) (*Verifier, error) {
 }
 
 func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) {
+	// Fail closed on a system the verifier would check only in part: without
+	// a PCS, or with queries no compiler reduced, no verifier action binds the
+	// proof's values to the committed columns.
+	if len(sys.Rounds) == 0 {
+		return nil, fmt.Errorf("recursion: system %q has no rounds", sys.Context.Path())
+	}
+	if !skipPCS && sys.PCSMode() != 1 {
+		return nil, fmt.Errorf("recursion: system %q is not compiled with a PCS", sys.Context.Path())
+	}
+	if unreduced := sys.UnreducedQueries(); len(unreduced) != 0 {
+		return nil, fmt.Errorf("recursion: system %q has %d unreduced queries (%q, ...)",
+			sys.Context.Path(), len(unreduced), unreduced[0].Context().Path())
+	}
 	for _, mod := range sys.Modules {
 		if mod.IsDynamic() {
 			return nil, fmt.Errorf("recursion: module %q is dynamic, which the verifier does not support yet",
 				mod.Context.Path())
+		}
+		if !mod.IsSized() {
+			return nil, fmt.Errorf("recursion: module %q has no size", mod.Context.Path())
 		}
 	}
 	v := &Verifier{
@@ -96,10 +113,15 @@ func (v *Verifier) replay() error {
 		pi[c.Context.ID] = i
 	}
 	t := transcript{m: v.m, state: -1}
-	for _, r := range v.sys.Rounds {
+	for i, r := range v.sys.Rounds {
+		// Runtime.AdvanceRound draws coins only for the rounds after the
+		// first.
+		if i == 0 && len(r.Coins) > 0 {
+			return fmt.Errorf("recursion: round 0 declares %d coins", len(r.Coins))
+		}
 		if r.HasCommitment {
 			d := v.m.InputDigest()
-			v.inputs = append(v.inputs, verifierInput{round: r.ID})
+			v.inputs = append(v.inputs, verifierInput{round: r.ID, pub: -1})
 			v.commitments[r.ID] = d
 			t.absorb(d, KindDigest)
 		}
@@ -109,11 +131,13 @@ func (v *Verifier) replay() error {
 				kind = KindE6
 			}
 			a := v.m.input(kind)
-			v.inputs = append(v.inputs, verifierInput{cell: c})
-			v.cells[c.Context.ID] = a
+			in := verifierInput{cell: c, pub: -1}
 			if i, ok := pi[c.Context.ID]; ok {
 				v.public[i] = a
+				in.pub = i
 			}
+			v.inputs = append(v.inputs, in)
+			v.cells[c.Context.ID] = a
 			t.absorb(a, kind)
 		}
 		next, ok := r.Next()
@@ -171,10 +195,6 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 	if len(proof.DynamicSizes) != 0 {
 		return nil, fmt.Errorf("recursion: the proof has dynamic sizes")
 	}
-	pi := map[wiop.ObjectID]int{}
-	for i, c := range v.sys.PublicInputs {
-		pi[c.Context.ID] = i
-	}
 	res := make([]Cell, len(v.inputs))
 	for k, in := range v.inputs {
 		if in.cell == nil {
@@ -186,8 +206,9 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 			continue
 		}
 		var x field.Gen
-		if i, ok := pi[in.cell.Context.ID]; ok {
-			x = pub[i]
+		var ok bool
+		if in.pub >= 0 {
+			x = pub[in.pub]
 		} else if x, ok = proof.Cells[in.cell.Context.ID]; !ok {
 			return nil, fmt.Errorf("recursion: cell %q is not in the proof", in.cell.Context.Path())
 		}
