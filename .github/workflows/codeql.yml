@@ -67,6 +67,17 @@ jobs:
           # Only main populates shared dependencies; PRs restore without saving duplicates.
           dependency-caching: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && 'full' || 'restore' }}
 
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: ./.github/actions/setup-go
+        with:
+          # Greatest Go version required by the repo's modules (prover: 1.25.7, others: 1.27.1).
+          # A newer toolchain handles older go directives, so this avoids per-run toolchain
+          # downloads (the runner image ships go1.23.5).
+          go-version: "1.27.1"
+          # CodeQL's dependency-caching above already manages the Go module cache.
+          cache: "false"
+
       - name: Setup Java
         if: matrix.language == 'java-kotlin'
         uses: ./.github/actions/setup-java-and-gradle
