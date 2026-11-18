@@ -29,6 +29,7 @@ type Config struct {
 	// ShardWorkers is the number of shards traced and proved at the same time.
 	// Zero or one proves them one at a time. Each shard in progress needs its
 	// own memory: about 30 to 35 GiB for a real block, on top of the trace
-	// checkpoints.
+	// checkpoints, measured in dev-partial on the test blocks with 500000
+	// instructions per shard (see docs/prover-modes.md).
 	ShardWorkers int
 }
