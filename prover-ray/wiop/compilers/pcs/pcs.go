@@ -66,6 +66,14 @@ const maxRSBlowup = 1 << field.MaxOrderRoot
 // defaultFRINumQueries is the production number of FRI query openings, obtained
 // from https://github.com/ethereum/soundcalc to match 128 bits of security at
 // [defaultRSBlowup].
+//
+// The 128 bits cover FRI soundness only; the Merkle hash also bounds the
+// security. [fri.MerkleHashKoalaBear] octuplet digests give about 2^124
+// collision resistance, [fri.MerkleHashBNPacked] keeps 240 bits of its BN254
+// digest and gives about 2^120 (birthday bound on 240 bits: the digest is
+// stored as 8 limbs of 30 bits, thus the 254-bit BN element does not
+// fit into a KoalaBear octuplet, so the top 14 of its 254 bits are dropped).
+// Raising the query count does not lift either bound.
 const defaultFRINumQueries = 229
 
 // maxMerkleCapHeight bounds [WithMerkleCapHeight]: no committed tree is taller
