@@ -3,8 +3,8 @@ module github.com/LFDT-Lineth/lineth-monorepo/prover-ray
 go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261116150218-066899c8d0e2
-	github.com/LFDT-Lineth/zkc v1.2.36
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261118120423-b85f64a55712
+	github.com/LFDT-Lineth/zkc v1.2.37-0.20261117205523-0f1831590c48
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
 	github.com/consensys/gnark-crypto v0.22.1-0.20261014224656-bf76cc82bdd1
 	github.com/go-playground/assert/v2 v2.2.0
