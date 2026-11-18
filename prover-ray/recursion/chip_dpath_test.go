@@ -110,7 +110,7 @@ func dpathTree(t *testing.T, heights []int, seed uint64) dpathValues {
 		}
 	}
 	if top > 0 {
-		require.NoError(t, branch.AuthenticateToCap(i, []field.Octuplet{field.Octuplet(level[0][0])}),
+		require.NoError(t, branch.AuthenticateToCap(fri.MerkleHashKoalaBear, i, []field.Octuplet{field.Octuplet(level[0][0])}),
 			"the test's tree must be ray's")
 	}
 
@@ -229,7 +229,7 @@ func groupedTable(logSizes []int, seed uint64) fri.MultiSizeTable {
 // the path, which a commitment of that group alone gives.
 func groupedValues(t *testing.T, table fri.MultiSizeTable, logSizes []int, s uint64) dpathValues {
 	t.Helper()
-	tree := table.Merkleize()
+	tree := table.Merkleize(fri.MerkleHashKoalaBear)
 	top := len(table) - 2 // the bottom's pairs
 	i := int(s >> (dpH - top))
 	v := dpathValues{heights: make([]int, len(logSizes)), sibs: make([]Cell, dpH), index: s, root: Cell(tree.Root())}
@@ -245,7 +245,7 @@ func groupedValues(t *testing.T, table fri.MultiSizeTable, logSizes []int, s uin
 		}
 		alone := make(fri.MultiSizeTable, size+1)
 		alone[size] = fri.SizedTable{Base: table[size].Base[col : col+g+1], Groups: []fri.GroupShape{{BaseWidth: g + 1}}}
-		v.leaves = append(v.leaves, Cell(alone.Merkleize().OpenBranch(i>>(top-l)).Leaf))
+		v.leaves = append(v.leaves, Cell(alone.Merkleize(fri.MerkleHashKoalaBear).OpenBranch(i>>(top-l)).Leaf))
 	}
 	v.order = canonicalOrder(v.heights)
 	branch := tree.OpenBranch(i)

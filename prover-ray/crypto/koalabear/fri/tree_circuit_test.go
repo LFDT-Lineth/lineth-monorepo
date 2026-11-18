@@ -56,7 +56,7 @@ func newCapWitness(t *testing.T, prng *rand.Rand, numLeaves, capDepth, idx int) 
 	// aux-free shape the running FRI trees have.
 	levels := make([][]field.Octuplet, utils.Log2Ceil(numLeaves)+1)
 	levels[len(levels)-1] = pseudoRandOctuplets(prng, numLeaves)
-	tree := NewTree(levels)
+	tree := NewTree(MerkleHashKoalaBear, levels)
 	w := capWitness{
 		tree:   tree,
 		cap:    tree.OpenCap(capDepth),
@@ -66,9 +66,9 @@ func newCapWitness(t *testing.T, prng *rand.Rand, numLeaves, capDepth, idx int) 
 
 	// The native side must accept, or the fixture is wrong rather than the
 	// circuit.
-	require.NoError(t, w.cap.Authenticate(capDepth, tree.Root()), "native cap must authenticate")
+	require.NoError(t, w.cap.Authenticate(MerkleHashKoalaBear, capDepth, tree.Root()), "native cap must authenticate")
 	frontier := w.frontier()
-	require.NoError(t, w.branch.AuthenticateToCap(idx, frontier), "native branch must authenticate")
+	require.NoError(t, w.branch.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier), "native branch must authenticate")
 	return w
 }
 
@@ -170,7 +170,7 @@ func TestCapCircuitRejectsCorruptedFrontier(t *testing.T) {
 		tampered.cap = MerkleCap{Nodes: append([]field.Octuplet(nil), w.cap.Nodes...), Aux: w.cap.Aux}
 		tampered.cap.Nodes[node][0] = field.PseudoRandOctuplet(prng)[0]
 
-		require.Error(t, tampered.cap.Authenticate(capDepth, w.tree.Root()),
+		require.Error(t, tampered.cap.Authenticate(MerkleHashKoalaBear, capDepth, w.tree.Root()),
 			"native verifier must reject a corrupted frontier node %d", node)
 		require.Error(t, solveCap(t, w.template(capDepth, height), tampered.assign(capDepth, height)),
 			"circuit must reject a corrupted frontier node %d", node)
@@ -202,7 +202,7 @@ func TestCapCircuitRejectsWrongFrontierSlot(t *testing.T) {
 		// The native check is the same statement: the branch folds to a
 		// different frontier slot than the one it belongs to.
 		flipped := idx ^ (1 << bit)
-		require.Error(t, w.branch.AuthenticateToCap(flipped, w.frontier()),
+		require.Error(t, w.branch.AuthenticateToCap(MerkleHashKoalaBear, flipped, w.frontier()),
 			"native verifier must reject frontier slot bit %d flipped", bit)
 		require.Error(t, solveCap(t, w.template(capDepth, height), assignment),
 			"circuit must reject frontier slot bit %d flipped", bit)
@@ -230,7 +230,7 @@ func TestCapCircuitRejectsTamperedSibling(t *testing.T) {
 		}
 		tampered.branch.Siblings[sib] = field.PseudoRandOctuplet(prng)
 
-		require.Error(t, tampered.branch.AuthenticateToCap(idx, w.frontier()),
+		require.Error(t, tampered.branch.AuthenticateToCap(MerkleHashKoalaBear, idx, w.frontier()),
 			"native verifier must reject a tampered sibling %d", sib)
 		require.Error(t, solveCap(t, w.template(capDepth, height), tampered.assign(capDepth, height)),
 			"circuit must reject a tampered sibling %d", sib)

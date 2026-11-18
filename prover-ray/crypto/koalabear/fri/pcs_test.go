@@ -563,7 +563,7 @@ func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiS
 	table := make(MultiSizeTable, 4)
 	table[2] = SizedTable{Ext: [][]field.Ext{levelEvals}}
 	table[3] = SizedTable{Ext: [][]field.Ext{fullEvals}}
-	return table.Merkleize(), table
+	return table.Merkleize(MerkleHashKoalaBear), table
 }
 
 func digestSizedRow(table SizedTable, row int) field.Octuplet {

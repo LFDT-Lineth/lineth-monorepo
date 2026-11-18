@@ -158,7 +158,7 @@ func TestMerkleHashBNPackedTree(t *testing.T) {
 	for i := range leaves {
 		leaves[i] = field.PseudoRandOctuplet(prng)
 	}
-	tree := newTreeWithHash(MerkleHashBNPacked, [][]field.Octuplet{11: leaves})
+	tree := NewTree(MerkleHashBNPacked, [][]field.Octuplet{11: leaves})
 
 	var ref func(lo, hi int) field.Octuplet
 	ref = func(lo, hi int) field.Octuplet {
@@ -173,8 +173,8 @@ func TestMerkleHashBNPackedTree(t *testing.T) {
 	for _, idx := range []int{0, 1, 777, n - 1} {
 		branch := tree.OpenBranch(idx)
 		frontier := []field.Octuplet{tree.Root()}
-		require.NoError(t, branch.authenticateToCap(MerkleHashBNPacked, idx, frontier))
-		require.ErrorContains(t, branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier), "invalid Merkle proof")
+		require.NoError(t, branch.AuthenticateToCap(MerkleHashBNPacked, idx, frontier))
+		require.ErrorContains(t, branch.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier), "invalid Merkle proof")
 	}
 }
 

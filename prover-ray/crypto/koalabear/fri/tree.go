@@ -120,12 +120,9 @@ func (p Params) merkleCapDepth(height int) int {
 // bottom layer (largest):
 //
 //	for all 0 <= i < len(leaves): len(leaves[i]) = 2**i or 0
-func NewTree(leaves [][]field.Octuplet) *Tree {
-	return newTreeWithHash(MerkleHashKoalaBear, leaves)
-}
-
-// newTreeWithHash is [NewTree] with the given Merkle hash.
-func newTreeWithHash(hash MerkleHash, leaves [][]field.Octuplet) *Tree {
+//
+// The nodes are hashed with the given Merkle hash.
+func NewTree(hash MerkleHash, leaves [][]field.Octuplet) *Tree {
 
 	if len(leaves) == 0 {
 		panic("at least one level must be provided")
@@ -509,13 +506,9 @@ func (cap MerkleCap) Validate(depth int) error {
 	return nil
 }
 
-// RecoverRoot rebuilds the root from a structurally valid nonempty cap.
-func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
-	return cap.recoverRoot(MerkleHashKoalaBear, depth)
-}
-
-// recoverRoot is [MerkleCap.RecoverRoot] with the given Merkle hash.
-func (cap MerkleCap) recoverRoot(hash MerkleHash, depth int) (field.Octuplet, error) {
+// RecoverRoot rebuilds the root from a structurally valid nonempty cap, with
+// the given Merkle hash.
+func (cap MerkleCap) RecoverRoot(hash MerkleHash, depth int) (field.Octuplet, error) {
 	if err := cap.Validate(depth); err != nil {
 		return field.Octuplet{}, err
 	}
@@ -546,17 +539,13 @@ func capRoot(hash MerkleHash, nodes []field.Octuplet, injections [][]field.Octup
 }
 
 // Authenticate checks a cap once against the caller's trusted root. A
-// depth-zero cap is empty and represents the trusted root directly.
-func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
-	return cap.authenticate(MerkleHashKoalaBear, depth, root)
-}
-
-// authenticate is [MerkleCap.Authenticate] with the given Merkle hash.
-func (cap MerkleCap) authenticate(hash MerkleHash, depth int, root field.Octuplet) error {
+// depth-zero cap is empty and represents the trusted root directly. The cap
+// is hashed with the given Merkle hash.
+func (cap MerkleCap) Authenticate(hash MerkleHash, depth int, root field.Octuplet) error {
 	if depth == 0 {
 		return cap.Validate(depth)
 	}
-	recovered, err := cap.recoverRoot(hash, depth)
+	recovered, err := cap.RecoverRoot(hash, depth)
 	if err != nil {
 		return err
 	}
@@ -567,13 +556,8 @@ func (cap MerkleCap) authenticate(hash MerkleHash, depth int, root field.Octuple
 }
 
 // AuthenticateToCap checks this lower branch against a previously
-// authenticated frontier.
-func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
-	return branch.authenticateToCap(MerkleHashKoalaBear, idx, frontier)
-}
-
-// authenticateToCap is [Branch.AuthenticateToCap] with the given Merkle hash.
-func (branch *Branch) authenticateToCap(hash MerkleHash, idx int, frontier []field.Octuplet) error {
+// authenticated frontier, with the given Merkle hash.
+func (branch *Branch) AuthenticateToCap(hash MerkleHash, idx int, frontier []field.Octuplet) error {
 	if idx < 0 {
 		return errors.New("negative opening index")
 	}

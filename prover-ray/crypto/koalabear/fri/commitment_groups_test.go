@@ -123,7 +123,7 @@ func referenceGroupDigest(group SizedTable, j int) field.Octuplet {
 func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	witness := groupedWitness(rand.New(utils.NewRandSource(5)))
 	encoded := witness.Encode(makeEncoders(4, 2))
-	tree := encoded.Merkleize()
+	tree := encoded.Merkleize(MerkleHashKoalaBear)
 
 	bottom := encoded[len(encoded)-1]
 	leaves := make([]field.Octuplet, bottom.Size()/2)
@@ -155,7 +155,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	for i := range encoded {
 		flat[i] = SizedTable{Base: encoded[i].Base, Ext: encoded[i].Ext}
 	}
-	require.NotEqual(t, flat.Merkleize().Root(), tree.Root(), "the grouping must change the commitment")
+	require.NotEqual(t, flat.Merkleize(MerkleHashKoalaBear).Root(), tree.Root(), "the grouping must change the commitment")
 }
 
 // TestPCSVerifyGroupedCommitment opens a grouped commitment through both the

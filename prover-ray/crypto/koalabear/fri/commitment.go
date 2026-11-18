@@ -64,7 +64,7 @@ func CommitWithHash(hash MerkleHash, encoders []*RSEncoder, witness MultiSizeTab
 	}
 
 	encoded := witness.Encode(encoders)
-	tree := encoded.MerkleizeWithHash(hash)
+	tree := encoded.Merkleize(hash)
 
 	return CommitterState{
 		EncodedTable: encoded,
@@ -177,12 +177,9 @@ func (st *CommitterState) Release() {
 // group's digest with the other groups' digests chained after it,
 // C(…C(h_1, h_2)…, h_m). The tree is then one level shorter, and the opening
 // proof keeps its shape.
-func (table MultiSizeTable) Merkleize() *Tree {
-	return table.MerkleizeWithHash(MerkleHashKoalaBear)
-}
-
-// MerkleizeWithHash is [MultiSizeTable.Merkleize] with the given Merkle hash.
-func (table MultiSizeTable) MerkleizeWithHash(hash MerkleHash) *Tree {
+//
+// The nodes are hashed with the given Merkle hash.
+func (table MultiSizeTable) Merkleize(hash MerkleHash) *Tree {
 
 	bottom := len(table) - 1
 	if table[bottom].NumRows() == 0 {

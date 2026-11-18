@@ -1774,7 +1774,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			runningFrontiers[j] = []field.Octuplet{root}
 			continue
 		}
-		if err := treeCap.authenticate(pcs.Params.MerkleHash, depth, root); err != nil {
+		if err := treeCap.Authenticate(pcs.Params.MerkleHash, depth, root); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
 		}
 		runningFrontiers[j] = treeCap.Nodes
@@ -1933,7 +1933,7 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 			opening, vq.runningFrontiers[j], 1<<(pcs.Params.LogCodewordSize-j), depth); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
-		if err := opening.authenticateToCap(pcs.Params.MerkleHash, queryPosition>>j, vq.runningFrontiers[j]); err != nil {
+		if err := opening.AuthenticateToCap(pcs.Params.MerkleHash, queryPosition>>j, vq.runningFrontiers[j]); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
 		if len(opening.Siblings) == 0 {

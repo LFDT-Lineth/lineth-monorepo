@@ -67,7 +67,7 @@ func (fx *ldtFixture) addLevelWith(t *testing.T, sizeLog2 uint8, coeffs []field.
 		shifts[sizeLog2].Base = [][]int{{0}}
 		claimed[sizeLog2].Base = [][]field.Ext{{{}}}
 	}
-	committed := CommitterState{Tree: table.Merkleize(), EncodedTable: table}
+	committed := CommitterState{Tree: table.Merkleize(MerkleHashKoalaBear), EncodedTable: table}
 
 	require.NoError(t, fx.pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
 
