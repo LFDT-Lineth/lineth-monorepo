@@ -174,7 +174,7 @@ Every `dorny/paths-filter` filter used by this pipeline lives in `.github/path-f
 | `build-required.yml` | `plan` | whether anything beyond docs changed (`has-changes-requiring-build`) |
 | `e2e.yml` | `.github/actions/e2e-detect-changes` | whether the zkEVM and RISC-V e2e stacks run |
 | `codeql-languages.yml` | `.github/actions/codeql-languages` | which languages CodeQL scans |
-| `changelog.yml` | `component-changelog-upload.yml` | which component changelogs are regenerated on `main` |
+| `changelog.yml` | `component-changelog-update.yml` | which component changelogs are regenerated on `main` |
 
 Filters in a workflow's `on: paths:` trigger can't be moved there, because GitHub evaluates them before any job starts.
 

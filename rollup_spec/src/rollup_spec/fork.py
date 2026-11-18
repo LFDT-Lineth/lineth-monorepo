@@ -50,6 +50,8 @@ from ethereum.forks.amsterdam.transactions import (
     recover_sender,
 )
 from ethereum.forks.amsterdam.fork import (
+    BEACON_ROOTS_ADDRESS,
+    HISTORY_STORAGE_ADDRESS,
     BlockChain,
     apply_body,
     get_last_256_block_hashes,
@@ -135,6 +137,8 @@ __all__ = [
     "decode_transaction",
     "encode_transaction",
     "recover_sender",
+    "BEACON_ROOTS_ADDRESS",
+    "HISTORY_STORAGE_ADDRESS",
     "BlockChain",
     "apply_body",
     "get_last_256_block_hashes",

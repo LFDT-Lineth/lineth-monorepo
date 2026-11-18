@@ -9,6 +9,7 @@
 
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+- *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
 
 ### ⚙️ Miscellaneous Tasks
 

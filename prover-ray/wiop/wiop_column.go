@@ -49,6 +49,9 @@ type Module struct {
 	// system is the owning System. Set once at registration time by
 	// [System.NewModule], never nil for a well-formed Module.
 	system *System
+	// interner canonicalises the module's vanishings; allocated by the
+	// first one registered.
+	interner *exprInterner
 }
 
 // System returns the owning System. It is always non-nil for a well-formed

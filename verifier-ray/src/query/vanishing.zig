@@ -10,6 +10,8 @@ pub const Error = error{
     LagrangeSelectorInDomain,
     LagrangeSelectorPositionOutOfRange,
     CellRefOutOfRange,
+    NodeValuesTooSmall,
+    ExpressionOrder,
 };
 
 /// A module's row count, or the index of the proof-supplied size for a dynamic
@@ -126,7 +128,21 @@ pub const CheckInput = struct {
     witness_claims: []const ext.Ext,
     quotient_claims: []const ext.Ext,
     module_sizes: []const usize = &.{},
+    /// Caller-owned scratch holding one value per expression node of the
+    /// module being checked. It must hold at least
+    /// `maxModuleExpressions(system)` entries; its contents on entry are
+    /// ignored and on return are unspecified.
+    node_values: []ext.Ext,
 };
+
+/// The largest expression count of any module in `system`: the size
+/// `CheckInput.node_values` must have. Callers holding a comptime System size a
+/// stack buffer with it.
+pub fn maxModuleExpressions(system: System) usize {
+    var max: usize = 0;
+    for (system.modules) |module| max = @max(max, module.expressions.len);
+    return max;
+}
 
 pub fn verify(system: System, input: CheckInput) Error!void {
     if (input.witness_claims.len != system.total_witness_claims) return error.InvalidClaimCount;
@@ -179,10 +195,11 @@ fn verifyModule(
     const annihilator = powModuleSize(eval_coin, static_n, dynamic_n).sub(ext.Ext.one());
 
     const ctx = EvalCtx{ .coin = eval_coin, .annihilator = annihilator, .dynamic_n = dynamic_n };
+    const values = try evalExpressions(module, static_n, ctx, input);
     // Runtime loop over runtime buckets: see verifyBucket's own note on why
     // `bucket` is deliberately not comptime.
     for (module.buckets) |bucket| {
-        try verifyBucket(module, bucket, static_n, input, merge_coin, ctx);
+        try verifyBucket(bucket, static_n, input, merge_coin, ctx, values);
     }
 }
 
@@ -194,16 +211,16 @@ fn powModuleSize(r: ext.Ext, static_n: u32, dynamic_n: usize) ext.Ext {
 }
 
 fn verifyBucket(
-    module: Module,
     bucket: Bucket,
     static_n: u32,
     input: CheckInput,
     merge_coin: ext.Ext,
     ctx: EvalCtx,
+    values: []const ext.Ext,
 ) Error!void {
     // `bucket` is a RUNTIME parameter, and the loop over its vanishings below is
-    // a runtime loop, for the same reason evalExpr/evalOp take a runtime
-    // expr_index (see the long note there).
+    // a runtime loop, for the same reason evalExpressions reads the module's
+    // nodes as runtime data (see the note there).
     //
     // When `bucket` was comptime, Zig monomorphized a distinct verifyBucket per
     // bucket and `inline for (bucket.vanishings)` unrolled every constraint of
@@ -215,7 +232,7 @@ fn verifyBucket(
     //
     // Nothing here needs bucket to be comptime: Bucket/Vanishing are plain data
     // (ratio, a slice of expression indices, a claim offset), the expression
-    // indices are already consumed as runtime values by evalExpr, and
+    // indices are already consumed as runtime values, and
     // cancelled_positions is likewise handled at runtime by cancellationAtPoint.
     // `module` and `static_n` are runtime too: monomorphizing per module cost
     // far more .text than the folded static-size exponentiation saved.
@@ -236,7 +253,7 @@ fn verifyBucket(
     for (bucket.vanishings) |v| {
         // Aggregate the vanished numerators with the merge coin alpha:
         // P_agg(r) = sum_i alpha^i * P_i(r) * C_i(r).
-        const value = try evalExpr(module, v.expression, static_n, ctx, input);
+        const value = values[v.expression];
         const cancellation = try cancellationAtPoint(v.cancelled_positions, static_n, ctx);
         aggregate = aggregate.add(coin_power.mul(value.mul(cancellation)));
         coin_power = coin_power.mul(merge_coin);
@@ -247,75 +264,76 @@ fn verifyBucket(
     if (!aggregate.eql(ctx.annihilator.mul(quotient))) return error.QuotientIdentityMismatch;
 }
 
-// EvalCtx carries the per-module evaluation context that is shared, unchanged,
-// by every node of an expression: the eval coin r, the domain annihilator
-// r^n - 1, and dynamic_n (the runtime module size, 0 for static modules). Only
-// lagrange_selector leaves read dynamic_n, and only on the dynamic path: a
-// static module's size is the comptime static_n threaded into the leaf, so its
-// size-derived terms fold at comptime and dynamic_n stays the unused 0
-// sentinel. The other node kinds ignore the context and merely forward it down
-// the recursion. Bundling it keeps evalExpr/evalOp from threading unused scalars.
+// EvalCtx carries the per-module evaluation context, unchanged across the
+// module's nodes and vanishings: the eval coin r, the domain annihilator
+// r^n - 1, and dynamic_n (the proof-supplied module size, 0 for static
+// modules). Among the nodes, only lagrange_selector leaves read it;
+// verifyBucket reads it per bucket, cancellationAtPoint per vanishing. dynamic_n is
+// read only on the dynamic path; a static module's size is static_n, passed
+// alongside.
 const EvalCtx = struct {
     coin: ext.Ext,
     annihilator: ext.Ext,
     dynamic_n: usize,
 };
 
-// evalExpr/evalOp evaluate a single node of a module's expression tree,
-// identified by a RUNTIME expr_index/op rather than a comptime one.
+// evalExpressions evaluates every expression node of `module` once, in array
+// order, into input.node_values, and returns the module's prefix of it.
 //
-// module.expressions is built by codegen (see codegen/vanishing.go's
-// appendExpr) as a post-order flattening of each vanishing constraint's
-// expression tree: every operand is appended, and therefore assigned its
-// index, strictly before the node that references it. So op.lhs/op.rhs are
-// always < the node's own index, and recursion here always makes progress
-// toward index 0 (the array's leaves) — there is no cycle.
+// The nodes form a DAG: codegen emits one node per distinct subexpression
+// (see codegen/vanishing.go appendExpr) and a node may be the operand of many
+// parents, across vanishings and buckets. Walking it from each vanishing root
+// as a tree would re-evaluate a shared node once per path to it. A single
+// forward pass evaluates each node exactly once instead, and needs no
+// recursion and no visited set, because codegen emits operands strictly
+// before the node that reads them. That order is checked here (one compare
+// per operator node) rather than assumed, so a malformed system is rejected
+// instead of reading an unwritten slot.
 //
-// expr_index/op used to be `comptime` parameters. That made Zig monomorphize
-// a distinct evalExpr/evalOp instantiation per unique node ever evaluated —
-// for a real (non-synthetic) RISC-V arithmetization module with thousands of
-// expression nodes, that blew up into a stack overflow (observed as a SIGSEGV
-// inside verifyModule) well before any actual recursion depth problem: the
-// per-tree depth is shallow in practice (a few dozen levels for real modules),
-// but the sheer number of monomorphized node-specific function bodies bloated
-// the generated code and its stack frames. Keeping module/static_n comptime
-// (there are only ~100 modules total, and static_n legitimately folds
-// static-size exponentiation/root-of-unity work at compile time) while making
-// expr_index/op ordinary runtime values gives exactly one evalExpr/evalOp
-// instantiation per module, with recursion depth bounded by that module's
-// actual (shallow) expression-tree depth — eliminating the blowup without
-// changing any evaluation semantics or error behavior.
-fn evalExpr(
+// Every node codegen emits is reachable from some vanishing of its module, so
+// the pass evaluates no node the tree walk would have skipped. One
+// observable difference: a node's error (an in-domain eval coin, an
+// out-of-range selector position) is raised before any bucket's identity
+// check, where the tree walk raised it when it first reached the node. The
+// verdict is the same; only which error a rejected proof reports may differ.
+//
+// The node array and every index are runtime values. When they were comptime
+// (expr_index/op as comptime parameters of a recursive evalExpr), Zig
+// monomorphized one function body per node, which overflowed the stack on the
+// real RISC-V system; a loop over runtime data compiles to one body.
+fn evalExpressions(
     module: Module,
-    expr_index: Index,
     static_n: u32,
     ctx: EvalCtx,
     input: CheckInput,
-) Error!ext.Ext {
-    const node = module.expressions[expr_index];
-    return switch (node) {
-        .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
-        .cell_value => |ref| (try input.ctx.cell(ref.round, ref.index)).toExt(),
-        .coin_value => |coin_index| input.ctx.all_coins[coin_index],
-        .constant => |value| ext.Ext.lift(value),
-        .op => |op| try evalOp(module, op, static_n, ctx, input),
-        .lagrange_selector => |position| try evalLagrangeSelector(position, static_n, ctx),
-    };
+) Error![]const ext.Ext {
+    if (input.node_values.len < module.expressions.len) return error.NodeValuesTooSmall;
+    const values = input.node_values[0..module.expressions.len];
+    for (module.expressions, values, 0..) |node, *value, i| {
+        value.* = switch (node) {
+            .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
+            .cell_value => |ref| (try input.ctx.cell(ref.round, ref.index)).toExt(),
+            .coin_value => |coin_index| input.ctx.all_coins[coin_index],
+            .constant => |c| ext.Ext.lift(c),
+            .op => |op| blk: {
+                if (op.lhs >= i or op.rhs >= i) return error.ExpressionOrder;
+                break :blk evalOp(op, values);
+            },
+            .lagrange_selector => |position| try evalLagrangeSelector(position, static_n, ctx),
+        };
+    }
+    return values;
 }
 
-fn evalOp(
-    module: Module,
-    op: ExprOp,
-    static_n: u32,
-    ctx: EvalCtx,
-    input: CheckInput,
-) Error!ext.Ext {
-    const a = try evalExpr(module, op.lhs, static_n, ctx, input);
+// evalOp applies op to operands already evaluated into values. A unary
+// operator ignores rhs (written as 0 by codegen).
+fn evalOp(op: ExprOp, values: []const ext.Ext) ext.Ext {
+    const a = values[op.lhs];
     return switch (op.operator) {
-        .add => a.add(try evalExpr(module, op.rhs, static_n, ctx, input)),
-        .mul => a.mul(try evalExpr(module, op.rhs, static_n, ctx, input)),
-        .sub => a.sub(try evalExpr(module, op.rhs, static_n, ctx, input)),
-        .div => a.div(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .add => a.add(values[op.rhs]),
+        .mul => a.mul(values[op.rhs]),
+        .sub => a.sub(values[op.rhs]),
+        .div => a.div(values[op.rhs]),
         .double => a.add(a),
         .square => a.square(),
         .negate => a.neg(),
@@ -333,8 +351,8 @@ fn evalOp(
 // mirrors prover-ray wiop.LagrangeSelector.EvaluateOutOfDomain, the reference
 // used by global.Verifier.
 //
-// position comes from the node's runtime expression payload (module.expressions
-// is looked up by a runtime expr_index — see evalExpr) and may be end-relative
+// position comes from the node's runtime expression payload (see
+// evalExpressions) and may be end-relative
 // (negative — -1 is the module's last row, mirroring prover-ray
 // wiop.LagrangeSelector's own convention), the same shape cancellationAtPoint's
 // `positions` already handles via normalizePosition. For a STATIC module

@@ -407,12 +407,17 @@ pub fn verifyWithWorkspace(
     try routeClaims(pcs_system, recon, pcs_system.witness_map, entry_claims, &derived_witness);
     try routeClaims(pcs_system, recon, pcs_system.quotient_map, entry_claims, &derived_quotient);
 
+    // One slot per expression node of the widest module: the vanishing check
+    // evaluates each module's node DAG once into it.
+    var node_values: [vanishing.maxModuleExpressions(systems.vanishing)]ext.Ext = undefined;
+
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = &derived_witness,
         .quotient_claims = &derived_quotient,
         .module_sizes = proof.module_sizes,
+        .node_values = &node_values,
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
 
