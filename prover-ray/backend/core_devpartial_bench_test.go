@@ -1,3 +1,5 @@
+//go:build linux
+
 package backend
 
 import (
@@ -5,13 +7,18 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -21,17 +28,56 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// benchCase is one block of the benchmark plan. A block with maxShards > 0 is
+// stopped after that many shards, and its full time is estimated from them.
+type benchCase struct {
+	block     string
+	maxShards uint
+}
+
+// benchPlan is the benchmark plan, smallest block first. The shard counts are
+// at 500000 instructions per shard. 17M is too big to run in full: its first
+// shards give the memory before the first shard and the time per shard.
+var benchPlan = []benchCase{
+	{"stateless_input.ssz", 0},            // 4 shards
+	{"block_amsterdam_175k.ssz", 0},       // 57 shards
+	{"block_amsterdam_786k.ssz", 0},       // 96 shards
+	{"block_amsterdam_51584_500k.ssz", 0}, // 113 shards
+	{"block_amsterdam_52861_2M.ssz", 0},   // 272 shards
+	{"block_amsterdam_52866_17M.ssz", 5},  // not counted, maybe 1000 or more
+}
+
+// The environment of a block process, set by [TestDevPartial_Benchmark].
+const (
+	benchBlockEnv     = "BENCH_BLOCK"
+	benchMaxShardsEnv = "BENCH_MAX_SHARDS"
+	benchRecordEnv    = "BENCH_RECORD"
+)
+
+// benchUnfinished is the result of a block until it ends: a block process
+// killed before the end leaves it in its record.
+const benchUnfinished = "did not finish"
+
+// benchPass is the result of a block that passed.
+const benchPass = "pass"
+
+// benchFastPass is the name of the step that splits the trace into shards.
+const benchFastPass = "fast pass"
+
 // benchBlock is the benchmark record of one block file.
 type benchBlock struct {
-	Block       string       `json:"block"`
-	InputBytes  int          `json:"inputBytes"`
-	ShardSize   uint64       `json:"shardSize"`
-	NumShards   uint         `json:"numShards"`
-	Result      string       `json:"result"`
-	TotalSec    float64      `json:"totalSec"`
-	PeakRSSGB   float64      `json:"peakRssGb"`
-	Steps       []benchStep  `json:"steps"`
-	ShardsStats []benchShard `json:"shards"`
+	Block         string       `json:"block"`
+	Guest         string       `json:"guest"`
+	InputBytes    int          `json:"inputBytes"`
+	ShardSize     uint64       `json:"shardSize"`
+	NumShards     uint         `json:"numShards"`
+	MaxShards     uint         `json:"maxShards"`
+	Result        string       `json:"result"`
+	TotalSec      float64      `json:"totalSec"`
+	PeakRSSGB     float64      `json:"peakRssGb"`
+	ProcessPeakGB float64      `json:"processPeakGb"`
+	Steps         []benchStep  `json:"steps"`
+	ShardsStats   []benchShard `json:"shards"`
 }
 
 // benchStep is the time and peak resident memory of one step.
@@ -58,83 +104,201 @@ type benchModule struct {
 	Columns uint   `json:"columns"`
 }
 
-// TestDevPartial_Benchmark runs dev-partial step by step on the block files, as
-// [Core.Prove] does, and records for each block the time and peak resident
-// memory of each step, the size of each shard and the result. A shard with a
-// module over [wiop.ColumnSizeMaxSupported] rows is recorded and not checked,
-// as its assignment would panic. Same settings as [TestDevPartial_Integration];
-// BENCH_OUT appends one JSON line per block to that file, and
-// BENCH_MAX_SHARDS stops each block after that many shards. Peak memory is
-// read from /proc (Linux only).
+// TestDevPartial_Benchmark runs dev-partial step by step on the blocks of
+// [benchPlan], as [Core.Prove] does, and reports for each block the time and
+// peak memory of each step, the size of each shard and the result. Each block
+// runs in its own process, so that a block killed for lack of memory is
+// reported and the next one still runs. A shard with a module over
+// [wiop.ColumnSizeMaxSupported] rows is reported and not checked, as its
+// assignment would panic. Same settings as [TestDevPartial_Integration]
+// (GUEST_ELF, DEV_PARTIAL_SHARD_SIZE). The report goes to BENCH_DIR, by default
+// a new folder in the home folder: report.md, bench.jsonl, and the record and
+// log of each block. Linux only (peak memory is read from /proc).
 //
-//	REAL_GUEST_TESTS=1 DEV_PARTIAL_BLOCKS=block_amsterdam_175k.ssz BENCH_OUT=/tmp/bench.jsonl \
-//		go test ./backend -run TestDevPartial_Benchmark -v -timeout 0
+//	REAL_GUEST_TESTS=1 go test ./backend -run TestDevPartial_Benchmark -v -timeout 0
 func TestDevPartial_Benchmark(t *testing.T) {
-	core, id, blocks := realGuestCore(t)
+	if os.Getenv("REAL_GUEST_TESTS") == "" {
+		t.Skip("set REAL_GUEST_TESTS=1 to run the real guest tests (heavy: runs real blocks)")
+	}
+	if block := os.Getenv(benchBlockEnv); block != "" {
+		benchOneBlock(t, block)
+		return
+	}
+
+	dir := benchDir(t)
+	t.Logf("writing the report to %s", dir)
+	machine := benchMachine()
+	var recs []benchBlock
+	for _, bc := range benchPlan {
+		t.Logf("=== %s", bc.block)
+		rec := benchInProcess(t, dir, bc)
+		recs = append(recs, rec)
+		line, err := json.Marshal(rec)
+		require.NoError(t, err)
+		appendFile(t, filepath.Join(dir, "bench.jsonl"), append(line, '\n'))
+		report := []byte(renderBenchReport(machine, recs))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "report.md"), report, 0o600)) //nolint:gosec // G703: test-controlled path
+		t.Logf("=== %s: %s", bc.block, rec.Result)
+	}
+	t.Logf("report: %s", filepath.Join(dir, "report.md"))
+}
+
+// benchDir returns the report folder: BENCH_DIR, or a new folder in the home
+// folder.
+func benchDir(t *testing.T) string {
+	t.Helper()
+	dir := os.Getenv("BENCH_DIR")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		dir = filepath.Join(home, "dev-partial-bench-"+time.Now().Format("20060102-150405"))
+	}
+	require.NoError(t, os.MkdirAll(dir, 0o750)) //nolint:gosec // G703: test-controlled path
+	return dir
+}
+
+// benchMachine describes the machine and the settings of the run.
+func benchMachine() string {
+	cpu := "unknown CPU"
+	if data, err := os.ReadFile("/proc/cpuinfo"); err == nil {
+		for line := range strings.Lines(string(data)) {
+			if v, ok := strings.CutPrefix(line, "model name"); ok {
+				cpu = strings.TrimSpace(strings.TrimLeft(v, " \t:"))
+				break
+			}
+		}
+	}
+	memGB := -1.0
+	if kb, ok := procKB("/proc/meminfo", "MemTotal:"); ok {
+		memGB = kb / (1 << 20)
+	}
+	commit := "unknown"
+	if out, err := exec.Command("git", "rev-parse", "HEAD").Output(); err == nil {
+		commit = strings.TrimSpace(string(out))
+	}
+	elf := os.Getenv("GUEST_ELF")
+	if elf == "" {
+		elf = "default (riscv-guests/l2_execution/zig-out/bin/evm_execution_guest)"
+	}
+	return fmt.Sprintf("Machine: %d CPUs (%s), %.0f GB memory. Commit %s, %s. Guest ELF: %s.",
+		runtime.NumCPU(), cpu, memGB, commit, runtime.Version(), elf)
+}
+
+// benchInProcess runs one block in a new process of this test binary and
+// returns its record, with the peak memory of the whole process.
+func benchInProcess(t *testing.T, dir string, bc benchCase) benchBlock {
+	t.Helper()
+	recordPath := filepath.Join(dir, bc.block+".json")
+	logFile, err := os.Create(filepath.Join(dir, bc.block+".log")) //nolint:gosec // G304: test-controlled path
+	require.NoError(t, err)
+	defer func() { require.NoError(t, logFile.Close()) }()
+
+	//nolint:gosec // G204: this test binary
+	cmd := exec.Command(os.Args[0], "-test.run=^TestDevPartial_Benchmark$", "-test.v", "-test.timeout=0")
+	cmd.Env = append(os.Environ(),
+		benchBlockEnv+"="+bc.block,
+		benchMaxShardsEnv+"="+strconv.FormatUint(uint64(bc.maxShards), 10),
+		benchRecordEnv+"="+recordPath,
+	)
+	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
+	cmd.Stderr = cmd.Stdout
+	runErr := cmd.Run()
+
+	rec := benchBlock{Block: bc.block, MaxShards: bc.maxShards}
+	if data, err := os.ReadFile(recordPath); err == nil { //nolint:gosec // G304: test-controlled path
+		require.NoError(t, json.Unmarshal(data, &rec))
+	}
+	if ru, ok := cmd.ProcessState.SysUsage().(*syscall.Rusage); ok {
+		rec.ProcessPeakGB = float64(ru.Maxrss) / (1 << 20) // Maxrss is in kB on Linux
+	}
+	if rec.Result == "" || rec.Result == benchUnfinished {
+		rec.Result = benchChildFailure(runErr)
+	}
+	return rec
+}
+
+// benchChildFailure says how a block process that wrote no result ended.
+func benchChildFailure(err error) string {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return "did not finish, see the log"
+	}
+	if ws, ok := exitErr.Sys().(syscall.WaitStatus); ok && ws.Signaled() && ws.Signal() == syscall.SIGKILL {
+		return "killed by SIGKILL, most likely out of memory"
+	}
+	return fmt.Sprintf("failed (%v), see the log", err)
+}
+
+// benchOneBlock runs one block in this process and writes its record to
+// BENCH_RECORD after each step, so a killed process leaves what it did.
+func benchOneBlock(t *testing.T, block string) {
+	t.Helper()
+	core, id, _ := realGuestCore(t)
 	g, err := core.loadGuest(id)
 	require.NoError(t, err)
-	maxShards := uint(0)
-	if s := os.Getenv("BENCH_MAX_SHARDS"); s != "" {
-		n, err := strconv.ParseUint(s, 10, 32)
-		require.NoError(t, err, "parsing BENCH_MAX_SHARDS")
-		maxShards = uint(n)
+	maxShards, err := strconv.ParseUint(os.Getenv(benchMaxShardsEnv), 10, 32)
+	require.NoError(t, err, "parsing "+benchMaxShardsEnv)
+	extended, err := os.ReadFile(blockPath(block)) //nolint:gosec // G703: test-controlled path
+	require.NoError(t, err, "reading block file")
+
+	rec := benchBlock{
+		Block: block, Guest: fmt.Sprintf("%x", id), InputBytes: len(extended),
+		ShardSize: core.cfg.ShardSize, MaxShards: uint(maxShards), Result: benchUnfinished,
 	}
-	for _, name := range blocks {
-		t.Run(name, func(t *testing.T) {
-			extended, err := os.ReadFile(blockPath(name)) //nolint:gosec // G703: test-controlled path
-			require.NoError(t, err, "reading block file")
-			rec := benchBlock{Block: name, InputBytes: len(extended), ShardSize: core.cfg.ShardSize}
-			start := time.Now()
-			rec.Result = benchDevPartial(t, core, g, extended, maxShards, &rec)
-			rec.TotalSec = time.Since(start).Seconds()
-			for _, s := range rec.Steps {
-				rec.PeakRSSGB = max(rec.PeakRSSGB, s.PeakRSSGB)
-			}
-			for _, s := range rec.ShardsStats {
-				rec.PeakRSSGB = max(rec.PeakRSSGB, s.Trace.PeakRSSGB, s.Check.PeakRSSGB)
-			}
-			logBench(t, rec)
-			if out := os.Getenv("BENCH_OUT"); out != "" {
-				line, err := json.Marshal(rec)
-				require.NoError(t, err)
-				f, err := os.OpenFile(out, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // G703: test-controlled path
-				require.NoError(t, err)
-				_, err = f.Write(append(line, '\n'))
-				require.NoError(t, err)
-				require.NoError(t, f.Close())
-			}
-		})
+	start := time.Now()
+	save := func() {
+		rec.TotalSec = time.Since(start).Seconds()
+		for _, s := range rec.Steps {
+			rec.PeakRSSGB = max(rec.PeakRSSGB, s.PeakRSSGB)
+		}
+		for _, s := range rec.ShardsStats {
+			rec.PeakRSSGB = max(rec.PeakRSSGB, s.Trace.PeakRSSGB, s.Check.PeakRSSGB)
+		}
+		line, err := json.Marshal(rec)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(os.Getenv(benchRecordEnv), line, 0o600)) //nolint:gosec // G703: test-controlled path
 	}
+	save()
+	result := benchDevPartial(t, core, g, extended, uint(maxShards), &rec, save)
+	rec.Result = result
+	save()
+	logBench(t, rec)
 }
 
 // benchDevPartial runs the steps of dev-partial on one input, records them in
-// rec and returns the result: "pass", "over the column limit", or the error.
-func benchDevPartial(t *testing.T, c *Core, g guestProgram, extended []byte, maxShards uint, rec *benchBlock) string {
+// rec, calls save after each step, and returns the result: "pass", "over the
+// column limit", "stopped after N shards", or the error.
+func benchDevPartial(
+	t *testing.T, c *Core, g guestProgram, extended []byte, maxShards uint, rec *benchBlock, save func(),
+) string {
 	t.Helper()
 	inputs, err := c.encodeGuestInputs(Job{Payload: extended}, g)
 	require.NoError(t, err)
 
 	var out []byte
-	if err := benchRun(&rec.Steps, "execute", func() error {
-		guestOutput, err := executeGuest(c.driver.BinaryFile, inputs)
-		out = guestOutput.Bytes()
+	err = benchRun(&rec.Steps, "execute", func() error {
+		var err error
+		out, _, err = executeGuestPublicInputs(c.driver.BinaryFile, inputs)
 		return err
-	}); err != nil {
-		return err.Error()
-	}
-	if _, err := decodeGuestPublicInputs(out[guestOutputHashSize:]); err != nil {
+	})
+	save()
+	if err != nil {
 		return err.Error()
 	}
 
 	var lazyTrace zkcdriver.LazyTrace
-	if err := benchRun(&rec.Steps, "fast pass", func() error {
+	err = benchRun(&rec.Steps, benchFastPass, func() error {
 		var err error
 		lazyTrace, err = c.driver.TryTraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs})
 		return err
-	}); err != nil {
+	})
+	if err == nil {
+		rec.NumShards = lazyTrace.Len()
+	}
+	save()
+	if err != nil {
 		return err.Error()
 	}
-	rec.NumShards = lazyTrace.Len()
 
 	sharded := c.cfg.ShardSize > 0
 	var reducer *conglomeration.Reducer
@@ -142,7 +306,7 @@ func benchDevPartial(t *testing.T, c *Core, g guestProgram, extended []byte, max
 		reducer = conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
 	}
 	var pub wiop.PublicInput
-	result := "pass"
+	result := benchPass
 	for i := range rec.NumShards {
 		if maxShards > 0 && i >= maxShards {
 			return fmt.Sprintf("stopped after %d shards", maxShards)
@@ -161,6 +325,7 @@ func benchDevPartial(t *testing.T, c *Core, g guestProgram, extended []byte, max
 		benchShardSize(c, shard, &stats)
 		if len(stats.OverLimit) > 0 {
 			rec.ShardsStats = append(rec.ShardsStats, stats)
+			save()
 			result = "over the column limit"
 			continue
 		}
@@ -171,6 +336,7 @@ func benchDevPartial(t *testing.T, c *Core, g guestProgram, extended []byte, max
 			return err
 		})
 		rec.ShardsStats = append(rec.ShardsStats, stats)
+		save()
 		if strings.HasPrefix(stats.Check.Name, "error") {
 			return stats.Check.Name
 		}
@@ -180,17 +346,19 @@ func benchDevPartial(t *testing.T, c *Core, g guestProgram, extended []byte, max
 			}
 		}
 	}
-	if result != "pass" {
+	if result != benchPass {
 		return result
 	}
 	if sharded {
-		if err := benchRun(&rec.Steps, "merge", func() error {
+		err := benchRun(&rec.Steps, "merge", func() error {
 			root, err := reducer.Close(func(children []conglomeration.Node) (conglomeration.Node, error) {
 				return c.merger.Finalize(children, rec.NumShards)
 			})
 			pub = root.Pub
 			return err
-		}); err != nil {
+		})
+		save()
+		if err != nil {
 			return err.Error()
 		}
 	}
@@ -249,7 +417,7 @@ func benchStepOf(name string, step func() error) benchStep {
 	return s
 }
 
-// resetPeakRSS resets the peak resident memory of the process (Linux only).
+// resetPeakRSS resets the peak resident memory of the process.
 func resetPeakRSS() {
 	_ = os.WriteFile("/proc/self/clear_refs", []byte("5"), 0)
 }
@@ -257,21 +425,95 @@ func resetPeakRSS() {
 // peakRSSGB returns the peak resident memory of the process since the last
 // reset, in GB, or -1 if /proc cannot be read.
 func peakRSSGB() float64 {
-	data, err := os.ReadFile("/proc/self/status")
-	if err != nil {
+	kb, ok := procKB("/proc/self/status", "VmHWM:")
+	if !ok {
 		return -1
+	}
+	return kb / (1 << 20)
+}
+
+// procKB returns the value in kB of the line of the /proc file that starts
+// with key.
+func procKB(path, key string) (float64, bool) {
+	data, err := os.ReadFile(path) //nolint:gosec // G304: /proc file
+	if err != nil {
+		return 0, false
 	}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
-		if v, ok := strings.CutPrefix(sc.Text(), "VmHWM:"); ok {
+		if v, ok := strings.CutPrefix(sc.Text(), key); ok {
 			kb, err := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(v), " kB"), 64)
-			if err != nil {
-				return -1
-			}
-			return kb / (1 << 20)
+			return kb, err == nil
 		}
 	}
-	return -1
+	return 0, false
+}
+
+// appendFile appends data to the file at path.
+func appendFile(t *testing.T, path string, data []byte) {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // G304: test-controlled path
+	require.NoError(t, err)
+	_, err = f.Write(data)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+}
+
+// renderBenchReport renders the records as a Markdown report: one row per
+// block. The full time of a block stopped before its last shard is estimated
+// from the time of its steps and the average time of its shards.
+func renderBenchReport(machine string, recs []benchBlock) string {
+	var b strings.Builder
+	b.WriteString("# dev-partial benchmark\n\n" + machine + "\n\n")
+	b.WriteString("| Block | Shards run | Result | Time | Peak memory | Fast pass | Time per shard " +
+		"| Largest module | Shards over the limit | Full time (estimated) |\n")
+	b.WriteString("|---|---|---|---|---|---|---|---|---|---|\n")
+	for _, r := range recs {
+		fastPass := "-"
+		var stepsSec float64
+		for _, s := range r.Steps {
+			stepsSec += s.Sec
+			if s.Name == benchFastPass {
+				fastPass = fmt.Sprintf("%s, %.1f GB", benchDuration(s.Sec), s.PeakRSSGB)
+			}
+		}
+		perShard, largest, over := "-", "-", 0
+		var shardsSec float64
+		var top benchModule
+		for _, s := range r.ShardsStats {
+			shardsSec += s.Trace.Sec + s.Check.Sec
+			if len(s.Largest) > 0 && s.Largest[0].Rows > top.Rows {
+				top = s.Largest[0]
+			}
+			if len(s.OverLimit) > 0 {
+				over++
+			}
+		}
+		run := uint(len(r.ShardsStats))
+		if run > 0 {
+			perShard = benchDuration(shardsSec / float64(run))
+			largest = fmt.Sprintf("%s %d rows", top.Name, top.Rows)
+		}
+		estimate := "-"
+		if run > 0 && run < r.NumShards {
+			estimate = benchDuration(stepsSec + shardsSec/float64(run)*float64(r.NumShards))
+		}
+		peak := max(r.ProcessPeakGB, r.PeakRSSGB)
+		fmt.Fprintf(&b, "| %s | %d of %d | %s | %s | %.1f GB | %s | %s | %s | %d | %s |\n",
+			r.Block, run, r.NumShards, benchCell(r.Result), benchDuration(r.TotalSec), peak,
+			fastPass, perShard, largest, over, estimate)
+	}
+	return b.String()
+}
+
+// benchDuration formats seconds as a duration, to the second.
+func benchDuration(sec float64) string {
+	return (time.Duration(sec * float64(time.Second))).Round(time.Second).String()
+}
+
+// benchCell makes s fit in one cell of a Markdown table.
+func benchCell(s string) string {
+	return strings.NewReplacer("|", "/", "\n", " ").Replace(s)
 }
 
 // logBench logs the record of one block in a readable form.
