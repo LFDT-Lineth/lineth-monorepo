@@ -90,13 +90,14 @@ jobs:
         fi
 
   # Runs alongside staticcheck instead of after it: waiting for the static
-  # checks added ~4.5 min to every prover-ray PR. Large rather than xxl: xxl is
-  # ~1 min faster to run but queues ~70 s longer (2026-11 median 86 s vs 16 s).
+  # checks added ~4.5 min to every prover-ray PR.
+  # xxl: `go test` takes ~2 min here vs ~4 min on large, which outweighs xxl's
+  # longer queue (2026-11 median 86 s vs 16 s).
   test:
     strategy:
       matrix:
         go-version: [1.27.1]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     name: Prover testing
     steps:
     - name: checkout code
