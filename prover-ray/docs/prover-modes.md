@@ -48,7 +48,6 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
   - each shard in progress: about 30 to 35 GiB;
   - plus the trace checkpoints, shared by all the shards: about 85 MB per shard of the block.
   - Measured on r8a.24xlarge with the blocks in `riscv-guests/l2_execution/test/testdata/`: `stateless_input.ssz`, `block_amsterdam_175k.ssz`, `block_amsterdam_786k.ssz`, `block_amsterdam_51584_500k.ssz` and `block_amsterdam_52861_2M.ssz`.
-  - These numbers are with a paged RAM. Until zkc keeps it paged (#4519), each checkpoint is about 3.4 GB.
 - Checks every shard against every constraint, compiled as in `full` but without the commitment (PCS).
 - With shards, the mock conglomeration checks that:
   - the shards agree on the guest output;
