@@ -51,6 +51,9 @@ pub fn build(b: *std.Build) void {
             .{ .name = "core_serde", .module = core_serde_native_mod },
         },
     }, .{});
+    tests.get("test/l2_execution_proof_test.zig").?.root_module.addAnonymousImport("l2_execution_output.ssz", .{
+        .root_source_file = b.path("../../prover-ray/utils/ssz/testdata/l2_execution_output.ssz"),
+    });
     const crypto = common.HostCrypto.forTarget(b, native_target, .{}) orelse return;
     crypto.linkAll(tests);
 }
