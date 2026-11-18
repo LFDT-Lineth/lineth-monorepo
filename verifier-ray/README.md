@@ -16,8 +16,6 @@ The Zig library under `src/` is independent from `prover-ray` at runtime. Go tes
 Generated fixtures are checked into git and live in:
 
 ```text
-testdata/generated/vectors.zig
-testdata/generated/vanishing.zig
 testdata/generated/verify.zig
 testdata/generated/riscv_system.zig
 ```

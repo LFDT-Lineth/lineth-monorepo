@@ -40,10 +40,10 @@ pub fn verify(comptime system: System, input: CheckInput) Error!void
 For tests, generated prover scenarios live in:
 
 ```text
-verifier-ray/testdata/generated/vanishing.zig
+verifier-ray/testdata/generated/verify.zig
 ```
 
-The generated file contains the extracted `vanishing.System` values and matching proof views side by side. This file is test fixture data for prover-ray scenarios; it is not part of the verifier library API.
+The generated file contains each scenario's compiled `verifier.Systems` and its honest (and, where relevant, tampered) proofs side by side. This file is test fixture data for prover-ray scenarios; it is not part of the verifier library API.
 
 The repository also commits one generated production-style system:
 
@@ -127,7 +127,7 @@ cd verifier-ray
 make generate-testdata
 ```
 
-The Zig tests consume `testdata/generated/vanishing.zig` and call `vanishing.verify` with the generated system at comptime.
+The Zig tests consume `testdata/generated/verify.zig` and call `verifier.verify` with each generated system at comptime.
 
 ## Production Direction
 

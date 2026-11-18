@@ -129,7 +129,6 @@ test-codegen:
 
 generate-testdata:
 	cd testdata/generate && go run .
-	cd testdata/generate/fri && go run .
 	cd codegen/generate-riscv-system && go run .
 	cd codegen/generate-devmode-system && go run .
 

@@ -5,8 +5,6 @@ Fixtures in this directory are exported from local `prover-ray` references and c
 Generated Zig fixtures live in:
 
 ```text
-testdata/generated/vectors.zig
-testdata/generated/vanishing.zig
 testdata/generated/verify.zig
 testdata/generated/riscv_system.zig
 ```
