@@ -11,6 +11,15 @@ const logderivativesum = verifier_ray.query.logderivativesum;
 const commitment_mod = verifier_ray.crypto.commitment;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 
+// Scratch for vanishing.verify's per-module node values, sized for the widest
+// module of any fixture (and the small hand-built systems below).
+const max_nodes = blk: {
+    var max: usize = 16;
+    for (fixtures.scenarios) |case| max = @max(max, vanishing.maxModuleExpressions(case.system));
+    break :blk max;
+};
+var node_values_buf: [max_nodes]ext.Ext = undefined;
+
 test "vanishing quotient honest scenarios match prover-ray" {
     try std.testing.expect(fixtures.scenarios.len > 0);
     inline for (fixtures.scenarios) |case| {
@@ -26,6 +35,7 @@ test "vanishing quotient honest scenarios match prover-ray" {
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = rounds };
         try vanishing.verify(system, .{
             .ctx = ctx,
+            .node_values = &node_values_buf,
             .witness_claims = proof.witness_claims,
             .quotient_claims = proof.quotient_claims,
             .module_sizes = proof.module_sizes,
@@ -55,6 +65,7 @@ test "vanishing quotient invalid scenarios fail identity" {
             error.QuotientIdentityMismatch,
             vanishing.verify(system, .{
                 .ctx = ctx,
+                .node_values = &node_values_buf,
                 .witness_claims = proof.witness_claims,
                 .quotient_claims = proof.quotient_claims,
                 .module_sizes = proof.module_sizes,
@@ -83,30 +94,30 @@ test "dynamic vanishing module sizes are required and validated" {
         const coins = try protocol.replayWithTranscript(&transcript, spec, rounds, valid.module_sizes);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = rounds };
 
-        try vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = valid.module_sizes });
+        try vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = valid.module_sizes });
 
         try std.testing.expectError(
             error.MissingDynamicModuleSize,
-            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = &.{} }),
+            vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = &.{} }),
         );
 
         var zero_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         zero_sizes[0] = 0;
         try std.testing.expectError(
             error.InvalidModuleSize,
-            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = zero_sizes }),
+            vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = zero_sizes }),
         );
 
         var non_power_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         non_power_sizes[0] = 7;
         try std.testing.expectError(
             error.InvalidModuleSize,
-            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = non_power_sizes }),
+            vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = non_power_sizes }),
         );
 
         var wrong_sizes = try arena.allocator().dupe(usize, valid.module_sizes);
         wrong_sizes[0] = if (wrong_sizes[0] == 16) 8 else 16;
-        vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = wrong_sizes }) catch |err| {
+        vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = wrong_sizes }) catch |err| {
             if (err == error.QuotientIdentityMismatch) wrong_size_failures += 1 else return err;
         };
     }
@@ -148,7 +159,7 @@ test "lagrange selector rejects an in-domain evaluation coin" {
         const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
         try std.testing.expectError(
             error.LagrangeSelectorInDomain,
-            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+            vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
         );
     }
 
@@ -161,7 +172,7 @@ test "lagrange selector rejects an in-domain evaluation coin" {
         const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
         try std.testing.expectError(
             error.QuotientIdentityMismatch,
-            vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+            vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
         );
     }
 }
@@ -221,6 +232,7 @@ test "lagrange selector rejects positions outside [-n, n) for dynamic modules" {
     const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
     const input = vanishing.CheckInput{
         .ctx = ctx,
+        .node_values = &node_values_buf,
         .witness_claims = &.{},
         .quotient_claims = &quotient_claims,
         .module_sizes = &sizes,
@@ -261,6 +273,7 @@ test "cancelled positions get the same dynamic bounds check" {
     const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
     const input = vanishing.CheckInput{
         .ctx = ctx,
+        .node_values = &node_values_buf,
         .witness_claims = &.{},
         .quotient_claims = &quotient_claims,
         .module_sizes = &sizes,
@@ -320,6 +333,7 @@ test "average cell is bound by the cyclic recurrence" {
             try addToCell(a, result_only, query.result_ref, n_ext);
             try vanishing.verify(case.system, .{
                 .ctx = .{ .all_coins = &coins, .rounds = result_only },
+                .node_values = &node_values_buf,
                 .witness_claims = proof.witness_claims,
                 .quotient_claims = proof.quotient_claims,
                 .module_sizes = proof.module_sizes,
@@ -335,6 +349,7 @@ test "average cell is bound by the cyclic recurrence" {
                 error.QuotientIdentityMismatch,
                 vanishing.verify(case.system, .{
                     .ctx = ctx,
+                    .node_values = &node_values_buf,
                     .witness_claims = proof.witness_claims,
                     .quotient_claims = proof.quotient_claims,
                     .module_sizes = proof.module_sizes,
@@ -418,4 +433,82 @@ fn buildRounds(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView,
 fn buildRoundMessage(round: fixtures.RuntimeTraceRound, cells: []const protocol.Scalar) protocol.RoundMessage {
     const commitment = if (round.commitment) |c| commitment_mod.fromUints(c) else null;
     return .{ .commitment = commitment, .cells = cells };
+}
+
+// sharedDagSystem is a static module (n = 4) whose nodes form a DAG rather
+// than a tree: node 0 is read twice by node 1, node 1 twice by node 2, and
+// both vanishings read shared nodes. With eval coin r = 2 and merge coin 1 the
+// aggregate is v2 + v1 = 18 + 9 = 27, and Z_H(r) = r^4 - 1 = 15.
+const shared_dag_expressions = [_]vanishing.ExprNode{
+    .{ .constant = field.Element.init(3) },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 1 } },
+};
+
+fn singleBucketSystem(comptime expressions: []const vanishing.ExprNode, comptime roots: []const vanishing.Index) vanishing.System {
+    const S = struct {
+        const vanishings = blk: {
+            var vs: [roots.len]vanishing.Vanishing = undefined;
+            for (roots, &vs) |root, *v| v.* = .{ .expression = root };
+            break :blk vs;
+        };
+        const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
+        const modules = [_]vanishing.Module{.{
+            .size = .{ .static = 4 },
+            .expressions = expressions,
+            .buckets = &buckets,
+            .witness_claim_offset = 0,
+            .merge_coin_index = 0,
+            .eval_coin_index = 1,
+        }};
+    };
+    return .{ .modules = &S.modules, .total_witness_claims = 0, .total_quotient_claims = 1 };
+}
+
+fn constantExt(v: u64) ext.Ext {
+    return ext.Ext.lift(field.Element.init(v));
+}
+
+test "shared expression nodes evaluate to the same values as their tree" {
+    const system = singleBucketSystem(&shared_dag_expressions, &.{ 2, 1 });
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), constantExt(2) };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+
+    const honest = [_]ext.Ext{constantExt(27).div(constantExt(15))};
+    try vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = &.{}, .quotient_claims = &honest });
+
+    // A quotient off by the value of one shared node fails the identity.
+    const forged = [_]ext.Ext{constantExt(18).div(constantExt(15))};
+    try std.testing.expectError(
+        error.QuotientIdentityMismatch,
+        vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = &.{}, .quotient_claims = &forged }),
+    );
+}
+
+test "node values scratch must cover the widest module" {
+    const system = singleBucketSystem(&shared_dag_expressions, &.{2});
+    try std.testing.expectEqual(@as(usize, 3), vanishing.maxModuleExpressions(system));
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), constantExt(2) };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+    try std.testing.expectError(
+        error.NodeValuesTooSmall,
+        vanishing.verify(system, .{ .ctx = ctx, .node_values = node_values_buf[0..2], .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+    );
+}
+
+const forward_operand_expressions = [_]vanishing.ExprNode{
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 1 } },
+    .{ .constant = field.Element.init(3) },
+};
+
+test "an operand emitted after its parent is rejected" {
+    const system = singleBucketSystem(&forward_operand_expressions, &.{0});
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), constantExt(2) };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+    try std.testing.expectError(
+        error.ExpressionOrder,
+        vanishing.verify(system, .{ .ctx = ctx, .node_values = &node_values_buf, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+    );
 }
