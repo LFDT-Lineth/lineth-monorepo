@@ -627,6 +627,12 @@ func (c *Core) runProve(
 		if err != nil {
 			return conglomeration.Node{}, 0, err
 		}
+		// Assigning a module over the limit would panic in a worker goroutine,
+		// which no recover here can catch.
+		if err := c.driver.CheckShardFits(shard, wiop.ColumnSizeMaxSupported); err != nil {
+			return conglomeration.Node{}, 0, fmt.Errorf("shard %d does not fit in a column (%s): %w",
+				i, c.shardSizeHint(i), err)
+		}
 		// Once the last shard is traced, drop the lazy trace so that its
 		// checkpoints can be garbage collected before that shard is proved.
 		if k == len(indexes)-1 {
@@ -658,6 +664,25 @@ func (c *Core) runProve(
 		return conglomeration.Node{}, 0, fmt.Errorf("merging: %w", err)
 	}
 	return root, numShards, nil
+}
+
+// shardSizeHint says what to change when shard i does not fit in a column. A
+// smaller shard_size does not shrink every module: blobs_data follows the
+// block input, and most of ram in shard 0 is there whatever the input
+// (LFDT-Lineth/zkc#2346). Without a merger, as in full today, the trace cannot
+// be split.
+func (c *Core) shardSizeHint(i uint) string {
+	switch {
+	case c.merger == nil:
+		return "this mode cannot split the trace into shards yet"
+	case c.cfg.ShardSize == 0:
+		return "set shard_size to split the trace into shards"
+	case i == 0:
+		return "use a smaller shard_size; it does not help for ram in shard 0 or for blobs_data, " +
+			"which do not follow shard_size"
+	default:
+		return "use a smaller shard_size; it does not help for blobs_data, which follows the block input"
+	}
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.
