@@ -39,7 +39,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 - Runs the guest on the real input, without a trace.
 - The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
-- The guest output must be equal to the native runner's output (temporary, see below).
+- If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-partial
 
@@ -69,7 +69,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 ### Native runner check
 
 - The native runner runs the same guest code outside the VM.
-- Set it with `native_runner_bin` in `[execution]`, as a path or a name found on `PATH`: required in `dev-zkvm`, optional in `dev-partial`. In these two modes the prover does not start if it cannot be run.
+- Set it with `native_runner_bin` in `[execution]`, as a path or a name found on `PATH`: optional in `dev-zkvm` and `dev-partial`. When it is set in these two modes, the prover does not start if it cannot be run.
 - `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size`. The prover logs a warning at startup when an ignored setting is set.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
 
