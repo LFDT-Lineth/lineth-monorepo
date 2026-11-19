@@ -103,6 +103,11 @@ the ELF produced by the Zig build graph using the pinned toolchain's Keccak impl
 guest build defaults to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
 `-Dkeccak-accel=false`. Release staging uses the Zig build default.
 
+Guest ELFs are not bundled in the prover-ray image: put the released `.elf` in prover-ray's guests
+folder. The folder can hold several guests, e.g. both sides of a fork. prover-ray CI and the local
+e2e stack build the ELF from the same commit with `make docker-artifacts GUEST=<guest>` (Docker,
+linux/amd64, pinned Zig), at version `0.0.0-dev`.
+
 ## Continuous Integration
 
 Two workflows guard the guests.
