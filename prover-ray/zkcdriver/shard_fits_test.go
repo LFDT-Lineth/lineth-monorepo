@@ -43,12 +43,17 @@ func TestCheckShardFits(t *testing.T) {
 	}
 	shard := maybeShard.Unwrap()
 
-	// The largest module of the shard.
+	// The largest module of the shard that CheckShardFits looks at: static
+	// modules are skipped.
 	var largest struct {
 		name string
 		rows uint
 	}
+	schema := driver.BinaryFile.AirConstraints()
 	for k := range shard.Width() {
+		if schema.Module(k).IsStatic() {
+			continue
+		}
 		if m := shard.Module(k); m.Height() > largest.rows {
 			largest.name, largest.rows = m.Name(), m.Height()
 		}
