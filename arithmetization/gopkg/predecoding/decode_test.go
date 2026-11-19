@@ -1216,7 +1216,6 @@ func TestDecodeInstruction(t *testing.T) {
 // DecodeImage
 // ------------------------------------------------------------
 
-
 // TestDecodeImage checks that decodeImage walks the image as little-endian
 // words and appends one decodeInstruction row per record. Bytes past the last
 // record are ignored. Zero records return an empty buffer.
@@ -1257,7 +1256,6 @@ func TestDecodeImage(t *testing.T) {
 // ------------------------------------------------------------
 // EXECUTABLE HELPERS
 // ------------------------------------------------------------
-
 
 // TestExecutableBlobs checks that executableBlobs keeps only executable blobs
 // and sorts them by address. Equal addresses keep their input order. No
@@ -1307,6 +1305,81 @@ func TestExecutableBlobs(t *testing.T) {
 		}
 		if !reflect.DeepEqual(got, tt.want) {
 			t.Fatalf("%s: got %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestExecutableSpanEnd checks the highest end address of blobs already in
+// address order. An empty blob does not move the previous end. Overlap, an
+// end that wraps the address space, and an end past a 32-bit address are errors.
+func TestExecutableSpanEnd(t *testing.T) {
+	tests := []struct {
+		name    string
+		blobs   []elfmapping.Blob
+		want    uint64
+		wantErr bool
+	}{
+		{name: "one", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+		}, want: 0x1004},
+		{name: "gap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x2000, Data: []byte{5, 6}},
+		}, want: 0x2002},
+		{name: "touching", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x1004, Data: []byte{5, 6, 7, 8}},
+		}, want: 0x1008},
+		{name: "empty does not move previous end", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004},
+			{Address: 0x1008, Data: []byte{9}},
+		}, want: 0x1009},
+		{name: "empty extends the end", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x3000},
+		}, want: 0x3000},
+		{name: "overlap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004, Data: []byte{9}},
+		}, wantErr: true},
+		{name: "overlap across an empty blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004},
+			{Address: 0x1006, Data: []byte{9}},
+		}, wantErr: true},
+		{name: "wraps", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint64, Data: []byte{1}},
+		}, wantErr: true},
+		{name: "wraps before the top", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint64 - 1, Data: []byte{1, 2}},
+		}, wantErr: true},
+		{name: "fits 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 3},
+		}, want: math.MaxUint32 - 3},
+		{name: "past 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 2},
+		}, wantErr: true},
+		{name: "data passes 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 4, Data: []byte{1, 2}},
+		}, wantErr: true},
+		{name: "data crosses 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32, Data: []byte{1}},
+		}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := executableSpanEnd(tt.blobs)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if got != tt.want {
+			t.Fatalf("%s: end = %#x, want %#x", tt.name, got, tt.want)
 		}
 	}
 }
