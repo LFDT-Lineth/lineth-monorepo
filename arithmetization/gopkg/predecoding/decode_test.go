@@ -1254,7 +1254,10 @@ func TestDecodeImage(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// EXECUTABLE HELPERS
+// EXECUTABLE IMAGE AND EXECUTABLE HELPERS
+// ------------------------------------------------------------
+// TestExecutableBlobs, TestExecutableSpanEnd, TestExecutableImage
+// checks the executable helpers.	
 // ------------------------------------------------------------
 
 // TestExecutableBlobs checks that executableBlobs keeps only executable blobs
@@ -1326,7 +1329,7 @@ func TestExecutableSpanEnd(t *testing.T) {
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 			{Address: 0x2000, Data: []byte{5, 6}},
 		}, want: 0x2002},
-		{name: "touching", blobs: []elfmapping.Blob{
+		{name: "contiguous", blobs: []elfmapping.Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 			{Address: 0x1004, Data: []byte{5, 6, 7, 8}},
 		}, want: 0x1008},
@@ -1380,6 +1383,113 @@ func TestExecutableSpanEnd(t *testing.T) {
 		}
 		if got != tt.want {
 			t.Fatalf("%s: end = %#x, want %#x", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestExecutableSpan checks rounding of the blob range to 4-byte words.
+// base is rounded down and the end is rounded up. records equal to the cap is
+// accepted. One record past the cap, and a span that does not fit in a Go
+// slice, are errors.
+func TestExecutableSpan(t *testing.T) {
+	largestSpan := uint64(math.MaxInt) &^ 3
+	tests := []struct {
+		name                      string
+		first, maxEnd, maxRecords uint64
+		wantBase, wantRecords     uint64
+		wantErr                   bool
+	}{
+		{name: "aligned", first: 0x1000, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round base down", first: 0x1001, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round end up", first: 0x1000, maxEnd: 0x1001, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round both", first: 0x1002, maxEnd: 0x1005, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
+		{name: "empty span", first: 0x1000, maxEnd: 0x1000, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
+		{name: "records equal cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
+		{name: "records above cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 1, wantErr: true},
+		{name: "span fits max int", first: 0, maxEnd: largestSpan, maxRecords: largestSpan / 4, wantBase: 0, wantRecords: largestSpan / 4},
+		{name: "span above max int", first: 0, maxEnd: 1 << 63, maxRecords: math.MaxUint64, wantErr: true},
+	}
+	for _, tt := range tests {
+		base, records, err := executableSpan(tt.first, tt.maxEnd, tt.maxRecords)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if base != tt.wantBase || records != tt.wantRecords {
+			t.Fatalf("%s: base=%#x records=%d, want base=%#x records=%d",
+				tt.name, base, records, tt.wantBase, tt.wantRecords)
+		}
+	}
+}
+
+// TestExecutableImage checks the image built from the executable blobs. Bytes
+// are copied at address-base, and gaps stay zero. The end is padded to a whole
+// word. No executable blob, a span-end error, and a record count above the cap
+// are returned as errors.
+func TestExecutableImage(t *testing.T) {
+	tests := []struct {
+		name        string
+		blobs       []elfmapping.Blob
+		maxRecords  uint64
+		wantBase    uint64
+		wantImage   []byte
+		wantRecords uint64
+		wantErr     bool
+	}{
+		{name: "none", maxRecords: 1, wantErr: true},
+		{name: "one word", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4}, wantRecords: 1},
+		{name: "empty blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Executable: true},
+		}, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
+		{name: "short blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 0, 0}, wantRecords: 1},
+		{name: "unaligned", blobs: []elfmapping.Blob{
+			{Address: 0x1002, Data: []byte{1, 2}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{0, 0, 1, 2}, wantRecords: 1},
+		{name: "gap stays zero", blobs: []elfmapping.Blob{
+			{Address: 0x1008, Data: []byte{2}, Executable: true},
+			{Address: 0x1004, Data: []byte{9}, Executable: false},
+			{Address: 0x1000, Data: []byte{1}, Executable: true},
+		}, maxRecords: 3, wantBase: 0x1000, wantImage: []byte{1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}, wantRecords: 3},
+		{name: "contiguous", blobs: []elfmapping.Blob{
+			{Address: 0x1004, Data: []byte{5, 6, 7, 8}, Executable: true},
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 5, 6, 7, 8}, wantRecords: 2},
+		{name: "empty extends the image", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+			{Address: 0x1008, Executable: true},
+		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 0, 0, 0, 0}, wantRecords: 2},
+		{name: "overlap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}, Executable: true},
+			{Address: 0x1004, Data: []byte{9}, Executable: true},
+		}, maxRecords: 4, wantErr: true},
+		{name: "records above cap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+			{Address: 0x1008, Data: []byte{5, 6, 7, 8}, Executable: true},
+		}, maxRecords: 2, wantErr: true},
+	}
+	for _, tt := range tests {
+		base, image, records, err := executableImage(tt.blobs, tt.maxRecords)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if base != tt.wantBase || records != tt.wantRecords || !bytes.Equal(image, tt.wantImage) {
+			t.Fatalf("%s: base=%#x records=%d image=%x, want base=%#x records=%d image=%x",
+				tt.name, base, records, image, tt.wantBase, tt.wantRecords, tt.wantImage)
 		}
 	}
 }
