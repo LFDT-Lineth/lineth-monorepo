@@ -9,14 +9,14 @@ import (
 )
 
 // TestNewRollupResponse_MatchesReferenceShape verifies the placeholder rollup
-// response has the exact V1 field shape (including the PI) and echoes
-// the routing programVk. Values stay placeholder until the guest lands.
+// response has the exact V1 field shape (including the PI) and carries the
+// programVk of the result. Values stay placeholder until the guest lands.
 func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
-	vk := filledHash(0xbb)
-	resp := newRollupResponse(backend.Result{ProofBytes: []byte{0xde, 0xad}}, 1000501, "test-version", vk[:])
+	result := backend.Result{ProofBytes: []byte{0xde, 0xad}, ProgramVK: filledHash(0xbb)}
+	resp := newRollupResponse(result, 1000501, "test-version")
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
-	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk)
+	assert.Equal(t, repeatHex(0xbb), resp.ProgramVk, "programVk should be the VK of the result")
 	assert.Equal(t, "0xdead", resp.ProofHex)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
 	assert.Empty(t, resp.PublicInputs.ProgramVks)

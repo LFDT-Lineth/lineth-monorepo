@@ -205,7 +205,7 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
+		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
