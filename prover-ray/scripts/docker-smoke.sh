@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
 # Docker smoke test for the prover-ray image (reusable by CI).
 #
-# Checks five things:
+# Checks four things:
 #   1. dev-mock turns a dropped request file into a valid response file (the
 #      supervisor runs each request in a child over stdin/stdout).
-#   2. the native runner and its shared libraries run inside the image.
-#   3. the bundled guest ELF can be staged into a guests folder under its
-#      Program ID.
-#   4. dev-zkvm proves a real request: the guest output follows the spec, and the
-#      bundled guest ELF and native runner emit the same output.
-#   5. the same dev-zkvm request over stdin/stdout leaves only the response on
+#   2. the guests folder holds one l2-execution ELF named by its Program ID.
+#   3. dev-zkvm proves a real request: the guest output follows the spec.
+#   4. the same dev-zkvm request over stdin/stdout leaves only the response on
 #      stdout.
 #
-# Usage: scripts/docker-smoke.sh [image]
+# Usage: scripts/docker-smoke.sh [image] [guest artifacts dir]
+# Without a guest artifacts dir, the guest is built from riscv-guests.
 set -euo pipefail
 
 DOCKER="${DOCKER:-docker}"
 IMAGE="${1:-consensys/lineth-prover-ray:dev}"
+GUEST_SRC="${2:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_single_block.json"
 CONTAINER="prover-ray-smoke-$$"
@@ -72,27 +71,9 @@ if ! grep -q '"proverVersion": "smoke-dev-mock"' "$WORK/responses/req.json"; the
 fi
 echo "    ok: response written with proverVersion smoke-dev-mock"
 
-echo "==> native runner: runs in the image"
-# Run the bundled native runner on an extended (0x0002) input. This confirms the
-# runner and its shared libraries (glibc) run in the image. Step 3 checks the
-# output format.
-FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2_execution/test/testdata"
-if ! $DOCKER run --rm \
-        --entrypoint /opt/linea/prover-ray/l2_execution_runner \
-        -v "$FIXTURE_DIR:/in:ro" \
-        "$IMAGE" /in/stateless_input.ssz --ssz > "$WORK/commitment.bin" 2>/dev/null; then
-    echo "FAIL: native runner failed to run (missing library or exec error)"
-    exit 1
-fi
-if [ ! -s "$WORK/commitment.bin" ]; then
-    echo "FAIL: native runner wrote no output"
-    exit 1
-fi
-echo "    ok: native runner ran and wrote its output"
-
-echo "==> guests folder: bundled guest ELF staged under its Program ID"
-if ! program_id="$(DOCKER="$DOCKER" "$SCRIPT_DIR/stage-guest.sh" "$IMAGE" "$WORK/guests")"; then
-    echo "FAIL: could not stage the bundled guest ELF"
+echo "==> guests folder: l2-execution ELF staged under its Program ID"
+if ! program_id="$(DOCKER="$DOCKER" "$SCRIPT_DIR/stage-guest.sh" "$WORK/guests" ${GUEST_SRC:+"$GUEST_SRC"})"; then
+    echo "FAIL: could not stage the guest"
     exit 1
 fi
 staged=("$WORK/guests/"*)
@@ -102,11 +83,9 @@ if [ "${#staged[@]}" -ne 1 ] || [[ "${staged[0]##*/}" != l2-execution-v*-"${prog
 fi
 echo "    ok: l2-execution staged as ${staged[0]##*/}"
 
-echo "==> dev-zkvm: bundled guest and native runner agree on a real request"
-# Runs one dev-zkvm prove: the bundled guest ELF under ZkC Execute, cross-checked
-# byte for byte against the bundled native runner. A runner/guest mismatch in the
-# image fails here. The request fixture encodes the guest's own stateless_input.ssz;
-# its guestProgramId is set to the staged guest, as the coordinator would.
+echo "==> dev-zkvm: the guest proves a real request"
+# One dev-zkvm prove of the guest's own stateless_input.ssz, with
+# guestProgramId set to the staged guest.
 ZKVM_FIXTURE="$SCRIPT_DIR/../backend/jobadapter/testdata/request_guest_fixture.json"
 ZKVM_REQUEST="$WORK/zkvm/1-1-getZkL2ExecutionProofV1.json"
 mkdir -p "$WORK/zkvm"
@@ -119,7 +98,6 @@ guests_dir = "/opt/linea/prover-ray/guests"
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data"
-native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 TOML
 if ! $DOCKER run --rm \
         "${run_opts[@]}" \
@@ -128,7 +106,7 @@ if ! $DOCKER run --rm \
         -v "$WORK/guests:/opt/linea/prover-ray/guests:ro" \
         "$IMAGE" prove --config /data/config.toml \
         --in /data/1-1-getZkL2ExecutionProofV1.json --out /data/response.json; then
-    echo "FAIL: dev-zkvm prove failed (guest/native-runner mismatch or runtime error)"
+    echo "FAIL: dev-zkvm prove failed"
     cat "$WORK/zkvm/response.json" 2>/dev/null || true
     exit 1
 fi
@@ -137,7 +115,7 @@ if ! grep -q '"proverVersion": "smoke-dev-zkvm"' "$WORK/zkvm/response.json"; the
     cat "$WORK/zkvm/response.json"
     exit 1
 fi
-echo "    ok: guest commitment matches the native runner"
+echo "    ok: dev-zkvm response written"
 
 echo "==> dev-zkvm over stdin/stdout: the way the supervisor runs every child"
 # Same request, but piped in and out as the shared subprocess spawn does. Fails

@@ -71,11 +71,8 @@ make -f "$MK" version-dry-run COMPONENT=coordinator
 make -f "$MK" changelog-dry-run COMPONENT=coordinator
 
 # Preview the CHANGELOG.md exactly as a release would rewrite it — WITHOUT
-# writing the file or touching the remote (needs FOLDER_NAME, the directory
-# that holds the component's CHANGELOG.md).
-make -f "$MK" prepend-dry-run \
-  COMPONENT=coordinator \
-  FOLDER_NAME=coordinator
+# writing the file or touching the remote.
+make -f "$MK" prepend-dry-run COMPONENT=coordinator
 ```
 
 Pass `SCOPES`/`INCLUDE_PATH` explicitly to preview a value *before* committing it to `components.sh` (`INCLUDE_PATH` is one path per line, so for several paths use a multi-line value — bash/zsh `$'a\nb'` or a real newline-quoted string both work):
@@ -87,17 +84,7 @@ make -f "$MK" changelog-dry-run \
   INCLUDE_PATH=$'tracer/**\ntracer-constraints/**\nlinea-besu/plugins/linea-sequencer/**\nlinea-besu/besu/**\nlinea-besu/package/**\ngradle/libs.versions.toml'
 ```
 
-`COMPONENT` is also the release tag-pattern component; `FOLDER_NAME` (only needed for `prepend-dry-run`) per component:
-
-| `COMPONENT` | `FOLDER_NAME` |
-|---|---|
-| `coordinator` | `coordinator` |
-| `maru` | `maru` |
-| `postman` | `postman` |
-| `prover` | `prover` |
-| `tx-exclusion-api` | `transaction-exclusion-api` |
-| `linea-besu-package` | `linea-besu/package` |
-| `linea` (milestone) | `.` |
+`COMPONENT` is also the release tag-pattern component. The directory holding each component's `CHANGELOG.md` (`FOLDER_NAME`) is resolved from `component_folder()` in `components.sh` like the scopes/include-paths — pass `FOLDER_NAME=<dir>` to `prepend-dry-run` only to override it (e.g. `riscv-guests/<guest_dir>`).
 
 Notes:
 
@@ -106,6 +93,24 @@ Notes:
 - If a component has no qualifying commits, git-cliff reports "There is nothing to bump" and `changed=false` — meaning no release would be cut. This is the scope-and-path gating in action: a commit counts only when it is **both** in-scope **and** touches a component path.
 - The changelog/prepend previews render under the computed next-version header by default (`GENERATE_WITH_NEXT_TAG=true`); pass `GENERATE_WITH_NEXT_TAG=false` to preview under an `[unreleased]` header instead.
 - The Makefile runs the same scripts (and the same `components.sh` lookup) the workflows use, so the local result matches CI. Run `make -f "$MK" help` to list every target.
+
+### Update `[Unreleased]` changelogs locally
+
+[`update-unreleased-changelogs.sh`](.github/actions/run-git-cliff-commands/scripts/update-unreleased-changelogs.sh) is the script the `component-changelog-update` workflow runs on every push to `main`: it regenerates the `[Unreleased]` section of each component's `CHANGELOG.md`, processing components in parallel. Run the same update locally via the Makefile (same prerequisites as above; from the repo root):
+
+```bash
+# Selected components (comma-separated):
+make -f "$MK" update-unreleased-changelogs COMPONENTS=coordinator,maru,postman
+
+# All components (the default when COMPONENTS is omitted):
+make -f "$MK" update-unreleased-changelogs
+```
+
+Notes:
+
+- Unlike the `*-dry-run` targets this **writes** the `CHANGELOG.md` files (it never commits or pushes) — review with `git diff` afterwards. To preview a rewrite without touching files, use `prepend-dry-run` per component.
+- Parallelism is capped by `MAX_PARALLEL` (default 4); per-component logs go to `${RUNNER_TEMP:-${TMPDIR:-/tmp}}/changelog-gen.<component>.log`.
+- A component with no release-relevant commits since its last tag is left untouched.
 
 ### Per-component release
 

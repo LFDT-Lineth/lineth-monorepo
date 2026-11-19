@@ -141,7 +141,14 @@ func (m *Module) NewVanishingManual(ctx *ContextFrame, expr Expression, position
 // newVanishing is the shared implementation used by [Module.NewVanishing] and
 // [Module.NewVanishingManual]. It constructs the [Vanishing], appends it to
 // the module's Vanishings list, and returns it.
+//
+// expr is stored interned (see [exprInterner]), so equal subexpressions of the
+// module's vanishings share one pointer, whichever compiler built them.
 func (m *Module) newVanishing(ctx *ContextFrame, expr Expression, positions []int) *Vanishing {
+	if m.interner == nil {
+		m.interner = newExprInterner()
+	}
+	expr = m.interner.intern(expr)
 	v := &Vanishing{
 		baseQuery: baseQuery{
 			context:     ctx,
@@ -159,21 +166,27 @@ func (m *Module) newVanishing(ctx *ContextFrame, expr Expression, positions []in
 // row positions, and returns the merged set in sorted order.
 func cancelledPositionsFromExpr(expr Expression) []int {
 	shifts := make(map[int]struct{})
-	collectShifts(expr, shifts)
+	collectShifts(expr, shifts, make(map[*ArithmeticOperation]struct{}))
 	return cancelledPositionsFromShifts(shifts)
 }
 
 // collectShifts recursively traverses expr and records all non-zero
-// [ColumnView.ShiftingOffset] values into the shifts set.
-func collectShifts(expr Expression, shifts map[int]struct{}) {
+// [ColumnView.ShiftingOffset] values into the shifts set. Operations in
+// visited are skipped, so a subexpression shared by several parents is walked
+// once.
+func collectShifts(expr Expression, shifts map[int]struct{}, visited map[*ArithmeticOperation]struct{}) {
 	switch e := expr.(type) {
 	case *ColumnView:
 		if e.ShiftingOffset != 0 {
 			shifts[e.ShiftingOffset] = struct{}{}
 		}
 	case *ArithmeticOperation:
+		if _, ok := visited[e]; ok {
+			return
+		}
+		visited[e] = struct{}{}
 		for _, op := range e.Operands {
-			collectShifts(op, shifts)
+			collectShifts(op, shifts, visited)
 		}
 		// *Cell, *CoinField, and other leaf types carry no shifts.
 	}

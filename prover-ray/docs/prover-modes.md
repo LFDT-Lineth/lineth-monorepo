@@ -24,6 +24,8 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 
 For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
 
+The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
+
 ## Modes
 
 ### dev-mock
@@ -35,9 +37,9 @@ For rollup and aggregation, the modes other than `dev-mock` need the layer's gue
 ### dev-zkvm
 
 - Runs the guest on the real input, without a trace.
-- The public inputs are real.
+- The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
-- The guest output must be equal to the native runner's output (temporary, see below).
+- If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-partial
 
@@ -67,6 +69,8 @@ For rollup and aggregation, the modes other than `dev-mock` need the layer's gue
 ### Native runner check
 
 - The native runner runs the same guest code outside the VM.
+- Set it with `native_runner_bin` in `[execution]`, as a path or a name found on `PATH`: optional in `dev-zkvm` and `dev-partial`. When it is set in these two modes, the prover does not start if it cannot be run.
+- `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size`. The prover logs a warning at startup when an ignored setting is set.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
 
 Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.

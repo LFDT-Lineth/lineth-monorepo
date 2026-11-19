@@ -395,11 +395,11 @@ docs/                    Project documentation
 
 - **Platform:** GitHub Actions
 - **Main workflow:** `.github/workflows/main.yml` — triggers on PR and push to `main`
-- **Path filtering:** `dorny/paths-filter` detects which components changed
+- **Path filtering:** `dorny/paths-filter` detects which components changed (filters in `.github/path-filters/`)
 - **Pipeline:** Filter changed paths -> Run component tests -> Build Docker images -> E2E tests -> Publish
 - **Coverage:** Codecov with Jacoco (JVM), Hardhat (Solidity), Jest LCOV (TS packages), and tracer Jacoco XML (`tracer` flag)
 - **Security:** CodeQL analysis, KICS Dockerfile scanning (weekly)
-- **Runners:** Custom scale-set runners (small, med, large, xl) on Ubuntu 22.04
+- **Runners:** Custom scale-set runners (small, med, large, xl, xxl) on Ubuntu 24.04. Jobs that only call the GitHub or Slack APIs (approval gate, deployment cleanup, Slack failure notification, cache cleanup) run on GitHub-hosted `ubuntu-24.04`, which is free for this public repository
 - **Concurrency:** Cancel in-progress runs on PRs; serial on `main`
 - **Notifications:** Slack alerts on workflow failures; external contribution notifications
 

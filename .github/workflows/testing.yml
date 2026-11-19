@@ -57,6 +57,10 @@ jobs:
   # Cache for pulling Docker images is disabled as we empirically found that this
   # (retrieving cache and loading Docker images) actually increased test time-to-completion
   coordinator:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     uses: ./.github/workflows/coordinator-testing.yml
     if: ${{ inputs.coordinator_changed == 'true' }}
     with:
@@ -100,11 +104,19 @@ jobs:
     secrets: inherit
 
   transaction-exclusion-api:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
     secrets: inherit
 
   staterecovery:
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
     uses: ./.github/workflows/staterecovery-testing.yml
     if: ${{ inputs.staterecovery_changed == 'true' }}
     with:
@@ -142,16 +154,14 @@ jobs:
   jacoco-report:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Generate Jacoco Coverage Report
-    # Run if at least one JVM test job completed (whether passed, failed, or cancelled)
-    # Don't run if all test jobs were skipped due to no changes
+    # Run only when every JVM test job that ran passed, and at least one ran.
+    # After a failed or cancelled test job the report is incomplete or missing, so
+    # this job would fail too. "Re-run failed jobs" re-runs it with the fixed tests.
     if: |
-      always() && (
-        needs.coordinator.result != 'skipped' ||
-        needs.linea-sequencer.result != 'skipped' ||
-        needs.maru.result != 'skipped' ||
-        needs.staterecovery.result != 'skipped' ||
-        needs.transaction-exclusion-api.result != 'skipped'
-      )
+      !cancelled() &&
+      contains(needs.*.result, 'success') &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     needs:
       - coordinator
       - linea-sequencer
@@ -222,25 +232,3 @@ jobs:
           name: codecov-jvm-tests
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  # If all jobs are skipped, the workflow will still succeed.
-  always_succeed:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    if: >
-      inputs.coordinator_changed == 'false' &&
-      inputs.prover_changed == 'false' &&
-      inputs.prover_ray_changed == 'false' &&
-      inputs.rollup_spec_changed == 'false' &&
-      inputs.native_yield_automation_service_changed == 'false' &&
-      inputs.lido_governance_monitor_changed == 'false' &&
-      inputs.postman_changed == 'false' &&
-      inputs.transaction_exclusion_api_changed == 'false' &&
-      inputs.staterecovery_changed == 'false' &&
-      inputs.smart_contracts_changed == 'false' &&
-      inputs.linea_sequencer_changed == 'false' &&
-      inputs.tracer_changed == 'false' &&
-      inputs.constraints_changed == 'false' &&
-      inputs.maru_changed == 'false'
-    steps:
-      - name: Ensure Workflow Success
-        run: echo "All jobs were skipped, but workflow succeeds."

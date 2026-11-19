@@ -113,7 +113,8 @@
 //   - (iii) empty shift list is an error (every committed row is
 //     opened at least once).
 //   - (iv)  duplicate shifts inside a row's shift list is an error.
-//   - (v)   no cross-batch dedup; caller is responsible.
+//   - (v)   every batch gets its own input tree, even when roots coincide;
+//     batches are never merged.
 //   - (vi)  caller picks batch order. Convention: setup batches at
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
@@ -126,7 +127,6 @@ import (
 	"math/big"
 	"math/bits"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
@@ -255,27 +255,6 @@ func (shape Shape) grouped() bool {
 // groups returns the groups of this size (one group of every row by default).
 func (s SizedShape) groups() []GroupShape {
 	return sizeGroups(s.BaseWidth, s.ExtWidth, s.Groups)
-}
-
-// sameGrouping reports whether two shapes split every size into the same
-// groups. Batches that share a commitment must agree on it, since the grouping
-// fixes how that commitment's rows were hashed.
-func sameGrouping(a, b Shape) bool {
-	if len(a) != len(b) || a.grouped() != b.grouped() {
-		return false
-	}
-	for i := range a {
-		ga, gb := a[i].groups(), b[i].groups()
-		if len(ga) != len(gb) {
-			return false
-		}
-		for j := range ga {
-			if ga[j] != gb[j] {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // BatchShifts describes which rotation shifts each row of each
@@ -586,8 +565,9 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 type OpeningProof struct {
 	// InputQueries[k] contains one row-carrying opening per input tree for query k.
 	InputQueries []InputQuery
-	// InputCaps contains one authenticated cap per distinct input tree, in the
-	// same canonical order as the tree openings inside InputQueries.
+	// InputCaps contains one authenticated cap per input tree (one per opened
+	// batch), in the same canonical order as the tree openings inside
+	// InputQueries.
 	InputCaps []InputCap
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
@@ -697,7 +677,8 @@ func (source inputQuerySource) authenticate() error {
 			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, 1<<info.height, codewordSize)
 		}
 		leafIndex := source.queryPosition / (codewordSize / (1 << info.height))
-		if err := branch.AuthenticateToCap(leafIndex, source.frontiers[i], info.levelGroups); err != nil {
+		err := branch.AuthenticateToCap(source.params.MerkleHash, leafIndex, source.frontiers[i], info.levelGroups)
+		if err != nil {
 			return fmt.Errorf("input tree %d: %w", i, err)
 		}
 	}
@@ -723,7 +704,7 @@ func splitRowOpening(row RowOpening, groups []GroupShape) []RowOpening {
 // group order: these are the digests injected into that level's node. A nil
 // groups is the single group of every row. Both rows must have the groups'
 // widths; the pair comes from the proof, so a mismatch is an error.
-func hashAuxPairGroups(pair RowPair, groups []GroupShape, selfIsEven bool) ([]field.Octuplet, error) {
+func hashAuxPairGroups(hash MerkleHash, pair RowPair, groups []GroupShape, selfIsEven bool) ([]field.Octuplet, error) {
 	groups = sizeGroups(len(pair[0].Base), len(pair[0].Ext), groups)
 	var baseWidth, extWidth int
 	for _, g := range groups {
@@ -740,7 +721,7 @@ func hashAuxPairGroups(pair RowPair, groups []GroupShape, selfIsEven bool) ([]fi
 	sibling := splitRowOpening(pair[1], groups)
 	res := make([]field.Octuplet, len(groups))
 	for i := range groups {
-		res[i] = hashAuxPair(RowPair{self[i], sibling[i]}, selfIsEven)
+		res[i] = hashAuxPair(hash, RowPair{self[i], sibling[i]}, selfIsEven)
 	}
 	return res, nil
 }
@@ -779,7 +760,7 @@ type Challenges struct {
 // register an opening; pass the returned state to AddOpening when this
 // commitment should contribute to the next opening proof.
 func (pcs *PCS) Commit(witness MultiSizeTable) CommitterState {
-	return Commit(pcs.Encoders, witness)
+	return CommitWithHash(pcs.Params.MerkleHash, pcs.Encoders, witness)
 }
 
 // AddOpening registers one committed batch to be opened at zeta with the given
@@ -806,6 +787,10 @@ func (pcs *PCS) AddOpening(
 	}
 	if committed.Tree == nil {
 		return fmt.Errorf("fri: AddOpening: commitment has nil tree")
+	}
+	if committed.Tree.hash != pcs.Params.MerkleHash {
+		return fmt.Errorf("fri: AddOpening: commitment built with Merkle hash %v, PCS uses %v",
+			committed.Tree.hash, pcs.Params.MerkleHash)
 	}
 	// Validate the opening on its own; the alpha_DEEP powers are assigned over
 	// all the openings at once (see openingsLayout).
@@ -1329,18 +1314,15 @@ func (pcs *PCS) inputOpeningCommitments() ([]CommitterState, error) {
 		return nil, err
 	}
 	// Sizes in decreasing order (canonicalLayout's order), batches in order
-	// within a size: the commitments in order of first appearance.
-	seen := make(map[field.Octuplet]bool)
+	// within a size: one input tree per batch, in order of first appearance.
+	// Batches are never merged, even when their roots coincide.
+	seen := make(map[int]bool)
 	var inputs []CommitterState
 	for _, bundle := range openingsLayout {
-		if int(bundle.SizeLog2) > int(pcs.Params.LogPlainTextSize) {
-			continue
-		}
 		for _, entry := range bundle.Entries {
 			committed := pcs.openings[entry.BatchIdx].committed
-			root := committed.Tree.Root()
-			if !seen[root] {
-				seen[root] = true
+			if !seen[entry.BatchIdx] {
+				seen[entry.BatchIdx] = true
 				inputs = append(inputs, committed)
 			}
 		}
@@ -1458,8 +1440,8 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 	return opening
 }
 
-func hashRowOpening(row RowOpening) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
+func hashRowOpening(hash MerkleHash, row RowOpening) field.Octuplet {
+	hasher := hash.newLeafHasher()
 	absorbLeafHeader(hasher, len(row.Base), len(row.Ext))
 	writeRowOpeningElements(hasher, row)
 	return hasher.SumDigest()
@@ -1468,8 +1450,8 @@ func hashRowOpening(row RowOpening) field.Octuplet {
 // hashAuxPair must match Merkleize's even-before-odd hash order regardless of
 // which one is Self, hence selfIsEven. The domain-separation header is written
 // once per leaf (both rows share the same shape).
-func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
+func hashAuxPair(hash MerkleHash, pair RowPair, selfIsEven bool) field.Octuplet {
+	hasher := hash.newLeafHasher()
 	absorbLeafHeader(hasher, len(pair[0].Base), len(pair[0].Ext))
 	if selfIsEven {
 		writeRowOpeningElements(hasher, pair[0])
@@ -1481,13 +1463,15 @@ func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	return hasher.SumDigest()
 }
 
-func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
+// writeRowOpeningElements mirrors [writeRowElements] on an opened row: base
+// values first, then extension coordinates. See writeRowElements for why the
+// declaration order of the columns needs no encoding.
+func writeRowOpeningElements(hasher leafHasher, row RowOpening) {
 	for _, base := range row.Base {
-		hasher.WriteElements(base)
+		hasher.WriteElement(base)
 	}
 	for _, ext := range row.Ext {
-		limbs := extLimbs(ext)
-		hasher.WriteElements(limbs[:]...)
+		hasher.WriteExt(ext)
 	}
 }
 
@@ -1500,7 +1484,7 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 // pair is digested group by group into its leaf, like the other pairs;
 // otherwise each of its rows is a leaf.
 func (branch InputTreeOpening) AuthenticateToCap(
-	idx int, frontier []field.Octuplet, levelGroups [][]GroupShape,
+	hash MerkleHash, idx int, frontier []field.Octuplet, levelGroups [][]GroupShape,
 ) error {
 	if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
 		return fmt.Errorf("missing bottom level")
@@ -1530,13 +1514,14 @@ func (branch InputTreeOpening) AuthenticateToCap(
 		bottomGroups = levelGroups[height-1]
 	}
 	if bottomGroups != nil {
-		digests, err := hashAuxPairGroups(*bottom, bottomGroups, idx&1 == 0)
+		digests, err := hashAuxPairGroups(hash, *bottom, bottomGroups, idx&1 == 0)
 		if err != nil {
 			return fmt.Errorf("bottom level: %w", err)
 		}
-		ancestor, currPos = chainDigests(digests), idx>>1
+		ancestor, currPos = chainDigests(hash, digests), idx>>1
 	} else {
-		ancestor, currPos, err = foldOneLevel(hashRowOpening(bottom[0]), hashRowOpening(bottom[1]), nil, nil, idx)
+		left, right := hashRowOpening(hash, bottom[0]), hashRowOpening(hash, bottom[1])
+		ancestor, currPos, err = foldOneLevel(hash, left, right, nil, nil, idx)
 		if err != nil {
 			return err
 		}
@@ -1547,7 +1532,8 @@ func (branch InputTreeOpening) AuthenticateToCap(
 		if level < len(levelGroups) {
 			groups = levelGroups[level]
 		}
-		ancestor, currPos, err = foldOneLevel(ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], groups, currPos)
+		ancestor, currPos, err = foldOneLevel(
+			hash, ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], groups, currPos)
 		if err != nil {
 			return fmt.Errorf("level %d: %w", level, err)
 		}
@@ -1561,7 +1547,7 @@ func (branch InputTreeOpening) AuthenticateToCap(
 // foldOneLevel hashes the ancestor with its sibling, then injects the digest
 // of each group of the level's conjugate pair, if any.
 func foldOneLevel(
-	ancestor, sibling field.Octuplet, aux *RowPair, groups []GroupShape, currPos int,
+	hash MerkleHash, ancestor, sibling field.Octuplet, aux *RowPair, groups []GroupShape, currPos int,
 ) (field.Octuplet, int, error) {
 	selfIsEven := currPos&1 == 0
 	left, right := ancestor, sibling
@@ -1569,13 +1555,13 @@ func foldOneLevel(
 		left, right = right, left
 	}
 	if aux == nil {
-		return hashNode(left, right), currPos >> 1, nil
+		return hashNode(hash, left, right), currPos >> 1, nil
 	}
-	injected, err := hashAuxPairGroups(*aux, groups, selfIsEven)
+	injected, err := hashAuxPairGroups(hash, *aux, groups, selfIsEven)
 	if err != nil {
 		return field.Octuplet{}, 0, err
 	}
-	return hashNode(left, right, injected...), currPos >> 1, nil
+	return hashNode(hash, left, right, injected...), currPos >> 1, nil
 }
 
 // levelIndex resolves levelSize to its index into branch.Leaves. The bottom
@@ -1708,7 +1694,7 @@ type VerifyInputs struct {
 //
 //  1. Shape validation for Roots/Shapes/Shifts and claimed values.
 //  2. Canonical-layout build from Shapes + Shifts.
-//  3. Per query: authenticate each deduped input opening once, bind top and
+//  3. Per query: authenticate each batch's input opening once, bind top and
 //     auxiliary rows from those branches, authenticate each running FRI layer
 //     against its committed root, and resolve all fold values.
 //  4. checkFolds: pure fold-recurrence arithmetic over the resolved values.
@@ -1752,14 +1738,12 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	inputShapes := make([]Shape, len(inputRoots))
 	for batchIdx, treeIdx := range inputIndexByBatch {
-		if treeIdx < 0 {
-			continue
-		}
-		if inputShapes[treeIdx] == nil {
+		// The PCS allows empty batches, e.g. a batch whose columns were all
+		// elided upstream. Such a batch has no layout entries, hence no input
+		// tree, and treeIdx is -1: skip it. Otherwise each tree belongs to
+		// exactly one batch.
+		if treeIdx >= 0 {
 			inputShapes[treeIdx] = in.Shapes[batchIdx]
-		} else if !sameGrouping(inputShapes[treeIdx], in.Shapes[batchIdx]) {
-			return fmt.Errorf("fri: pcs.Verify: batch %d shares input tree %d but groups its rows differently",
-				batchIdx, treeIdx)
 		}
 	}
 	inputFrontiers := make([][]field.Octuplet, len(inputRoots))
@@ -1770,7 +1754,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
 		}
 		inputCapInfos[treeIdx] = info
-		frontier, err := authenticateInputCap(info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
+		frontier, err := authenticateInputCap(
+			pcs.Params.MerkleHash, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
 		if err != nil {
 			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
 		}
@@ -1789,7 +1774,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			runningFrontiers[j] = []field.Octuplet{root}
 			continue
 		}
-		if err := treeCap.Authenticate(depth, root); err != nil {
+		if err := treeCap.Authenticate(pcs.Params.MerkleHash, depth, root); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
 		}
 		runningFrontiers[j] = treeCap.Nodes
@@ -1948,7 +1933,7 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 			opening, vq.runningFrontiers[j], 1<<(pcs.Params.LogCodewordSize-j), depth); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
-		if err := opening.AuthenticateToCap(queryPosition>>j, vq.runningFrontiers[j]); err != nil {
+		if err := opening.AuthenticateToCap(pcs.Params.MerkleHash, queryPosition>>j, vq.runningFrontiers[j]); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
 		if len(opening.Siblings) == 0 {
@@ -2026,23 +2011,20 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
+// inputOpeningRoots assigns every opened batch its own input tree, in order of
+// first appearance in the layout. Batches are never merged by root value.
 func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
-	indexByRoot := make(map[field.Octuplet]int)
-	inputRoots := make(QueryLayerRoots, 0)
+	inputRoots := make(QueryLayerRoots, 0, len(roots))
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
-			root := roots[batchIdx]
-			if idx, ok := indexByRoot[root]; ok {
-				indexByBatch[batchIdx] = idx
-				continue
+			if indexByBatch[batchIdx] < 0 {
+				indexByBatch[batchIdx] = len(inputRoots)
+				inputRoots = append(inputRoots, roots[batchIdx])
 			}
-			indexByBatch[batchIdx] = len(inputRoots)
-			indexByRoot[root] = len(inputRoots)
-			inputRoots = append(inputRoots, root)
 		}
 	}
 	return inputRoots, indexByBatch
@@ -2148,7 +2130,7 @@ func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
 }
 
 func authenticateInputCap(
-	info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
+	hash MerkleHash, info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
 ) ([]field.Octuplet, error) {
 	depth := info.depth
 	if depth == 0 {
@@ -2185,14 +2167,14 @@ func authenticateInputCap(
 		groups := shapeAtSize.groups()
 		for pairIdx := range len(table.Rows) / 2 {
 			pair := RowPair{table.Rows[2*pairIdx], table.Rows[2*pairIdx+1]}
-			injected, err := hashAuxPairGroups(pair, groups, true)
+			injected, err := hashAuxPairGroups(hash, pair, groups, true)
 			if err != nil {
 				return nil, fmt.Errorf("revealed table %d pair %d: %w", i, pairIdx, err)
 			}
 			injections[levelStart+pairIdx] = injected
 		}
 	}
-	if capRoot(treeCap.Nodes, injections) != root {
+	if capRoot(hash, treeCap.Nodes, injections) != root {
 		return nil, fmt.Errorf("invalid Merkle cap")
 	}
 	return treeCap.Nodes, nil

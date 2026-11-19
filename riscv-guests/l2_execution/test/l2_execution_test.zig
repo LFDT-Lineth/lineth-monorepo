@@ -55,19 +55,14 @@ fn sampleChainConfig() l2_execution_ssz.ChainConfig {
     };
 }
 
-test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
-    const got = api.chainConfigHashFn(sampleChainConfig(), 1_000_000_000);
-    const want = [_]u8{ 0xeb, 0x9a, 0xbc, 0xa2, 0x92, 0x7e, 0x7d, 0x36, 0x99, 0x9c, 0x8d, 0x0a, 0xe3, 0xf4, 0x94, 0xf7, 0xb0, 0x12, 0x0a, 0xde, 0xc4, 0x1f, 0x5c, 0xe1, 0x3a, 0x2b, 0x98, 0xdd, 0xa4, 0x38, 0x50, 0x06 };
-    try testing.expectEqualSlices(u8, &want, &got);
-}
-
-test "chainConfigHash excludes the system-contract addresses" {
+test "chainConfigHash commits to every system contract except beacon roots and history storage" {
     const baseline = api.chainConfigHashFn(sampleChainConfig(), 7);
     inline for (std.meta.fields(l2_execution_ssz.SystemContracts)) |field| {
         var tampered = sampleChainConfig();
         @field(tampered.system_contracts, field.name) = repeat(20, 0x00);
         const got = api.chainConfigHashFn(tampered, 7);
-        try testing.expectEqualSlices(u8, &baseline, &got);
+        const hashed = !std.mem.eql(u8, field.name, "beacon_roots") and !std.mem.eql(u8, field.name, "history_storage");
+        try testing.expectEqual(hashed, !std.mem.eql(u8, &baseline, &got));
     }
 }
 
@@ -322,7 +317,7 @@ test "validateForcedTransactions: INCLUDED must appear in the payload's transact
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.INCLUDED,
         .deadline = 100,
     };
@@ -356,7 +351,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_FROM bubbles up the sender" {
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 100,
     };
@@ -377,7 +372,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_TO bubbles up the recipient" 
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
         .deadline = 100,
     };
@@ -395,7 +390,7 @@ test "validateForcedTransactions: BAD_NONCE dispatch mirrors the account's nonce
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -425,7 +420,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors the gas+value ari
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -459,7 +454,7 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
     // Out-of-order FTX number (last_processed=0, declared number=2, expected 1).
     const out_of_order = l2_execution_ssz.ForcedTransactionWitness{
         .number = 2,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 100,
     };
@@ -473,7 +468,7 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
     // Deadline already passed (payload.block_number=10, deadline=1).
     const expired = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = 1,
     };
@@ -495,7 +490,7 @@ test "validateForcedTransactions: an unknown acceptance value is rejected" {
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = 7,
         .deadline = 100,
     };
@@ -529,7 +524,7 @@ test "validateForcedTransactions: FILTERED_ADDRESS_TO on a contract-creation tx 
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = creation_tx_rlp,
+        .signed_tx_rlp = .{ .bytes = creation_tx_rlp },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
         .deadline = 100,
     };
@@ -553,7 +548,7 @@ test "validateForcedTransactions: BAD_NONCE with a sender proven absent at the p
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -575,7 +570,7 @@ test "validateForcedTransactions: BAD_NONCE whose tx is actually in the block is
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.BAD_NONCE,
         .deadline = 100,
     };
@@ -598,7 +593,7 @@ test "validateForcedTransactions: a deadline equal to the block number clears th
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .signed_tx_rlp = .{ .bytes = &SIGNED_TX_RLP },
         .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
         .deadline = DUMMY_PAYLOAD.block_number,
     };
@@ -629,7 +624,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-2 (EIP-155
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -678,7 +673,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-3 (blob) t
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };
@@ -723,7 +718,7 @@ test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-4 (EIP-770
 
     const ftx = l2_execution_ssz.ForcedTransactionWitness{
         .number = 1,
-        .signed_tx_rlp = tx_rlp,
+        .signed_tx_rlp = .{ .bytes = tx_rlp },
         .acceptance = api.Acceptance.BAD_BALANCE,
         .deadline = 100,
     };

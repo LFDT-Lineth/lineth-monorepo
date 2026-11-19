@@ -105,8 +105,7 @@ func (r *sszReader) offset() int {
 }
 
 // decodeList decodes an SSZ list of fixed-size elements of size bytes each,
-// at most maxLen of them. An empty list is empty, not nil, as the native
-// runner's output parses.
+// at most maxLen of them. An empty list is empty, not nil.
 func decodeList[T any](region []byte, name string, size, maxLen int, decode func([]byte) T) ([]T, error) {
 	if len(region)%size != 0 {
 		return nil, fmt.Errorf("%s is %d bytes, not a multiple of %d", name, len(region), size)

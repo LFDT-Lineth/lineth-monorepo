@@ -1,0 +1,57 @@
+# Changelog component filters for .github/workflows/component-changelog-update.yml
+# (dorny/paths-filter). Each key must also have scopes/include-path/folder entries in
+# .github/actions/run-git-cliff-commands/scripts/components.sh.
+coordinator:
+  - 'coordinator/**'
+riscv-l2-execution:
+  - 'riscv-guests/l2_execution/**'
+  - 'riscv-guests/guest_common/**'
+  - 'riscv-guests/build_common/**'
+  - 'riscv-guests/release/**'
+  - 'riscv-guests/lineth_accelerators/**'
+  - 'riscv-guests/guest_crypto_ctt/**'
+  - 'riscv-guests/.zigversion'
+  - 'riscv-guests/Makefile'
+  - 'riscv-guests/Dockerfile'
+  - 'riscv-guests/.dockerignore'
+riscv-rollup:
+  - 'riscv-guests/rollup/**'
+  - 'riscv-guests/guest_common/**'
+  - 'riscv-guests/build_common/**'
+  - 'riscv-guests/release/**'
+  - 'riscv-guests/lineth_accelerators/**'
+  - 'riscv-guests/.zigversion'
+  - 'riscv-guests/Makefile'
+  - 'riscv-guests/Dockerfile'
+  - 'riscv-guests/.dockerignore'
+maru:
+  - 'maru/**'
+postman:
+  - 'postman/**'
+prover:
+  - 'prover/**'
+prover-ray:
+  - 'prover-ray/**'
+tx-exclusion-api:
+  - 'transaction-exclusion-api/**'
+linea-besu-package:
+  - 'tracer/**'
+  - 'tracer-constraints/**'
+  - 'linea-besu/plugins/linea-sequencer/**'
+  - 'linea-besu/plugins/sequencer-interfaces/**'
+  - 'linea-besu/besu/**'
+  - 'linea-besu/package/**'
+  - 'gradle/libs.versions.toml'
+linea:
+  - 'coordinator/**'
+  - 'maru/**'
+  - 'postman/**'
+  - 'prover/**'
+  - 'transaction-exclusion-api/**'
+  - 'tracer/**'
+  - 'tracer-constraints/**'
+  - 'linea-besu/plugins/linea-sequencer/**'
+  - 'linea-besu/plugins/sequencer-interfaces/**'
+  - 'linea-besu/besu/**'
+  - 'linea-besu/package/**'
+  - 'gradle/libs.versions.toml'

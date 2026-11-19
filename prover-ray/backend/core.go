@@ -274,10 +274,10 @@ func (c *Core) proveDevMock(job Job) Result {
 	}
 }
 
-// proveDevZkVM runs the guest under ZkC Execute and returns its 0x0003 output
-// as [Result.ProofBytes], so the runner can cross-check it against the native
-// runner. It runs no real proof; Payload is the whole extended (0x0002)
-// input, the same bytes the native runner consumes.
+// proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
+// decoded from its output, the output itself for the runner's native runner
+// check, and the dev-zkvm marker in place of a proof. Payload is the whole
+// extended (0x0002) input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
@@ -288,15 +288,17 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	guestOutput, err := executeGuest(c.binaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
 
 	return Result{
-		JobID:      job.ID,
-		Status:     ResultStatusOK,
-		ProofBytes: guestOutput.Bytes(),
+		JobID:        job.ID,
+		Status:       ResultStatusOK,
+		ProofBytes:   DevMarkerProof(ProverModeDevZkVM),
+		PublicInputs: pi,
+		GuestOutput:  out,
 	}
 }
 
@@ -316,14 +318,9 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 
 	// The lazy trace keeps no output, so Execute gives it. It also fails fast
 	// on a rejected block, before the trace.
-	guestOutput, err := executeGuest(c.driver.BinaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs)
 	if err != nil {
 		return failResult(job.ID, err)
-	}
-	out := guestOutput.Bytes()
-	pi, err := decodeGuestPublicInputs(out[guestOutputHashSize:])
-	if err != nil {
-		return failResult(job.ID, fmt.Errorf("decoding the guest public inputs: %w", err))
 	}
 
 	// Every shard, so that the result is the root.
@@ -401,6 +398,21 @@ func (c *Core) devmodePublicInputs(pub wiop.PublicInput, hash []byte) (wiop.Publ
 func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
 	output, errs := binf.Execute(inputs)
 	return classifyGuestOutput(output, errs)
+}
+
+// executeGuestPublicInputs runs the guest under ZkC Execute and returns its
+// 0x0003 output (hash || frame) and the public inputs decoded from it.
+func executeGuestPublicInputs(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) ([]byte, PublicInputs, error) {
+	guestOutput, err := executeGuest(binf, inputs)
+	if err != nil {
+		return nil, PublicInputs{}, err
+	}
+	out := guestOutput.Bytes()
+	pi, err := decodeGuestPublicInputs(out[guestOutputHashSize:])
+	if err != nil {
+		return nil, PublicInputs{}, fmt.Errorf("decoding the guest public inputs: %w", err)
+	}
+	return out, pi, nil
 }
 
 // classifyGuestOutput turns a ZkC Execute result into either the guest's
@@ -513,8 +525,8 @@ func (c *Core) buildInputs(job Job, g guestProgram) (map[string]bit.Array, error
 // encodeGuestInputs converts a Job's Payload into the guest and memory inputs
 // ZkC expects, without the proving-path single-block check. dev-zkvm passes the
 // whole extended (0x0002) input and lets the guest conflate the range; a
-// conflation disagreement surfaces as a cross-check failure, not silent
-// corruption.
+// conflation disagreement surfaces as a native runner check failure, not
+// silent corruption.
 func (c *Core) encodeGuestInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
 	dataBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,

@@ -356,7 +356,7 @@ func TestRunningMerkleCaps(t *testing.T) {
 				height := int(fx.pcs.Params.LogCodewordSize - j)
 				depth := min(int(capHeight), height-1)
 				treeCap := proof.FRIProof.RoundCaps[j-1]
-				require.NoError(t, treeCap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
+				require.NoError(t, treeCap.Authenticate(MerkleHashKoalaBear, depth, proof.FRIProof.RoundRoots[j-1]))
 				frontier := treeCap.Nodes
 				if depth == 0 {
 					require.Empty(t, frontier, "a depth-zero cap carries no copy of the root")
@@ -365,7 +365,7 @@ func TestRunningMerkleCaps(t *testing.T) {
 				for queryIdx, query := range proof.FRIProof.RunningQueries {
 					branch := query[j-1]
 					require.Len(t, branch.Siblings, height-depth)
-					require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, frontier))
+					require.NoError(t, branch.AuthenticateToCap(MerkleHashKoalaBear, positions[queryIdx]>>j, frontier))
 				}
 			}
 

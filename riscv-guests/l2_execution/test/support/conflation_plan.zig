@@ -368,7 +368,7 @@ pub const ConflationPlan = struct {
                     .parent_ftx_rolling_hash = self.parent_ftx_rolling_hash,
                     .parent_last_processed_ftx_number = self.parent_last_processed_ftx_number,
                     .chain_config = chain_config,
-                    .payloads = &.{},
+                    .payloads = .{ .items = &.{} },
                 },
             };
         }
@@ -466,7 +466,7 @@ pub const ConflationPlan = struct {
                 if (idx == i) ssz_bytes = ssz_bytes[0..@min(ssz_bytes.len, 1)];
             }
 
-            payloads[i] = .{ .stateless_input_ssz = ssz_bytes, .forced_transactions = block.forced_transactions };
+            payloads[i] = .{ .stateless_input_ssz = .{ .bytes = ssz_bytes }, .forced_transactions = .{ .items = block.forced_transactions } };
             tx_logs[i] = block.tx_logs;
         }
 
@@ -477,7 +477,7 @@ pub const ConflationPlan = struct {
                 .parent_ftx_rolling_hash = self.parent_ftx_rolling_hash,
                 .parent_last_processed_ftx_number = self.parent_last_processed_ftx_number,
                 .chain_config = chain_config,
-                .payloads = payloads,
+                .payloads = .{ .items = payloads },
             },
             .parent_block_hash = built_parent_block_hash,
             .end_block_hash = built_end_block_hash,
