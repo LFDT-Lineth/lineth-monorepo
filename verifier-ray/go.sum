@@ -1,7 +1,7 @@
 github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1 h1:xlN5Y42sexs9PNgykO8Ypmqllyz9Md+zvxku+dHJREI=
 github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1/go.mod h1:kyQb5+owsiLYDemRS1bc5SpjHSupIcqKQaNfzjQIHh0=
-github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261112142725-3147f54bca09 h1:bGe/kyD4UTNCs4izY9sQZ+2gDFNYxuDyACGrwtL38t4=
-github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261112142725-3147f54bca09/go.mod h1:yCtn6fnOm/lSmFhEr+xf557JhaRAbT7CP4TemyJw4gE=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261118113852-df362b34d957 h1:MSk5vqwvx4jVTq2bnK4mWSS8ASaXiIR/EZJx5FznMrs=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20261118113852-df362b34d957/go.mod h1:yCtn6fnOm/lSmFhEr+xf557JhaRAbT7CP4TemyJw4gE=
 github.com/LFDT-Lineth/zkc v1.2.36 h1:AinjMviLT9woAL1rQcdMWxANQ0H5DDgThjjPOs5qiWA=
 github.com/LFDT-Lineth/zkc v1.2.36/go.mod h1:VbcIr1KkeSaKe/ax+ZYIOly0Pcs6azyek5xaYkJzP0A=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=

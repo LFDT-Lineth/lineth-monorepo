@@ -181,18 +181,29 @@ test "a block of other than four parts is rejected" {
     try std.testing.expectError(error.MalformedBlock, truncate(a, entry.chain_id, try rlp_encode.encodeList(a, try appended(a, parts, &.{0xc0}))));
 }
 
-test "a header with a missing or an extra field is rejected" {
+test "a header has Osaka's fields or Amsterdam's" {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
-    const entry = (try selection()).entries.get(.empty_block);
+    const entry = (try selection()).entries.get(.set_code);
     var block = try Block.parse(a, entry.rlp);
     const fields = block.header;
 
-    _ = try expectAccepted(a, entry.chain_id, block);
+    const amsterdam = try expectAccepted(a, entry.chain_id, block);
+    try std.testing.expect(amsterdam.froms.len > 0);
+    block.header = fields[0 .. fields.len - 2];
+    const osaka = try expectAccepted(a, entry.chain_id, block);
+    try std.testing.expectEqualSlices(u8, &amsterdam.parent_hash, &osaka.parent_hash);
+    try std.testing.expectEqualSlices(u8, &amsterdam.prev_randao, &osaka.prev_randao);
+    try std.testing.expectEqual(amsterdam.timestamp, osaka.timestamp);
+    try std.testing.expectEqualDeep(amsterdam.transactions, osaka.transactions);
+    try std.testing.expectEqualDeep(amsterdam.froms, osaka.froms);
+
     block.header = fields[0 .. fields.len - 1];
     try expectRejected(a, error.MalformedBlock, entry.chain_id, block);
     block.header = try appended(a, fields, &.{0x01});
+    try expectRejected(a, error.MalformedBlock, entry.chain_id, block);
+    block.header = fields[0 .. fields.len - 3];
     try expectRejected(a, error.MalformedBlock, entry.chain_id, block);
 }
 

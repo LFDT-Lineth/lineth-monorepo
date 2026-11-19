@@ -147,8 +147,8 @@ def _rollup_output_bytes() -> bytes:
 
 
 _DECODE_CASES = [
-    pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x1001, id="rollup_input"),
-    pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x1801, id="rollup_output"),
+    pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x0004, id="rollup_input"),
+    pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x0005, id="rollup_output"),
 ]
 
 
@@ -158,8 +158,8 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
     # Flip the schema id to a value that is neither the expected id nor the
     # other schema id in this module.
     wrong_id = (schema_id ^ 0xFFFF).to_bytes(2, "big")
-    encoded[32:34] = wrong_id if schema_id == 0x1801 else encoded[32:34]
-    if schema_id != 0x1801:
+    encoded[32:34] = wrong_id if schema_id == 0x0005 else encoded[32:34]
+    if schema_id != 0x0005:
         encoded[0:2] = wrong_id
     with pytest.raises(InvalidSsz, match="schema id|commitment"):
         decode_fn(bytes(encoded))

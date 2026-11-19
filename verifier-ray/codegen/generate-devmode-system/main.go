@@ -1,8 +1,19 @@
-// Command generate-devmode-system compiles the minimal devmode arithmetization
-// circuit from prover-ray/backend/devmode, proves one deterministic 40-cell
-// statement, and emits:
+// Command generate-devmode-system builds the minimal devmode arithmetization circuit from
+// prover-ray/backend/devmode and runs in one of two modes.
+//
+// By default it proves one deterministic 40-cell statement and writes:
 //   - testdata/generated/devmode_system.zig: the verifier's compiled system
 //   - testdata/devmode_proof_image.bin: the single proof image relocated for GuestBase
+//
+// With -zig-only it writes only devmode_system.zig.
+//
+// With -prove it writes no files and serves proofs: it reads one request per line from stdin, the
+// 32-byte public-input hash and the 32-byte program VK, each as 64 hex digits, separated by one
+// space. The devmode public input of a request is the 32 bytes of the hash, one cell each, followed
+// by the 8 big-endian 32-bit limbs of the VK. For each request it writes the proof image encoded for
+// devmode.GuestBase to stdout, behind its length as 4 big-endian bytes. The system is built once,
+// before the first request. A malformed request, or a VK limb that is not a canonical KoalaBear
+// element, ends the process with a message on stderr and a nonzero status.
 package main
 
 import (
@@ -25,9 +36,21 @@ const (
 
 func main() {
 	zigOnly := flag.Bool("zig-only", false, "write only devmode_system.zig (skip proving and proof image emission)")
+	proveRequests := flag.Bool("prove", false, "prove the statements read from stdin and write their proof images to stdout, writing no files")
 	flag.Parse()
 
-	if err := run(*zigOnly); err != nil {
+	if *proveRequests && *zigOnly {
+		fmt.Fprintln(os.Stderr, "generate-devmode-system: -prove and -zig-only are mutually exclusive")
+		os.Exit(2)
+	}
+
+	var err error
+	if *proveRequests {
+		err = serve(os.Stdin, os.Stdout)
+	} else {
+		err = run(*zigOnly)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "generate-devmode-system:", err)
 		os.Exit(1)
 	}

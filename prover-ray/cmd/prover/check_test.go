@@ -53,10 +53,6 @@ func TestCheckPipeline_Rejects(t *testing.T) {
 			backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeDevPartial},
 			"aggregation.prover_mode \"dev-partial\" is not supported yet",
 		},
-		"dev-zkvm without a native runner": {
-			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM},
-			"execution.native_runner_bin must be set in prover_mode \"dev-zkvm\"",
-		},
 		"missing native runner": {
 			backend.ProofTypeL2Execution,
 			pipeline{mode: backend.ProverModeDevPartial, nativeRunnerBin: filepath.Join(t.TempDir(), "missing")},
@@ -99,6 +95,7 @@ func TestCheckPipeline_Accepts(t *testing.T) {
 		p   pipeline
 	}{
 		"execution in dev-mock":            {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevMock}},
+		"dev-zkvm without a runner":        {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM}},
 		"dev-zkvm with a native runner":    {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: runner}},
 		"native runner is a symlink":       {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: link}},
 		"native runner is a name on PATH":  {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: runnerName}},

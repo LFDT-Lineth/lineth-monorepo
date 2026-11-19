@@ -243,6 +243,17 @@ extern fn ctt_eth_evm_kzg_point_evaluation(
 var kzg_ctx: ?*CttKzgContext = null;
 var kzg_ctx_failed = false;
 
+/// Builds the KZG trusted-setup context ahead of its first use. False when the heap the C allocator
+/// draws on refuses it.
+pub fn initKzgContext() bool {
+    return kzgContext() != null;
+}
+
+/// Whether the KZG trusted-setup context exists.
+pub fn kzgContextBuilt() bool {
+    return kzg_ctx != null;
+}
+
 /// Lazily builds the KZG trusted-setup context once.
 fn kzgContext() ?*CttKzgContext {
     if (kzg_ctx) |c| return c;
