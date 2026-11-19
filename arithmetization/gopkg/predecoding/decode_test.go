@@ -805,3 +805,10 @@ func TestCheckNoOpRdZero(t *testing.T) {
 		}
 	}
 }
+
+// commit 88fe45d
+// TestDecodedInputsPreserveExactRowLength
+// TestDecodedProgramEncodeInputsReturnsFreshBytes
+// TestBitsPerRowOfModuleDecoded
+
+// commit 
