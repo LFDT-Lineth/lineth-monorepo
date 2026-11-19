@@ -506,14 +506,14 @@ func decodeJTypeSemantic(opcode uint32) (computeOp uint32) {
 }
 
 // assembleJTypeImm reassembles the split J-type immediate from a raw instruction
-// word and sign-extends it to 64 bits for decoded_jtype.imm.
-func assembleJTypeImm(instr uint32) uint64 {
+// word
+func assembleJTypeImm(instr uint32) uint32 {
 	imm20 := (instr >> 31) & 0x1
 	imm10_1 := (instr >> 21) & 0x3ff
 	imm11 := (instr >> 20) & 0x1
 	imm19_12 := (instr >> 12) & 0xff
 	imm21 := uint32((imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1))
-	return uint64(signExtend21(imm21))
+	return imm21
 }
 
 func signExtend21(x uint32) int64 {
@@ -522,14 +522,14 @@ func signExtend21(x uint32) int64 {
 }
 
 // assembleBTypeImm reassembles the split B-type immediate from a raw instruction
-// word and sign-extends it to 64 bits for decoded_btype.imm.
-func assembleBTypeImm(instr uint32) uint64 {
+// word
+func assembleBTypeImm(instr uint32) uint32 {
 	immSign := (instr >> 31) & 0x1
 	imm10_5 := (instr >> 25) & 0x3f
 	imm4_1 := (instr >> 8) & 0xf
 	imm11 := (instr >> 7) & 0x1
 	imm13 := uint32((immSign << 12) | (imm11 << 11) | (imm10_5 << 5) | (imm4_1 << 1))
-	return uint64(signExtend13(imm13))
+	return imm13
 }
 
 func signExtend13(x uint32) int64 {
@@ -537,26 +537,26 @@ func signExtend13(x uint32) int64 {
 	return int64(int32(x<<19) >> 19)
 }
 
-// assembleUTypeImm sign-extends the U-type upper immediate (imm[31:12]) to 64 bits.
-func assembleUTypeImm(instr uint32) uint64 {
+// assembleUTypeImm places the U-type upper immediate imm[31:12] into a 32-bit
+// word. The low 12 bits are zero.
+func assembleUTypeImm(instr uint32) uint32 {
 	imm20 := (instr >> 12) & 0xfffff
 	word := uint32(imm20 << 12)
-	return uint64(int64(int32(word)))
+	return word
 }
 
-// assembleSTypeImm sign-extends the reassembled 12-bit S-type store offset to 64 bits.
-func assembleSTypeImm(simm12 uint32) uint64 {
-	return uint64(signExtend12(simm12))
+// assembleSTypeImm reassembles the split S-type store offset into a 12-bit
+// value: imm[11:5] from instruction bits [31:25] and imm[4:0] from bits [11:7].
+func assembleSTypeImm(instr uint32) uint32 {
+	simm12 := (((instr >> 31) & 1) << 11) |
+		(((instr >> 25) & 0x3f) << 5) |
+		((instr >> 7) & 0x1f)
+	return simm12
 }
 
 func signExtend12(x uint32) int64 {
 	x &= 0xfff
 	return int64(int32(x<<20) >> 20)
-}
-
-// assembleITypeImm sign-extends the normalized 12-bit I-type immediate to 64 bits.
-func assembleITypeImm(normImm12 uint32) uint64 {
-	return uint64(signExtend12(normImm12))
 }
 
 // decodeUTypeSemantic maps a raw U-type opcode to a unified compute op.
@@ -571,24 +571,32 @@ func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	}
 }
 
-// unifiedOperands packs pre-decoded operands into the decoded record layout:
-// record layout: imm, rs1, rs2, rd.
-func unifiedOperands(instrType uint32, normImm12, simm12 uint32, bImm, jImm, uImm uint64, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
+// unifiedOperands builds the four operand fields of one decoded row.
+// It sign-extends the immediate that belongs to the instruction format and
+// clears each register that format does not use. Misc-mem and undefined types
+// write zeros as they don't use operands.
+func unifiedOperands(instrType uint32, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
 	switch instrType {
 	case iType:
-		return assembleITypeImm(normImm12), uint64(rs1), 0, uint64(rd)
+		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		return uint64(signExtend12(normImm12)), uint64(rs1), 0, uint64(rd)
 	case rType:
 		return 0, uint64(rs1), uint64(rs2), uint64(rd)
 	case sType:
-		return assembleSTypeImm(simm12), uint64(rs1), uint64(rs2), 0
+		simm12 := assembleSTypeImm(instruction)
+		return uint64(signExtend12(simm12)), uint64(rs1), uint64(rs2), 0
 	case bType:
-		return bImm, uint64(rs1), uint64(rs2), 0
+		imm13 := assembleBTypeImm(instruction)
+		return uint64(signExtend13(imm13)), uint64(rs1), uint64(rs2), 0
 	case jType:
-		return jImm, 0, 0, uint64(rd)
+		imm21 := assembleJTypeImm(instruction)
+		return uint64(signExtend21(imm21)), 0, 0, uint64(rd)
 	case uType:
-		return uImm, 0, 0, uint64(rd)
+		word := assembleUTypeImm(instruction)
+		return uint64(int64(int32(word))), 0, 0, uint64(rd)
 	default:
-		return assembleITypeImm(normImm12), uint64(rs1), uint64(rs2), uint64(rd)
+		// Misc-mem and undefined types don't use operands.
+		return 0, 0, 0, 0
 	}
 }
 
@@ -850,7 +858,16 @@ func extractFields(instruction uint32) instructionFields {
 	}
 }
 
+// decodeInstruction writes the predecoded instruction to the bitWriter.
+// 87 bits :
+// - 8 bits: compute op
+// - 64 bits: immediate
+// - 5 bits: operand RS1
+// - 5 bits: operand RS2
+// - 5 bits: operand RD
 func decodeInstruction(decoded *bitWriter, instruction uint32) {
+
+	// Extract the fields from the instruction.
 	fields := extractFields(instruction)
 	opcode := fields.opcode
 	rd := fields.rd
@@ -860,28 +877,24 @@ func decodeInstruction(decoded *bitWriter, instruction uint32) {
 	imm12 := fields.imm12
 	funct7 := fields.funct7
 
+	// Classify the instruction and get the compute op.
 	instructionType := instructionTypeFromOpcode(opcode)
-	
-	simm12 := (((instruction >> 31) & 1) << 11) |
-		(((instruction >> 25) & 0x3f) << 5) |
-		((instruction >> 7) & 0x1f)
-	_, normalizedImm12 := decodeITypeSemantic(opcode, funct3, imm12)
-	if instructionType != iType {
-		normalizedImm12 = imm12
-	}
+	compute_op := classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)
 
-	decoded.writeBits(uint64(classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)), 8)
+	// Get the operands depending on the instruction type.
 	imm, operandRS1, operandRS2, operandRD := unifiedOperands(
 		instructionType,
-		normalizedImm12,
-		simm12,
-		assembleBTypeImm(instruction),
-		assembleJTypeImm(instruction),
-		assembleUTypeImm(instruction),
+		instruction,
+		opcode,
+		imm12,
+		funct3,
 		rs1,
 		rs2,
 		rd,
 	)
+
+	// Write to the bitWriter
+	decoded.writeBits(uint64(compute_op), 8)
 	decoded.writeBits(imm, 64)
 	decoded.writeBits(operandRS1, 5)
 	decoded.writeBits(operandRS2, 5)
