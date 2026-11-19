@@ -1142,8 +1142,8 @@ func TestUnifiedOperands(t *testing.T) {
 		}
 	}
 
-	// I-type is swept again over every imm12. It is the only arm not calling 
-	// an assemble function and where the immediate is the sign extension of 
+	// I-type is swept again over every imm12. It is the only arm not calling
+	// an assemble function and where the immediate is the sign extension of
 	// the normalized imm12, not of the raw instruction.
 	// OPIMM and OPIMM32 are the opcodes that can replace imm12 with a shift amount.
 	// funct3 runs through 8 so the OPIMM default arm is reached. The instruction
@@ -1154,6 +1154,62 @@ func TestUnifiedOperands(t *testing.T) {
 				check(iType, 0xffffffff, opcode, imm12, funct3, 1, 31, 2)
 			}
 		}
+	}
+}
+
+// ------------------------------------------------------------
+// DecodeInstruction
+// ------------------------------------------------------------
+
+// TestDecodeInstruction checks that decodeInstruction joins the pieces already
+// tested: one word per instruction format, written as compute op, immediate,
+// rs1, rs2, rd. The same words are then written back to back, so the next row
+// starts at bit 87.
+func TestDecodeInstruction(t *testing.T) {
+	tests := []struct {
+		name              string
+		instr             uint32
+		op                uint32
+		imm, rs1, rs2, rd uint64
+	}{
+		{"addi", (1 << 20) | (1 << 15) | (5 << 7) | opcodeOPIMM, itypeOpAddiWB, 1, 1, 0, 5},
+		{"addi x0", (1 << 20) | (1 << 15) | opcodeOPIMM, computeNoOp, 1, 1, 0, 0},
+		{"addi -1", (0xfff << 20) | (1 << 7) | opcodeOPIMM, itypeOpAddiWB, ^uint64(0), 0, 0, 1},
+		{"ecall", opcodeSYSTEM, itypeEcall, 0, 0, 0, 0},
+		{"add", (2 << 20) | (1 << 15) | (5 << 7) | opcodeOP, rtypeOpAddWB, 0, 1, 2, 5},
+		{"sb", (2 << 20) | (1 << 15) | opcodeSTORE, stypeStore8, 0, 1, 2, 0},
+		{"beq", (2 << 20) | (1 << 15) | opcodeBRANCH, btypeBeq, 0, 1, 2, 0},
+		{"jal", (1 << 7) | opcodeJAL, jtypeJalWB, 0, 0, 0, 1},
+		{"jal x0", opcodeJAL, jtypeJal, 0, 0, 0, 0},
+		{"lui", (5 << 7) | opcodeLUI, utypeLuiWB, 0, 0, 0, 5},
+		{"lui x0", opcodeLUI, computeNoOp, 0, 0, 0, 0},
+		{"fence", opcodeMISCMEM, computeNoOp, 0, 0, 0, 0},
+		{"unknown", 0x7f, computeNoOp, 0, 0, 0, 0},
+	}
+
+	var got, want bitWriter
+	for _, tt := range tests {
+		var row bitWriter
+		decodeInstruction(&row, tt.instr)
+		var one bitWriter
+		one.writeBits(uint64(tt.op), 8)
+		one.writeBits(tt.imm, 64)
+		one.writeBits(tt.rs1, 5)
+		one.writeBits(tt.rs2, 5)
+		one.writeBits(tt.rd, 5)
+		if row.nbits != int(BitsPerRowOfModuleDecoded) || !bytes.Equal(row.buf, one.buf) {
+			t.Fatalf("%s: decodeInstruction(%#08x) nbits=%d buf=%x, want nbits=%d buf=%x",
+				tt.name, tt.instr, row.nbits, row.buf, BitsPerRowOfModuleDecoded, one.buf)
+		}
+		decodeInstruction(&got, tt.instr)
+		want.writeBits(uint64(tt.op), 8)
+		want.writeBits(tt.imm, 64)
+		want.writeBits(tt.rs1, 5)
+		want.writeBits(tt.rs2, 5)
+		want.writeBits(tt.rd, 5)
+	}
+	if got.nbits != 87*len(tests) || !bytes.Equal(got.buf, want.buf) {
+		t.Fatalf("stream nbits=%d buf=%x, want nbits=%d buf=%x", got.nbits, got.buf, 87*len(tests), want.buf)
 	}
 }
 
