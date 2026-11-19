@@ -23,6 +23,9 @@ USER maru
 ARG LINETH_APP_JAR=/opt/lineth/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
 
+# Remove once the base image ships Temurin 25.0.5.1+2 or later.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
+
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF

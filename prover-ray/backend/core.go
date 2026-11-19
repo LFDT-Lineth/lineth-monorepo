@@ -403,7 +403,7 @@ func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 // executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
 // its validated 0x0003 output.
 func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
-	output, errs := binf.Execute(inputs)
+	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
 	return classifyGuestOutput(output, errs)
 }
 

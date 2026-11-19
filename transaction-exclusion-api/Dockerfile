@@ -12,6 +12,8 @@ COPY --from=libs --chown=txexclusion:txexclusion ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 USER txexclusion
+# Remove once the base image ships Temurin 25.0.5.1+2 or later.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

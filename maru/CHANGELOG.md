@@ -1,4 +1,4 @@
-## [1.6.0-rc1] - 2026-11-18
+## [1.6.0] - 2026-11-19
 
 ### 🚀 Features
 
@@ -6,9 +6,7 @@
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(misc)* Remove manual changelog commit
-- *(misc)* Remove manual changelog commit
-- *(maru)* Set default maru image tag as local in compose.dev.yaml
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 ## [1.5.0] - 2026-11-03
 
 ### 🚀 Features
