@@ -24,9 +24,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,6 +62,11 @@ const (
 // benchWorkersEnv sets the number of shards in progress at once, instead of
 // benchWorkers. 1 checks the shards one at a time, with the memory of each step.
 const benchWorkersEnv = "BENCH_SHARD_WORKERS"
+
+// benchPCSEnv turns the PCS on: with BENCH_PCS=1 each shard is proved and
+// verified as in full, instead of checked, still with the mock merger (no
+// recursion). The "check" time of a shard is then the time of its proof.
+const benchPCSEnv = "BENCH_PCS"
 
 // benchWorkers is the number of shards in progress at once, the same for
 // every block so that the blocks compare, and a round number so that the gain
@@ -96,6 +105,7 @@ type benchBlock struct {
 	ShardsRun     uint         `json:"shardsRun"`
 	MaxShards     uint         `json:"maxShards"`
 	Workers       int          `json:"workers"`
+	PCS           bool         `json:"pcs"`
 	Result        string       `json:"result"`
 	TotalSec      float64      `json:"totalSec"`
 	PeakRSSGB     float64      `json:"peakRssGb"`
@@ -137,7 +147,8 @@ type benchModule struct {
 // default settings, so that they compare. Each shard is recorded with its
 // size. A shard with a module over [wiop.ColumnSizeMaxSupported] rows is
 // reported and not checked, as its assignment would panic, and the other
-// shards still run. Same settings as [TestDevPartial_Integration]
+// shards still run. BENCH_PCS=1 proves the shards with the PCS instead of
+// checking them. Same settings as [TestDevPartial_Integration]
 // (GUEST_ELF, DEV_PARTIAL_SHARD_SIZE). The report goes to BENCH_DIR, by default
 // a new folder in the home folder: report.md, bench.jsonl, and the record and
 // log of each block. Linux only (peak memory is read from /proc).
@@ -261,6 +272,9 @@ func benchChildFailure(err error) string {
 func benchOneBlock(t *testing.T, block string) {
 	t.Helper()
 	core, id, _ := realGuestCore(t)
+	if os.Getenv(benchPCSEnv) != "" {
+		core = benchPCSCore(t, core)
+	}
 	g, err := core.loadGuest(id)
 	require.NoError(t, err)
 	maxShards, err := strconv.ParseUint(os.Getenv(benchMaxShardsEnv), 10, 32)
@@ -305,6 +319,7 @@ func benchDevPartial(
 	t *testing.T, c *Core, g guestProgram, extended []byte, maxShards uint, workers int, rec *benchBlock, save func(),
 ) string {
 	t.Helper()
+	rec.PCS = c.sys.PCSMode() == 1
 	inputs, err := c.encodeGuestInputs(Job{Payload: extended}, g)
 	require.NoError(t, err)
 
@@ -483,6 +498,28 @@ func benchMerge(c *Core, rec *benchBlock, reducer *conglomeration.Reducer, out [
 	return benchPass
 }
 
+// benchPCSCore returns a Core like c that proves the shards as full does: the
+// arithmetization and settings of dev-partial, compiled as in newDevPartial
+// but with the PCS, and the mock merger, so there is no recursion.
+func benchPCSCore(t *testing.T, c *Core) *Core {
+	t.Helper()
+	binf, err := embedded.CompiledBinaryFile()
+	require.NoError(t, err)
+	sys := wiop.NewSystemf(wiopSystemName)
+	sys.NewRound()
+	settings := zkcdriver.Settings{TraceRound: 1, ShardSize: c.cfg.ShardSize}
+	driver, err := zkcdriver.NewZkCDriverFromBinaryFile(sys, settings, binf)
+	require.NoError(t, err)
+	risc5.RegisterPublicInputs(sys)
+	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigureMessageBus(messagebus.WithoutSharedRandomness())))
+	risc5.CheckPublicInputs(sys)
+	// Mode full: proveShard proves and verifies, as in full.
+	return &Core{
+		cfg: c.cfg, mode: ProverModeFull, sys: sys, driver: driver, guests: c.guests,
+		merger: conglomeration.NewMockMerger(sys),
+	}
+}
+
 // benchShardWorkers returns the number of shards in progress at once: the
 // workers asked for, no more than the shards, at least 1.
 func benchShardWorkers(workers int, shards uint) int {
@@ -594,6 +631,10 @@ func appendFile(t *testing.T, path string, data []byte) {
 func renderBenchReport(machine string, recs []benchBlock) string {
 	var b strings.Builder
 	b.WriteString("# dev-partial benchmark\n\n" + machine + "\n\n")
+	if slices.ContainsFunc(recs, func(r benchBlock) bool { return r.PCS }) {
+		b.WriteString("PCS on: each shard is proved and verified as in full, with the mock merger. " +
+			"The time per shard includes the proof.\n\n")
+	}
 	b.WriteString("| Block | Shards run | Result | Time | Peak memory | Fast pass | Time per shard " +
 		"| Largest module | Shards over the limit | Full time (estimated) | Workers |\n")
 	b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|\n")
@@ -656,8 +697,9 @@ func benchCell(s string) string {
 // logBench logs the record of one block in a readable form.
 func logBench(t *testing.T, rec benchBlock) {
 	t.Helper()
-	t.Logf("%s: %d bytes, %d shards of %d instructions, %d workers, result %q, %.0f s, peak %.1f GB",
-		rec.Block, rec.InputBytes, rec.NumShards, rec.ShardSize, max(rec.Workers, 1), rec.Result, rec.TotalSec, rec.PeakRSSGB)
+	t.Logf("%s: %d bytes, %d shards of %d instructions, %d workers, PCS %t, result %q, %.0f s, peak %.1f GB",
+		rec.Block, rec.InputBytes, rec.NumShards, rec.ShardSize, max(rec.Workers, 1), rec.PCS, rec.Result, rec.TotalSec,
+		rec.PeakRSSGB)
 	for _, s := range rec.Steps {
 		t.Logf("  %-12s %8.1f s %6.1f GB", s.Name, s.Sec, s.PeakRSSGB)
 	}

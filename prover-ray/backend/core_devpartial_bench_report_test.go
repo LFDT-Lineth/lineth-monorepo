@@ -77,6 +77,7 @@ func TestBenchDevPartial_Parallel(t *testing.T) {
 
 	require.Equal(t, benchPass, seq.Result)
 	require.Equal(t, benchPass, par.Result)
+	assert.False(t, seq.PCS, "dev-partial has no PCS")
 	assert.Equal(t, 4, par.Workers)
 	assert.Equal(t, seq.NumShards, par.ShardsRun)
 	require.Len(t, par.ShardsStats, len(seq.ShardsStats))
@@ -87,6 +88,27 @@ func TestBenchDevPartial_Parallel(t *testing.T) {
 		assert.Equal(t, want.Largest, s.Largest, "shard %d", i)
 		assert.Positive(t, s.Check.Sec, "shard %d should be checked", i)
 	}
+}
+
+// TestBenchDevPartial_PCS checks that with BENCH_PCS the benchmark proves the
+// shards with the PCS, as full does, and that the block still passes, with the
+// same merge and public input checks as dev-partial.
+func TestBenchDevPartial_PCS(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: dir, ShardSize: devPartialShardSize})
+	require.NoError(t, err)
+	c = benchPCSCore(t, c)
+	g, err := c.loadGuest(id)
+	require.NoError(t, err)
+
+	var rec benchBlock
+	rec.Result = benchDevPartial(t, c, g, devPartialJob(id).Payload, 0, 1, &rec, func() {})
+	require.Equal(t, benchPass, rec.Result)
+	assert.True(t, rec.PCS, "the record should say the shards were proved with the PCS")
+	assert.Len(t, rec.ShardsStats, 2, "devPartialShardSize splits the guest into 2 shards")
+	assert.Contains(t, renderBenchReport("Machine: test", []benchBlock{rec}), "PCS on")
 }
 
 // TestBenchShardWorkers checks the number of shards in progress at once: the
