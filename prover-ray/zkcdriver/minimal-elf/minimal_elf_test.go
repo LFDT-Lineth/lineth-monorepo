@@ -101,7 +101,7 @@ func TestOutputAndLogGuest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
-	outputs, errs := binf.Execute(inputs)
+	outputs, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
 	if len(errs) > 0 {
 		t.Fatalf("execution failed: %v", errors.Join(errs...))
 	}
@@ -132,7 +132,7 @@ func TestOutputAndLogGuest_MaxSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
-	outputs, errs := binf.Execute(inputs)
+	outputs, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
 	if len(errs) > 0 {
 		t.Fatalf("execution failed: %v", errors.Join(errs...))
 	}

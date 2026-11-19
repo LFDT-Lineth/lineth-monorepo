@@ -12,6 +12,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +36,30 @@ func devmodeImage(t *testing.T, hash []byte) []byte {
 	img, err := devmode.Encode(sys, proof, pub, devmode.GuestBase)
 	require.NoError(t, err)
 	return img
+}
+
+// TestNewDevPartial_RAMIsPaged checks that the RAM stays paged after the
+// constraints are encoded and decoded. A flat RAM copies the whole memory at
+// each sharding checkpoint (zkc #2345).
+func TestNewDevPartial_RAMIsPaged(t *testing.T) {
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir(), ShardSize: devPartialShardSize})
+	require.NoError(t, err)
+	for name, prog := range map[string]func() bool{
+		"execution": func() bool { return ramIsPaged(c.driver.BinaryFile.ExecutionProgram()) },
+		"tracing":   func() bool { return ramIsPaged(c.driver.BinaryFile.TracingProgram()) },
+	} {
+		assert.True(t, prog(), "%s program: ram should be paged", name)
+	}
+}
+
+// ramIsPaged reports whether the memory named ram of prog is paged.
+func ramIsPaged[W vm.Word[W]](prog vm.Program[W]) bool {
+	for _, m := range prog.Modules() {
+		if mem, ok := m.(*vm.Memory[W]); ok && mem.Name() == "ram" {
+			return mem.IsPaged()
+		}
+	}
+	return false
 }
 
 // devPartialJob is an l2-execution job of guest id.
