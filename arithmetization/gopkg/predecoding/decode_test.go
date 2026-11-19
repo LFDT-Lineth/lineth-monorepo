@@ -806,6 +806,74 @@ func TestCheckNoOpRdZero(t *testing.T) {
 	}
 }
 
+// ------------------------------------------------------------
+// classifyInstruction
+// ------------------------------------------------------------
+
+
+// classifyInstructionVectors checks the join inside classifyInstruction: the
+// instruction type selects a format decoder (decodeITypeSemantic etc, then 
+// checkNoOp folds rd. The format decoders and checkNoOp are tested on their
+// own; these rows pin that the switch calls the right one and passes rd through.
+var classifyInstructionVectors = []struct {
+	name   string
+	typ    uint32
+	opcode uint32
+	funct3 uint32
+	funct7 uint32
+	imm12  uint32
+	rd     uint32
+	want   uint32
+}{
+	// misc-mem ignores the other fields and is always NO_OP.
+	{"fence", miscMemType, opcodeMISCMEM, 0b000, 0, 0, 0, computeNoOp},
+	{"fence rd set", miscMemType, opcodeMISCMEM, 0b000, 0, 0, 1, computeNoOp},
+
+	// I-type: a real op, the rd == x0 collapse, JALR writeback, and an invalid arm.
+	{"addi", iType, opcodeOPIMM, 0b000, 0, 1, 5, itypeOpAddiWB},
+	{"addi x0", iType, opcodeOPIMM, 0b000, 0, 1, 0, computeNoOp},
+	{"jalr", iType, opcodeJALR, 0b000, 0, 0, 1, itypeJalrWB},
+	{"jalr x0", iType, opcodeJALR, 0b000, 0, 0, 0, itypeJalr},
+	{"ecall", iType, opcodeSYSTEM, 0b000, 0, funct12Ecall, 0, itypeEcall},
+	{"load funct3 111", iType, opcodeLOAD, 0b111, 0, 0, 5, computeInvalid},
+
+	// R-type: writeback collapse, a precompile kept at x0, and custom-1 funct3 010.
+	{"add", rType, opcodeOP, 0b000, 0b0000000, 0, 5, rtypeOpAddWB},
+	{"add x0", rType, opcodeOP, 0b000, 0b0000000, 0, 0, computeNoOp},
+	{"keccak x0", rType, opcodeCUSTOM1, 0b000, 0b0000000, 0, 0, rtypeOpKeccak},
+	{"custom-1 funct3 010", rType, opcodeCUSTOM1, 0b010, 0b0000000, 0, 1, computeInvalid},
+
+	// S and B keep their op for any rd. Invalid funct3 stays invalid.
+	{"sb", sType, opcodeSTORE, 0b000, 0, 0, 0, stypeStore8},
+	{"store funct3 111", sType, opcodeSTORE, 0b111, 0, 0, 0, computeInvalid},
+	{"beq", bType, opcodeBRANCH, 0b000, 0, 0, 0, btypeBeq},
+	{"branch funct3 010", bType, opcodeBRANCH, 0b010, 0, 0, 0, computeInvalid},
+
+	// J-type promotes JAL when rd != x0 and keeps it when rd == x0.
+	{"jal", jType, opcodeJAL, 0, 0, 0, 1, jtypeJalWB},
+	{"jal x0", jType, opcodeJAL, 0, 0, 0, 0, jtypeJal},
+	{"jal bad opcode", jType, 0, 0, 0, 0, 1, computeInvalid},
+
+	// U-type collapses LUI into x0. An unknown U opcode stays invalid.
+	{"lui", uType, opcodeLUI, 0, 0, 0, 5, utypeLuiWB},
+	{"lui x0", uType, opcodeLUI, 0, 0, 0, 0, computeNoOp},
+	{"u bad opcode", uType, 0, 0, 0, 0, 5, computeInvalid},
+
+	// No switch arm matches. op stays 0, so checkNoOp returns NO_OP.
+	{"undefined", undefinedType, 0, 0, 0, 0, 0, computeNoOp},
+	{"undefined rd set", undefinedType, opcodeOPIMM, 0b000, 0, 1, 5, computeNoOp},
+}
+
+func TestClassifyInstruction(t *testing.T) {
+	for _, tv := range classifyInstructionVectors {
+		got := classifyInstruction(tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd)
+		if got != tv.want {
+			t.Fatalf("%s: classifyInstruction(type=%d, op=%#x, f3=%#x, f7=%#x, imm=%#x, rd=%d) = %d, want %d",
+				tv.name, tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd, got, tv.want)
+		}
+	}
+}
+
 // commit 88fe45d
 // TestDecodedInputsPreserveExactRowLength
 // TestDecodedProgramEncodeInputsReturnsFreshBytes
