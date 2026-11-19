@@ -3,6 +3,7 @@ package recursion
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
@@ -25,7 +26,8 @@ import (
 // Native verification takes it from the proof's value, so Inputs rejects a
 // proof whose values do not follow the declarations.
 //
-// Not supported yet: dynamic modules, and the PCS opening.
+// The PCS opening is checked in the machine too (see verifier_pcs.go), for
+// the PCS's default configuration. Not supported yet: dynamic modules.
 type Verifier struct {
 	m   *Machine
 	sys *wiop.System
@@ -35,18 +37,24 @@ type Verifier struct {
 	coins       map[wiop.ObjectID]int
 	commitments map[int]int // round ID → digest cell
 	public      []int       // the public inputs' cells, in sys.PublicInputs order
+	t           *transcript   // the inner transcript, after the replay of the rounds
+	pcs         *pcsVerifier // the PCS opening, nil if skipped
 
-	// skipPCS skips the PCS opening (tests only, until it is supported): the
-	// verifier then checks a proof's values and transcript, not that they are
-	// bound to the committed columns.
+	// skipPCS skips the PCS opening (tests only): the verifier then checks a
+	// proof's values and transcript, not that they are bound to the committed
+	// columns, so that tests can compare it with the other native actions.
 	skipPCS bool
 }
 
-// verifierInput is one machine input: a proof cell, or a round's commitment.
+// verifierInput is one machine input: a proof cell, a round's commitment, or
+// a value of the PCS opening proof.
 type verifierInput struct {
 	cell  *wiop.Cell
-	round int // the commitment's round, if cell is nil
+	round int // the commitment's round, if cell and pcs are nil
 	pub   int // the cell's index in sys.PublicInputs, -1 if it is not a public input
+	// pcs reads the value from the opening proof, whose shape Inputs checks
+	// first.
+	pcs func(*fri.OpeningProof) Cell
 }
 
 // NewVerifier builds in m the verifier of sys's proofs. sys must be compiled
@@ -112,7 +120,8 @@ func (v *Verifier) replay() error {
 	for i, c := range v.sys.PublicInputs {
 		pi[c.Context.ID] = i
 	}
-	t := transcript{m: v.m, state: -1}
+	t := &transcript{m: v.m, state: -1}
+	v.t = t
 	for i, r := range v.sys.Rounds {
 		// Runtime.AdvanceRound draws coins only for the rounds after the
 		// first.
@@ -195,8 +204,17 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 	if len(proof.DynamicSizes) != 0 {
 		return nil, fmt.Errorf("recursion: the proof has dynamic sizes")
 	}
+	if v.pcs != nil {
+		if err := v.pcs.checkOpeningShape(proof.PCSOpeningProof); err != nil {
+			return nil, fmt.Errorf("recursion: PCS opening: %w", err)
+		}
+	}
 	res := make([]Cell, len(v.inputs))
 	for k, in := range v.inputs {
+		if in.pcs != nil {
+			res[k] = in.pcs(proof.PCSOpeningProof)
+			continue
+		}
 		if in.cell == nil {
 			d, ok := proof.Commitments[in.round]
 			if !ok {
@@ -251,7 +269,7 @@ func (v *Verifier) check(a wiop.VerifierAction) error {
 		v.checkE6(a)
 	case *pcs.OpeningVerifierAction:
 		if !v.skipPCS {
-			return fmt.Errorf("the PCS opening is not supported yet")
+			return v.checkPCS(a)
 		}
 	default:
 		return fmt.Errorf("verifier action %T is not supported", a)

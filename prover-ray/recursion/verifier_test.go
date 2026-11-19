@@ -405,17 +405,13 @@ func TestVerifierInputs(t *testing.T) {
 // TestVerifierUnsupported: the verifier fails closed on what it does not
 // handle yet.
 func TestVerifierUnsupported(t *testing.T) {
-	c := mixedInner(t)
-	_, err := NewVerifier(&Machine{}, c.sys)
-	require.ErrorContains(t, err, "PCS opening")
-
 	sys := wiop.NewSystemf("dynamic")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
 	col := mod.NewColumn(sys.Context.Childf("a"), r0)
 	mod.NewVanishing(sys.Context.Childf("v"), wiop.Mul(col.View(), col.View()))
 	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
-	_, err = NewVerifier(&Machine{}, sys)
+	_, err := NewVerifier(&Machine{}, sys)
 	require.ErrorContains(t, err, "dynamic")
 
 	// Without a PCS, nothing binds the proof's values to the columns.
