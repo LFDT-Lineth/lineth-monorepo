@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(linea-besu)* Update to 26.11.1 (#4532)
+
 ### 🐛 Bug Fixes
 
 - *(tracer)* Adapt reference tests to Besu block processor API (#4328)

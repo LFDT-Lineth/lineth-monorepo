@@ -50,6 +50,7 @@
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
 - *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
 - *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
+- *(linea-besu)* Update to 26.11.1 (#4532)
 
 ### 🐛 Bug Fixes
 
