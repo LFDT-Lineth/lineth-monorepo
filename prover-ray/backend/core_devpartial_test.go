@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/conglomeration"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -171,7 +174,8 @@ func parallelCore(t *testing.T, dir string, id [32]byte, workers int) *Core {
 }
 
 // TestProveDevPartial_ParallelShards checks that checking several shards at a
-// time gives the result of checking them one at a time.
+// time gives the result of checking them one at a time, with at most
+// ShardWorkers shards at once.
 func TestProveDevPartial_ParallelShards(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()
@@ -180,9 +184,30 @@ func TestProveDevPartial_ParallelShards(t *testing.T) {
 
 	want := parallelCore(t, dir, id, 1).Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, want.Status, "prove err: %v", want.Err)
-	got := parallelCore(t, dir, id, 4).Prove(context.Background(), job)
+
+	c := parallelCore(t, dir, id, 4)
+	// Count the shards checked at the same time.
+	var (
+		mu            sync.Mutex
+		running, most int
+	)
+	tamperAfterTrace(t, c).f = func(*wiop.Runtime) {
+		mu.Lock()
+		running++
+		most = max(most, running)
+		mu.Unlock()
+		// Longer than the spread of the shard arrivals, about 1.5 s: with no
+		// limit every shard overlaps.
+		time.Sleep(2 * time.Second)
+		mu.Lock()
+		running--
+		mu.Unlock()
+	}
+	got := c.Prove(context.Background(), job)
 	require.Equal(t, ResultStatusOK, got.Status, "prove err: %v", got.Err)
 	assert.Equal(t, want, got, "the number of workers should not change the result")
+	assert.LessOrEqual(t, most, 4, "at most ShardWorkers shards should be checked at once")
+	assert.Greater(t, most, 1, "the shards should be checked in parallel")
 }
 
 // TestProveDevPartial_ParallelShards_BrokenConstraint checks that a shard
@@ -224,6 +249,34 @@ func TestRunProve_ParallelShards_Cancelled(t *testing.T) {
 	_, _, err = c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs}, nil)
 	require.ErrorIs(t, err, context.Canceled)
 	require.ErrorContains(t, err, "before shard 0")
+}
+
+// TestProveShards_CancelledWhileProving checks that a shard proved after the
+// job was cancelled is not merged, and that the run fails rather than succeed
+// without it.
+func TestProveShards_CancelledWhileProving(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c := parallelCore(t, dir, id, 1)
+	g, err := c.loadGuest(id)
+	require.NoError(t, err)
+	inputs, err := c.encodeGuestInputs(devPartialJob(id), g)
+	require.NoError(t, err)
+	lazyTrace, err := c.driver.TryTraceZkcInputs(&zkcdriver.PreReadInputs{Inputs: inputs})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tamper := tamperAfterTrace(t, c)
+	tamper.f = func(*wiop.Runtime) { cancel() } // the job is cancelled while shard 0 is proved
+	reducer := conglomeration.NewReducer(c.merger, 1)
+
+	err = c.proveShards(ctx, lazyTrace, []uint{0}, reducer)
+	require.ErrorIs(t, err, context.Canceled, "the run should fail, not succeed without shard 0")
+	require.ErrorContains(t, err, "after shard 0", "the error should say shard 0 was proved, then dropped")
+	_, err = reducer.Close(nil)
+	require.ErrorContains(t, err, "no node was added", "shard 0 should not be merged")
 }
 
 // TestProveDevPartial_Sharded_UnbalancedBus checks that with sharding, where no
@@ -285,7 +338,11 @@ func setInterpreterRows(t *testing.T, rt *wiop.Runtime, interpreter []*wiop.Colu
 			}
 		}
 	}
-	require.Positive(t, row, "two interpreter rows should differ")
+	// This may run in a shard worker goroutine, where require cannot stop the
+	// test: report and return instead.
+	if !assert.Positive(t, row, "two interpreter rows should differ") {
+		return
+	}
 	for _, col := range interpreter {
 		v := rt.GetColumnAssignment(col)
 		rows := slices.Clone(v.Plain.AsBase())

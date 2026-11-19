@@ -9,7 +9,6 @@ import (
 	"maps"
 	"os"
 	"slices"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
 )
 
 // ErrNotImplemented is returned by stubs that are not yet wired up.
@@ -667,56 +667,42 @@ func (c *Core) shardSizeHint(i uint) string {
 }
 
 // proveShards traces and proves the shards of indexes, [Config.ShardWorkers]
-// at a time, and adds each to reducer when it is done. The first failure stops
-// the shards not started yet, and is the error returned.
+// at a time, and gives each to reducer when it is done. The first error
+// cancels the other shards and is returned.
 func (c *Core) proveShards(
 	ctx context.Context, lazyTrace zkcdriver.LazyTrace, indexes []uint, reducer *conglomeration.Reducer,
 ) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	var (
-		wg      sync.WaitGroup
-		errOnce sync.Once
-		failed  error
-		slots   = make(chan struct{}, max(c.cfg.ShardWorkers, 1))
-		done    atomic.Int64
-	)
-	fail := func(err error) {
-		errOnce.Do(func() {
-			failed = err
-			cancel()
-		})
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("before shard %d: %w", indexes[0], err)
 	}
+	// shards runs each shard in a goroutine, at most ShardWorkers at a time.
+	// Its ctx is cancelled at the first error, which shards.Wait returns.
+	shards, ctx := errgroup.WithContext(ctx)
+	shards.SetLimit(max(c.cfg.ShardWorkers, 1))
+	var done atomic.Int64
 	for _, i := range indexes {
-		if err := ctx.Err(); err != nil {
-			fail(fmt.Errorf("before shard %d: %w", i, err))
-			break
-		}
-		slots <- struct{}{}
-		wg.Add(1)
-		go func() {
-			defer func() {
-				<-slots
-				wg.Done()
-			}()
+		shards.Go(func() error {
 			start := time.Now()
 			node, err := c.proveOneShard(ctx, lazyTrace, i)
 			if err != nil {
-				fail(err)
-				return
+				return err
+			}
+			// The job failed or was cancelled meanwhile: nobody needs the merge,
+			// and the error makes sure the job does not succeed without this shard.
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("after shard %d: %w", i, err)
 			}
 			// Add reports a merge that failed meanwhile: stop rather than
 			// prove shards whose result is already lost.
 			if err := reducer.Add(node); err != nil {
-				fail(fmt.Errorf("merging after shard %d: %w", i, err))
-				return
+				return fmt.Errorf("merging after shard %d: %w", i, err)
 			}
 			logrus.Infof("Shard %d done in %s: %d of %d",
 				i, time.Since(start).Round(100*time.Millisecond), done.Add(1), len(indexes))
-		}()
+			return nil
+		})
 	}
-	wg.Wait()
-	return failed
+	return shards.Wait()
 }
 
 // proveOneShard traces and proves the ith shard of the lazy trace.
