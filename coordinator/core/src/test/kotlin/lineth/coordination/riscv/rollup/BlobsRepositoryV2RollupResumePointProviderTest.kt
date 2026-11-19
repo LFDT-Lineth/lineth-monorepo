@@ -65,8 +65,8 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
     )
   }
 
-  private fun addRow(start: ULong, end: ULong, finalDataTailDiscardBytes: Int = 0): BlobRecordV2 {
-    val record = if (finalDataTailDiscardBytes > 0) {
+  private fun addRow(start: ULong, end: ULong, finalDataTailDiscardBytes: UInt = 0u): BlobRecordV2 {
+    val record = if (finalDataTailDiscardBytes > 0u) {
       val parent = Random.nextBytes(32)
       val drh = Random.nextBytes(32)
       createBlobRecordV2(
@@ -114,7 +114,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
   @Test
   fun `a last row ending inside a blob resumes inside that shared blob`() {
     addRow(91UL, 100UL)
-    val last = addRow(101UL, 110UL, finalDataTailDiscardBytes = 500)
+    val last = addRow(101UL, 110UL, finalDataTailDiscardBytes = 500u)
 
     val lastBlob = last.blobsData.last()
     assertThat(resume(100UL, cutover + 1.seconds)).isEqualTo(
@@ -123,7 +123,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
         DaStreamPosition(
           dataRollingHash = last.dataRollingHash,
           parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
-          sharedBlobCarryOverTailBytes = 500,
+          sharedBlobCarryOverTailBytes = 500u,
           sharedBlob = lastBlob.blobBytes,
         ),
       ),

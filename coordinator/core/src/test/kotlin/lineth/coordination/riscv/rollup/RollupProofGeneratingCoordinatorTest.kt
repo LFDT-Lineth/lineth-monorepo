@@ -208,14 +208,14 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(request2.parentDataTailTakeBytes).isEqualTo(70_094)
 
     val (context1, context2) = pollProofs()
-    assertThat(context1.finalDataTailDiscardBytes).isEqualTo(70_094)
+    assertThat(context1.finalDataTailDiscardBytes).isEqualTo(70_094u)
     assertThat(context1.blobsData.map { it.batchesCount }).containsExactly(1U, 2U)
     assertThat(context1.totalBatchesCount).isEqualTo(3)
     assertThat(request2.parentDataRollingHash).isEqualTo(context1.dataRollingHash)
     assertThat(request2.boundaryPrevDataRollingHash).isEqualTo(context1.blobsData.last().prevDataRollingHash)
-    assertThat(context2.parentDataTailTakeBytes).isEqualTo(70_094)
+    assertThat(context2.parentDataTailTakeBytes).isEqualTo(70_094u)
     assertThat(context2.blobsData.map { it.batchesCount }).containsExactly(2U, 0U, 2U)
-    assertThat(context2.finalDataTailDiscardBytes).isZero()
+    assertThat(context2.finalDataTailDiscardBytes).isEqualTo(0u)
   }
 
   @Test
@@ -354,7 +354,7 @@ class RollupProofGeneratingCoordinatorTest {
     val lastBlob = context.blobsData.last()
     return RollupResumePoint(
       context.proofIndex.endBlockNumber,
-      if (tail == 0) {
+      if (tail == 0u) {
         DaStreamPosition.fresh(context.dataRollingHash)
       } else {
         DaStreamPosition(

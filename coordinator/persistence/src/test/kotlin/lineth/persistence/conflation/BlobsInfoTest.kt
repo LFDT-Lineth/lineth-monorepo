@@ -12,8 +12,8 @@ class BlobsInfoTest {
     val record = createBlobRecordV2(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
-      parentDataTailTakeBytes = 100,
-      finalDataTailDiscardBytes = 200,
+      parentDataTailTakeBytes = 100u,
+      finalDataTailDiscardBytes = 200u,
     )
     val info = BlobsInfo.fromDomainObject(record)
 

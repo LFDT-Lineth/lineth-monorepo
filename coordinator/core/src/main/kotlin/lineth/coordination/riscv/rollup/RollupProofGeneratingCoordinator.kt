@@ -27,6 +27,7 @@ import lineth.conflation.calculators.GlobalBlobCalculator
 import lineth.conflation.calculators.GlobalRollupCalculator
 import lineth.conflation.calculators.Rollup
 import lineth.conflation.calculators.RollupDaAssembler
+import lineth.conflation.calculators.RollupDaWitness
 import lineth.conflation.calculators.RollupHandler
 import lineth.conflation.calculators.RollupTriggerCalculator
 import lineth.encoding.BlockEncoder
@@ -327,8 +328,8 @@ class RollupProofGeneratingCoordinator(
         )
       },
       parentDataRollingHash = da.parentDataRollingHash,
-      parentDataTailTakeBytes = da.parentDataTailTakeBytes,
-      boundaryPrevDataRollingHash = da.boundaryPrevDataRollingHash,
+      parentDataTailTakeBytes = da.parentDataTailTakeBytes.toInt(),
+      boundaryPrevDataRollingHash = da.midBlobStartBoundaryPrevDataRollingHash(),
     )
   }
 
@@ -356,7 +357,7 @@ class RollupProofGeneratingCoordinator(
       parentDataRollingHash = da.parentDataRollingHash,
       dataRollingHash = da.expectedEndDataRollingHash,
       parentDataTailTakeBytes = da.parentDataTailTakeBytes,
-      boundaryPrevDataRollingHash = da.boundaryPrevDataRollingHash,
+      boundaryPrevDataRollingHash = da.midBlobStartBoundaryPrevDataRollingHash(),
       finalDataTailDiscardBytes = da.expectedFinalDataTailDiscardBytes,
       startBlockTimestamp = rollup.conflations.first().blocks.first().timestamp.toInstantFromEpochSeconds(),
       endBlockTimestamp = rollup.conflations.last().blocks.last().timestamp.toInstantFromEpochSeconds(),
@@ -364,3 +365,10 @@ class RollupProofGeneratingCoordinator(
     )
   }
 }
+
+/**
+ * [RollupDaWitness.boundaryPrevDataRollingHash] for a rollup that starts inside a shared blob, null otherwise: the
+ * request and the persisted rollup carry it only for a mid-blob start, as the spec requires it exactly then.
+ */
+private fun RollupDaWitness.midBlobStartBoundaryPrevDataRollingHash(): ByteArray? =
+  boundaryPrevDataRollingHash.takeIf { parentDataTailTakeBytes > 0u }
