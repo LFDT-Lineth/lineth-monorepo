@@ -83,7 +83,7 @@ func TestProgramVKBytes(t *testing.T) {
 		binary.BigEndian.PutUint32(want[4*i:], limb)
 	}
 
-	assert.Equal(t, want, c.programVK(pub))
+	assert.Equal(t, want, c.programVK(pub), "the VK bytes should be the limbs, big-endian and canonical")
 }
 
 // TestProgramVKMisuse checks that the program VK registration and the
