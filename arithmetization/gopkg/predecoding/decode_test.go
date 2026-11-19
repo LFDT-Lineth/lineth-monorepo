@@ -1033,7 +1033,6 @@ func TestAssembleJTypeImm(t *testing.T) {
 // WriteBits
 // ------------------------------------------------------------
 
-
 // writeBitsOracle appends the low width bits of val, most-significant bit first.
 // Bits are taken by division by two, so this does not use the shifts writeBits uses.
 func writeBitsOracle(val uint64, width int) ([]byte, int) {
@@ -1073,6 +1072,86 @@ func TestWriteBits(t *testing.T) {
 					t.Fatalf("writeBits(%#x, %d) nbits=%d buf=%x, want nbits=%d buf=%x",
 						val, width, w.nbits, w.buf, n, want)
 				}
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// UnifiedOperands
+// ------------------------------------------------------------
+
+// unifiedOperandsOracle is the unifiedOperands oracle function.
+// Immediates come from the assemble oracles. Registers the format does not use
+// are zero. Misc-mem, undefined, and any other type contribute nothing, just as
+// unifiedOperands does.
+func unifiedOperandsOracle(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) (uint64, uint64, uint64, uint64) {
+	switch instrType {
+	case iType:
+		_, norm := decodeITypeSemantic(opcode, funct3, imm12)
+		return uint64(signExtend12_oracle(norm)), uint64(rs1), 0, uint64(rd)
+	case rType:
+		return 0, uint64(rs1), uint64(rs2), uint64(rd)
+	case sType:
+		return assembleSTypeImm_oracle(instruction), uint64(rs1), uint64(rs2), 0
+	case bType:
+		return assembleBTypeImm_oracle(instruction), uint64(rs1), uint64(rs2), 0
+	case jType:
+		return assembleJTypeImm_oracle(instruction), 0, 0, uint64(rd)
+	case uType:
+		return assembleUTypeImm_oracle(instruction), 0, 0, uint64(rd)
+	default:
+		return 0, 0, 0, 0
+	}
+}
+
+// TestUnifiedOperands checks every register for each instruction type.
+// Opcode, imm12, and funct3 are set to 0 and to all-ones for the types that
+// do not read them. The instruction word stays fixed, with bit 31 and bit 7 set.
+func TestUnifiedOperands(t *testing.T) {
+	check := func(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) {
+		t.Helper()
+		gotImm, gotRs1, gotRs2, gotRd := unifiedOperands(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd)
+		wantImm, wantRs1, wantRs2, wantRd := unifiedOperandsOracle(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd)
+		if gotImm != wantImm || gotRs1 != wantRs1 || gotRs2 != wantRs2 || gotRd != wantRd {
+			t.Fatalf("unifiedOperands(type=%d, instr=%#x, op=%#x, imm12=%#x, f3=%#x, rs1=%d, rs2=%d, rd=%d) = (%#x, %d, %d, %d), want (%#x, %d, %d, %d)",
+				instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd,
+				gotImm, gotRs1, gotRs2, gotRd, wantImm, wantRs1, wantRs2, wantRd)
+		}
+	}
+
+	// Bit 31 and bit 7 are set, so S, B, J, and U each assemble a different immediate.
+	instr := uint32(0x80000080)
+	// Sweep through every background and every register combination.
+	for _, bg := range []uint32{0, 0xffffffff} {
+		for rs1 := uint32(0); rs1 < 32; rs1++ {
+			for rs2 := uint32(0); rs2 < 32; rs2++ {
+				for rd := uint32(0); rd < 32; rd++ {
+					check(rType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(iType, instr, opcodeOPIMM, 0xabc, 0b000, rs1, rs2, rd)
+					check(iType, instr, opcodeOPIMM, 0x43f, 0b101, rs1, rs2, rd)
+					check(sType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(bType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(jType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(uType, instr, bg, bg, bg, rs1, rs2, rd)
+					for _, typ := range []uint32{miscMemType, undefinedType, 8} {
+						check(typ, instr, bg, bg, bg, rs1, rs2, rd)
+					}
+				}
+			}
+		}
+	}
+
+	// I-type is swept again over every imm12. It is the only arm not calling 
+	// an assemble function and where the immediate is the sign extension of 
+	// the normalized imm12, not of the raw instruction.
+	// OPIMM and OPIMM32 are the opcodes that can replace imm12 with a shift amount.
+	// funct3 runs through 8 so the OPIMM default arm is reached. The instruction
+	// word and rs2 are set and must not affect the row.
+	for _, opcode := range []uint32{opcodeOPIMM, opcodeOPIMM32} {
+		for funct3 := uint32(0); funct3 <= 8; funct3++ {
+			for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+				check(iType, 0xffffffff, opcode, imm12, funct3, 1, 31, 2)
 			}
 		}
 	}
