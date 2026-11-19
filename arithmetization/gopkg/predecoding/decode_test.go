@@ -3,7 +3,10 @@ package predecoding
 import (
 	"bytes"
 	"math"
+	"reflect"
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
 // TestInstructionTypeFromOpcode
@@ -1209,6 +1212,11 @@ func TestDecodeInstruction(t *testing.T) {
 	}
 }
 
+// ------------------------------------------------------------
+// DecodeImage
+// ------------------------------------------------------------
+
+
 // TestDecodeImage checks that decodeImage walks the image as little-endian
 // words and appends one decodeInstruction row per record. Bytes past the last
 // record are ignored. Zero records return an empty buffer.
@@ -1242,6 +1250,63 @@ func TestDecodeImage(t *testing.T) {
 		got := decodeImage(image, uint64(len(tt.words)))
 		if !bytes.Equal(got, want.buf) {
 			t.Fatalf("%s: decodeImage(%x) = %x, want %x", tt.name, image, got, want.buf)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// EXECUTABLE HELPERS
+// ------------------------------------------------------------
+
+
+// TestExecutableBlobs checks that executableBlobs keeps only executable blobs
+// and sorts them by address. Equal addresses keep their input order. No
+// executable blob is an error.
+func TestExecutableBlobs(t *testing.T) {
+	tests := []struct {
+		name    string
+		blobs   []elfmapping.Blob
+		want    []elfmapping.Blob
+		wantErr bool
+	}{
+		{name: "none", wantErr: true},
+		{name: "data only", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Executable: false},
+		}, wantErr: true},
+		{name: "one", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
+		}},
+		{name: "drops data and sorts", blobs: []elfmapping.Blob{
+			{Address: 0x3000, Data: []byte{3}, Executable: true},
+			{Address: 0x2000, Data: []byte{9}, Executable: false},
+			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
+			{Address: 0x3000, Data: []byte{3}, Executable: true},
+		}},
+		{name: "stable on equal address", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
+			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
+			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
+		}},
+	}
+	for _, tt := range tests {
+		got, err := executableBlobs(tt.blobs)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: got %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
 }
