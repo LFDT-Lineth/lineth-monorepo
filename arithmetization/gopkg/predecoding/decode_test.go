@@ -1213,6 +1213,43 @@ func TestDecodeInstruction(t *testing.T) {
 	}
 }
 
+// TestDecodeImage checks that decodeImage walks the image as little-endian
+// words and appends one decodeInstruction row per record. Bytes past the last
+// record are ignored. Zero records return an empty buffer.
+func TestDecodeImage(t *testing.T) {
+	addi := uint32((1 << 20) | (1 << 15) | (5 << 7) | opcodeOPIMM)
+	add := uint32((2 << 20) | (1 << 15) | (5 << 7) | opcodeOP)
+	tests := []struct {
+		name  string
+		words []uint32
+		tail  byte
+	}{
+		{"empty", nil, 0},
+		{"one", []uint32{0x01020304}, 0},
+		{"two with tail", []uint32{addi, add}, 0xff},
+	}
+	for _, tt := range tests {
+		image := make([]byte, len(tt.words)*4)
+		for i, word := range tt.words {
+			image[i*4] = byte(word)
+			image[i*4+1] = byte(word >> 8)
+			image[i*4+2] = byte(word >> 16)
+			image[i*4+3] = byte(word >> 24)
+		}
+		if tt.tail != 0 {
+			image = append(image, tt.tail)
+		}
+		var want bitWriter
+		for _, word := range tt.words {
+			decodeInstruction(&want, word)
+		}
+		got := decodeImage(image, uint64(len(tt.words)))
+		if !bytes.Equal(got, want.buf) {
+			t.Fatalf("%s: decodeImage(%x) = %x, want %x", tt.name, image, got, want.buf)
+		}
+	}
+}
+
 // commit 88fe45d
 // TestDecodedInputsPreserveExactRowLength
 // TestDecodedProgramEncodeInputsReturnsFreshBytes
