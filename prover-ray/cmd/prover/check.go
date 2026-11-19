@@ -15,8 +15,9 @@ const (
 	ignored use = iota
 	// optional: the mode uses the setting when it is set.
 	optional
-	// required: the mode does not work without the setting.
-	required
+	// required: the mode does not work without the setting. No setting uses
+	// it yet.
+	// required
 )
 
 // layers says on which layers the prover may start in a mode. A layer is false
