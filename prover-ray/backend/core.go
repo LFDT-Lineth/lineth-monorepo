@@ -657,9 +657,12 @@ func (c *Core) runProve(
 // shardSizeHint says what to change when shard i does not fit in a column. A
 // smaller shard_size does not shrink every module: blobs_data follows the
 // block input, and most of ram in shard 0 is there whatever the input
-// (LFDT-Lineth/zkc#2346).
+// (LFDT-Lineth/zkc#2346). Without a merger, as in full today, the trace cannot
+// be split.
 func (c *Core) shardSizeHint(i uint) string {
 	switch {
+	case c.merger == nil:
+		return "this mode cannot split the trace into shards yet"
 	case c.cfg.ShardSize == 0:
 		return "set shard_size to split the trace into shards"
 	case i == 0:
