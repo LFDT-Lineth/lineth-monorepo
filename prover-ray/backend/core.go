@@ -654,16 +654,19 @@ func (c *Core) runProve(
 	return root, numShards, nil
 }
 
-// shardSizeHint says what to change when shard i does not fit in a column.
+// shardSizeHint says what to change when shard i does not fit in a column. A
+// smaller shard_size does not shrink every module: blobs_data follows the
+// block input, and most of ram in shard 0 is there whatever the input
+// (LFDT-Lineth/zkc#2346).
 func (c *Core) shardSizeHint(i uint) string {
 	switch {
 	case c.cfg.ShardSize == 0:
 		return "set shard_size to split the trace into shards"
 	case i == 0:
-		return "use a smaller shard_size; shard 0 also holds the input setup, " +
-			"which shard_size does not limit, so this may not be enough"
+		return "use a smaller shard_size; it does not help for ram in shard 0 or for blobs_data, " +
+			"which do not follow shard_size"
 	default:
-		return "use a smaller shard_size"
+		return "use a smaller shard_size; it does not help for blobs_data, which follows the block input"
 	}
 }
 

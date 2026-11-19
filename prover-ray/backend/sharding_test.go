@@ -168,8 +168,8 @@ func TestShardSizeHint(t *testing.T) {
 		want      string
 	}{
 		"unsharded":     {0, 0, "set shard_size to split the trace into shards"},
-		"first shard":   {100, 0, "use a smaller shard_size; shard 0 also holds the input setup"},
-		"a later shard": {100, 1, "use a smaller shard_size"},
+		"first shard":   {100, 0, "it does not help for ram in shard 0 or for blobs_data"},
+		"a later shard": {100, 1, "it does not help for blobs_data"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
