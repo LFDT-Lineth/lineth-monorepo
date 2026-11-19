@@ -176,7 +176,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -205,7 +205,7 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
+		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -281,7 +281,7 @@ func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, 
 	}
 
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }

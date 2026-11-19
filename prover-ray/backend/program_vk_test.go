@@ -2,6 +2,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/binary"
 	"os"
 	"testing"
 
@@ -61,6 +62,28 @@ func TestProgramVK(t *testing.T) {
 		forged[pos] = field.ElemFromExt(forged[pos].AsExt())
 		assert.ErrorIs(t, c.sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
 	})
+}
+
+// TestProgramVKBytes checks that the response VK has the layout the rollup guest
+// reads: limb i in bytes 4i to 4i+4, big-endian and canonical.
+func TestProgramVKBytes(t *testing.T) {
+	c, err := New(Config{Mode: ProverModeDevPartial, GuestsDir: t.TempDir()})
+	require.NoError(t, err)
+	pub := make(wiop.PublicInput, len(c.sys.PublicInputs))
+	for i := range pub {
+		pub[i] = field.ElemFromBase(field.Element{})
+	}
+	var want [32]byte
+	for i := range risc5.NumProgramVK {
+		limb := uint32(0x7f000000 - i) // near the modulus, so a Montgomery form would differ
+		var e field.Element
+		e.SetUint64(uint64(limb))
+		_, pos := c.sys.LookupPublicInputByTag(risc5.ProgramVKPI, i)
+		pub[pos] = field.ElemFromBase(e)
+		binary.BigEndian.PutUint32(want[4*i:], limb)
+	}
+
+	assert.Equal(t, want, c.programVK(pub), "the VK bytes should be the limbs, big-endian and canonical")
 }
 
 // TestProgramVKMisuse checks that the program VK registration and the
