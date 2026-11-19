@@ -837,7 +837,7 @@ var classifyInstructionVectors = []struct {
 	{"ecall", iType, opcodeSYSTEM, 0b000, 0, funct12Ecall, 0, itypeEcall},
 	{"load funct3 111", iType, opcodeLOAD, 0b111, 0, 0, 5, computeInvalid},
 
-	// R-type: writeback collapse, a precompile kept at x0, and custom-1 funct3 010.
+	// R-type: writeback collapse, a precompile kept at x0, and custom-1 funct3 010 invalid case.
 	{"add", rType, opcodeOP, 0b000, 0b0000000, 0, 5, rtypeOpAddWB},
 	{"add x0", rType, opcodeOP, 0b000, 0b0000000, 0, 0, computeNoOp},
 	{"keccak x0", rType, opcodeCUSTOM1, 0b000, 0b0000000, 0, 0, rtypeOpKeccak},
