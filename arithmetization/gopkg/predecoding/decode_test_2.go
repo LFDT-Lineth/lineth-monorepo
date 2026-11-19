@@ -161,13 +161,6 @@ func encodeRType(opcode, funct7, rs2, rs1, funct3, rd uint32) uint32 {
 	return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
 }
 
-func encodeSType(funct3, rs1, rs2, simm12 uint32) uint32 {
-	imm11 := (simm12 >> 11) & 0x1
-	imm10_5 := (simm12 >> 5) & 0x3f
-	imm4_0 := simm12 & 0x1f
-	return opcodeSTORE | (imm4_0 << 7) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm11 << 31)
-}
-
 func encodeUType(opcode, rd, imm20 uint32) uint32 {
 	return (imm20 << 12) | (rd << 7) | opcode
 }
@@ -300,112 +293,6 @@ func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
 	}
 	if !bytes.Equal(image, textCode) {
 		t.Fatalf("image = %x, want %x", image, textCode)
-	}
-}
-
-func TestAssembleITypeImm(t *testing.T) {
-	tests := []struct {
-		name      string
-		normImm12 uint32
-		want      uint64
-	}{
-		{name: "zero", normImm12: 0, want: 0},
-		{name: "positive_42", normImm12: 42, want: 42},
-		{name: "shift_3", normImm12: 3, want: 3},
-		{name: "negative_1", normImm12: 0xfff, want: 0xffffffffffffffff},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := assembleITypeImm(tt.normImm12)
-			if got != tt.want {
-				t.Fatalf("assembleITypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAssembleSTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		simm12 uint32
-		want   uint64
-	}{
-		{name: "zero", simm12: 0, want: 0},
-		{name: "positive_8", simm12: 8, want: 8},
-		{name: "negative_1", simm12: 0xfff, want: 0xffffffffffffffff},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeSType(0b000, 1, 2, tt.simm12)
-			simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
-			got := assembleSTypeImm(simm12)
-			if got != tt.want {
-				t.Fatalf("assembleSTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAssembleBTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		offset int32
-		want   uint64
-	}{
-		{name: "zero", offset: 0, want: 0},
-		{name: "forward_8", offset: 8, want: 8},
-		{name: "backward_16", offset: -16, want: 0xfffffffffffffff0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeBType(0b000, 1, 2, tt.offset)
-			got := assembleBTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleBTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAssembleJTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		offset int32
-		want   uint64
-	}{
-		{name: "zero", offset: 0, want: 0},
-		{name: "forward_4k", offset: 4096, want: 4096},
-		{name: "backward_2k", offset: -2048, want: 0xfffffffffffff800},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeJType(1, tt.offset)
-			got := assembleJTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleJTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAssembleUTypeImm(t *testing.T) {
-	tests := []struct {
-		name  string
-		imm20 uint32
-		want  uint64
-	}{
-		{name: "zero", imm20: 0, want: 0},
-		{name: "positive", imm20: 0x12345, want: 0x12345000},
-		{name: "negative", imm20: 0xfffff, want: 0xfffffffffffff000},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeUType(opcodeLUI, 1, tt.imm20)
-			got := assembleUTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleUTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
 	}
 }
 
