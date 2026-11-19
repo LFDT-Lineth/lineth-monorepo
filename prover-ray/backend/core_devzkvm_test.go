@@ -130,6 +130,7 @@ func TestProveDevZkVM(t *testing.T) {
 		assert.Equal(t, referencePublicInputs(t), result.PublicInputs, "the public inputs should be decoded from the guest output")
 		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput, "the guest output should be returned for the native runner check")
 		assert.Equal(t, DevMarkerProof(ProverModeDevZkVM), result.ProofBytes, "the proof should be the dev-zkvm marker")
+		assert.Equal(t, [32]byte{}, result.ProgramVK, "dev-zkvm has no proof, so its VK should be zero")
 	})
 
 	t.Run("hash does not match the frame", func(t *testing.T) {

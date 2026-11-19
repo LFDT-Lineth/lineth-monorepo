@@ -11,14 +11,18 @@ import (
 
 // The tests shared with dev-partial are in runner_extended_test.go.
 
-func TestRunner_DevZkVM_RequiresBinary(t *testing.T) {
-	runner, err := NewRunner(&mockProver{}, testProverVersion, WithMode(backend.ProverModeDevZkVM))
+// The native runner is optional in dev-zkvm: without it, the job passes on
+// the guest's own output.
+func TestRunner_DevZkVM_WithoutNativeRunner(t *testing.T) {
+	mode := backend.ProverModeDevZkVM
+	runner, err := NewRunner(extendedProver(mode, guestOutput, nil), testProverVersion, WithMode(mode))
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(),
 		l2ExecutionRunRequest("dz-3", readFixture(t, "request_single_block.json")))
 
-	assert.Equal(t, RunStatusFailed, result.Status)
-	require.Error(t, result.Err)
-	assert.Contains(t, result.Err.Error(), "native runner binary")
+	require.Equal(t, RunStatusSuccess, result.Status, "run err: %v", result.Err)
+	resp, ok := result.ResponseBody.(executionResponse)
+	require.True(t, ok)
+	assert.Equal(t, hexBytes(extendedModes[mode]), resp.ProofHex)
 }

@@ -123,15 +123,12 @@ make docker-build-prover-ray
 ./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local
 ```
 
-One image includes the Go prover, native runner, and guest ELF. The runner and
-guest are both compiled from `riscv-guests` at the same commit, so every image
-build checks their compatibility; the smoke test runs one `dev-zkvm` prove that
-checks the guest's output against the runner's. Docker installs Nim/LLVM
-in the builder stage to compile the Constantine dependency; these tools are not
-required on the host or in the final runtime image. The coordinator's Program ID
-must match the bundled ELF (Keccak-256 of the complete ELF).
+The image holds only the Go prover. Guest ELFs are released
+separately (see `riscv-guests/README.md`) and mounted in the guests folder at run
+time; one prover-ray version can serve several guests. Without a second argument
+the smoke test builds the guest from `riscv-guests` at the same commit
+(`make -C riscv-guests docker-artifacts`), as the release gate does.
 
 Mount a config at `CONFIG_FILE` with the stack's shared queue paths and select
-`execution.prover_mode = "dev-mock"` or `"dev-zkvm"`. For `dev-zkvm`, set the bundled
-native-runner and guest-ELF paths as shown in `prover-ray/config/config-dev-zkvm.toml`.
-Both modes use the same image and release workflow.
+`execution.prover_mode = "dev-mock"` or `"dev-zkvm"`, as in
+`prover-ray/config/config-dev-zkvm.toml`.

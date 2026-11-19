@@ -2,9 +2,10 @@ package jobadapter
 
 import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 
-// rollupResponse is the getZkRollupProofV1 success body. programVk is echoed
-// from the request envelope. The public inputs and proof are placeholders until
-// the rollup guest and proof serialization land.
+// rollupResponse is the getZkRollupProofV1 success body. programVk is the VK
+// of the proof, from the result, not the request's guestProgramId. The public
+// inputs and proof are placeholders until the rollup guest and proof
+// serialization land.
 type rollupResponse struct {
 	ProverVersion    string                     `json:"proverVersion"`
 	ProgramVk        string                     `json:"programVk"`
@@ -37,12 +38,10 @@ type rollupResponsePublicInputs struct {
 	L2L1Messages                          []string `json:"l2L1Messages"`
 }
 
-func newRollupResponse(
-	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
-) rollupResponse {
+func newRollupResponse(result backend.Result, startBlockNumber uint64, proverVersion string) rollupResponse {
 	return rollupResponse{
 		ProverVersion:    proverVersion,
-		ProgramVk:        hexBytes(programVk),
+		ProgramVk:        hexHash(result.ProgramVK),
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     placeholderRollupPublicInputs(),
