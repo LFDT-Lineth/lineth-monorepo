@@ -25,8 +25,8 @@ class RollupProofPersistenceHandlerTest {
   private val record = createBlobRecordV2(
     startBlockNumber = 1UL,
     endBlockNumber = 10UL,
-    parentDataTailTakeBytes = 100,
-    finalDataTailDiscardBytes = 200,
+    parentDataTailTakeBytes = 100u,
+    finalDataTailDiscardBytes = 200u,
   )
   private val proofIndex = BlockIntervalProofIndex(
     startBlockNumber = record.startBlockNumber,
@@ -49,13 +49,13 @@ class RollupProofPersistenceHandlerTest {
 
   private fun proof(
     endDataRollingHash: ByteArray = record.dataRollingHash,
-    finalDataTailDiscardBytes: Int = record.finalDataTailDiscardBytes,
+    finalDataTailDiscardBytes: Int = record.finalDataTailDiscardBytes.toInt(),
   ) = dummyRollupProofResponse(proofIndex).let {
     it.copy(
       publicInputs = it.publicInputs.copy(
         parentDataRollingHash = record.parentDataRollingHash,
         endDataRollingHash = endDataRollingHash,
-        parentDataTailTakeBytes = record.parentDataTailTakeBytes,
+        parentDataTailTakeBytes = record.parentDataTailTakeBytes.toInt(),
         finalDataTailDiscardBytes = finalDataTailDiscardBytes,
       ),
     )

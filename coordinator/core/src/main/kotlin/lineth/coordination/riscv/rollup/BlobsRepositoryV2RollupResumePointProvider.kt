@@ -60,7 +60,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
     val tail = row.finalDataTailDiscardBytes
     return RollupResumePoint(
       lastConflationEndBlock = row.endBlockNumber,
-      daPosition = if (tail == 0) {
+      daPosition = if (tail == 0u) {
         DaStreamPosition.fresh(row.dataRollingHash)
       } else {
         DaStreamPosition(

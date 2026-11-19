@@ -6,6 +6,7 @@ import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.da.DaStream
 import linea.da.SealedBlob
 import linea.domain.BlocksConflation
+import linea.kotlin.minusCoercingUnderflow
 import linea.kotlin.toInstantFromEpochSeconds
 import lineth.encoding.BlockEncoder
 import org.apache.logging.log4j.LogManager
@@ -42,7 +43,7 @@ class GlobalBlobCalculator(
   private val blockEncoder: BlockEncoder,
   private val handler: BlobHandler,
   private val blobDeadline: Duration? = null,
-  sharedBlobCarryOverTailBytes: Int = 0,
+  sharedBlobCarryOverTailBytes: UInt = 0u,
   private val log: Logger = LogManager.getLogger(GlobalBlobCalculator::class.java),
 ) {
   /** Appended to the stream, but the blob holding the end of their segment is not sealed yet. */
@@ -50,12 +51,6 @@ class GlobalBlobCalculator(
 
   /** Carry-over tail bytes of the resumed shared blob that appended segments have not filled yet; > 0 blocks flushing. */
   private var remainingSharedBlobCarryOverTailBytes = sharedBlobCarryOverTailBytes
-
-  init {
-    require(sharedBlobCarryOverTailBytes >= 0) {
-      "sharedBlobCarryOverTailBytes=$sharedBlobCarryOverTailBytes must not be negative"
-    }
-  }
 
   /** The oldest conflation appended to the stream whose segment end is not in a sealed blob yet, if any. */
   val oldestUnsealedConflation: BlocksConflation? get() = appended.firstOrNull()?.conflation
@@ -76,12 +71,11 @@ class GlobalBlobCalculator(
       appended.removeLast()
       throw e
     }
-    remainingSharedBlobCarryOverTailBytes = maxOf(
-      0,
-      remainingSharedBlobCarryOverTailBytes - (SEGMENT_LENGTH_PREFIX_BYTES + compressed.compressedData.size),
+    remainingSharedBlobCarryOverTailBytes = remainingSharedBlobCarryOverTailBytes.minusCoercingUnderflow(
+      (SEGMENT_LENGTH_PREFIX_BYTES + compressed.compressedData.size).toUInt(),
     )
     // append seals only full blobs; a short one can only be a resumed shared blob that was flushed originally.
-    sealed.forEach { emit(it, flushed = it.payloadBytes < BLOB_PAYLOAD_CAPACITY) }
+    sealed.forEach { emit(it, flushed = it.payloadBytes < BLOB_PAYLOAD_CAPACITY.toUInt()) }
 
     triggers.forEach { it.appendConflation(conflation) }
     triggers.firstNotNullOfOrNull { it.checkTrigger(conflation) }?.let { tryFlush(it) }
@@ -94,7 +88,7 @@ class GlobalBlobCalculator(
    *   resumed shared blob is not filled yet. Once it is filled, flushing re-seals the shared blob unchanged.
    */
   fun tryFlush(trigger: BlobTrigger? = null): Boolean {
-    if (remainingSharedBlobCarryOverTailBytes > 0) {
+    if (remainingSharedBlobCarryOverTailBytes > 0u) {
       log.debug(
         "skipping blob flush trigger={}: {} carry-over tail bytes of the resumed shared blob are not filled yet",
         trigger,
@@ -127,7 +121,7 @@ class GlobalBlobCalculator(
       SealedConflation(oldest, end)
     }
     if (flushed && sealedConflations.isEmpty()) error("a flushed blob must end at least one conflation")
-    remainingSharedBlobCarryOverTailBytes = 0
+    remainingSharedBlobCarryOverTailBytes = 0u
     triggers.forEach { it.reset() } // a new blob opens
     log.debug(
       "blob sealed: payloadBytes={} flushed={} conflations={}",

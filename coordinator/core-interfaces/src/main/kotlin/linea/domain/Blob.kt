@@ -169,19 +169,19 @@ data class BlobRecordV2(
   val totalBatchesCount: UInt,
   val blobsData: List<BlobData>,
   val proofHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
+  val parentDataTailTakeBytes: UInt,
   val boundaryPrevDataRollingHash: ByteArray?,
-  val finalDataTailDiscardBytes: Int,
+  val finalDataTailDiscardBytes: UInt,
 ) : BlockInterval {
   init {
     require(blobsData.isNotEmpty()) { "blobsData must not be empty: rollup=${intervalString()}" }
-    require(parentDataTailTakeBytes in 0..MAX_TAIL_BYTES) {
+    require(parentDataTailTakeBytes <= MAX_TAIL_BYTES.toUInt()) {
       "parentDataTailTakeBytes=$parentDataTailTakeBytes must be in 0..$MAX_TAIL_BYTES: rollup=${intervalString()}"
     }
-    require(finalDataTailDiscardBytes in 0..MAX_TAIL_BYTES) {
+    require(finalDataTailDiscardBytes <= MAX_TAIL_BYTES.toUInt()) {
       "finalDataTailDiscardBytes=$finalDataTailDiscardBytes must be in 0..$MAX_TAIL_BYTES: rollup=${intervalString()}"
     }
-    require((parentDataTailTakeBytes > 0) == (boundaryPrevDataRollingHash != null)) {
+    require((parentDataTailTakeBytes > 0u) == (boundaryPrevDataRollingHash != null)) {
       "boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0: rollup=${intervalString()}"
     }
     val first = blobsData.first()
@@ -237,9 +237,9 @@ data class BlobRecordV2(
     result = 31 * result + totalBatchesCount.hashCode()
     result = 31 * result + blobsData.hashCode()
     result = 31 * result + proofHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
+    result = 31 * result + parentDataTailTakeBytes.hashCode()
     result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
-    result = 31 * result + finalDataTailDiscardBytes
+    result = 31 * result + finalDataTailDiscardBytes.hashCode()
     return result
   }
 }
