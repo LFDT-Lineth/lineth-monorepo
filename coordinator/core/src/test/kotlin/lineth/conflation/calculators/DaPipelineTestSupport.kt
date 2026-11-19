@@ -40,7 +40,7 @@ object DaPipelineTestSupport {
   fun positionAfter(rollup: Rollup): DaStreamPosition {
     val last = rollup.da.blobs.last()
     val tail = rollup.da.expectedFinalDataTailDiscardBytes
-    if (tail == 0) return DaStreamPosition.fresh(rollup.da.expectedEndDataRollingHash)
+    if (tail == 0u) return DaStreamPosition.fresh(rollup.da.expectedEndDataRollingHash)
     return DaStreamPosition(
       dataRollingHash = rollup.da.expectedEndDataRollingHash,
       parentBlobDataRollingHash = last.prevDataRollingHash,

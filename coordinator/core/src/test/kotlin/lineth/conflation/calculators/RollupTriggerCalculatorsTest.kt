@@ -43,7 +43,7 @@ class RollupTriggerCalculatorsTest {
 
     // 7_000 so far: 3 blocks of 1_000 reach the limit exactly, a 4th block exceeds it although each block is small.
     assertThat(calculator.checkOverflow(compressed(8UL, 10UL, gasUsed = 1_000UL))).isNull()
-    assertThat(calculator.checkOverflow(compressed(8UL, 11UL, gasUsed = 1_000UL))).isEqualTo(RollupTrigger.GAS)
+    assertThat(calculator.checkOverflow(compressed(8UL, 11UL, gasUsed = 1_000UL))).isEqualTo(RollupTrigger.GAS_LIMIT)
     calculator.reset()
     assertThat(calculator.checkOverflow(compressed(8UL, 17UL, gasUsed = 1_000UL))).isNull()
   }
@@ -56,7 +56,7 @@ class RollupTriggerCalculatorsTest {
 
     // 4 so far: 3 blocks of 2 reach the limit exactly, 3 blocks of 2 plus 1 more block exceed it.
     assertThat(calculator.checkOverflow(compressed(4UL, 6UL, txsPerBlock = 2))).isNull()
-    assertThat(calculator.checkOverflow(compressed(4UL, 7UL, txsPerBlock = 2))).isEqualTo(RollupTrigger.TX_COUNT)
+    assertThat(calculator.checkOverflow(compressed(4UL, 7UL, txsPerBlock = 2))).isEqualTo(RollupTrigger.TX_LIMIT)
     calculator.reset()
     assertThat(calculator.checkOverflow(compressed(4UL, 8UL, txsPerBlock = 2))).isNull()
   }
