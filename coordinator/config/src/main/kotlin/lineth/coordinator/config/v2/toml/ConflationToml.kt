@@ -92,6 +92,10 @@ data class ConflationToml(
     example = "2027-01-01T00:00:00Z",
   )
   val riscvStartingBlockTimestampInclusive: Instant? = null,
+  @param:ConfigSection(
+    "RISC-V rollup stage: the DA stream, blob and rollup cut-offs, and rollup proof requests. Omit to disable it.",
+  )
+  val rollup: RollupToml? = null,
 ) {
   init {
     require(proofAggregation.proofsLimit >= (blobCompression.batchesLimit ?: 1u) + 1u) {
@@ -214,6 +218,88 @@ data class ConflationToml(
     }
   }
 
+  data class RollupToml(
+    @param:ConfigDoc(
+      description = "Data rolling hash the RISC-V DA stream starts from at the cutover (32-byte hex).",
+      example = "0x0000000000000000000000000000000000000000000000000000000000000000",
+    )
+    val genesisDataRollingHash: ByteArray,
+    @param:ConfigDoc(description = "DA stream codec version.", default = "fake-v1")
+    val daCodec: String = "fake-v1",
+    @param:ConfigDoc(
+      description = "Compression dictionary for the DA codec. Omit for codecs that do not use one.",
+      example = "/opt/consensys/linea/coordinator/dictionary.bin",
+    )
+    val dictionaryPath: Path? = null,
+    @param:ConfigDoc(description = "Interval between rollup stage ticks.", default = "PT1S")
+    val pollingInterval: Duration = 1.seconds,
+    @param:ConfigDoc(
+      description = "Maximum number of persisted batches fed into the DA stream per tick.",
+      default = "100",
+    )
+    val maxConflationsToFeedPerTick: UInt = 100u,
+    @param:ConfigDoc(
+      description = "Maximum time, from the first block's timestamp, a blob stays open before it is flushed. " +
+        "Batches reach the DA stream only once their execution proof is persisted, so set it well above the " +
+        "execution proving time, or every blob holds a single conflation. Omit to disable.",
+      example = "PT10M",
+    )
+    val blobDeadline: Duration? = null,
+    @param:ConfigDoc(
+      description = "L2 block numbers that must end a blob. Omit for none.",
+      example = "[]",
+    )
+    val blobTargetEndBlocks: List<ULong> = emptyList(),
+    @param:ConfigDoc(
+      description = "Maximum number of conflations in a rollup. Omit for no limit.",
+      example = "10",
+    )
+    val conflationsLimit: UInt? = null,
+    @param:ConfigDoc(
+      description = "L2 block numbers that must end a rollup. Omit for none.",
+      example = "[]",
+    )
+    val targetEndBlocks: List<ULong> = emptyList(),
+    @param:ConfigDoc(
+      description = "Maximum time, from the first block's timestamp, a rollup stays open before it is ended. " +
+        "Batches reach the DA stream only once their execution proof is persisted, so set it well above the " +
+        "execution proving time, or every rollup holds a single conflation. Omit to disable.",
+      example = "PT30M",
+    )
+    val deadline: Duration? = null,
+    @param:ConfigDoc(
+      description = "Maximum DA bytes in a rollup: the conflations' segments, length prefixes included. " +
+        "Omit for no limit.",
+      example = "786432",
+    )
+    val dataLimit: ULong? = null,
+    @param:ConfigDoc(description = "Maximum gas used in a rollup. Omit for no limit.", example = "300000000")
+    val gasLimit: ULong? = null,
+    @param:ConfigDoc(description = "Maximum number of transactions in a rollup. Omit for no limit.", example = "10000")
+    val txCountLimit: ULong? = null,
+  ) {
+    override fun equals(other: Any?): Boolean = other is RollupToml && reified() == other.reified()
+
+    override fun hashCode(): Int = reified().hashCode()
+
+    fun reified(): ConflationConfig.Rollup =
+      ConflationConfig.Rollup(
+        genesisDataRollingHash = genesisDataRollingHash,
+        daCodec = daCodec,
+        dictionaryPath = dictionaryPath,
+        pollingInterval = pollingInterval,
+        maxConflationsToFeedPerTick = maxConflationsToFeedPerTick,
+        blobDeadline = blobDeadline,
+        blobTargetEndBlocks = blobTargetEndBlocks.toSet(),
+        conflationsLimit = conflationsLimit,
+        targetEndBlocks = targetEndBlocks.toSet(),
+        deadline = deadline,
+        dataLimit = dataLimit,
+        gasLimit = gasLimit,
+        txCountLimit = txCountLimit,
+      )
+  }
+
   fun reified(
     defaults: DefaultsToml,
     tracesCountersLimitsV5: TracesCountersV5,
@@ -244,6 +330,7 @@ data class ConflationToml(
       tracesLimits = tracesCountersLimitsV5,
       backtestingDirectory = backtestingDirectory,
       riscvStartingBlockTimestampInclusive = this.riscvStartingBlockTimestampInclusive,
+      rollup = this.rollup?.reified(),
     )
   }
 }
