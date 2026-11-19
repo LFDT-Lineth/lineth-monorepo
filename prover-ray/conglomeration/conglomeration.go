@@ -26,6 +26,7 @@ package conglomeration
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"sync"
 
@@ -263,12 +264,13 @@ func (r *Reducer) startFullMerges() {
 	}
 }
 
-// safeMerge merges the children and returns a panic of the merge as an error:
-// it runs in a goroutine of its own, where a panic would end the process.
+// safeMerge merges the children and returns a panic of the merge as an error,
+// with its stack: it runs in a goroutine of its own, where a panic would end
+// the process.
 func safeMerge(merger Merger, children []Node) (node Node, err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("merge panicked: %v", p)
+			err = fmt.Errorf("merge panicked: %v\n%s", p, debug.Stack())
 		}
 	}()
 	return merger.Merge(children)

@@ -392,6 +392,7 @@ func TestReducer_MergePanic(t *testing.T) {
 	sys := testSystem(false)
 	_, err := reduce(panicMerger{NewMockMerger(sys)}, 1, shardNode(sys, 0, elem(1)), shardNode(sys, 1, elem(1)))
 	require.ErrorContains(t, err, "merge panicked: data length too large for column")
+	require.ErrorContains(t, err, "panicMerger.Merge", "the error should say where the merge panicked")
 }
 
 // seededShardNode is a shard proof over the seeded sys with a balanced bus,
