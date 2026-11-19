@@ -3,6 +3,10 @@
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 ## [1.5.0] - 2026-11-03
 
 ### 🚀 Features
