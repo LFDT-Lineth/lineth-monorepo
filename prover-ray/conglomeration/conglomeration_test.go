@@ -11,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -387,12 +388,26 @@ type panicMerger struct{ MockMerger }
 func (panicMerger) Merge([]Node) (Node, error) { panic("data length too large for column") }
 
 // TestReducer_MergePanic checks that a merge that panics in the background
-// fails the reduction instead of the process.
+// fails the reduction instead of the process, and logs where it panicked.
 func TestReducer_MergePanic(t *testing.T) {
+	hook := logtest.NewGlobal()
+	t.Cleanup(hook.Reset)
 	sys := testSystem(false)
 	_, err := reduce(panicMerger{NewMockMerger(sys)}, 1, shardNode(sys, 0, elem(1)), shardNode(sys, 1, elem(1)))
-	require.ErrorContains(t, err, "merge panicked: data length too large for column")
-	require.ErrorContains(t, err, "panicMerger.Merge", "the error should say where the merge panicked")
+	require.EqualError(t, err, "merge panicked: data length too large for column",
+		"the error should be short: it goes into the response")
+	require.NotNil(t, hook.LastEntry(), "the panic should be logged")
+	require.Contains(t, hook.LastEntry().Message, "panicMerger.Merge", "the log should say where the merge panicked")
+}
+
+// TestReducer_RootMergePanic checks that a root merge that panics, which runs
+// in the caller of Close, fails the reduction instead of the process.
+func TestReducer_RootMergePanic(t *testing.T) {
+	sys := testSystem(false)
+	last := func([]Node) (Node, error) { panic("data length too large for column") }
+	_, err := reduceWith(NewMockMerger(sys), 1, last, shardNode(sys, 0, elem(1)), shardNode(sys, 1, elem(1)))
+	require.EqualError(t, err, "merge panicked: data length too large for column",
+		"a panic of the root merge should be returned as an error")
 }
 
 // seededShardNode is a shard proof over the seeded sys with a balanced bus,

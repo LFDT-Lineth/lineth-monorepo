@@ -31,6 +31,7 @@ import (
 	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/sirupsen/logrus"
 )
 
 // Kind tells a shard proof from a node merged by the [Merger].
@@ -238,7 +239,7 @@ func (r *Reducer) Close(last func(children []Node) (Node, error)) (Node, error) 
 		case r.last != nil:
 			children := r.merged
 			r.merged = nil
-			return r.last(children)
+			return safeMerge(r.last, children)
 		case len(r.merged) > 1:
 			r.start(&r.merged, len(r.merged))
 		default:
@@ -264,16 +265,17 @@ func (r *Reducer) startFullMerges() {
 	}
 }
 
-// safeMerge merges the children and returns a panic of the merge as an error,
-// with its stack: it runs in a goroutine of its own, where a panic would end
-// the process.
-func safeMerge(merger Merger, children []Node) (node Node, err error) {
+// safeMerge runs merge on the children and returns a panic of the merge as an
+// error, as nothing above it recovers: a panic would end the process. The
+// stack goes to the log, as the error goes into the response.
+func safeMerge(merge func([]Node) (Node, error), children []Node) (node Node, err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("merge panicked: %v\n%s", p, debug.Stack())
+			logrus.Errorf("merge panicked: %v\n%s", p, debug.Stack())
+			err = fmt.Errorf("merge panicked: %v", p)
 		}
 	}()
-	return merger.Merge(children)
+	return merge(children)
 }
 
 // start merges the first k ready nodes of a kind in the background; the
@@ -283,7 +285,7 @@ func (r *Reducer) start(ready *[]Node, k int) {
 	*ready = slices.Delete(*ready, 0, k)
 	r.inFlight++
 	go func() {
-		node, err := safeMerge(r.merger, children)
+		node, err := safeMerge(r.merger.Merge, children)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.inFlight--
