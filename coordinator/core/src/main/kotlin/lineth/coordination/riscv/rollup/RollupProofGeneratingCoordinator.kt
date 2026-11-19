@@ -313,9 +313,9 @@ class RollupProofGeneratingCoordinator(
       parentDataRollingHash = chunkedData.parentDataRollingHash,
       dataRollingHash = chunkedData.dataRollingHash,
       // Every proof window closes its own last chunk, so no bytes are shared with the next window.
-      parentDataTailTakeBytes = 0,
+      parentDataTailTakeBytes = 0u,
       boundaryPrevDataRollingHash = null,
-      finalDataTailDiscardBytes = 0,
+      finalDataTailDiscardBytes = 0u,
       startBlockTimestamp = windowPending.first().startBlockTimestamp,
       endBlockTimestamp = windowPending.last().endBlockTimestamp,
       totalBatchesCount = windowPending.size,

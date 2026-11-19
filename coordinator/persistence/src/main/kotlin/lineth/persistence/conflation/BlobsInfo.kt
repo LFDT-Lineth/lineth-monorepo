@@ -10,18 +10,18 @@ import linea.kotlin.encodeHex
 data class BlobsInfo(
   val parentDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
+  val parentDataTailTakeBytes: UInt,
   val boundaryPrevDataRollingHash: ByteArray?,
-  val finalDataTailDiscardBytes: Int,
+  val finalDataTailDiscardBytes: UInt,
   val blobsData: List<BlobData>,
 ) {
   fun toJsonString(): String =
     JsonObject()
       .put("parentDataRollingHash", parentDataRollingHash.encodeHex())
       .put("dataRollingHash", dataRollingHash.encodeHex())
-      .put("parentDataTailTakeBytes", parentDataTailTakeBytes)
+      .put("parentDataTailTakeBytes", parentDataTailTakeBytes.toLong())
       .put("boundaryPrevDataRollingHash", boundaryPrevDataRollingHash?.encodeHex())
-      .put("finalDataTailDiscardBytes", finalDataTailDiscardBytes)
+      .put("finalDataTailDiscardBytes", finalDataTailDiscardBytes.toLong())
       .put(
         "blobsData",
         JsonArray(
@@ -53,9 +53,9 @@ data class BlobsInfo(
   override fun hashCode(): Int {
     var result = parentDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
+    result = 31 * result + parentDataTailTakeBytes.hashCode()
     result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
-    result = 31 * result + finalDataTailDiscardBytes
+    result = 31 * result + finalDataTailDiscardBytes.hashCode()
     result = 31 * result + blobsData.hashCode()
     return result
   }
@@ -66,15 +66,15 @@ data class BlobsInfo(
       return BlobsInfo(
         parentDataRollingHash = json.requiredString("parentDataRollingHash").decodeHex(),
         dataRollingHash = json.requiredString("dataRollingHash").decodeHex(),
-        parentDataTailTakeBytes = json.requiredInteger("parentDataTailTakeBytes"),
+        parentDataTailTakeBytes = json.requiredUInt("parentDataTailTakeBytes"),
         boundaryPrevDataRollingHash = json.getString("boundaryPrevDataRollingHash")?.decodeHex(),
-        finalDataTailDiscardBytes = json.requiredInteger("finalDataTailDiscardBytes"),
+        finalDataTailDiscardBytes = json.requiredUInt("finalDataTailDiscardBytes"),
         blobsData = (json.getJsonArray("blobsData") ?: error("missing blobsData")).map { item ->
           val blobDataJson = item as JsonObject
           BlobData(
             chunkHash = blobDataJson.requiredString("chunkHash").decodeHex(),
             blobBytes = blobDataJson.requiredString("blobBytes").decodeHex(),
-            batchesCount = blobDataJson.requiredInteger("batchesCount").toUInt(),
+            batchesCount = blobDataJson.requiredUInt("batchesCount"),
             prevDataRollingHash = blobDataJson.requiredString("prevDataRollingHash").decodeHex(),
             dataRollingHash = blobDataJson.requiredString("dataRollingHash").decodeHex(),
           )
@@ -95,5 +95,8 @@ data class BlobsInfo(
     private fun JsonObject.requiredString(key: String): String = getString(key) ?: error("missing $key")
 
     private fun JsonObject.requiredInteger(key: String): Int = getInteger(key) ?: error("missing $key")
+
+    private fun JsonObject.requiredUInt(key: String): UInt =
+      requiredInteger(key).also { require(it >= 0) { "$key must not be negative, got $it" } }.toUInt()
   }
 }

@@ -30,7 +30,7 @@ class BlobRecordV2Test {
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
       dataRollingHash = end,
-      parentDataTailTakeBytes = 100,
+      parentDataTailTakeBytes = 100u,
     )
 
     assertThat(record.blobsData.first().dataRollingHash).isEqualTo(parent)
@@ -45,9 +45,9 @@ class BlobRecordV2Test {
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
       dataRollingHash = parent,
-      parentDataTailTakeBytes = 100,
+      parentDataTailTakeBytes = 100u,
       boundaryPrevDataRollingHash = boundary,
-      finalDataTailDiscardBytes = 50,
+      finalDataTailDiscardBytes = 50u,
       blobsData = listOf(createBlobData(boundary, parent)),
     )
 
@@ -91,7 +91,7 @@ class BlobRecordV2Test {
       createBlobRecordV2(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
-        parentDataTailTakeBytes = 100,
+        parentDataTailTakeBytes = 100u,
         boundaryPrevDataRollingHash = null,
       )
     }.hasMessageContaining("boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0")
@@ -103,7 +103,7 @@ class BlobRecordV2Test {
       )
     }.hasMessageContaining("boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0")
     assertThatThrownBy {
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 130_047)
+      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 130_047u)
     }.hasMessageContaining("finalDataTailDiscardBytes=130047 must be in 0..130046")
     assertThatThrownBy {
       createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, blobsData = emptyList())
@@ -112,7 +112,7 @@ class BlobRecordV2Test {
 
   @Test
   fun `equality includes the tail fields and per-blob hashes`() {
-    val record = createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, parentDataTailTakeBytes = 100)
+    val record = createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, parentDataTailTakeBytes = 100u)
     val equalRecord = record.copy(
       boundaryPrevDataRollingHash = record.boundaryPrevDataRollingHash!!.copyOf(),
       blobsData = record.blobsData.map { it.copy(dataRollingHash = it.dataRollingHash.copyOf()) },
@@ -120,6 +120,6 @@ class BlobRecordV2Test {
 
     assertThat(record).isEqualTo(equalRecord)
     assertThat(record.hashCode()).isEqualTo(equalRecord.hashCode())
-    assertThat(record).isNotEqualTo(record.copy(finalDataTailDiscardBytes = 1))
+    assertThat(record).isNotEqualTo(record.copy(finalDataTailDiscardBytes = 1u))
   }
 }
