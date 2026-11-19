@@ -8,12 +8,12 @@ package maru.executionlayer
 
 import maru.consensus.ElFork
 import maru.executionlayer.client.EngineApiEndpoint
+import maru.executionlayer.manager.EngineApiExecutionLayerManager
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 
 object ExecutionLayerFactory {
   fun buildExecutionLayerManager(
     engineApiEndpoint: EngineApiEndpoint,
     elFork: ElFork,
-  ): ExecutionLayerManager = JsonRpcExecutionLayerManager(engineApiEndpoint.clientFor(elFork))
+  ): ExecutionLayerManager = EngineApiExecutionLayerManager(engineApiEndpoint.clientFor(elFork))
 }

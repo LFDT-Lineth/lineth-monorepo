@@ -4,14 +4,10 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package maru.executionlayer.client
+package maru.executionlayer.manager
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
-import maru.executionlayer.manager.ForkChoiceUpdatedResult
-import maru.executionlayer.manager.LatestBlockMetadata
-import maru.executionlayer.manager.PayloadAttributes
-import maru.executionlayer.manager.PayloadStatus
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**

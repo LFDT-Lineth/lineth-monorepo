@@ -26,8 +26,8 @@ import maru.core.ext.DataGenerators
 import maru.core.ext.metrics.TestMetrics
 import maru.database.BeaconChain
 import maru.executionlayer.client.EngineApiEndpoint
+import maru.executionlayer.manager.EngineApiExecutionLayerManager
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.serialization.rlp.HashUtil
 import net.consensys.linea.async.get
@@ -414,7 +414,7 @@ class EagerQbftBlockCreatorTest {
         requestTimeouts = { 1.minutes },
         log = LogManager.getLogger(EagerQbftBlockCreatorTest::class.java),
       )
-    return JsonRpcExecutionLayerManager(engineApiEndpoint.clientFor(ElFork.Prague))
+    return EngineApiExecutionLayerManager(engineApiEndpoint.clientFor(ElFork.Prague))
   }
 
   private fun createDelayedBlockCreator(

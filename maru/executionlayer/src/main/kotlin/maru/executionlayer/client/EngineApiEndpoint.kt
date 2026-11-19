@@ -8,6 +8,7 @@ package maru.executionlayer.client
 
 import io.vertx.core.Vertx
 import maru.consensus.ElFork
+import maru.executionlayer.manager.EngineApiClient
 import net.consensys.linea.jsonrpc.client.JsonRpcV2Client
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Logger

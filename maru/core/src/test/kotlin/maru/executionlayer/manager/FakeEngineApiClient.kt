@@ -8,7 +8,6 @@ package maru.executionlayer.manager
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
-import maru.executionlayer.client.EngineApiClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
 

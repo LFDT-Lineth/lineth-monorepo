@@ -9,7 +9,6 @@ package maru.executionlayer.manager
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
-import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,7 +20,7 @@ import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextULong
 
-class JsonRpcExecutionLayerManagerTest {
+class EngineApiExecutionLayerManagerTest {
   private lateinit var engineApiClient: FakeEngineApiClient
   private lateinit var executionLayerManager: ExecutionLayerManager
 
@@ -33,7 +32,7 @@ class JsonRpcExecutionLayerManagerTest {
   @BeforeEach
   fun setUp() {
     engineApiClient = FakeEngineApiClient()
-    executionLayerManager = JsonRpcExecutionLayerManager(engineApiClient)
+    executionLayerManager = EngineApiExecutionLayerManager(engineApiClient)
   }
 
   private fun validStatus() = PayloadStatus(ExecutionPayloadStatus.VALID, Random.nextBytes(32), validationError = null)
@@ -152,7 +151,7 @@ class JsonRpcExecutionLayerManagerTest {
   fun `finishBlockBuilding reports getPayload failures with context`() {
     respondToForkChoiceUpdate(Random.nextBytes(8))
     engineApiClient.getPayloadResponse = {
-      SafeFuture.failedFuture(JsonRpcErrorResponseException(-38001, "Unknown payload", null))
+      SafeFuture.failedFuture(IllegalArgumentException("Unknown payload"))
     }
     startBlockBuilding().get()
 
@@ -162,8 +161,8 @@ class JsonRpcExecutionLayerManagerTest {
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessage(
         "engine_getPayload request failed: fork=Prague " +
-          "Cause: code=-38001 message=Unknown payload errorData=null",
-      ).hasCauseInstanceOf(JsonRpcErrorResponseException::class.java)
+          "Cause: Unknown payload",
+      ).hasCauseInstanceOf(IllegalArgumentException::class.java)
   }
 
   @Test
@@ -189,14 +188,14 @@ class JsonRpcExecutionLayerManagerTest {
   fun `newPayload reports request failures with context`() {
     val executionPayload = DataGenerators.randomExecutionPayload()
     engineApiClient.newPayloadResponse = {
-      SafeFuture.failedFuture(JsonRpcErrorResponseException(-32000, "Unexpected error!", null))
+      SafeFuture.failedFuture(IllegalStateException("Unexpected error!"))
     }
 
     val exception = assertThrows<ExecutionException> { executionLayerManager.newPayload(executionPayload).get() }
 
     assertThat(exception).cause().hasMessage(
       "engine_newPayload request failed: elBlockNumber=${executionPayload.blockNumber} fork=Prague " +
-        "Cause: code=-32000 message=Unexpected error! errorData=null",
+        "Cause: Unexpected error!",
     )
   }
 
