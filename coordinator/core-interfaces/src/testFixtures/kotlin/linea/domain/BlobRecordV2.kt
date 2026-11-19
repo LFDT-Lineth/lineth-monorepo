@@ -34,9 +34,9 @@ fun createBlobRecordV2(
   parentDataRollingHash: ByteArray = Random.nextBytes(32),
   dataRollingHash: ByteArray = Random.nextBytes(32),
   totalBatchesCount: UInt = 1U,
-  parentDataTailTakeBytes: Int = 0,
-  boundaryPrevDataRollingHash: ByteArray? = if (parentDataTailTakeBytes > 0) Random.nextBytes(32) else null,
-  finalDataTailDiscardBytes: Int = 0,
+  parentDataTailTakeBytes: UInt = 0u,
+  boundaryPrevDataRollingHash: ByteArray? = if (parentDataTailTakeBytes > 0u) Random.nextBytes(32) else null,
+  finalDataTailDiscardBytes: UInt = 0u,
   blobsData: List<BlobData> = if (boundaryPrevDataRollingHash != null) {
     listOf(
       createBlobData(prevDataRollingHash = boundaryPrevDataRollingHash, dataRollingHash = parentDataRollingHash),

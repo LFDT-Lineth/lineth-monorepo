@@ -23,8 +23,8 @@ class RollupProofPersistenceHandler(
     val inputs = proof.publicInputs
     if (!inputs.parentDataRollingHash.contentEquals(context.parentDataRollingHash) ||
       !inputs.endDataRollingHash.contentEquals(context.dataRollingHash) ||
-      inputs.parentDataTailTakeBytes != context.parentDataTailTakeBytes ||
-      inputs.finalDataTailDiscardBytes != context.finalDataTailDiscardBytes
+      inputs.parentDataTailTakeBytes.toLong() != context.parentDataTailTakeBytes.toLong() ||
+      inputs.finalDataTailDiscardBytes.toLong() != context.finalDataTailDiscardBytes.toLong()
     ) {
       val message = "rollup proof DA outputs differ from the request: rollup=${context.proofIndex.intervalString()} " +
         "parentDataRollingHash=${inputs.parentDataRollingHash.encodeHex()} " +

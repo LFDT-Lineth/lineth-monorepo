@@ -202,14 +202,14 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val riscvBatches = (0L until 8L).map { createBatch(startBlockNumber = it * 5 + 1, endBlockNumber = it * 5 + 5) }
     // Rollups ending inside a blob share it with the next one.
     val rollups = listOf(
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 100),
+      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 100u),
       createBlobRecordV2(
         startBlockNumber = 11UL,
         endBlockNumber = 20UL,
-        parentDataTailTakeBytes = 100,
-        finalDataTailDiscardBytes = 200,
+        parentDataTailTakeBytes = 100u,
+        finalDataTailDiscardBytes = 200u,
       ),
-      createBlobRecordV2(startBlockNumber = 21UL, endBlockNumber = 30UL, parentDataTailTakeBytes = 200),
+      createBlobRecordV2(startBlockNumber = 21UL, endBlockNumber = 30UL, parentDataTailTakeBytes = 200u),
       createBlobRecordV2(startBlockNumber = 31UL, endBlockNumber = 40UL),
     )
     riscvBatches.forEach { batchesRepository.saveNewBatch(it).get() }

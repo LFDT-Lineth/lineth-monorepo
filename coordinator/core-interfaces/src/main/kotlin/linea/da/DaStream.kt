@@ -99,7 +99,7 @@ data class SealedBlob(
   val kzgProof: ByteArray,
   val prevDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
-  val payloadBytes: Int,
+  val payloadBytes: UInt,
   val segmentEnds: List<SegmentEnd>,
 ) {
   init {
@@ -113,7 +113,7 @@ data class SealedBlob(
     }
     require(prevDataRollingHash.size == 32) { "prevDataRollingHash must be 32 bytes, got ${prevDataRollingHash.size}" }
     require(dataRollingHash.size == 32) { "dataRollingHash must be 32 bytes, got ${dataRollingHash.size}" }
-    require(payloadBytes in 1..DaConstants.BLOB_PAYLOAD_CAPACITY) {
+    require(payloadBytes in 1u..DaConstants.BLOB_PAYLOAD_CAPACITY.toUInt()) {
       "payloadBytes=$payloadBytes must be in 1..${DaConstants.BLOB_PAYLOAD_CAPACITY}"
     }
   }
@@ -143,7 +143,7 @@ data class SealedBlob(
     result = 31 * result + kzgProof.contentHashCode()
     result = 31 * result + prevDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
-    result = 31 * result + payloadBytes
+    result = 31 * result + payloadBytes.hashCode()
     result = 31 * result + segmentEnds.hashCode()
     return result
   }
@@ -161,10 +161,10 @@ data class SealedBlob(
  */
 data class SegmentEnd(
   val conflationEndBlock: ULong,
-  val unusedTailBytes: Int,
+  val unusedTailBytes: UInt,
 ) {
   init {
-    require(unusedTailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
+    require(unusedTailBytes <= DaConstants.MAX_TAIL_BYTES.toUInt()) {
       "unusedTailBytes=$unusedTailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
   }
