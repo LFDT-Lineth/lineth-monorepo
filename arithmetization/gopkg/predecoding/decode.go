@@ -8,6 +8,9 @@ import (
 	"maps"
 	"math"
 	"sort"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 const (
@@ -755,10 +758,8 @@ func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedPro
 	return DecodedProgram{InstructionBase: base, Decoded: decoded}, nil
 }
 
-func executableImage(
-	blobs []elfmapping.Blob,
-	maxRecords uint64,
-) (uint64, []byte, uint64, error) {
+// executableBlobs keeps the executable blobs and sorts them by address.
+func executableBlobs(blobs []elfmapping.Blob) ([]elfmapping.Blob, error) {
 	executable := make([]elfmapping.Blob, 0, len(blobs))
 	for _, blob := range blobs {
 		if blob.Executable {
@@ -766,24 +767,31 @@ func executableImage(
 		}
 	}
 	if len(executable) == 0 {
-		return 0, nil, 0, fmt.Errorf("no executable blobs found for instruction decoding")
+		return nil, fmt.Errorf("no executable blobs found for instruction decoding")
 	}
 	sort.SliceStable(executable, func(i, j int) bool {
 		return executable[i].Address < executable[j].Address
 	})
+	return executable, nil
+}
 
-	base := executable[0].Address &^ uint64(3)
+// executableSpanEnd returns the highest end address of the blobs.
+// The blobs are in address order. A blob whose end wraps the address space,
+// or a non-empty blob that overlaps the previous one, is rejected. An empty
+// blob does not move the previous end. The end must fit in a 32-bit address
+// with room to round it up to a multiple of 4.
+func executableSpanEnd(blobs []elfmapping.Blob) (uint64, error) {
 	var previousEnd, maxEnd uint64
-	for i, blob := range executable {
+	for i, blob := range blobs {
 		end := blob.Address + uint64(len(blob.Data))
 		if end < blob.Address {
-			return 0, nil, 0, fmt.Errorf(
+			return 0, fmt.Errorf(
 				"executable blob at %#x overflows address space",
 				blob.Address,
 			)
 		}
 		if i != 0 && len(blob.Data) != 0 && blob.Address < previousEnd {
-			return 0, nil, 0, fmt.Errorf(
+			return 0, fmt.Errorf(
 				"executable blob at %#x overlaps preceding blob ending at %#x",
 				blob.Address,
 				previousEnd,
@@ -797,12 +805,20 @@ func executableImage(
 		}
 	}
 	if maxEnd > math.MaxUint32-3 {
-		return 0, nil, 0, fmt.Errorf("executable span end %#x is outside the 32-bit address space", maxEnd)
+		return 0, fmt.Errorf("executable span end %#x is outside the 32-bit address space", maxEnd)
 	}
+	return maxEnd, nil
+}
+
+// executableSpan rounds the blob range to 4-byte words. base is the first
+// address rounded down, and records is the number of words up to maxEnd
+// rounded up. The count must fit maxRecords and a Go slice.
+func executableSpan(firstAddress, maxEnd, maxRecords uint64) (base, records uint64, err error) {
+	base = firstAddress &^ uint64(3)
 	alignedEnd := (maxEnd + 3) &^ uint64(3)
-	records := (alignedEnd - base) / 4
+	records = (alignedEnd - base) / 4
 	if records > maxRecords {
-		return 0, nil, 0, fmt.Errorf(
+		return 0, 0, fmt.Errorf(
 			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous",
 			records,
 			maxRecords,
@@ -812,9 +828,28 @@ func executableImage(
 	}
 	span := alignedEnd - base
 	if span > uint64(math.MaxInt) {
-		return 0, nil, 0, fmt.Errorf("executable span has unsupported size %d", span)
+		return 0, 0, fmt.Errorf("executable span has unsupported size %d", span)
 	}
-	image := make([]byte, int(span))
+	return base, records, nil
+}
+
+func executableImage(
+	blobs []elfmapping.Blob,
+	maxRecords uint64,
+) (uint64, []byte, uint64, error) {
+	executable, err := executableBlobs(blobs)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	maxEnd, err := executableSpanEnd(executable)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	base, records, err := executableSpan(executable[0].Address, maxEnd, maxRecords)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	image := make([]byte, int(records*4))
 	for _, blob := range executable {
 		copy(image[blob.Address-base:], blob.Data)
 	}
