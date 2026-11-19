@@ -513,7 +513,6 @@ var decodeRTypeVectors = map[rTypeInput]uint32{
 	// CUSTOM1, funct7 must be 0000000.
 	{opcodeCUSTOM1, 0b000, 0b0000000}: rtypeOpKeccak,
 	{opcodeCUSTOM1, 0b001, 0b0000000}: rtypeOpPoseidon2,
-	{opcodeCUSTOM1, 0b010, 0b0000000}: rtypeOpWriteOutput,
 }
 
 // TestDecodeRTypeSemantic checks every valid combination against the
