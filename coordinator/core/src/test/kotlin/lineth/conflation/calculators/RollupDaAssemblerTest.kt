@@ -66,11 +66,11 @@ class RollupDaAssemblerTest {
     rollups.zipWithNext().forEach { (previous, next) ->
       assertThat(next.da.parentDataRollingHash).isEqualTo(previous.da.expectedEndDataRollingHash)
       assertThat(next.da.parentDataTailTakeBytes).isEqualTo(previous.da.expectedFinalDataTailDiscardBytes)
-      if (next.da.parentDataTailTakeBytes > 0) {
+      if (next.da.parentDataTailTakeBytes > 0u) {
         assertThat(next.da.blobs.first()).isSameAs(previous.da.blobs.last())
         assertThat(next.da.boundaryPrevDataRollingHash).isEqualTo(previous.da.blobs.last().prevDataRollingHash)
       } else {
-        assertThat(next.da.boundaryPrevDataRollingHash).isNull()
+        assertThat(next.da.boundaryPrevDataRollingHash).isEqualTo(next.da.parentDataRollingHash)
       }
     }
   }
@@ -92,10 +92,10 @@ class RollupDaAssemblerTest {
     assertThat(spanning.da.blobs).hasSize(5)
     assertThat(spanning.da.blobs.first()).isSameAs(first.da.blobs.single())
     assertThat(spanning.da.blobs.subList(1, 4)).allSatisfy { assertThat(it.segmentEnds).isEmpty() }
-    assertThat(spanning.da.parentDataTailTakeBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY - 10_000)
-    assertThat(spanning.da.expectedFinalDataTailDiscardBytes).isEqualTo(10_000)
+    assertThat(spanning.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
+    assertThat(spanning.da.expectedFinalDataTailDiscardBytes).isEqualTo(10_000u)
     assertThat(last.da.blobs).containsExactly(spanning.da.blobs.last())
-    assertThat(last.da.expectedFinalDataTailDiscardBytes).isZero()
+    assertThat(last.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
   }
 
   @Test
@@ -111,7 +111,7 @@ class RollupDaAssemblerTest {
     val blob = rollups.first().da.blobs.single()
     assertThat(blob.segmentEnds).hasSize(10)
     assertThat(rollups).allSatisfy { assertThat(it.da.blobs).containsExactly(blob) }
-    assertThat(rollups.map { it.da.expectedFinalDataTailDiscardBytes }).containsExactly(70_000, 40_000, 10_000, 0)
+    assertThat(rollups.map { it.da.expectedFinalDataTailDiscardBytes }).containsExactly(70_000u, 40_000u, 10_000u, 0u)
   }
 
   @Test
@@ -133,8 +133,8 @@ class RollupDaAssemblerTest {
     assertThat(blob1.segmentEnds.map { it.conflationEndBlock }).containsExactly(2UL, 4UL, 6UL, 8UL)
     assertThat(blob2.segmentEnds).isEmpty()
     assertThat(blob3.segmentEnds.map { it.conflationEndBlock }).containsExactly(15UL, 17UL, 19UL, 21UL)
-    assertThat(mixed.da.parentDataTailTakeBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY - 20_000)
-    assertThat(mixed.da.expectedFinalDataTailDiscardBytes).isZero()
+    assertThat(mixed.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 20_000).toUInt())
+    assertThat(mixed.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
   }
 
   @Test
@@ -153,13 +153,13 @@ class RollupDaAssemblerTest {
 
     assertThat(first.da.blobs).containsExactly(blob1)
     assertThat(first.da.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
-    assertThat(first.da.parentDataTailTakeBytes).isZero()
+    assertThat(first.da.parentDataTailTakeBytes).isEqualTo(0u)
     assertThat(second.da.blobs).containsExactly(blob1)
-    assertThat(second.da.parentDataTailTakeBytes).isEqualTo(blob1.payloadBytes - 40_000)
+    assertThat(second.da.parentDataTailTakeBytes).isEqualTo(blob1.payloadBytes - 40_000u)
     assertThat(second.da.boundaryPrevDataRollingHash).isEqualTo(blob1.prevDataRollingHash)
     assertThat(third.da.blobs).containsExactly(blob1, blob2)
     assertThat(third.da.expectedEndDataRollingHash).isEqualTo(blob2.dataRollingHash)
-    assertThat(third.da.expectedFinalDataTailDiscardBytes).isZero()
+    assertThat(third.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
   }
 
   @Test
@@ -185,7 +185,7 @@ class RollupDaAssemblerTest {
       DaStreamPosition(
         dataRollingHash = blob1.dataRollingHash,
         parentBlobDataRollingHash = blob1.prevDataRollingHash,
-        sharedBlobCarryOverTailBytes = 100,
+        sharedBlobCarryOverTailBytes = 100u,
         sharedBlob = ByteArray(BLOB_BYTES),
       ),
     )
@@ -218,7 +218,7 @@ class RollupDaAssemblerTest {
     assertThatThrownBy {
       RollupDaAssembler(
         DaStreamPosition.fresh(genesisDataRollingHash),
-      ).endRollup(SegmentEnd(1UL, 1))
+      ).endRollup(SegmentEnd(1UL, 1u))
     }
       .hasMessageContaining("without blobs")
   }
@@ -232,10 +232,17 @@ class RollupDaAssemblerTest {
       kzgProof = ByteArray(KZG_POINT_BYTES),
       prevDataRollingHash = ByteArray(32),
       dataRollingHash = ByteArray(32),
-      payloadBytes = 1,
+      payloadBytes = 1u,
       segmentEnds = emptyList(),
     )
-    fun witness() = RollupDaWitness(listOf(blob()), ByteArray(32) { 1 }, 0, null, ByteArray(32) { 2 }, 0)
+    fun witness() = RollupDaWitness(
+      listOf(blob()),
+      ByteArray(32) { 1 },
+      0u,
+      ByteArray(32) { 1 },
+      ByteArray(32) { 2 },
+      0u,
+    )
 
     assertThat(witness()).isEqualTo(witness())
     assertThat(witness().hashCode()).isEqualTo(witness().hashCode())

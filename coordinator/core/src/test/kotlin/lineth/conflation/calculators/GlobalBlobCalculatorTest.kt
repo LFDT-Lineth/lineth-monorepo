@@ -32,7 +32,7 @@ class GlobalBlobCalculatorTest {
     stream: DaStream = FakeDaStream(DaStreamPosition.fresh(genesisDataRollingHash)),
     triggers: List<BlobTriggerCalculator> = emptyList(),
     blobDeadline: kotlin.time.Duration? = null,
-    sharedBlobCarryOverTailBytes: Int = 0,
+    sharedBlobCarryOverTailBytes: UInt = 0u,
   ) = GlobalBlobCalculator(
     FakeDaCompressor(),
     stream,
@@ -67,12 +67,12 @@ class GlobalBlobCalculatorTest {
     assertThat(events[0].conflationEnds()).containsExactly(1UL)
     assertThat(
       events[0].conflations.single().cut,
-    ).isEqualTo(SegmentEnd(1UL, unusedTailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
+    ).isEqualTo(SegmentEnd(1UL, unusedTailBytes = (BLOB_PAYLOAD_CAPACITY - 50_000).toUInt()))
     assertThat(events[0].next!!.conflation).isEqualTo(b)
     assertThat(events[0].flushed).isFalse()
     assertThat(events[1].conflationEnds()).containsExactly(2UL, 3UL)
     assertThat(events[1].conflations.map { it.cut.unusedTailBytes })
-      .containsExactly(BLOB_PAYLOAD_CAPACITY - 19_953, BLOB_PAYLOAD_CAPACITY - 59_953)
+      .containsExactly((BLOB_PAYLOAD_CAPACITY - 19_953).toUInt(), (BLOB_PAYLOAD_CAPACITY - 59_953).toUInt())
     assertThat(events[1].next!!.conflation).isEqualTo(d)
     assertThat(
       SEGMENT_LENGTH_PREFIX_BYTES + events[1].conflations.first().conflation.compressed.compressedData.size,
@@ -125,7 +125,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events[1].flushed).isTrue()
     assertThat(events[1].next).isNull()
     assertThat(events[1].blob.prevDataRollingHash).isEqualTo(events[0].blob.dataRollingHash)
-    assertThat(events[1].blob.payloadBytes).isLessThan(BLOB_PAYLOAD_CAPACITY)
+    assertThat(events[1].blob.payloadBytes).isLessThan(BLOB_PAYLOAD_CAPACITY.toUInt())
   }
 
   @Test
@@ -187,7 +187,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events[0].conflations.single().conflation.conflation).isEqualTo(first)
     assertThat(
       events[0].conflations.single().cut,
-    ).isEqualTo(SegmentEnd(3UL, unusedTailBytes = BLOB_PAYLOAD_CAPACITY - 50_000))
+    ).isEqualTo(SegmentEnd(3UL, unusedTailBytes = (BLOB_PAYLOAD_CAPACITY - 50_000).toUInt()))
     assertThat(events[0].next!!.conflation).isEqualTo(second)
     assertThat(events[1].conflations.map { it.conflation.conflation }).containsExactly(second, third)
     assertThat(events[1].conflations.map { it.cut.conflationEndBlock }).containsExactly(7UL, 9UL)
@@ -360,7 +360,7 @@ class GlobalBlobCalculatorTest {
 
   @Test
   fun `a cut that does not match the oldest queued conflation fails`() {
-    val stream = ScriptedDaStream(sealOnAppend = listOf(blobWithCuts(SegmentEnd(99UL, 10))))
+    val stream = ScriptedDaStream(sealOnAppend = listOf(blobWithCuts(SegmentEnd(99UL, 10u))))
     val calculator = calculator(stream = stream)
 
     assertThatThrownBy { calculator.newConflation(conflation(1UL, 10_000)) }
@@ -385,7 +385,7 @@ class GlobalBlobCalculatorTest {
     kzgProof = ByteArray(KZG_POINT_BYTES),
     prevDataRollingHash = ByteArray(32),
     dataRollingHash = ByteArray(32),
-    payloadBytes = BLOB_PAYLOAD_CAPACITY,
+    payloadBytes = BLOB_PAYLOAD_CAPACITY.toUInt(),
     segmentEnds = cuts.toList(),
   )
 

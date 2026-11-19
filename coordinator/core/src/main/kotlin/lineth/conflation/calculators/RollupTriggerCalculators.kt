@@ -52,13 +52,13 @@ class RollupTriggerCalculatorByDataLimit(limit: ULong) : RollupTriggerCalculator
 }
 
 /** Ends the rollup before the next conflation if the rollup's gas used would exceed [limit]. */
-class RollupTriggerCalculatorByGas(limit: ULong) : RollupTriggerCalculatorBySum(limit, RollupTrigger.GAS) {
+class RollupTriggerCalculatorByGas(limit: ULong) : RollupTriggerCalculatorBySum(limit, RollupTrigger.GAS_LIMIT) {
   override fun measure(conflation: CompressedBlocksConflation): ULong =
     conflation.conflation.blocks.sumOf { it.gasUsed }
 }
 
 /** Ends the rollup before the next conflation if the rollup's transaction count would exceed [limit]. */
-class RollupTriggerCalculatorByTxCount(limit: ULong) : RollupTriggerCalculatorBySum(limit, RollupTrigger.TX_COUNT) {
+class RollupTriggerCalculatorByTxCount(limit: ULong) : RollupTriggerCalculatorBySum(limit, RollupTrigger.TX_LIMIT) {
   override fun measure(conflation: CompressedBlocksConflation): ULong =
     conflation.conflation.blocks.sumOf { it.transactions.size.toULong() }
 }
