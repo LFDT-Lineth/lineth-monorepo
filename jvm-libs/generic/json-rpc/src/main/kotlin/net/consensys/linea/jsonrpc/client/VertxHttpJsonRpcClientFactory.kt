@@ -30,13 +30,13 @@ interface JsonRpcClientFactory {
     httpVersion: HttpVersion? = null,
     requestObjectMapper: ObjectMapper = objectMapper,
     responseObjectMapper: ObjectMapper = objectMapper,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { it is Err },
     log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
     requestResponseLogLevel: Level = Level.TRACE,
     failuresLogLevel: Level = Level.DEBUG,
     requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-    requestOverallTimeoutProvider: (method: String) -> Duration? = { null },
+    methodTimeoutOverrideProvider: (method: String) -> Duration? = { null },
   ): JsonRpcV2Client
 }
 
@@ -53,12 +53,12 @@ class VertxHttpJsonRpcClientFactory(
     httpVersion: HttpVersion? = null,
     requestObjectMapper: ObjectMapper = objectMapper,
     responseObjectMapper: ObjectMapper = objectMapper,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
     requestResponseLogLevel: Level = this.requestResponseLogLevel,
     failuresLogLevel: Level = this.failuresLogLevel,
     requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-    requestOverallTimeoutProvider: (method: String) -> Duration? = { null },
+    methodTimeoutOverrideProvider: (method: String) -> Duration? = { null },
   ): VertxHttpJsonRpcClient {
     val clientOptions =
       HttpClientOptions()
@@ -79,11 +79,11 @@ class VertxHttpJsonRpcClientFactory(
       log = log,
       requestParamsObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,
-      requestTimeout = requestTimeout,
+      defaultRequestTimeout = defaultRequestTimeout,
       requestResponseLogLevel = requestResponseLogLevel,
       failuresLogLevel = failuresLogLevel,
       requestHeadersProvider = requestHeadersProvider,
-      requestOverallTimeoutProvider = requestOverallTimeoutProvider,
+      methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
     )
   }
 
@@ -93,13 +93,13 @@ class VertxHttpJsonRpcClientFactory(
     httpVersion: HttpVersion? = null,
     requestObjectMapper: ObjectMapper = objectMapper,
     responseObjectMapper: ObjectMapper = objectMapper,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
     requestResponseLogLevel: Level = this.requestResponseLogLevel,
     failuresLogLevel: Level = this.failuresLogLevel,
     requestPriorityComparator: Comparator<JsonRpcRequest>? = null,
     requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-    requestOverallTimeoutProvider: (method: String) -> Duration? = { null },
+    methodTimeoutOverrideProvider: (method: String) -> Duration? = { null },
   ): JsonRpcClient {
     val rpcClients = endpoints.map { endpoint ->
       create(
@@ -108,12 +108,12 @@ class VertxHttpJsonRpcClientFactory(
         httpVersion = httpVersion,
         requestObjectMapper = requestObjectMapper,
         responseObjectMapper = responseObjectMapper,
-        requestTimeout = requestTimeout,
+        defaultRequestTimeout = defaultRequestTimeout,
         log = log,
         requestResponseLogLevel = requestResponseLogLevel,
         failuresLogLevel = failuresLogLevel,
         requestHeadersProvider = requestHeadersProvider,
-        requestOverallTimeoutProvider = requestOverallTimeoutProvider,
+        methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
       )
     }
 
@@ -132,7 +132,7 @@ class VertxHttpJsonRpcClientFactory(
     httpVersion: HttpVersion? = null,
     requestObjectMapper: ObjectMapper = objectMapper,
     responseObjectMapper: ObjectMapper = objectMapper,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
     requestResponseLogLevel: Level = this.requestResponseLogLevel,
     failuresLogLevel: Level = this.failuresLogLevel,
@@ -143,7 +143,7 @@ class VertxHttpJsonRpcClientFactory(
       httpVersion = httpVersion,
       requestObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,
-      requestTimeout = requestTimeout,
+      defaultRequestTimeout = defaultRequestTimeout,
       log = log,
       requestResponseLogLevel = requestResponseLogLevel,
       failuresLogLevel = failuresLogLevel,
@@ -169,7 +169,7 @@ class VertxHttpJsonRpcClientFactory(
     httpVersion: HttpVersion? = null,
     requestObjectMapper: ObjectMapper = objectMapper,
     responseObjectMapper: ObjectMapper = objectMapper,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
     requestResponseLogLevel: Level = this.requestResponseLogLevel,
     failuresLogLevel: Level = this.failuresLogLevel,
@@ -180,7 +180,7 @@ class VertxHttpJsonRpcClientFactory(
       httpVersion = httpVersion,
       requestObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,
-      requestTimeout = requestTimeout,
+      defaultRequestTimeout = defaultRequestTimeout,
       log = log,
       requestResponseLogLevel = requestResponseLogLevel,
       failuresLogLevel = failuresLogLevel,
@@ -206,13 +206,13 @@ class VertxHttpJsonRpcClientFactory(
     httpVersion: HttpVersion?,
     requestObjectMapper: ObjectMapper,
     responseObjectMapper: ObjectMapper,
-    requestTimeout: Long?,
+    defaultRequestTimeout: Duration?,
     shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>>,
     log: Logger,
     requestResponseLogLevel: Level,
     failuresLogLevel: Level,
     requestHeadersProvider: () -> Map<String, String>,
-    requestOverallTimeoutProvider: (method: String) -> Duration?,
+    methodTimeoutOverrideProvider: (method: String) -> Duration?,
   ): JsonRpcV2Client {
     assert(endpoints.isNotEmpty()) { "endpoints set is empty " }
     assert(endpoints.size == endpoints.toSet().size) {
@@ -227,12 +227,12 @@ class VertxHttpJsonRpcClientFactory(
         httpVersion = httpVersion,
         requestObjectMapper = requestObjectMapper,
         responseObjectMapper = responseObjectMapper,
-        requestTimeout = requestTimeout,
+        defaultRequestTimeout = defaultRequestTimeout,
         log = log,
         requestResponseLogLevel = requestResponseLogLevel,
         failuresLogLevel = failuresLogLevel,
         requestHeadersProvider = requestHeadersProvider,
-        requestOverallTimeoutProvider = requestOverallTimeoutProvider,
+        methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
       )
     } else {
       create(
@@ -240,12 +240,12 @@ class VertxHttpJsonRpcClientFactory(
         httpVersion = httpVersion,
         requestObjectMapper = requestObjectMapper,
         responseObjectMapper = responseObjectMapper,
-        requestTimeout = requestTimeout,
+        defaultRequestTimeout = defaultRequestTimeout,
         log = log,
         requestResponseLogLevel = requestResponseLogLevel,
         failuresLogLevel = failuresLogLevel,
         requestHeadersProvider = requestHeadersProvider,
-        requestOverallTimeoutProvider = requestOverallTimeoutProvider,
+        methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
       )
     }.let {
       // Wrap the client with a retryer
