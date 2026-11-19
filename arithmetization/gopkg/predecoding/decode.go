@@ -547,7 +547,7 @@ func assembleUTypeImm(instr uint32) uint64 {
 
 // assembleSTypeImm reassembles the split S-type store offset, imm[11:5] from
 // instruction bits [31:25] and imm[4:0] from bits [11:7], and sign-extends it
-// to the 64-bit imm. 
+// to the 64-bit imm.
 func assembleSTypeImm(instr uint32) uint64 {
 	simm12 := (((instr >> 31) & 1) << 11) |
 		(((instr >> 25) & 0x3f) << 5) |
@@ -821,6 +821,8 @@ func executableImage(
 	return base, image, records, nil
 }
 
+// decodeImage reads records consecutive little-endian instruction words from
+// image, one every four bytes, and appends one decoded row per word.
 func decodeImage(image []byte, records uint64) []byte {
 	var decoded bitWriter
 	for record := range records {
