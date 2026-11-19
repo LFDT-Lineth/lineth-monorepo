@@ -351,6 +351,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 		ProofBytes:   proofBytes,
 		PublicInputs: pi,
 		GuestOutput:  out,
+		ProgramVK:    c.programVK(root.Pub),
 	}
 }
 
@@ -391,6 +392,12 @@ func (c *Core) devmodePublicInputs(pub wiop.PublicInput, hash []byte) (wiop.Publ
 		out = append(out, pub[pos])
 	}
 	return out, nil
+}
+
+// programVK returns the program VK in the public inputs pub of a proof over the
+// trace system, in the response layout of [Result.ProgramVK].
+func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
+	return field.OctupletToBytes(risc5.GetProgramVK(c.sys, pub))
 }
 
 // executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
@@ -510,6 +517,7 @@ func (c *Core) proveFull(ctx context.Context, job Job) Result {
 		JobID:      job.ID,
 		Status:     ResultStatusOK,
 		ProofBytes: proofBytes,
+		ProgramVK:  c.programVK(node.Pub),
 	}
 }
 

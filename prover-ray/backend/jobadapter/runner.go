@@ -176,7 +176,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -286,7 +286,7 @@ func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, 
 	}
 
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
