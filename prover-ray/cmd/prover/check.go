@@ -122,10 +122,11 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 	if uses.shardSize == ignored && p.shardSize > 0 {
 		warn("shard_size")
 	}
+	// One worker, the default, is one shard at a time: nothing to ignore.
 	switch {
-	case uses.shardWorkers == ignored && p.shardWorkers > 0:
+	case uses.shardWorkers == ignored && p.shardWorkers > 1:
 		warn("shard_workers")
-	case p.shardWorkers > 0 && p.shardSize == 0:
+	case p.shardWorkers > 1 && p.shardSize == 0:
 		warnings = append(warnings, "execution.shard_workers is ignored without execution.shard_size: there is one shard")
 	}
 	if uses.nativeRunner == ignored && runnerSet {

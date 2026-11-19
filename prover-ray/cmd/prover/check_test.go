@@ -112,6 +112,16 @@ func TestCheckPipeline_Accepts(t *testing.T) {
 		"full, 10 shard workers": {
 			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeFull, shardSize: 500000, shardWorkers: 10},
 		},
+		// One worker is the default, one shard at a time: nothing is ignored.
+		"one shard worker without shard_size": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevPartial, shardWorkers: 1},
+		},
+		"one shard worker in dev-mock": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevMock, shardWorkers: 1},
+		},
+		"one shard worker in dev-zkvm": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, shardWorkers: 1, nativeRunnerBin: runner},
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
