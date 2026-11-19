@@ -132,12 +132,12 @@ type benchModule struct {
 // [benchPlan], as [Core.Prove] does, and reports for each block the time and
 // peak memory of each step and the result. Each block runs in its own process,
 // so that a block killed for lack of memory is reported and the next one still
-// runs. The shards are traced and checked benchWorkers at a time, with the Go
-// memory limit at 90% of the machine, or one at a time with the memory of each
-// step with BENCH_SHARD_WORKERS=1. Each shard is recorded with its size. A
-// shard with a module over [wiop.ColumnSizeMaxSupported] rows is reported and
-// not checked, as its assignment would panic, and the other shards still run.
-// Same settings as [TestDevPartial_Integration]
+// runs. The shards are traced and checked benchWorkers at a time, or one at a
+// time with the memory of each step with BENCH_SHARD_WORKERS=1. Both use the Go
+// default settings, so that they compare. Each shard is recorded with its
+// size. A shard with a module over [wiop.ColumnSizeMaxSupported] rows is
+// reported and not checked, as its assignment would panic, and the other
+// shards still run. Same settings as [TestDevPartial_Integration]
 // (GUEST_ELF, DEV_PARTIAL_SHARD_SIZE). The report goes to BENCH_DIR, by default
 // a new folder in the home folder: report.md, bench.jsonl, and the record and
 // log of each block. Linux only (peak memory is read from /proc).
@@ -392,9 +392,6 @@ func benchShardsParallel(
 ) string {
 	t.Helper()
 	c.cfg.ShardWorkers = workers
-	totalKB, _ := procKB("/proc/meminfo", "MemTotal:")
-	old := debug.SetMemoryLimit(int64(0.9 * totalKB * 1024))
-	defer debug.SetMemoryLimit(old)
 	indexes := make([]uint, rec.NumShards)
 	for i := range indexes {
 		indexes[i] = uint(i)
