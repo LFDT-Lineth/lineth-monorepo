@@ -323,12 +323,13 @@ func TestDecodeITypeSemanticOp(t *testing.T) {
 // TestDecodeITypeSemanticInvalidArms scans
 // - every opcode (0..127)
 // - every funct3 (0..7)
+// - add funct3 is 8 to test the default case on OPIMM
 // which pair is NOT in the list of validITypeArms and asserts
 // decodeITypeSemantic returns computeInvalid with imm12 unchanged
 // for all imm12 (0..4095).
 func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
-		for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+		for funct3 := uint32(0); funct3 <= 8; funct3++ {
 			if validITypeArms[iTypeArm{opcode, funct3}] {
 				// if the pair is in the list of validITypeArms, skip
 				continue
@@ -811,4 +812,4 @@ func TestCheckNoOpRdZero(t *testing.T) {
 // TestDecodedProgramEncodeInputsReturnsFreshBytes
 // TestBitsPerRowOfModuleDecoded
 
-// commit 
+// commit
