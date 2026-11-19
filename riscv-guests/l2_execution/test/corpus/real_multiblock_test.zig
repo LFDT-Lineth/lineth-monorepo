@@ -49,13 +49,13 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
 
     const fixture_bytes = try fixture_gen.buildEngineeredInput(alloc);
     const decoded_input = try l2_execution_ssz.decodeInput(alloc, fixture_bytes);
-    try testing.expect(decoded_input.payloads.len >= 3);
+    try testing.expect(decoded_input.payloads.items.len >= 3);
 
     // Independently decode every payload's vanilla stateless input so every expectation below is
     // derived from the fixture's own real bytes rather than a hardcoded literal — the same
     // discipline `l2_execution_range_test.zig`'s own scenarios follow.
-    const stateless_inputs = try alloc.alloc(input.StatelessInput, decoded_input.payloads.len);
-    for (decoded_input.payloads, 0..) |payload, i| stateless_inputs[i] = try ssz_decode.decode(alloc, payload.stateless_input_ssz);
+    const stateless_inputs = try alloc.alloc(input.StatelessInput, decoded_input.payloads.items.len);
+    for (decoded_input.payloads.items, 0..) |payload, i| stateless_inputs[i] = try ssz_decode.decode(alloc, payload.stateless_input_ssz.bytes);
 
     // Sanity on the fixture itself: a genuine multi-block, real-child range (not unrelated blocks
     // masquerading as a range) — every block's number is exactly one more than the previous, and
@@ -103,8 +103,8 @@ test "a real multi-block EF-corpus range runs through the full guest pipeline (n
     try testing.expectEqualSlices(u8, &expected_tx_froms_hash, &output.public_inputs.tx_froms_hash);
 
     // dynamic_chain_config_hash: a deterministic Linea-layer formula over known values (chain_id,
-    // coinbase, l2MessageServiceAddress, base fee) — independently recomputed, not trusted from
-    // the pipeline under test.
+    // base fee, coinbase, l2MessageServiceAddress and the hashed system contracts) — independently
+    // recomputed, not trusted from the pipeline under test.
     const chain_config = l2_execution_ssz.ChainConfig{
         .l2_message_service_address = decoded_input.chain_config.l2_message_service_address,
         .coinbase = decoded_input.chain_config.coinbase,

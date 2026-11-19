@@ -3,6 +3,7 @@ package linea.web3j.gas
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
 import org.web3j.protocol.core.methods.request.Transaction
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 
 // this class is mainly intended to be used for testing purposes
@@ -15,8 +16,8 @@ class StaticGasProvider(
   private val maxFeePerBlobGas: ULong = 1000uL.gwei,
   private val gasLimit: ULong = 30_000_000uL,
 ) : AtomicContractEIP1559GasProvider, EIP4844GasProvider {
-  override fun getEIP1559GasFees(): EIP1559GasFees {
-    return EIP1559GasFees(maxPriorityFeePerGas, maxFeePerGas)
+  override fun getEIP1559GasFees(): SafeFuture<EIP1559GasFees> {
+    return SafeFuture.completedFuture(EIP1559GasFees(maxPriorityFeePerGas, maxFeePerGas))
   }
 
   @Deprecated("Deprecated in Java")
@@ -45,7 +46,9 @@ class StaticGasProvider(
     return maxPriorityFeePerGas.toBigInteger()
   }
 
-  override fun getEIP4844GasFees(): EIP4844GasFees {
-    return EIP4844GasFees(getEIP1559GasFees(), maxFeePerBlobGas)
+  override fun getEIP4844GasFees(): SafeFuture<EIP4844GasFees> {
+    return SafeFuture.completedFuture(
+      EIP4844GasFees(EIP1559GasFees(maxPriorityFeePerGas, maxFeePerGas), maxFeePerBlobGas),
+    )
   }
 }

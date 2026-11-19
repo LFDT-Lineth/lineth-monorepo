@@ -48,8 +48,15 @@ class EngineApiJwtTokenProviderTest {
 
   @Test
   fun `rejects missing, non-hex and wrongly sized secrets`() {
-    assertThatThrownBy { EngineApiJwtTokenProvider.fromSecretFile(dir.resolve("missing.hex")) }
-      .isInstanceOf(java.nio.file.NoSuchFileException::class.java)
+    val missing = dir.resolve("missing.hex")
+    assertThatThrownBy { EngineApiJwtTokenProvider.fromSecretFile(missing) }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("Could not find execution engine JWT secret file: ${missing.toAbsolutePath()}")
+      .hasCauseInstanceOf(java.nio.file.NoSuchFileException::class.java)
+    assertThatThrownBy { EngineApiJwtTokenProvider.fromSecretFile(dir) }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("Could not read execution engine JWT secret file: ${dir.toAbsolutePath()}")
+      .hasCauseInstanceOf(java.io.IOException::class.java)
     assertThatThrownBy { EngineApiJwtTokenProvider.fromSecretFile(secretFile("zz".repeat(32))) }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("does not contain a valid hex secret")

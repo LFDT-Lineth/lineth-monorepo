@@ -7,6 +7,9 @@
 package maru.executionlayer.client
 
 import linea.kotlin.decodeHex
+import org.apache.logging.log4j.LogManager
+import java.io.IOException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.time.Clock
 import java.util.Base64
@@ -44,17 +47,26 @@ class EngineApiJwtTokenProvider(
     private const val SECRET_SIZE = 32
     private const val HMAC_ALGORITHM = "HmacSHA256"
     private val base64UrlEncoder = Base64.getUrlEncoder().withoutPadding()
+    private val log = LogManager.getLogger(EngineApiJwtTokenProvider::class.java)
     private val ENCODED_HEADER = base64Url("""{"alg":"HS256","typ":"JWT"}""".toByteArray())
 
     private fun base64Url(bytes: ByteArray): String = base64UrlEncoder.encodeToString(bytes)
 
     /** Reads a hex-encoded secret, with or without `0x` prefix, as written by execution clients. */
     fun fromSecretFile(path: Path, clock: Clock = Clock.systemUTC()): EngineApiJwtTokenProvider {
-      val secretHex = path.readText().trim()
+      val secretHex =
+        try {
+          path.readText().trim()
+        } catch (e: NoSuchFileException) {
+          throw IllegalArgumentException("Could not find execution engine JWT secret file: ${path.toAbsolutePath()}", e)
+        } catch (e: IOException) {
+          throw IllegalArgumentException("Could not read execution engine JWT secret file: ${path.toAbsolutePath()}", e)
+        }
       val secret =
         runCatching { secretHex.decodeHex() }
           .getOrElse { throw IllegalArgumentException("JWT secret file $path does not contain a valid hex secret", it) }
       return EngineApiJwtTokenProvider(secret, clock)
+        .also { log.info("JWT secret loaded from {}", path.toAbsolutePath()) }
     }
   }
 }

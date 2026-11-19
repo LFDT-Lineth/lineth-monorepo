@@ -643,7 +643,7 @@ class JsonRpcV2ClientImplTest {
       retryConfig = defaultRetryConfig,
       shallRetryRequestsClientBasePredicate = Predicate { false },
       requestHeadersProvider = { mapOf("Authorization" to "Bearer abc") },
-      requestTimeoutProvider = { method -> if (method == "slowMethod") 200.milliseconds else null },
+      methodTimeoutOverrideProvider = { method -> if (method == "slowMethod") 200.milliseconds else null },
     )
 
     assertThat(client.makeRequest(method = "fastMethod", params = emptyList<Any>(), resultMapper = { it }).get())

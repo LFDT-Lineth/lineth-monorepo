@@ -6,6 +6,7 @@ import linea.web3j.gas.EIP1559GasFees
 import linea.web3j.gas.EIP4844GasFees
 import linea.web3j.gas.EIP4844GasProvider
 import org.web3j.protocol.core.methods.request.Transaction
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import kotlin.math.min
 
@@ -22,23 +23,6 @@ class WMAGasProvider(
     val maxFeePerBlobGasCap: ULong,
     val maxPriorityFeePerGasCap: ULong,
   )
-
-  private fun getRecentFees(): EIP4844GasFees {
-    return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
-      val maxPriorityFeePerGas =
-        priorityFeeCalculator.calculateFees(feesData)
-          .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
-      val maxFeePerGas = (feesData.baseFeePerGas.last().toDouble() * 2) + maxPriorityFeePerGas
-      val maxFeePerBlobGas = config.maxFeePerBlobGasCap
-      EIP4844GasFees(
-        EIP1559GasFees(
-          maxPriorityFeePerGas.toULong(),
-          maxFeePerGas.toULong(),
-        ),
-        maxFeePerBlobGas,
-      )
-    }.get()
-  }
 
   @Deprecated("Deprecated in Java")
   override fun getGasPrice(): BigInteger {
@@ -59,39 +43,29 @@ class WMAGasProvider(
   }
 
   override fun getMaxFeePerGas(): BigInteger {
-    return min(getRecentFees().eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap).toBigInteger()
+    return getEIP1559GasFees().get().maxFeePerGas.toBigInteger()
   }
 
   override fun getMaxPriorityFeePerGas(): BigInteger {
-    return min(getRecentFees().eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap).toBigInteger()
+    return getEIP1559GasFees().get().maxPriorityFeePerGas.toBigInteger()
   }
 
-  override fun getEIP1559GasFees(): EIP1559GasFees {
-    return getRecentFees().run {
-      EIP1559GasFees(
-        maxPriorityFeePerGas = min(this.eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap),
-        maxFeePerGas = min(this.eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap),
-      )
-    }
+  override fun getEIP1559GasFees(): SafeFuture<EIP1559GasFees> {
+    return getEIP4844GasFees().thenApply { it.eip1559GasFees }
   }
 
-  override fun getEIP4844GasFees(): EIP4844GasFees {
-    return getRecentFees().run {
+  override fun getEIP4844GasFees(): SafeFuture<EIP4844GasFees> {
+    return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
+      val maxPriorityFeePerGas =
+        priorityFeeCalculator.calculateFees(feesData)
+          .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
+      val maxFeePerGas = (feesData.baseFeePerGas.last().toDouble() * 2) + maxPriorityFeePerGas
       EIP4844GasFees(
-        eip1559GasFees =
-        EIP1559GasFees(
-          maxPriorityFeePerGas =
-          min(
-            this.eip1559GasFees.maxPriorityFeePerGas,
-            config.maxFeePerGasCap,
-          ),
-          maxFeePerGas =
-          min(
-            this.eip1559GasFees.maxFeePerGas,
-            config.maxFeePerGasCap,
-          ),
+        eip1559GasFees = EIP1559GasFees(
+          maxPriorityFeePerGas = min(maxPriorityFeePerGas.toULong(), config.maxFeePerGasCap),
+          maxFeePerGas = min(maxFeePerGas.toULong(), config.maxFeePerGasCap),
         ),
-        maxFeePerBlobGas = min(this.maxFeePerBlobGas, config.maxFeePerBlobGasCap),
+        maxFeePerBlobGas = config.maxFeePerBlobGasCap,
       )
     }
   }

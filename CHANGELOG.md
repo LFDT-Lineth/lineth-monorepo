@@ -48,6 +48,8 @@
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+- *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
+- *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
 
 ### 🐛 Bug Fixes
 
@@ -112,6 +114,7 @@
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 - *(postman)* Optimize docker image (#4424)
+- *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
 
 ### 🚜 Refactor
 

@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
+import linea.jsonrpc.TestingJsonRpcServer
+import linea.kotlin.encodeHex
 import lineth.vertx.vertxTestOptions
 import maru.consensus.ElFork
 import maru.executionlayer.client.EngineApiTestData.executionPayload
@@ -33,6 +35,7 @@ import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.manager.PayloadStatus
 import net.consensys.linea.async.get
+import net.consensys.linea.jsonrpc.JsonRpcErrorException
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.LogManager
@@ -55,35 +58,34 @@ import java.util.Base64
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class JsonRpcEngineApiClientTest {
   private lateinit var vertx: Vertx
-  private lateinit var server: RecordingJsonRpcServer
+  private lateinit var server: TestingJsonRpcServer
   private lateinit var meterRegistry: SimpleMeterRegistry
 
   @BeforeEach
   fun setUp() {
     vertx = Vertx.vertx(vertxTestOptions)
-    server = RecordingJsonRpcServer()
+    server = TestingJsonRpcServer(recordRequestsResponses = true, vertx = vertx)
     meterRegistry = SimpleMeterRegistry()
   }
 
   @AfterEach
   fun tearDown() {
-    server.close()
     vertx.close().get()
   }
 
   private fun client(
     fork: ElFork,
-    endpoint: java.net.URL = server.endpoint,
+    endpoint: java.net.URL = URI("http://127.0.0.1:${server.boundPort}").toURL(),
     jwtSecretPath: java.nio.file.Path? = null,
-    timeoutOverride: Duration? = 30.seconds,
+    requestTimeouts: (method: String) -> Duration = { 30.seconds },
     clock: Clock = Clock.systemUTC(),
   ): JsonRpcEngineApiClient {
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
@@ -93,7 +95,7 @@ class JsonRpcEngineApiClientTest {
         metricsFacade = metricsFacade,
         endpoint = endpoint,
         jwtSecretPath = jwtSecretPath,
-        timeoutOverride = timeoutOverride,
+        requestTimeouts = requestTimeouts,
         log = LogManager.getLogger(JsonRpcEngineApiClientTest::class.java),
         clock = clock,
       )
@@ -121,7 +123,7 @@ class JsonRpcEngineApiClientTest {
     client.getPayload(payloadId).get()
     client.getLatestBlockMetadata().get()
 
-    assertThat(server.requests.map { withoutId(it.body) })
+    assertThat(recordedRequests().map { withoutId(it.body) })
       .containsExactly(
         newPayloadRequest(fork),
         forkChoiceUpdatedRequest(fork, withAttributes = false),
@@ -129,12 +131,12 @@ class JsonRpcEngineApiClientTest {
         getPayloadRequest(fork),
         latestBlockRequest(),
       )
-    server.requests.filter { it.method.startsWith("engine_") }.forEach { request ->
+    recordedRequests().filter { it.method.startsWith("engine_") }.forEach { request ->
       assertThat(EngineApiSpec.paramsViolations(request.method, request.body["params"]))
         .describedAs(request.method)
         .isEmpty()
     }
-    assertThat(server.requests).allSatisfy { assertThat(it.authorization).isNull() }
+    assertThat(recordedRequests()).allSatisfy { assertThat(it.authorization).isNull() }
   }
 
   @ParameterizedTest
@@ -256,14 +258,13 @@ class JsonRpcEngineApiClientTest {
 
     assertThat(client.getPayload(ByteArray(4))).isCompletedExceptionally()
     assertThat(client.newPayload(executionPayload(ElFork.Prague))).isCompletedExceptionally()
-    assertThat(server.requests).isEmpty()
+    assertThat(recordedRequests()).isEmpty()
   }
 
   @Test
   fun `sends a freshly signed JWT with every request when a secret is configured`() {
     val secret = ByteArray(32) { it.toByte() }
-    val secretFile = Files.createTempFile("jwt", ".hex").apply { toFile().deleteOnExit() }
-    Files.writeString(secretFile, "0x" + secret.joinToString("") { "%02x".format(it) } + "\n")
+    val secretFile = jwtSecretFile(secret)
     var now = Instant.ofEpochSecond(1_700_000_000)
     val clock = object : Clock() {
       override fun getZone() = ZoneOffset.UTC
@@ -279,31 +280,89 @@ class JsonRpcEngineApiClientTest {
     now = now.plusSeconds(30)
     client.getLatestBlockMetadata().get()
 
-    val tokens = server.requests.map { requireNotNull(it.authorization).removePrefix("Bearer ") }
+    val tokens = recordedRequests().map { requireNotNull(it.authorization).removePrefix("Bearer ") }
     assertThat(tokens).hasSize(2)
     tokens.forEach { assertThat(hasValidSignature(it, secret)).isTrue() }
     assertThat(tokens.map(::issuedAt)).containsExactly(1_700_000_000L, 1_700_000_030L)
   }
 
   @Test
-  fun `getPayload uses the 1s spec timeout unless a timeout is configured`() {
+  fun `execution layer rejecting the JWT fails the future with the HTTP status, without retrying`() {
+    val receivedRequests = AtomicInteger()
+    val rejectingServer =
+      vertx
+        .createHttpServer()
+        .requestHandler { request ->
+          receivedRequests.incrementAndGet()
+          request.response().setStatusCode(401).setStatusMessage("Unauthorized").end("invalid token")
+        }.listen(0)
+        .get()
+    val endpoint = URI("http://127.0.0.1:${rejectingServer.actualPort()}").toURL()
+    val client = client(ElFork.Prague, endpoint = endpoint, jwtSecretPath = jwtSecretFile(ByteArray(32)))
+
+    // The rejection surfaces as a failed future carrying the HTTP 401, not as a JSON-RPC error or a decoding failure
+    assertThatThrownBy { client.getPayload(payloadId).get() }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOfSatisfying(JsonRpcErrorException::class.java) {
+        assertThat(it.httpStatusCode).isEqualTo(401)
+      }
+    // The rejected request is recorded as a failure in the engine API request metrics
+    awaitRequestLatencyCount(fork = ElFork.Prague, method = "getPayload", status = "failure", expected = 1)
+    // The client does not retry, leaving retry policy to its callers
+    assertThat(receivedRequests.get()).isEqualTo(1)
+    // An execution layer that rejects the JWT is reported as offline
+    assertThat(client.isOnline().get()).isFalse()
+  }
+
+  @Test
+  fun `getPayload fails once its 2s default timeout elapses`() {
     server.replyResult(
       EngineApiForkMethods.of(ElFork.Prague).getPayload,
       getPayloadResultJson(ElFork.Prague),
-      delay = 1500.milliseconds,
+      delay = 3.seconds,
     )
 
-    assertThatThrownBy { client(ElFork.Prague, timeoutOverride = null).getPayload(payloadId).get() }
+    assertThatThrownBy {
+      client(
+        ElFork.Prague,
+        requestTimeouts = EngineApiTimeouts.provider(override = null),
+      ).getPayload(payloadId).get()
+    }
       .isInstanceOf(ExecutionException::class.java)
       .cause()
       .isInstanceOf(TimeoutException::class.java)
       .hasMessageContaining("engine_getPayloadV4")
 
-    assertThat(client(ElFork.Prague, timeoutOverride = 5.seconds).getPayload(payloadId).get(10, TimeUnit.SECONDS))
+    assertThat(client(ElFork.Prague, requestTimeouts = { 5.seconds }).getPayload(payloadId).get(10, TimeUnit.SECONDS))
       .isEqualTo(executionPayload(ElFork.Prague))
   }
 
   /** The timer records in a completion callback that may run after the caller's `get()` returns. */
+  private data class RecordedRequest(val body: JsonNode, val authorization: String?) {
+    val method: String get() = body["method"].asText()
+  }
+
+  private fun recordedRequests(): List<RecordedRequest> =
+    server.recordedRequests().zip(server.recordedRequestsHeaders()) { (request, _), headers ->
+      RecordedRequest(jacksonObjectMapper().valueToTree(request), headers.get("Authorization"))
+    }
+
+  private fun TestingJsonRpcServer.replyResult(method: String, result: Any?, delay: Duration = Duration.ZERO) {
+    handle(method) { result }
+    if (delay.isPositive()) delayResponses(method, delay)
+  }
+
+  private fun TestingJsonRpcServer.replyError(method: String, code: Int, message: String) {
+    handle(method) { throw JsonRpcErrorResponseException(code, message) }
+  }
+
+  private fun jwtSecretFile(secret: ByteArray): java.nio.file.Path {
+    val secretFile = Files.createTempFile("jwt", ".hex").apply { toFile().deleteOnExit() }
+    Files.writeString(secretFile, secret.encodeHex() + "\n")
+    return secretFile
+  }
+
   private fun awaitRequestLatencyCount(fork: ElFork, method: String, status: String, expected: Long) {
     await().atMost(5, TimeUnit.SECONDS).untilAsserted {
       assertThat(requestLatencyCount(fork, method, status)).isEqualTo(expected)

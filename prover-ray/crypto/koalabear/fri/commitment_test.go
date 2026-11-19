@@ -192,7 +192,7 @@ func TestCommit(t *testing.T) {
 			frontier := []field.Octuplet{root}
 			for idx := 0; idx < cs.Tree.NumLeaves(); idx++ {
 				branch := cs.Tree.OpenBranch(idx)
-				if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+				if err := branch.AuthenticateToCap(MerkleHashKoalaBear, idx, frontier); err != nil {
 					t.Fatalf("idx %d: AuthenticateToCap: %v", idx, err)
 				}
 			}
@@ -208,8 +208,8 @@ func TestMerkleize_Regression_SizeOneAuxiliaryTable(t *testing.T) {
 	aux := tableOfSize(1, &ctr)
 	bottom := tableOfSize(2, &ctr)
 
-	withAux := MultiSizeTable{aux, bottom}.Merkleize()
-	withoutAux := MultiSizeTable{bottom}.Merkleize()
+	withAux := MultiSizeTable{aux, bottom}.Merkleize(MerkleHashKoalaBear)
+	withoutAux := MultiSizeTable{bottom}.Merkleize(MerkleHashKoalaBear)
 
 	if got, want := withAux.Root(), withoutAux.Root(); got != want {
 		t.Fatalf("size-one auxiliary table changed root: got %v, want %v", got, want)

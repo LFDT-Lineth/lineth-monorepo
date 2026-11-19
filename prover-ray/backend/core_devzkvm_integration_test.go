@@ -33,7 +33,7 @@ func statelessInputPublicInputs(t *testing.T) PublicInputs {
 		EndBlockHash:             hash("b6107b07672ca66bd702a53c5105925002037e593f46c8cecba5af3425496d64"),
 		EndBlockNumber:           1,
 		EndBlockTimestamp:        12,
-		DynamicChainConfigHash:   hash("4c87eca77cb88c24f2de035ddac21297991d5a1946b9e7d6a2b25375037715fa"),
+		DynamicChainConfigHash:   hash("2367565d6bb58aa35343cb6bd4d51b7a2a61123d59cdaf4680b6e30c02ce3fe7"),
 		TxFromsHash:              hash("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
 		BlockCount:               1,
 		FilteredAddresses:        [][20]byte{},

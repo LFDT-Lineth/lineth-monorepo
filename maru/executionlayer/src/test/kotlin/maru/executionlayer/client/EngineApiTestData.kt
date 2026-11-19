@@ -10,11 +10,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import linea.kotlin.encodeHex
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
 import java.math.BigInteger
-import java.util.HexFormat
 
 /**
  * Deterministic client inputs, and the Engine API JSON expected for them. The JSON is written out independently of the
@@ -22,12 +22,9 @@ import java.util.HexFormat
  */
 object EngineApiTestData {
   private val objectMapper = jacksonObjectMapper()
-  private val hexFormat = HexFormat.of()
   private const val ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
   fun bytes(size: Int, seed: Int): ByteArray = ByteArray(size) { (seed + it).toByte() }
-
-  fun hex(bytes: ByteArray): String = "0x" + hexFormat.formatHex(bytes)
 
   val headBlockHash = bytes(32, 14)
   val safeBlockHash = bytes(32, 15)
@@ -72,27 +69,27 @@ object EngineApiTestData {
   /** `ExecutionPayloadV1` to `ExecutionPayloadV4` JSON of [executionPayload] for [fork]. */
   fun executionPayloadJson(fork: ElFork): ObjectNode =
     objectMapper.createObjectNode().apply {
-      put("parentHash", hex(bytes(32, 1)))
-      put("feeRecipient", hex(bytes(20, 2)))
-      put("stateRoot", hex(bytes(32, 3)))
-      put("receiptsRoot", hex(bytes(32, 4)))
-      put("logsBloom", hex(bytes(256, 5)))
-      put("prevRandao", hex(bytes(32, 6)))
+      put("parentHash", bytes(32, 1).encodeHex())
+      put("feeRecipient", bytes(20, 2).encodeHex())
+      put("stateRoot", bytes(32, 3).encodeHex())
+      put("receiptsRoot", bytes(32, 4).encodeHex())
+      put("logsBloom", bytes(256, 5).encodeHex())
+      put("prevRandao", bytes(32, 6).encodeHex())
       put("blockNumber", "0x64")
       put("gasLimit", "0x1c9c380")
       put("gasUsed", "0x5208")
       put("timestamp", "0x6553f100")
-      put("extraData", hex(bytes(4, 7)))
+      put("extraData", bytes(4, 7).encodeHex())
       put("baseFeePerGas", "0x7")
-      put("blockHash", hex(bytes(32, 8)))
-      putArray("transactions").add(hex(bytes(3, 9))).add(hex(bytes(2, 10)))
+      put("blockHash", bytes(32, 8).encodeHex())
+      putArray("transactions").add(bytes(3, 9).encodeHex()).add(bytes(2, 10).encodeHex())
       if (schemaVersion(fork) >= 2) putArray("withdrawals")
       if (schemaVersion(fork) >= 3) {
         put("blobGasUsed", "0x0")
         put("excessBlobGas", "0x0")
       }
       if (schemaVersion(fork) >= 4) {
-        put("blockAccessList", hex(bytes(5, 11)))
+        put("blockAccessList", bytes(5, 11).encodeHex())
         put("slotNumber", "0x2a")
       }
     }
@@ -101,8 +98,8 @@ object EngineApiTestData {
   private fun payloadAttributesJson(fork: ElFork): ObjectNode =
     objectMapper.createObjectNode().apply {
       put("timestamp", "0x6553f102")
-      put("prevRandao", hex(bytes(32, 12)))
-      put("suggestedFeeRecipient", hex(bytes(20, 13)))
+      put("prevRandao", bytes(32, 12).encodeHex())
+      put("suggestedFeeRecipient", bytes(20, 13).encodeHex())
       if (schemaVersion(fork) >= 2) putArray("withdrawals")
       if (schemaVersion(fork) >= 3) put("parentBeaconBlockRoot", ZERO_HASH)
       if (schemaVersion(fork) >= 4) {
@@ -113,9 +110,9 @@ object EngineApiTestData {
 
   private fun forkchoiceStateJson(): ObjectNode =
     objectMapper.createObjectNode().apply {
-      put("headBlockHash", hex(headBlockHash))
-      put("safeBlockHash", hex(safeBlockHash))
-      put("finalizedBlockHash", hex(finalizedBlockHash))
+      put("headBlockHash", headBlockHash.encodeHex())
+      put("safeBlockHash", safeBlockHash.encodeHex())
+      put("finalizedBlockHash", finalizedBlockHash.encodeHex())
     }
 
   private fun request(method: String, params: ArrayNode.() -> Unit): JsonNode =
@@ -147,7 +144,7 @@ object EngineApiTestData {
 
   /** `engine_getPayload` request for [payloadId], without the JSON-RPC `id`. */
   fun getPayloadRequest(fork: ElFork): JsonNode =
-    request(EngineApiForkMethods.of(fork).getPayload) { add(hex(payloadId)) }
+    request(EngineApiForkMethods.of(fork).getPayload) { add(payloadId.encodeHex()) }
 
   /** `eth_getBlockByNumber` request for the latest block header, without the JSON-RPC `id`. */
   fun latestBlockRequest(): JsonNode =

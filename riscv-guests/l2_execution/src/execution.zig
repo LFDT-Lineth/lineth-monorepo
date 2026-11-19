@@ -4,6 +4,7 @@ const executor = @import("zesu_executor");
 const zesu_allocator = @import("zesu_allocator");
 const primitives = @import("zesu_primitives");
 const mpt = @import("zesu_mpt");
+const zkvm_accelerators = @import("zkvm_accelerators");
 const db_mod = @import("zesu_db");
 const context_mod = @import("zesu_context");
 const input = @import("zesu_input");
@@ -234,7 +235,7 @@ fn declaredHashes(alloc: std.mem.Allocator, req: input.NewPayloadRequest) !Decla
     const requests_hash = transition_mod.computeRequestsHash(alloc, er.deposits, er.withdrawals, er.consolidations, er.builder_deposits, er.builder_exits) catch |e| return zesuErr(e);
     return .{
         .requests_hash = requests_hash,
-        .block_access_list_hash = mpt.keccak256(req.execution_payload.block_access_list),
+        .block_access_list_hash = zkvm_accelerators.keccak256Digest(req.execution_payload.block_access_list),
     };
 }
 

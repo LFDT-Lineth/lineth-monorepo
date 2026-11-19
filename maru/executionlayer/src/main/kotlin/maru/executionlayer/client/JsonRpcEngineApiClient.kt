@@ -8,6 +8,7 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
+import maru.executionlayer.manager.EngineApiClient
 import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.manager.PayloadAttributes

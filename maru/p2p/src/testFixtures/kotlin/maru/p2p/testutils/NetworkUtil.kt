@@ -7,6 +7,12 @@
 package maru.p2p.testutils
 
 import java.net.ServerSocket
+import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.random.Random
 
 object NetworkUtil {
   fun findFreePorts(count: Int): List<UInt> {
@@ -27,14 +33,61 @@ object NetworkUtil {
 
   fun findFreePort(): UInt = findFreePorts(1).first()
 
-  // Ports below 32768 are never auto-assigned by the kernel for port-0 binds (the OS ephemeral
-  // range starts at 32768+ on Linux and 49152+ on macOS). Use this instead of findFreePort()
-  // when the same port number must survive a service stop/restart within a single test — no
-  // concurrent fork's port-0 bind can accidentally land on a port in this range.
-  fun findStablePort(): UInt {
-    for (port in 25000..31999) {
-      runCatching { ServerSocket(port).also { it.close() } }.onSuccess { return port.toUInt() }
+  private const val STABLE_PORT_RANGE_START = 25000
+  private const val STABLE_PORT_RANGE_END = 31999 // inclusive
+
+  // Locks of the ports reserved by this JVM, held until it exits (the OS then releases them).
+  private val stablePortLocks = ConcurrentHashMap<Int, FileLock>()
+
+  // Ports below 32768 are never auto-assigned by the kernel for port-0 binds nor used as source
+  // ports of outgoing connections (the OS ephemeral range starts at 32768+ on Linux and 49152+ on
+  // macOS). Use this instead of findFreePort() when the same port number must survive a service
+  // stop/restart within a single test — no concurrent socket can accidentally land on a port in
+  // this range while the service is down.
+  // Each returned port is reserved with an OS file lock in the temp dir, held for the JVM lifetime,
+  // so concurrent tests never get the same port, whether in this JVM or in other test forks.
+  fun findStablePorts(count: Int): List<UInt> {
+    val rangeSize = STABLE_PORT_RANGE_END - STABLE_PORT_RANGE_START + 1
+    val offset = Random.nextInt(rangeSize)
+    val ports = mutableListOf<UInt>()
+    for (i in 0 until rangeSize) {
+      if (ports.size == count) break
+      val port = STABLE_PORT_RANGE_START + (offset + i) % rangeSize
+      if (!tryReserveStablePort(port)) continue
+      runCatching { ServerSocket(port).close() }
+        .onSuccess { ports.add(port.toUInt()) }
+        .onFailure { releaseStablePort(port) }
     }
-    error("No free port found in range 25000..31999")
+    check(ports.size == count) {
+      "Could only find ${ports.size}/$count free ports in range $STABLE_PORT_RANGE_START..$STABLE_PORT_RANGE_END"
+    }
+    return ports
+  }
+
+  fun findStablePort(): UInt = findStablePorts(1).first()
+
+  // Lock files are never deleted: deleting one while another process holds or is about to lock it
+  // would let two processes lock different files for the same port.
+  // Synchronized so that this JVM never opens a second channel on a port's file it already locked:
+  // on Linux, closing any channel of a file releases all of the process's locks on it.
+  @Synchronized
+  private fun tryReserveStablePort(port: Int): Boolean {
+    if (stablePortLocks.containsKey(port)) return false
+    val lockFile = Path.of(System.getProperty("java.io.tmpdir"), "maru-it-port-$port.lock")
+    val channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+    // tryLock() returns null when another process holds the lock
+    val lock = runCatching { channel.tryLock() }.getOrNull()
+    if (lock == null) {
+      channel.close()
+      return false
+    }
+    stablePortLocks[port] = lock
+    return true
+  }
+
+  @Synchronized
+  private fun releaseStablePort(port: Int) {
+    stablePortLocks[port]?.channel()?.close()
+    stablePortLocks.remove(port)
   }
 }

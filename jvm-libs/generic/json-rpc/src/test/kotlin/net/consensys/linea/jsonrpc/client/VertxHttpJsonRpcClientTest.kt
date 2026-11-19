@@ -430,7 +430,7 @@ class VertxHttpJsonRpcClientTest {
     testingServer.delayResponses("engine_newPayloadV1", 300.milliseconds)
     client = clientWithHooks(
       endpoint = testingServerEndpoint,
-      requestTimeoutProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
+      methodTimeoutOverrideProvider = { method -> if (method == "engine_getPayloadV1") 200.milliseconds else null },
     )
 
     assertThatThrownBy {
@@ -451,14 +451,14 @@ class VertxHttpJsonRpcClientTest {
    * idle timeout is generous because a cold request on a loaded CI runner can take over a second to receive headers.
    */
   @Test
-  fun makesRequest_overallTimeoutTripsOnSlowlyStreamedResponseThatIdleTimeoutTolerates() {
+  fun makesRequest_timeoutCoversSlowResponseBody() {
     testingServer.streamResponses("eth_blockNumber", chunkInterval = 40.milliseconds)
-    val idleTimeoutMillis = 10_000L
-    val idleOnlyClient = clientWithHooks(endpoint = testingServerEndpoint, requestTimeout = idleTimeoutMillis)
+    val idleTimeout = 10.seconds
+    val idleOnlyClient = clientWithHooks(endpoint = testingServerEndpoint, defaultRequestTimeout = idleTimeout)
     val overallDeadlineClient = clientWithHooks(
       endpoint = testingServerEndpoint,
-      requestTimeout = idleTimeoutMillis,
-      requestTimeoutProvider = { 500.milliseconds },
+      defaultRequestTimeout = idleTimeout,
+      methodTimeoutOverrideProvider = { 500.milliseconds },
     )
 
     idleOnlyClient.makeRequest(JsonRpcRequestListParams("2.0", 1, "eth_blockNumber", emptyList())).get()
@@ -474,13 +474,14 @@ class VertxHttpJsonRpcClientTest {
   }
 
   @Test
-  fun makesRequest_overallTimeoutCoversWaitingForPooledConnectionAndRequestIsNeverSent() {
+  fun makesRequest_timeoutCoversWaitForPooledConnection() {
     testingServer.delayResponses("engine_newPayloadV1", 1.seconds)
     httpClient.close().get()
     httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(1))
     client = clientWithHooks(
       endpoint = testingServerEndpoint,
-      requestTimeoutProvider = { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
+      methodTimeoutOverrideProvider =
+      { method -> if (method == "engine_forkchoiceUpdatedV1") 200.milliseconds else null },
     )
 
     val occupyingRequest =
@@ -500,6 +501,26 @@ class VertxHttpJsonRpcClientTest {
   }
 
   @Test
+  fun makesRequest_methodTimeoutOverrideReplacesShorterDefaultTimeout() {
+    testingServer.delayResponses("engine_newPayloadV1", 500.milliseconds)
+    testingServer.delayResponses("eth_blockNumber", 500.milliseconds)
+    client = clientWithHooks(
+      endpoint = testingServerEndpoint,
+      defaultRequestTimeout = 100.milliseconds,
+      methodTimeoutOverrideProvider = { method -> if (method == "engine_newPayloadV1") 5.seconds else null },
+    )
+
+    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList())).get()
+      .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(1, "OK"))) }
+    assertThatThrownBy {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 2, "eth_blockNumber", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+  }
+
+  @Test
   fun makesRequest_withoutTimeoutProviderWaitsForSlowResponse() {
     testingServer.delayResponses("engine_newPayloadV1", 500.milliseconds)
     client = clientWithHooks(endpoint = testingServerEndpoint)
@@ -510,17 +531,17 @@ class VertxHttpJsonRpcClientTest {
 
   private fun clientWithHooks(
     endpoint: URL = this.endpoint,
-    requestTimeout: Long? = null,
+    defaultRequestTimeout: Duration? = null,
     requestHeadersProvider: () -> Map<String, String> = { emptyMap() },
-    requestTimeoutProvider: (String) -> Duration? = { null },
+    methodTimeoutOverrideProvider: (String) -> Duration? = { null },
   ): VertxHttpJsonRpcClient =
     VertxHttpJsonRpcClient(
       httpClient,
       endpoint,
       metricsFacade,
-      requestTimeout = requestTimeout,
+      defaultRequestTimeout = defaultRequestTimeout,
       requestHeadersProvider = requestHeadersProvider,
-      requestTimeoutProvider = requestTimeoutProvider,
+      methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
     )
 
   private fun replyRequestWith(jsonRpcResponse: JsonObject) {

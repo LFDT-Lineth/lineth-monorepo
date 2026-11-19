@@ -75,7 +75,7 @@ pub fn buildEngineeredInput(alloc: std.mem.Allocator) ![]const u8 {
 
     const payloads = try alloc.alloc(l2_execution_ssz.LineaPayloadInput, decoded.len);
     for (raw_inputs, 0..) |raw, slot| {
-        payloads[slot] = .{ .stateless_input_ssz = raw, .forced_transactions = &.{} };
+        payloads[slot] = .{ .stateless_input_ssz = .{ .bytes = raw }, .forced_transactions = .{ .items = &.{} } };
     }
 
     const extended_input = l2_execution_ssz.L2ExecutionProofPrivateInput{
@@ -87,7 +87,7 @@ pub fn buildEngineeredInput(alloc: std.mem.Allocator) ![]const u8 {
             .l2_message_service_address = vanilla_wrap.DUMMY_L2_MESSAGE_SERVICE_ADDRESS,
             .system_contracts = vanilla_wrap.defaultSystemContracts(decoded[0].chain_config.chain_id),
         },
-        .payloads = payloads,
+        .payloads = .{ .items = payloads },
     };
     return l2_execution_ssz.encodeInput(alloc, extended_input);
 }

@@ -31,7 +31,7 @@ object EngineApiRpcClientFactory {
     metricsFacade: MetricsFacade,
     endpoint: URL,
     jwtSecretPath: Path?,
-    timeoutOverride: Duration?,
+    requestTimeouts: (method: String) -> Duration,
     log: Logger,
     clock: Clock = Clock.systemUTC(),
   ): JsonRpcV2Client {
@@ -43,7 +43,7 @@ object EngineApiRpcClientFactory {
       shallRetryRequestsClientBasePredicate = Predicate<Result<Any?, Throwable>> { false },
       log = log,
       requestHeadersProvider = { jwtTokenProvider?.authorizationHeader() ?: emptyMap() },
-      requestTimeoutProvider = EngineApiTimeouts.provider(timeoutOverride),
+      methodTimeoutOverrideProvider = requestTimeouts,
     )
   }
 }
