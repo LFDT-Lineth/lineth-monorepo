@@ -25,6 +25,7 @@
 - *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
 - *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
 - *(prover-ray)* Fail the job when a shard does not fit in a column (#4464)
+- *(prover-ray)* Send the proof's program VK as programVk, not the guest Program ID (zero in dev modes) (#4527)
 
 ### 🚜 Refactor
 
