@@ -131,7 +131,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 	resultLimbs := make([]*wiop.Column, nbLimbs)
 	quotientLimbs := make([]*wiop.Column, nbLimbs)
 
-	assignLimb := func(limbs []*wiop.Column, prefix string, reg register.Register) error {
+	assignLimb := func(limbs []*wiop.Column, prefix string, reg register.Register[koalabear.Element]) error {
 		idxS, found := strings.CutPrefix(reg.Name(), prefix)
 		if !found {
 			// not something we care about, ignore
