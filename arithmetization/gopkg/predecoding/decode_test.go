@@ -810,9 +810,8 @@ func TestCheckNoOpRdZero(t *testing.T) {
 // classifyInstruction
 // ------------------------------------------------------------
 
-
 // classifyInstructionVectors checks the join inside classifyInstruction: the
-// instruction type selects a format decoder (decodeITypeSemantic etc, then 
+// instruction type selects a format decoder (decodeITypeSemantic etc, then
 // checkNoOp folds rd. The format decoders and checkNoOp are tested on their
 // own; these rows pin that the switch calls the right one and passes rd through.
 var classifyInstructionVectors = []struct {
@@ -870,6 +869,161 @@ func TestClassifyInstruction(t *testing.T) {
 		if got != tv.want {
 			t.Fatalf("%s: classifyInstruction(type=%d, op=%#x, f3=%#x, f7=%#x, imm=%#x, rd=%d) = %d, want %d",
 				tv.name, tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd, got, tv.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// ASSEMBLE FUNCTIONS
+// ------------------------------------------------------------
+// TestAssembleITypeImm, TestAssembleSTypeImm, TestAssembleBTypeImm, TestAssembleJTypeImm, TestAssembleUTypeImm
+// checks the assemble functions.
+// ------------------------------------------------------------
+
+// TestAssembleITypeImm checks assembleITypeImm over the full 12-bit domain
+// against signExtend12_oracle. Each value is tested under several high-bit
+// backgrounds to confirm bits above bit 11 are ignored.
+func TestAssembleITypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xfffff000, 0xaaaaa000, 0x55555000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<12; low++ {
+			x := bg | low
+			want := uint64(signExtend12_oracle(x))
+			if got := assembleITypeImm(x); got != want {
+				t.Fatalf("assembleITypeImm(%#x) = %#x, want %#x", x, got, want)
+			}
+		}
+	}
+}
+
+// assembleUTypeImm_oracle is a shift-free reference for the U-type immediate.
+// It drops the low 12 bits via division by 2^12 = 4096, places the 20-bit
+// immediate into bits [31:12] by multiplying by 4096, and subtracts 2^32 when
+// bit 31 is set (value >= 2^31 = 2147483648), independent of the >>12/<<12
+// and int32 cast assembleUTypeImm uses.
+func assembleUTypeImm_oracle(instr uint32) uint64 {
+	imm20 := int64(instr / 4096)
+	word := imm20 * 4096
+	if word >= 2147483648 {
+		word -= 4294967296
+	}
+	return uint64(word)
+}
+
+// TestAssembleUTypeImm checks assembleUTypeImm over the full 20-bit immediate
+// against assembleUTypeImm_oracle. Each value is tested under several low-bit
+// backgrounds to confirm bits below bit 12 are ignored.
+func TestAssembleUTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x000, 0xfff, 0xaaa, 0x555}
+	for _, bg := range backgrounds {
+		for imm20 := uint32(0); imm20 < 1<<20; imm20++ {
+			instr := imm20*4096 + bg
+			want := assembleUTypeImm_oracle(instr)
+			if got := assembleUTypeImm(instr); got != want {
+				t.Fatalf("assembleUTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleSTypeImm_oracle is a shift-free reference for the S-type store offset.
+// It pulls imm[4:0] from bits [11:7], imm[10:5] from bits [30:25], and imm[11]
+// from bit 31, then sign-extends that 12-bit value with signExtend12_oracle.
+// Opcode, funct3, rs1, and rs2 are dropped by the divisions.
+func assembleSTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm4_0 := (v / 128) % 32
+	imm10_5 := (v / 33554432) % 64
+	imm11 := v / 2147483648
+	simm12 := uint32(imm11*2048 + imm10_5*32 + imm4_0)
+	return uint64(signExtend12_oracle(simm12))
+}
+
+// TestAssembleSTypeImm checks assembleSTypeImm over the full 12-bit store offset
+// against assembleSTypeImm_oracle. Each value is tested under several backgrounds
+// in the bits the offset does not occupy, to confirm opcode, funct3, rs1, and rs2
+// are ignored.
+func TestAssembleSTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0x01fff07f, 0x00aaa02a, 0x01555055}
+	for _, bg := range backgrounds {
+		for simm12 := uint32(0); simm12 < 1<<12; simm12++ {
+			imm11 := simm12 / 2048
+			imm10_5 := (simm12 / 32) % 64
+			imm4_0 := simm12 % 32
+			instr := imm11*2147483648 + imm10_5*33554432 + imm4_0*128 + bg
+			want := assembleSTypeImm_oracle(instr)
+			if got := assembleSTypeImm(instr); got != want {
+				t.Fatalf("assembleSTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleBTypeImm_oracle is a shift-free reference for the B-type branch offset.
+// It pulls imm[12] from bit 31, imm[10:5] from bits [30:25], imm[4:1] from bits
+// [11:8], and imm[11] from bit 7. Bit 0 stays clear. The 13-bit value is
+// sign-extended with signExtend13_oracle.
+func assembleBTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm12 := v / 2147483648
+	imm10_5 := (v / 33554432) % 64
+	imm4_1 := (v / 256) % 16
+	imm11 := (v / 128) % 2
+	imm13 := uint32(imm12*4096 + imm11*2048 + imm10_5*32 + imm4_1*2)
+	return uint64(signExtend13_oracle(imm13))
+}
+
+// TestAssembleBTypeImm checks assembleBTypeImm over every encodable 13-bit branch
+// offset against assembleBTypeImm_oracle. Bit 0 is always clear. Each value is
+// tested under several backgrounds in the bits the offset does not occupy, to
+// confirm opcode, funct3, rs1, and rs2 are ignored.
+func TestAssembleBTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0x01fff07f, 0x00aaa02a, 0x01555055}
+	for _, bg := range backgrounds {
+		for imm13 := uint32(0); imm13 < 1<<13; imm13 += 2 {
+			imm12 := imm13 / 4096
+			imm11 := (imm13 / 2048) % 2
+			imm10_5 := (imm13 / 32) % 64
+			imm4_1 := (imm13 / 2) % 16
+			instr := imm12*2147483648 + imm10_5*33554432 + imm4_1*256 + imm11*128 + bg
+			want := assembleBTypeImm_oracle(instr)
+			if got := assembleBTypeImm(instr); got != want {
+				t.Fatalf("assembleBTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleJTypeImm_oracle is a shift-free reference for the J-type jump offset.
+// It pulls imm[20] from bit 31, imm[10:1] from bits [30:21], imm[11] from bit 20,
+// and imm[19:12] from bits [19:12]. Bit 0 stays clear. The 21-bit value is
+// sign-extended with signExtend21_oracle.
+func assembleJTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm20 := v / 2147483648
+	imm10_1 := (v / 2097152) % 1024
+	imm11 := (v / 1048576) % 2
+	imm19_12 := (v / 4096) % 256
+	imm21 := uint32(imm20*1048576 + imm19_12*4096 + imm11*2048 + imm10_1*2)
+	return uint64(signExtend21_oracle(imm21))
+}
+
+// TestAssembleJTypeImm checks assembleJTypeImm over every encodable 21-bit jump
+// offset against assembleJTypeImm_oracle. Bit 0 is always clear. Each value is
+// tested under several low-bit backgrounds to confirm rd and the opcode are ignored.
+func TestAssembleJTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x000, 0xfff, 0xaaa, 0x555}
+	for _, bg := range backgrounds {
+		for imm21 := uint32(0); imm21 < 1<<21; imm21 += 2 {
+			imm20 := imm21 / 1048576
+			imm19_12 := (imm21 / 4096) % 256
+			imm11 := (imm21 / 2048) % 2
+			imm10_1 := (imm21 / 2) % 1024
+			instr := imm20*2147483648 + imm10_1*2097152 + imm11*1048576 + imm19_12*4096 + bg
+			want := assembleJTypeImm_oracle(instr)
+			if got := assembleJTypeImm(instr); got != want {
+				t.Fatalf("assembleJTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
 		}
 	}
 }
