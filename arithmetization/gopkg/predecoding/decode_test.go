@@ -1,6 +1,7 @@
 package predecoding
 
 import (
+	"bytes"
 	"math"
 	"testing"
 
@@ -1023,6 +1024,55 @@ func TestAssembleJTypeImm(t *testing.T) {
 			want := assembleJTypeImm_oracle(instr)
 			if got := assembleJTypeImm(instr); got != want {
 				t.Fatalf("assembleJTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// WriteBits
+// ------------------------------------------------------------
+
+
+// writeBitsOracle appends the low width bits of val, most-significant bit first.
+// Bits are taken by division by two, so this does not use the shifts writeBits uses.
+func writeBitsOracle(val uint64, width int) ([]byte, int) {
+	var out []byte
+	place := uint64(1)
+	for i := 1; i < width; i++ {
+		place *= 2
+	}
+	nbits := 0
+	for i := width - 1; i >= 0; i-- {
+		bit := (val / place) % 2
+		if place > 1 {
+			place /= 2
+		}
+		if nbits%8 == 0 {
+			out = append(out, 0)
+		}
+		if bit == 1 {
+			out[nbits/8] |= [8]byte{128, 64, 32, 16, 8, 4, 2, 1}[nbits%8]
+		}
+		nbits++
+	}
+	return out, nbits
+}
+
+// TestWriteBits checks every width up to 16 and every value in that width.
+// The same value is also written with every bit above width set. The packed
+// bytes must match the low width bits only.
+func TestWriteBits(t *testing.T) {
+	for width := 0; width <= 16; width++ {
+		for low := uint64(0); low < uint64(1)<<uint(width); low++ {
+			for _, val := range []uint64{low, low | (^uint64(0) << uint(width))} {
+				var w bitWriter
+				w.writeBits(val, width)
+				want, n := writeBitsOracle(low, width)
+				if w.nbits != n || !bytes.Equal(w.buf, want) {
+					t.Fatalf("writeBits(%#x, %d) nbits=%d buf=%x, want nbits=%d buf=%x",
+						val, width, w.nbits, w.buf, n, want)
+				}
 			}
 		}
 	}
