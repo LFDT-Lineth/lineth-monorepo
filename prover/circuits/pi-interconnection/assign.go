@@ -72,6 +72,49 @@ func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err
 	}
 	utils.Copy(a.ParentShnarf[:], prevShnarf)
 
+	// CHECK_PARENT_SHNARF: recompute ParentAggregationFinalShnarf from its
+	// keccak preimage (the previous aggregation's last blob submission) and
+	// assert it matches the externally supplied digest, mirroring the
+	// in-circuit opening. This preimage, not ParentStateRootHash directly, is
+	// what seeds the circuit's InitialStateRootHash.
+	parentShnarf := blobsubmission.Shnarf{
+		Hash: &hshK,
+	}
+
+	if parentShnarf.OldShnarf, err = utils.HexDecodeString(r.Aggregation.GrandparentShnarf); err != nil {
+		return
+	}
+	utils.Copy(a.GrandparentShnarf[:], parentShnarf.OldShnarf)
+
+	if parentShnarf.SnarkHash, err = utils.HexDecodeString(r.Aggregation.ParentShnarf.SnarkHash); err != nil {
+		return
+	}
+	utils.Copy(a.ParentShnarfPreimage.BlobDataSnarkHash[:], parentShnarf.SnarkHash)
+
+	if parentShnarf.NewStateRootHash, err = utils.HexDecodeString(r.Aggregation.ParentStateRootHash); err != nil {
+		return
+	}
+	utils.Copy(a.ParentShnarfPreimage.NewStateRootHash[:], parentShnarf.NewStateRootHash)
+
+	if parentShnarf.X, err = utils.HexDecodeString(r.Aggregation.ParentShnarf.X); err != nil {
+		return
+	}
+	utils.Copy(a.ParentShnarfPreimage.EvaluationPointBytes[:], parentShnarf.X)
+
+	var b []byte
+	if b, err = utils.HexDecodeString(r.Aggregation.ParentShnarf.Y); err != nil {
+		return
+	}
+	if err = parentShnarf.Y.SetBytesCanonical(b); err != nil {
+		return
+	}
+	utils.Copy(a.ParentShnarfPreimage.EvaluationClaimBytes[:], b)
+
+	if computed := parentShnarf.Compute(); !bytes.Equal(computed, prevShnarf) {
+		err = fmt.Errorf("aggregation fails CHECK_PARENT_SHNARF:\n\tcomputed %x, given %x", computed, prevShnarf)
+		return
+	}
+
 	// execDataChecksums is a list that we progressively fill to store the Poseidon2
 	// hash of the executionData for every execution (conflation) batch. The
 	// is filled as we process the decompression proofs which store a list of
@@ -82,22 +125,20 @@ func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err
 	// Decompression FPI
 	for i, p := range r.DataAvailabilities {
 		var blobData [1024 * 128]byte
-		if b, err := base64.StdEncoding.DecodeString(p.CompressedData); err != nil {
+		if b, err = base64.StdEncoding.DecodeString(p.CompressedData); err != nil {
 			return a, err
-		} else {
-			copy(blobData[:], b)
 		}
+		copy(blobData[:], b)
 
 		var (
 			x [32]byte
 			y fr.Element
 		)
-		var b []byte
 		if b, err = utils.HexDecodeString(p.ExpectedX); err != nil { // TODO this is reduced. find how to get the unreduced value
 			return
-		} else {
-			copy(x[:], b)
 		}
+		copy(x[:], b)
+
 		if _, err = y.SetString(p.ExpectedY); err != nil {
 			return
 		}
@@ -408,38 +449,12 @@ func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err
 	a.ChainConfigurationFPISnark.L2MessageServiceAddress = new(big.Int).SetBytes(r.Aggregation.L2MessageServiceAddr[:])
 	a.IsAllowedCircuitID = aggregationFPI.IsAllowedCircuitID
 
-	a.FirstExecutionInitialStateRootHash[0] = r.Executions[0].InitialStateRootHash[:16]
-	a.FirstExecutionInitialStateRootHash[1] = r.Executions[0].InitialStateRootHash[16:]
-
-	if parentHash, decErr := utils.HexDecodeString(r.Aggregation.ParentStateRootHash); decErr == nil && !isKoalaBearHashBytes(parentHash) {
-		logrus.WithFields(logrus.Fields{
-			"parentStateRootHash":            r.Aggregation.ParentStateRootHash,
-			"firstExecutionInitialStateRoot": fmt.Sprintf("%x", r.Executions[0].InitialStateRootHash),
-		}).Warn("BLS-to-KoalaBear transition: aggregation ParentStateRootHash is not a valid koalabear octuplet, circuit will use first execution's initial state root hash instead")
-	}
-
 	a.InvalidityFPI, a.InvalidityPublicInput = assignInvalidity(r, len(a.InvalidityFPI))
 
 	// get the filtered addresses
 	a.FilteredAddressesFPISnark.Addresses = getFilteredAddresses(r, len(a.InvalidityFPI))
 
 	return
-}
-
-// isKoalaBearHashBytes checks whether a 32-byte slice represents a valid
-// koalabear octuplet (8 x 32-bit big-endian limbs, each < 0x7f000001).
-func isKoalaBearHashBytes(b []byte) bool {
-	if len(b) != 32 {
-		return false
-	}
-	const koalaMod = 0x7f000001
-	for i := 0; i < 8; i++ {
-		limb := uint32(b[4*i])<<24 | uint32(b[4*i+1])<<16 | uint32(b[4*i+2])<<8 | uint32(b[4*i+3])
-		if limb >= koalaMod {
-			return false
-		}
-	}
-	return true
 }
 
 // MerkleRoot computes the merkle root of data using the given hasher.

@@ -75,6 +75,8 @@ func (cf CollectedFields) AggregationPublicInput(cfg *config.Config) public_inpu
 		FinalShnarf:                             cf.FinalShnarf,
 		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
 		ParentStateRootHash:                     cf.ParentStateRootHashContract.Hex(),
+		ParentShnarf:                            cf.ParentShnarf,
+		GrandparentShnarf:                       cf.GrandparentShnarf,
 		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
 		FinalTimestamp:                          cf.FinalTimestamp,
 		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,

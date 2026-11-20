@@ -48,6 +48,11 @@ type Request struct {
 	// migration, afterward it will be simplifiable to only Koalabear.
 	ParentAggregationStateRootHashContract types.FullBytes32 `json:"parentAggregationStateRootHashContract"`
 
+	// Filename of the parent blob's decompression proof response (in the same
+	// directory as DecompressionProofs), which contains the parent shnarf's
+	// keccak preimage. Empty for the genesis aggregation.
+	ParentDecompressionProof string `json:"parentDecompressionProof"`
+
 	// last finalized stream hash
 	ParentAggregationLastFtxRollingHash string `json:"parentAggregationLastFtxRollingHash"`
 	// last finalized forced transaction number
@@ -63,6 +68,12 @@ type CollectedFields struct {
 	// format.
 	FinalShnarf                  string
 	ParentAggregationFinalShnarf string
+
+	// The remaining four components of the keccak preimage of
+	// ParentAggregationFinalShnarf, read from Request.ParentDecompressionProof
+	// (or the genesis defaults if that field is empty).
+	GrandparentShnarf string
+	ParentShnarf      public_input.ShnarfPreimage
 
 	// Parent data hash and the list of data hashes to be finalized
 	DataHashes     []string
