@@ -401,12 +401,14 @@ func (sys *System) NewLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 		))
 	}
 
-	// Allocate one claim cell per polynomial. The cell inherits the extension
-	// status of its corresponding column view.
+	// Allocate one claim cell per polynomial. A claim is an extension value if
+	// its column or the evaluation point is: evaluating a base column at an
+	// extension point (the usual case, a verifier coin) yields an extension
+	// value.
 	claims := make([]*Cell, len(polys))
 	for i, pv := range polys {
 		cellCtx := ctx.Childf("claim[%d]", i)
-		claims[i] = claimRound.NewCell(cellCtx, pv.IsExtension())
+		claims[i] = claimRound.NewCell(cellCtx, pv.IsExtension() || x.IsExtension())
 	}
 
 	return sys.newLagrangeEval(ctx, polys, x, claims)

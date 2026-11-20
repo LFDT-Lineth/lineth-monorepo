@@ -335,3 +335,46 @@ func TestCompileFull_AuditReduced(t *testing.T) {
 		}
 	})
 }
+
+// TestCompileFull_FixDynamicModuleSizes checks that the option pins every
+// dynamic module before the passes run: the compiled system is static, its
+// proofs carry no dynamic sizes and verify, and data that overflows the fixed
+// size is rejected at assignment.
+func TestCompileFull_FixDynamicModuleSizes(t *testing.T) {
+	sc := wioptest.NewDynamicQuadraticVanishingScenario()
+	require.NoError(t, compilers.CompileFull(sc.Sys,
+		compilers.FixDynamicModuleSizes(map[int]int{0: 16}),
+		compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
+	require.False(t, sc.Sys.Modules[0].IsDynamic(), "the module must be static after compilation")
+	require.Equal(t, 16, sc.Sys.Modules[0].Size())
+
+	proof, pub := sc.Sys.Prove(sc.AssignHonest)
+	require.Empty(t, proof.DynamicSizes, "a fixed system carries no dynamic sizes")
+	require.NoError(t, sc.Sys.Verify(proof, pub), "honest witness padded to the fixed size verifies")
+
+	// The scenario assigns 8 rows: a fixed size of 4 cannot hold them.
+	small := wioptest.NewDynamicQuadraticVanishingScenario()
+	require.NoError(t, compilers.CompileFull(small.Sys,
+		compilers.FixDynamicModuleSizes(map[int]int{0: 4}),
+		compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
+	require.PanicsWithValue(t,
+		`wiop: AssignColumn: column "dyn-quad/col" has data length 8 which overflows module "dyn-quad/mod" size 4`,
+		func() { small.Sys.Prove(small.AssignHonest) })
+}
+
+// TestCompileFull_FixDynamicModuleSizesErrors checks that an invalid size map
+// fails compilation before any pass runs, naming the cause.
+func TestCompileFull_FixDynamicModuleSizesErrors(t *testing.T) {
+	sc := wioptest.NewDynamicQuadraticVanishingScenario()
+	err := compilers.CompileFull(sc.Sys, compilers.FixDynamicModuleSizes(map[int]int{0: 12}))
+	require.ErrorContains(t, err, "compilers: wiop: FixDynamicSizes")
+	require.ErrorContains(t, err, "size 12 is not a power of two")
+	require.True(t, sc.Sys.Modules[0].IsDynamic(), "a rejected size map must leave the module dynamic")
+	require.Empty(t, sc.Sys.LagrangeEvals, "no pass may run after a rejected size map")
+
+	require.PanicsWithValue(t, "compilers: FixDynamicModuleSizes given twice", func() {
+		_ = compilers.CompileFull(wioptest.NewDynamicQuadraticVanishingScenario().Sys,
+			compilers.FixDynamicModuleSizes(map[int]int{0: 8}),
+			compilers.FixDynamicModuleSizes(map[int]int{0: 16}))
+	}, "giving the option twice must panic")
+}

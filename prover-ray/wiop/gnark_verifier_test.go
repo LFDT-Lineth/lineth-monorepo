@@ -73,27 +73,23 @@ func newPCSOnlySystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 // BN254, so that many witnesses can be solved against it without paying
 // for compilation again (it dominates the cost of the emulated circuit).
 type compiledVerifier struct {
-	sys         *wiop.System
-	template    wiop.Proof
-	templatePub wiop.PublicInput
-	modulus     *big.Int
-	ccs         interface {
+	sys     *wiop.System
+	circ    *wiop.VerifierCircuit
+	modulus *big.Int
+	ccs     interface {
 		Solve(witness.Witness, ...solver.Option) (any, error)
 		GetNbConstraints() int
 	}
 }
 
-// compileVerifierCircuit compiles the verifier circuit of sys over BN254, its
-// shape fixed by template (an honest proof of sys).
-func compileVerifierCircuit(
-	t *testing.T, sys *wiop.System, template wiop.Proof, templatePub wiop.PublicInput,
-) *compiledVerifier {
+// compileVerifierCircuit compiles the verifier circuit of sys over BN254. The
+// circuit is allocated from the System alone: no proof is needed.
+func compileVerifierCircuit(t *testing.T, sys *wiop.System) *compiledVerifier {
 	t.Helper()
 	modulus := ecc.BN254.ScalarField()
-	cv := &compiledVerifier{sys: sys, template: template, templatePub: templatePub, modulus: modulus}
-	circ := wiop.AllocateVerifierCircuit(sys, template, templatePub)
+	cv := &compiledVerifier{sys: sys, circ: wiop.AllocateVerifierCircuit(sys), modulus: modulus}
 	var err error
-	cv.ccs, err = frontend.Compile(modulus, scs.NewBuilder, circ)
+	cv.ccs, err = frontend.Compile(modulus, scs.NewBuilder, cv.circ)
 	require.NoError(t, err, "verifier circuit must compile")
 	return cv
 }
@@ -102,7 +98,7 @@ func compileVerifierCircuit(
 // solving it.
 func (cv *compiledVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicInput) error {
 	t.Helper()
-	assignment := wiop.AllocateVerifierCircuit(cv.sys, cv.template, cv.templatePub).AssignVerifierCircuit(proof, pub)
+	assignment := cv.circ.AssignVerifierCircuit(proof, pub)
 	w, err := frontend.NewWitness(assignment, cv.modulus)
 	require.NoError(t, err, "assignment must produce a witness")
 	_, err = cv.ccs.Solve(w)
@@ -117,7 +113,7 @@ func TestVerifierCircuit_PCSOnly(t *testing.T) {
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
-	cv := compileVerifierCircuit(t, sys, proof, pub)
+	cv := compileVerifierCircuit(t, sys)
 	t.Run("honest", func(t *testing.T) {
 		require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 		t.Logf("constraints (emulated over BN254): %d", cv.ccs.GetNbConstraints())
@@ -156,7 +152,7 @@ func TestVerifierCircuit_PCSOnly_RSBlowup(t *testing.T) {
 
 			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
 			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
-			cv := compileVerifierCircuit(t, sys, proof, pub)
+			cv := compileVerifierCircuit(t, sys)
 			require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 		})
 	}
@@ -199,15 +195,15 @@ func TestVerifierCircuit_PCSOnly_MerkleCap(t *testing.T) {
 
 			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
 			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
-			cv := compileVerifierCircuit(t, sys, proof, pub)
+			cv := compileVerifierCircuit(t, sys)
 			require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 		})
 	}
 }
 
 // TestVerifierCircuit_PCSOnly_MerkleCapMismatch checks that the circuit takes
-// the cap height from the System, not from the proof: a verifier circuit
-// allocated from a proof made at another cap height must not be satisfiable.
+// the cap height from the System, not from the proof: a proof made at another
+// cap height does not have the circuit's geometry and must be refused.
 func TestVerifierCircuit_PCSOnly_MerkleCapMismatch(t *testing.T) {
 	verifierSys, _ := newPCSOnlyCapSystem(pcs.WithMerkleCapHeight(0))
 	proverSys, col := newPCSOnlyCapSystem(pcs.WithMerkleCapHeight(3))
@@ -222,11 +218,12 @@ func TestVerifierCircuit_PCSOnly_MerkleCapMismatch(t *testing.T) {
 			}
 		}()
 		modulus := ecc.BN254.ScalarField()
-		ccs, err := frontend.Compile(modulus, scs.NewBuilder, wiop.AllocateVerifierCircuit(verifierSys, proof, pub))
+		circ := wiop.AllocateVerifierCircuit(verifierSys)
+		ccs, err := frontend.Compile(modulus, scs.NewBuilder, circ)
 		if err != nil {
 			return err
 		}
-		assignment := wiop.AllocateVerifierCircuit(verifierSys, proof, pub).AssignVerifierCircuit(proof, pub)
+		assignment := circ.AssignVerifierCircuit(proof, pub)
 		w, err := frontend.NewWitness(assignment, modulus)
 		if err != nil {
 			return err
@@ -234,7 +231,8 @@ func TestVerifierCircuit_PCSOnly_MerkleCapMismatch(t *testing.T) {
 		_, err = ccs.Solve(w)
 		return err
 	}()
-	require.Error(t, err, "a capped proof must not satisfy the uncapped System's circuit")
+	require.ErrorContains(t, err, "the PCS opening proof does not have the circuit's geometry",
+		"a capped proof must not satisfy the uncapped System's circuit")
 }
 
 // TestVerifierCircuit_PCSModuleGroups checks the circuit verifier on a system
@@ -286,7 +284,7 @@ func verifyModuleGroupsCircuit(t *testing.T, sizeAB, sizeBig int, opts ...pcs.Op
 	})
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
-	cv := compileVerifierCircuit(t, sys, proof, pub)
+	cv := compileVerifierCircuit(t, sys)
 	require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 	bad := cloneProof(proof)
 	bad.Cells[le.EvaluationClaims[1].Context.ID] = field.ElemFromExt(field.Uint64ToExt(7))
@@ -313,7 +311,7 @@ func TestVerifierCircuit_Vanishing(t *testing.T) {
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
 
-			cv := compileVerifierCircuit(t, sc.Sys, proof, pub)
+			cv := compileVerifierCircuit(t, sc.Sys)
 			require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 			t.Logf("constraints: %d", cv.ccs.GetNbConstraints())
 			require.Error(t, cv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
@@ -355,7 +353,7 @@ func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
 				return bad
 			}
 
-			cv := compileVerifierCircuit(t, sc.Sys, proof, pub)
+			cv := compileVerifierCircuit(t, sc.Sys)
 			for _, id := range cellIDs {
 				bad := tamperCell(id)
 				require.Errorf(t, sc.Sys.Verify(bad, pub), "tampered cell %d must fail natively", id)
@@ -374,25 +372,28 @@ type unsupportedAction struct{}
 func (unsupportedAction) Check(*wiop.Runtime) error { return nil }
 
 func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
-	sys, col, _ := newPCSOnlySystem()
+	sys, _, _ := newPCSOnlySystem()
 	sys.Rounds[1].RegisterVerifierAction(unsupportedAction{})
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
 
-	require.Panics(t, func() { wiop.AllocateVerifierCircuit(sys, proof, pub) },
+	require.Panics(t, func() { wiop.AllocateVerifierCircuit(sys) },
 		"a verifier action without CheckGnark must be rejected instead of dropped")
 }
 
 func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 	sys, col, le := newPCSOnlySystem()
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
-	circ := wiop.AllocateVerifierCircuit(sys, proof, pub)
+	circ := wiop.AllocateVerifierCircuit(sys)
 
 	bad := cloneProof(proof)
-	// The claim is carried as an extension element; retagging it as base
+	// The claim is declared as an extension element; retagging it as base
 	// changes the transcript layout and must be refused.
 	bad.Cells[le.EvaluationClaims[0].Context.ID] = field.ElemFromBase(field.NewElement(3))
-	require.Panics(t, func() { circ.AssignVerifierCircuit(bad, pub) },
-		"a proof whose cell field tags differ from the template must be rejected")
+	require.PanicsWithValue(t,
+		`wiop: VerifierCircuit: cell "gnark-pcs/le/claim[0]" does not carry its declared field tag (extension=true)`,
+		func() { circ.AssignVerifierCircuit(bad, pub) },
+		"a proof whose cell field tags differ from the declarations must be rejected")
+	require.ErrorContains(t, sys.Verify(bad, pub), "does not carry its declared field tag",
+		"the native verifier must refuse the retagged proof too")
 }
 
 func hasDynamicModule(sys *wiop.System) bool {
@@ -421,4 +422,118 @@ func cloneProof(p wiop.Proof) wiop.Proof {
 		res.Commitments[k] = v
 	}
 	return res
+}
+
+// TestVerifierCircuit_FixedDynamicSizes covers the terminal-layer recipe for
+// dynamic modules: pin every dynamic module to a fixed size before compiling
+// ([wiop.System.FixDynamicSizes]), which makes the proof shape, and so the
+// circuit, independent of the trace. Each dynamic vanishing scenario is fixed at
+// its natural size, where the honest proof must be accepted natively and
+// in-circuit and an invalid witness rejected by both.
+//
+// At twice the natural size the data no longer fills the module and padding
+// rows appear. Padding is only sound for constraints that hold on padding rows,
+// which is already what a dynamic module requires whenever its trace length is
+// not a power of two. Fixing the size does not change that requirement:
+//   - DynamicQuadratic (col² = col, zero padding) is padding-safe and must pass
+//     end to end;
+//   - DynamicFibonacci and LeftPadDynamic exactly fill size 8 and their
+//     recurrences break at the first padding row, so the honest witness must be
+//     rejected natively.
+func TestVerifierCircuit_FixedDynamicSizes(t *testing.T) {
+	paddingSafe := map[string]bool{"DynamicQuadratic": true}
+	ran := 0
+	for _, build := range wioptest.VanishingScenarios() {
+		probe := build()
+		if !hasDynamicModule(probe.Sys) {
+			continue
+		}
+		// Prove the dynamic system once to learn the sizes its data needs.
+		global.Compile(probe.Sys)
+		pcs.Compile(probe.Sys, testPCSOptions()...)
+		probeProof, _ := probe.Sys.Prove(probe.AssignHonest)
+		natural := probeProof.DynamicSizes
+		require.NotEmpty(t, natural, "%s: a dynamic proof must carry its sizes", probe.Name)
+
+		for _, factor := range []int{1, 2} {
+			sizes := make(map[int]int, len(natural))
+			for k, v := range natural {
+				sizes[k] = v * factor
+			}
+			fixed := func() *wioptest.VanishingScenario {
+				sc := build()
+				require.NoError(t, sc.Sys.FixDynamicSizes(sizes))
+				require.False(t, hasDynamicModule(sc.Sys), "every dynamic module must be fixed")
+				global.Compile(sc.Sys)
+				pcs.Compile(sc.Sys, testPCSOptions()...)
+				return sc
+			}
+			padded := factor > 1
+			t.Run(fmt.Sprintf("%s/x%d", probe.Name, factor), func(t *testing.T) {
+				ran++
+				sc := fixed()
+				proof, pub := sc.Sys.Prove(sc.AssignHonest)
+				require.Empty(t, proof.DynamicSizes, "a fixed system carries no dynamic sizes")
+				if padded && !paddingSafe[probe.Name] {
+					require.ErrorContains(t, sc.Sys.Verify(proof, pub), "global quotient check failed",
+						"constraints that fail on padding rows must reject the padded witness")
+					return
+				}
+				require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+				invalid := fixed()
+				badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+				require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+
+				cv := compileVerifierCircuit(t, sc.Sys)
+				require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+				t.Logf("sizes %v: %d constraints", sizes, cv.ccs.GetNbConstraints())
+				require.Error(t, cv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+			})
+		}
+	}
+	require.Equal(t, 6, ran, "expected three dynamic scenarios at two sizes each")
+}
+
+// TestVerifierCircuit_CompiledBeforeAnyProof is the point of allocating from
+// the System: the circuit is compiled right after the System, before anything
+// is proven, and then accepts honest proofs of different witnesses. The
+// constraint system is a function of the System alone, so allocating twice
+// yields the same one.
+func TestVerifierCircuit_CompiledBeforeAnyProof(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	cv := compileVerifierCircuit(t, sys)
+	again := compileVerifierCircuit(t, sys)
+	require.Equal(t, cv.ccs.GetNbConstraints(), again.ccs.GetNbConstraints(),
+		"the constraint system must not depend on the allocation")
+
+	for _, offset := range []uint64{1, 1000} {
+		elems := make([]field.Element, 8)
+		for i := range elems {
+			elems[i].SetUint64(uint64(i*i) + offset)
+		}
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(elems)})
+		})
+		require.NoError(t, sys.Verify(proof, pub), "offset %d: honest proof must verify natively", offset)
+		require.NoError(t, cv.solve(t, proof, pub), "offset %d: honest proof must satisfy the precompiled circuit", offset)
+	}
+}
+
+// TestAllocateVerifierCircuit_RejectsColumnElision checks that a system whose
+// batch shapes the prover chooses per proof is refused at allocation.
+func TestAllocateVerifierCircuit_RejectsColumnElision(t *testing.T) {
+	sys := wiop.NewSystemf("gnark-pcs-elision")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	pcs.Compile(sys, append(testPCSOptions(), pcs.WithColumnElision())...)
+
+	require.PanicsWithValue(t,
+		"pcs: OpeningProofShape: all-Present manifests only: compile without WithColumnElision",
+		func() { wiop.AllocateVerifierCircuit(sys) })
 }

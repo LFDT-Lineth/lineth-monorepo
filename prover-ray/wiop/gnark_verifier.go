@@ -2,6 +2,7 @@ package wiop
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
@@ -21,6 +22,13 @@ import (
 // verifier of the System the circuit was allocated for. The System itself is
 // compile-time metadata baked into the constraints, not a witness.
 //
+// Shape: the circuit, and so its constraint system and proving keys, is a
+// function of the System alone and can be built before any proof exists (see
+// [AllocateVerifierCircuit]). Every honest proof of the System has the same
+// shape: cell field tags follow the cell declarations, commitments follow the
+// rounds, and the FRI opening geometry follows the PCS parameters and the
+// static batch shapes.
+//
 // Visibility: every field is private. Exposing the public inputs (and a digest
 // of the System) is the job of the outer circuit that embeds a VerifierCircuit.
 //
@@ -30,8 +38,9 @@ import (
 //
 // Limitations of this first iteration, all enforced by
 // [AllocateVerifierCircuit] failing closed:
-//   - no dynamic-size modules (their sizes change the circuit shape);
-//   - no pre-sampling hooks;
+//   - no dynamic-size modules (their sizes change the circuit shape): fix their
+//     sizes before compiling, see [System.FixDynamicSizes];
+//   - no column elision (the prover would choose the batch shapes);
 //   - every verifier action must implement [GnarkVerifierAction].
 type VerifierCircuit struct {
 	// CellsBase holds every base-field proof cell, in round then declaration
@@ -59,47 +68,148 @@ type VerifierCircuit struct {
 
 // verifierLayout is the witness shape shared by a circuit and its assignments:
 // where every cell of the System lands in the witness slices, which rounds
-// carry a commitment, and whether a PCS opening proof is present. It is
-// derived from a template proof at allocation time and enforced on every
+// carry a commitment, and whether a PCS opening proof is present. It is a
+// function of the System alone, fixed at allocation time and enforced on every
 // assignment.
 type verifierLayout struct {
 	cells       map[ObjectID]cellSlot
 	commitments []int // round IDs carrying a commitment, in order
 	hasPCS      bool
+	// pcsShape is a proof with the opening geometry of the System (values
+	// meaningless), kept apart from the circuit fields: frontend.Compile writes
+	// its variables into the circuit struct, which then no longer describes the
+	// geometry alone.
+	pcsShape fri.OpeningProof
 }
 
 // cellSlot locates one cell in the witness: the (isBase, isPublic) pair picks
 // the slice, index the position within it.
 //
-// isBase is a property of the proof value (see [field.Gen.IsBase]), not of the
-// cell declaration, which is why the layout cannot be derived from the System
-// alone. It is load-bearing beyond slice selection: [Runtime.AdvanceRound]
-// absorbs a base cell as one field element and an extension cell as six, so a
-// proof whose tags differ from the template's would replay a different
-// transcript.
+// isBase is the cell's declared field ([Cell.IsExtension]). The declaration is
+// binding: the runtime stores every cell value with its declared tag and
+// [System.Verify] rejects a proof value tagged otherwise. It is load-bearing
+// beyond slice selection: [Runtime.AdvanceRound] absorbs a base cell as one
+// field element and an extension cell as six, so the tag fixes the transcript.
 type cellSlot struct {
 	isBase   bool
 	isPublic bool
 	index    int
 }
 
-// AllocateVerifierCircuit builds the unassigned circuit for sys, using
-// template (an honest proof of sys with its public inputs) to fix the witness
-// shape: cell field tags, commitment count and FRI opening-proof geometry.
-//
-// It panics if sys uses a feature the circuit does not support yet, or if a
-// registered verifier action does not implement [GnarkVerifierAction]: the
-// check it enforces would otherwise be silently dropped from the circuit.
-func AllocateVerifierCircuit(sys *System, template Proof, templatePub PublicInput) *VerifierCircuit {
-	checkCircuitSupport(sys)
-	return buildVerifierCircuit(sys, nil, template, templatePub, false)
+// GnarkOpeningProofAllocator is implemented by the verifier action that checks
+// the PCS opening proof (the PCS compiler's opening action). It returns an
+// opening proof with the geometry every honest proof of sys has, derived from
+// the System alone; its values are meaningless. [AllocateVerifierCircuit] calls
+// it; a System without such an action carries no PCS opening proof.
+type GnarkOpeningProofAllocator interface {
+	OpeningProofShape(sys *System) fri.OpeningProof
 }
 
-// AssignVerifierCircuit returns the witness assignment of the circuit produced
-// by [AllocateVerifierCircuit] for (proof, pub). It panics if the proof does
-// not have the shape the circuit was allocated with.
+// AllocateVerifierCircuit builds the unassigned circuit for sys from the System
+// alone, before any proof exists: the cell field tags come from the cell
+// declarations, the commitments from the rounds flagged HasCommitment and the
+// FRI opening-proof geometry from the [GnarkOpeningProofAllocator] action.
+//
+// It panics if sys uses a feature the circuit does not support (dynamic
+// modules, a verifier action without [GnarkVerifierAction], column elision),
+// or registers more than one opening-proof allocator.
+func AllocateVerifierCircuit(sys *System) *VerifierCircuit {
+	checkCircuitSupport(sys)
+	layout := &verifierLayout{cells: make(map[ObjectID]cellSlot)}
+	c := &VerifierCircuit{spec: sys, layout: layout}
+	piIdx := sys.publicInputIndex()
+
+	for _, r := range sys.Rounds {
+		for _, cell := range r.Cells {
+			_, isPI := piIdx[cell.Context.ID]
+			layout.cells[cell.Context.ID] = c.appendCell(!cell.IsExtension(), isPI, field.Gen{}, false)
+		}
+		if r.HasCommitment {
+			layout.commitments = append(layout.commitments, r.ID)
+			c.Commitments = append(c.Commitments, circuit.Octuplet{})
+		}
+	}
+
+	var allocator GnarkOpeningProofAllocator
+	for _, r := range sys.Rounds {
+		for _, va := range r.VerifierActions {
+			a, ok := va.(GnarkOpeningProofAllocator)
+			if !ok {
+				continue
+			}
+			if allocator != nil {
+				panic("wiop: VerifierCircuit: more than one verifier action allocates a PCS opening proof")
+			}
+			allocator = a
+		}
+	}
+	if allocator != nil {
+		layout.hasPCS = true
+		layout.pcsShape = allocator.OpeningProofShape(sys)
+		c.PCSOpeningProof = fri.AllocateGnarkOpeningProof(layout.pcsShape)
+	}
+	return c
+}
+
+// AssignVerifierCircuit returns the witness assignment of the circuit for
+// (proof, pub). It panics if the proof does not have the circuit's shape: a
+// missing cell, a cell value without its declared field tag, a missing
+// commitment, or an opening proof of another geometry.
 func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *VerifierCircuit {
-	return buildVerifierCircuit(c.spec, c.layout, proof, pub, true)
+	sys := c.spec
+	if len(pub) != len(sys.PublicInputs) {
+		panic(fmt.Sprintf("wiop: VerifierCircuit: public inputs length mismatch: got %d, want %d",
+			len(pub), len(sys.PublicInputs)))
+	}
+	a := &VerifierCircuit{spec: sys, layout: c.layout}
+	piIdx := sys.publicInputIndex()
+
+	for _, r := range sys.Rounds {
+		for _, cell := range r.Cells {
+			pos, isPI := piIdx[cell.Context.ID]
+			var v field.Gen
+			if isPI {
+				v = pub[pos]
+			} else {
+				var ok bool
+				if v, ok = proof.Cells[cell.Context.ID]; !ok {
+					panic(fmt.Sprintf("wiop: VerifierCircuit: cell %q not found in proof", cell.Context.Path()))
+				}
+			}
+			if !cell.hasDeclaredTag(v) {
+				panic(fmt.Sprintf("wiop: VerifierCircuit: cell %q does not carry its declared field tag (extension=%v)",
+					cell.Context.Path(), cell.IsExtension()))
+			}
+			slot := a.appendCell(v.IsBase(), isPI, v, true)
+			if want := c.layout.cells[cell.Context.ID]; want != slot {
+				panic(fmt.Sprintf("wiop: VerifierCircuit: cell %q lands at %+v, want %+v", cell.Context.Path(), slot, want))
+			}
+		}
+	}
+	for _, roundID := range c.layout.commitments {
+		commitment, ok := proof.Commitments[roundID]
+		if !ok {
+			panic(fmt.Sprintf("wiop: VerifierCircuit: commitment for round %d not found in proof", roundID))
+		}
+		a.Commitments = append(a.Commitments, poseidon2.NewKoalagnarkOctuplet(commitment))
+	}
+	if len(proof.Commitments) != len(c.layout.commitments) {
+		panic(fmt.Sprintf("wiop: VerifierCircuit: proof has %d commitments, want %d",
+			len(proof.Commitments), len(c.layout.commitments)))
+	}
+
+	if c.layout.hasPCS != (proof.PCSOpeningProof != nil) {
+		panic("wiop: VerifierCircuit: proof and circuit disagree on the presence of a PCS opening proof")
+	}
+	if c.layout.hasPCS {
+		// Compared on fresh unassigned structs, which keep exactly the geometry.
+		if !reflect.DeepEqual(fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof),
+			fri.AllocateGnarkOpeningProof(c.layout.pcsShape)) {
+			panic("wiop: VerifierCircuit: the PCS opening proof does not have the circuit's geometry")
+		}
+		a.PCSOpeningProof = fri.NewGnarkOpeningProof(*proof.PCSOpeningProof)
+	}
+	return a
 }
 
 // System returns the compiled system the circuit verifies.
@@ -108,7 +218,8 @@ func (c *VerifierCircuit) System() *System { return c.spec }
 func checkCircuitSupport(sys *System) {
 	for _, m := range sys.Modules {
 		if m.IsDynamic() {
-			panic(fmt.Sprintf("wiop: VerifierCircuit: dynamic module %q is not supported", m.Context.Path()))
+			panic(fmt.Sprintf("wiop: VerifierCircuit: dynamic module %q is not supported; "+
+				"fix its size before compiling (see System.FixDynamicSizes)", m.Context.Path()))
 		}
 	}
 	for _, r := range sys.Rounds {
@@ -124,82 +235,15 @@ func checkCircuitSupport(sys *System) {
 	}
 }
 
-// buildVerifierCircuit walks the system exactly like [System.Verify] and fills
-// the witness slices. With layout == nil the layout is derived from the proof
-// (allocation); otherwise the proof is checked against it (assignment).
-// withValues selects between zero placeholders and actual assignments.
-func buildVerifierCircuit(
-	sys *System, layout *verifierLayout, proof Proof, pub PublicInput, withValues bool,
-) *VerifierCircuit {
-	c := &VerifierCircuit{spec: sys}
-	allocating := layout == nil
-	if allocating {
-		layout = &verifierLayout{cells: make(map[ObjectID]cellSlot)}
-	}
-	c.layout = layout
-
-	if len(pub) != len(sys.PublicInputs) {
-		panic(fmt.Sprintf("wiop: VerifierCircuit: public inputs length mismatch: got %d, want %d",
-			len(pub), len(sys.PublicInputs)))
-	}
-	piIdx := sys.publicInputIndex()
-
-	for _, r := range sys.Rounds {
-		for _, cell := range r.Cells {
-			var v field.Gen
-			pos, isPI := piIdx[cell.Context.ID]
-			if isPI {
-				v = pub[pos]
-			} else {
-				var ok bool
-				if v, ok = proof.Cells[cell.Context.ID]; !ok {
-					panic(fmt.Sprintf("wiop: VerifierCircuit: cell %q not found in proof", cell.Context.Path()))
-				}
-			}
-			c.placeCell(cell, v, isPI, allocating, withValues)
-		}
-		if r.HasCommitment {
-			commitment, ok := proof.Commitments[r.ID]
-			if !ok {
-				panic(fmt.Sprintf("wiop: VerifierCircuit: commitment for round %d not found in proof", r.ID))
-			}
-			if allocating {
-				layout.commitments = append(layout.commitments, r.ID)
-			}
-			if withValues {
-				c.Commitments = append(c.Commitments, poseidon2.NewKoalagnarkOctuplet(commitment))
-			} else {
-				c.Commitments = append(c.Commitments, circuit.Octuplet{})
-			}
-		}
-	}
-
-	if allocating {
-		layout.hasPCS = proof.PCSOpeningProof != nil
-	}
-	if layout.hasPCS != (proof.PCSOpeningProof != nil) {
-		panic("wiop: VerifierCircuit: proof and circuit disagree on the presence of a PCS opening proof")
-	}
-	if layout.hasPCS {
-		if withValues {
-			c.PCSOpeningProof = fri.NewGnarkOpeningProof(*proof.PCSOpeningProof)
-		} else {
-			c.PCSOpeningProof = fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof)
-		}
-	}
-	return c
-}
-
-// placeCell appends v to the slice its (field, visibility) pair selects and
-// records or checks the cell's slot.
-func (c *VerifierCircuit) placeCell(cell *Cell, v field.Gen, isPublic, allocating, withValues bool) {
-	id := cell.Context.ID
-	slot := cellSlot{isBase: v.IsBase(), isPublic: isPublic}
+// appendCell appends a witness for v (a zero placeholder without values) to the
+// slice its (field, visibility) pair selects and returns the cell's slot.
+func (c *VerifierCircuit) appendCell(isBase, isPublic bool, v field.Gen, withValues bool) cellSlot {
+	slot := cellSlot{isBase: isBase, isPublic: isPublic}
 	switch {
-	case slot.isBase && isPublic:
+	case isBase && isPublic:
 		slot.index = len(c.PublicInputsBase)
 		c.PublicInputsBase = append(c.PublicInputsBase, newElementWitness(v, withValues))
-	case slot.isBase:
+	case isBase:
 		slot.index = len(c.CellsBase)
 		c.CellsBase = append(c.CellsBase, newElementWitness(v, withValues))
 	case isPublic:
@@ -209,18 +253,7 @@ func (c *VerifierCircuit) placeCell(cell *Cell, v field.Gen, isPublic, allocatin
 		slot.index = len(c.CellsExt)
 		c.CellsExt = append(c.CellsExt, newExtWitness(v, withValues))
 	}
-
-	if allocating {
-		c.layout.cells[id] = slot
-		return
-	}
-	if want := c.layout.cells[id]; want != slot {
-		panic(fmt.Sprintf(
-			"wiop: VerifierCircuit: cell %q does not match the allocated layout (base=%v public=%v index=%d), "+
-				"got (base=%v public=%v index=%d)",
-			cell.Context.Path(), want.isBase, want.isPublic, want.index, slot.isBase, slot.isPublic, slot.index,
-		))
-	}
+	return slot
 }
 
 func newElementWitness(v field.Gen, withValues bool) circuit.Element {
