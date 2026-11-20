@@ -199,6 +199,7 @@ func nativeReplay(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) *wio
 	for id, d := range proof.Commitments {
 		rt.Commitments[id] = d
 	}
+	setDynamicSizes(rt, proof.DynamicSizes)
 	pi := map[wiop.ObjectID]int{}
 	for i, c := range sys.PublicInputs {
 		pi[c.Context.ID] = i
@@ -216,6 +217,30 @@ func nativeReplay(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) *wio
 			return rt
 		}
 		rt.AdvanceRound()
+	}
+}
+
+// setDynamicSizes sets the dynamic modules' sizes of a fresh runtime, as
+// System.Verify does from the proof. The runtime has no setter: assigning a
+// column of n zeros in round 0 sizes its module n, which needs every dynamic
+// module to have a column in round 0, and the sizes to be absorbed from it
+// (System.DynamicSizeRound = 0).
+func setDynamicSizes(rt *wiop.Runtime, sizes map[int]int) {
+	sys := rt.System
+	if sys.DynamicSizeRound != 0 {
+		panic("setDynamicSizes: dynamic sizes after round 0")
+	}
+	for k, n := range sizes {
+		mod := sys.Modules[k]
+		for _, col := range sys.Rounds[0].Columns {
+			if col.Module == mod {
+				rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(make([]field.Element, n))})
+				break
+			}
+		}
+		if mod.RuntimeSize(rt) != n {
+			panic(fmt.Sprintf("setDynamicSizes: module %q has no column in round 0", mod.Context.Path()))
+		}
 	}
 }
 
@@ -412,7 +437,9 @@ func TestVerifierUnsupported(t *testing.T) {
 	mod.NewVanishing(sys.Context.Childf("v"), wiop.Mul(col.View(), col.View()))
 	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
 	_, err := NewVerifier(&Machine{}, sys)
-	require.ErrorContains(t, err, "dynamic")
+	require.ErrorContains(t, err, "dynamic", "the PCS opening of a dynamic module")
+	_, err = newVerifier(&Machine{}, sys, true)
+	require.NoError(t, err, "a dynamic module, the PCS skipped")
 
 	// Without a PCS, nothing binds the proof's values to the columns.
 	noPCS := wiop.NewSystemf("no-pcs")

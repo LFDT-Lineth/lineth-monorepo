@@ -182,7 +182,7 @@ func (pv *pcsVerifier) claims() {
 // zeta returns ζ, the LagrangeEvals' evaluation point, and checks they share
 // it.
 func (pv *pcsVerifier) zeta() (int, error) {
-	ev := &evaluator{v: pv.v, r: -1, memo: map[wiop.Expression]int{}, pows: map[int]int{}, anns: map[int]int{}}
+	ev := &evaluator{v: pv.v, r: -1, memo: map[wiop.Expression]int{}}
 	res := -1
 	for _, p := range pv.op.EvalPoints {
 		z, err := ev.eval(p)
