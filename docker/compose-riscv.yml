@@ -49,7 +49,7 @@ services:
 
   coordinator:
     # First release whose prover requests match prover-ray 0.2.0.
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.3.0-20261028-9bfcca4}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.4.0-20261119-c5e1daa}
     # Started by start-env-with-riscv once the L1 contract is deployed.
     profiles: !override ["riscv"]
     # The coordinator image has no curl, so the base healthcheck never passes.
