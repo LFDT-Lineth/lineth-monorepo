@@ -7,6 +7,9 @@ const guest_crypto = @import("guest_crypto");
 const secp256k1_std = @import("secp256k1_std");
 const build_options = @import("build_options");
 
+/// The providers keep no per-thread buffer for a signal stack.
+pub const std_options: std.Options = .{ .signal_stack_size = null };
+
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
 // the Lineth wrapper (prover-accelerated) or the standard zig keccak, selected at build time by
 // -Dkeccak-accel; modexp/ripemd160/blake2f come from zesu_crypto_backend; secp256k1 is either
@@ -38,12 +41,34 @@ comptime {
     @export(&bls12_map_fp_to_g1, .{ .name = "zkvm_bls12_map_fp_to_g1" });
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });
+    if (!build_options.is_guest) {
+        // The one KZG context of a host process, for the code that proves with it.
+        @export(&kzg_context, .{ .name = "lineth_zkvm_kzg_context" });
+    }
     if (build_options.is_guest) {
         @export(&log, .{ .name = "zkvm_log" });
         @export(&abort, .{ .name = "zkvm_abort" });
         // `write_output` already matches the declared C ABI, so export it directly.
         @export(&lineth_accel.write_output, .{ .name = "write_output" });
         @export(&guest_allocator, .{ .name = "guest_allocator" });
+    }
+}
+
+// The providers have the types the callers declare. A guest program holds the declarations through
+// its own `zkvm_accelerators` module, and a second module over that file would collide, so the
+// agreement is checked in the native compilations of the provider.
+comptime {
+    if (!build_options.is_guest) {
+        const declared = @import("zkvm_accelerators");
+        agree("zkvm_keccak256", declared.zkvm_keccak256, if (build_options.keccak_accel) lineth_accel.zkvm_keccak256 else keccak256);
+        agree("zkvm_sha256", declared.zkvm_sha256, sha256);
+        agree("lineth_zkvm_kzg_verify_blob_batch", declared.lineth_zkvm_kzg_verify_blob_batch, kzg_verify_blob_batch);
+    }
+}
+
+fn agree(comptime symbol: []const u8, comptime declared: anytype, comptime provided: anytype) void {
+    if (@TypeOf(declared) != @TypeOf(provided)) {
+        @compileError("the provider of " ++ symbol ++ " is " ++ @typeName(@TypeOf(provided)) ++ ", its declaration is " ++ @typeName(@TypeOf(declared)));
     }
 }
 
@@ -155,6 +180,9 @@ fn kzg_point_eval(commitment: *const [48]u8, z: *const [32]u8, y: *const [32]u8,
 fn kzg_verify_blob_batch(blobs: [*]const [131072]u8, commitments: [*]const [48]u8, proofs: [*]const [48]u8, n: usize, verified: *bool) callconv(.c) i32 {
     verified.* = guest_crypto.kzgVerifyBlobBatch(blobs[0..n], commitments[0..n], proofs[0..n]);
     return OK;
+}
+fn kzg_context() callconv(.c) ?*const anyopaque {
+    return guest_crypto.kzgContext();
 }
 fn bls12_g1_add(p1: *const [96]u8, p2: *const [96]u8, result: *[96]u8) callconv(.c) i32 {
     return if (guest_crypto.g1Add(p1, p2, result)) OK else ERR;

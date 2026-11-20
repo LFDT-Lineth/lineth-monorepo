@@ -234,10 +234,12 @@ pub fn acceleratorsDependency(
 }
 
 /// The host build of the `zkvm_*` crypto providers, which native tests and tools link: the
-/// Constantine-backed provider module as an object, and the Constantine archive it needs.
+/// Constantine-backed provider module as an object, and the Constantine archive it needs, with
+/// Constantine's C declarations translated for the target for the modules that call the archive.
 pub const HostCrypto = struct {
     provider: *std.Build.Step.Compile,
     constantine: std.Build.LazyPath,
+    constantine_c: *std.Build.Module,
 
     /// The host crypto of `target`, built from the accelerator package with the native form of
     /// `crypto`. The provider is compiled optimized: the compiler's own linker crashes on a
@@ -248,13 +250,14 @@ pub const HostCrypto = struct {
 
     /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
     /// native target, which publishes the Constantine archive of its provider as
-    /// `zkvm_provide_archive`. Null until that archive exists: it is fetched on demand and the build
-    /// reruns once it is.
+    /// `zkvm_provide_archive` and its declarations as `constantine_c`. Null until the archive exists:
+    /// it is fetched on demand and the build reruns once it is.
     pub fn init(b: *std.Build, accelerators: *std.Build.Dependency) ?HostCrypto {
         const constantine = accelerators.builder.named_lazy_paths.get("zkvm_provide_archive") orelse return null;
         return .{
             .provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") }),
             .constantine = constantine,
+            .constantine_c = accelerators.module("constantine_c"),
         };
     }
 

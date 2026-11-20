@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zesu = .{
-            .url = "https://github.com/Consensys-Incorporated/zesu/archive/2835883c929407ff7252f7f70924436833d767c7.tar.gz",
-            .hash = "zesu-0.1.0-UtqpADrkRgCDa2Q8oghvNCEGFguQic--Rv8uGWFjwqp2",
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/fbebc62e5ae8e8b545b2d24819b36c5425b73812.tar.gz",
+            .hash = "zesu-0.1.0-UtqpANRERwAmoPAYMD7NJOsUL0zwYOQcnCdWsRI-d8Nm",
         },
         // Shared build helpers.
         .build_common = .{ .path = "../build_common" },
