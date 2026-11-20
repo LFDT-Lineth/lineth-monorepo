@@ -26,6 +26,16 @@ on:
       - "prover-ray/utils/ssz/testdata/l2_execution_output.ssz"
       - "riscv-guests/**"
       - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
+      # verifier-ray builds the devmode system and prover against prover-ray HEAD
+      # (go.mod `replace`); these are the prover-ray packages that path reaches.
+      - "prover-ray/backend/devmode/**"
+      - "prover-ray/wiop/**"
+      - "prover-ray/maths/**"
+      - "prover-ray/crypto/**"
+      - "prover-ray/utils/**"
+      - "prover-ray/zkcdriver/**"
+      - "prover-ray/go.mod"
+      - "prover-ray/go.sum"
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
       - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
@@ -46,6 +56,14 @@ on:
       - "prover-ray/utils/ssz/testdata/l2_execution_output.ssz"
       - "riscv-guests/**"
       - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
+      - "prover-ray/backend/devmode/**"
+      - "prover-ray/wiop/**"
+      - "prover-ray/maths/**"
+      - "prover-ray/crypto/**"
+      - "prover-ray/utils/**"
+      - "prover-ray/zkcdriver/**"
+      - "prover-ray/go.mod"
+      - "prover-ray/go.sum"
       - "arithmetization/src/main/riscv/**"
       - "arithmetization/src/main/common/**"
       - "arithmetization/src/main/lib/**"
@@ -109,6 +127,14 @@ jobs:
             guest:
               - "riscv-guests/**"
               - "verifier-ray/**"
+              - "prover-ray/backend/devmode/**"
+              - "prover-ray/wiop/**"
+              - "prover-ray/maths/**"
+              - "prover-ray/crypto/**"
+              - "prover-ray/utils/**"
+              - "prover-ray/zkcdriver/**"
+              - "prover-ray/go.mod"
+              - "prover-ray/go.sum"
               - "arithmetization/src/main/riscv/**"
               - "arithmetization/src/main/common/**"
               - "arithmetization/src/main/lib/**"
