@@ -173,9 +173,10 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
     proverVersion: `riscv-local-${proverMode}`,
     startBlockNumber,
     publicInputs: { endBlockNumber },
-    programVk: zeroHash,
+    programVk: expect.stringMatching(/^0x[0-9a-f]{64}$/i),
     proof: stringToHex(`dev-proof:${proverMode}`),
   });
+  expect(response.programVk).not.toBe(zeroHash);
 
   if (proverMode === "dev-zkvm") {
     // dev-zkvm derives the public inputs by executing the guest.
