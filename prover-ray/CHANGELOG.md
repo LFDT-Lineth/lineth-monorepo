@@ -46,6 +46,7 @@
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(prover-ray)* Ship guest programs separately from the prover-ray image (#4515)
+- *(prover-ray)* Remove nonnative zkcdriver tests (#4555)
 ## [0.2.0] - 2026-10-28
 
 ### 🚀 Features
