@@ -40,7 +40,19 @@ else
 // The bound-round-message workspace lives here, in .bss, rather than in
 // `verify`'s stack frame: it holds every round cell (17,842 on the real RISC-V
 // system) and the guest's linker stack is a fixed 8 MiB.
-var verifier_workspace: verifier.Workspace(riscv_system.system_0_public_input) = undefined;
+// The verified system: the embedded fixture's when the input is embedded at
+// build time, the generated RISC-V system's otherwise. The workspace is sized
+// from the same system, so both modes compile.
+const active_spec = if (embedded_data_conf.embed_input)
+    embedded_data.get(embedded_data_conf.spec_index).spec
+else
+    riscv_system.system_0_spec;
+const active_systems = if (embedded_data_conf.embed_input)
+    embedded_data.get(embedded_data_conf.spec_index).systems
+else
+    riscv_system.system_0_systems;
+
+var verifier_workspace: verifier.Workspace(active_systems.public_input) = undefined;
 
 pub fn main() noreturn {
     if (comptime is_r5_zkvm) {
@@ -82,17 +94,10 @@ comptime {
 }
 
 fn runVerifier(input: *const verifier.VerifyInput) u8 {
-    const spec = if (comptime embedded_data_conf.embed_input)
-        comptime embedded_data.get(embedded_data_conf.spec_index).spec
-    else
-        riscv_system.system_0_spec;
-    const systems = if (comptime embedded_data_conf.embed_input)
-        comptime embedded_data.get(embedded_data_conf.spec_index).systems
-    else
-        riscv_system.system_0_systems;
-    // `spec`/`systems` are comptime, but the verifier input is a runtime value
-    // read from `input` (mmap/linker/embedded memory), so dereference it here.
-    verifier.verifyWithWorkspace(spec, systems, input.proof, input.public_inputs, &verifier_workspace) catch {
+    // `active_spec`/`active_systems` are comptime, but the verifier input is a
+    // runtime value read from `input` (mmap/linker/embedded memory), so
+    // dereference it here.
+    verifier.verifyWithWorkspace(active_spec, active_systems, input.proof, input.public_inputs, &verifier_workspace) catch {
         // if the verifier fails, return a non-zero exit code
         return 1;
     };
