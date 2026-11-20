@@ -18,6 +18,7 @@
 - *(prover-ray)* In-machine verifier interface with a mock (#4438)
 - *(prover-ray)* Bn packed hash (#4458)
 - *(prover-ray)* Make the native runner optional in dev-zkvm (#4528)
+- *(prover-ray)* Trace and prove shards in parallel (#4525)
 
 ### 🐛 Bug Fixes
 
