@@ -16,7 +16,7 @@
 ########################################
 # Go builder: the static prover binary
 ########################################
-FROM docker.io/library/golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS go-builder
+FROM docker.io/library/golang:1.27.4-bookworm@sha256:ce59b41415e2524ae99926fe1f37ce48ba8c194dcbd2a56a65436cdcefa2bd34 AS go-builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
