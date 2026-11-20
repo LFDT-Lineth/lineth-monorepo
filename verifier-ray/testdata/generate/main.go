@@ -20,7 +20,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -38,14 +37,11 @@ func main() {
 }
 
 // runtimeTraceRound is the verifier-visible transcript input for one WIOP
-// round. expectedCoins are the extension-field coins that prover-ray derives for
-// the next round after absorbing this round's commitment (if any) and cells.
-// prover-ray columns never travel raw: every committed round is represented by
+// round. prover-ray columns never travel raw: every committed round is represented by
 // a single Merkle root, and non-committed rounds carry none at all.
 type runtimeTraceRound struct {
-	commitment    *field.Octuplet
-	cells         []runtimeTraceCell
-	expectedCoins []field.Ext
+	commitment *field.Octuplet
+	cells      []runtimeTraceCell
 }
 
 // runtimeTraceCell records a scalar value opened in the round. Unlike internal
@@ -56,9 +52,6 @@ type runtimeTraceCell struct {
 	extValue  *field.Ext
 }
 
-// writeRuntimeTraceCases emits the scripted multi-round WIOP trace used by
-// verifier-ray to prove that per-round Fiat-Shamir coin derivation matches
-// prover-ray.
 func baseTraceCell(value field.Element) runtimeTraceCell {
 	return runtimeTraceCell{baseValue: &value}
 }
@@ -92,11 +85,9 @@ type fixtureCase struct {
 }
 
 type vanishingProofView struct {
-	rounds         []runtimeTraceRound
-	publicInputs   []runtimeTraceCell
-	witnessClaims  []field.Ext
-	quotientClaims []field.Ext
-	moduleSizes    []int
+	rounds       []runtimeTraceRound
+	publicInputs []runtimeTraceCell
+	moduleSizes  []int
 }
 
 type assignFn func(rt *wiop.Runtime)
@@ -421,9 +412,8 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		invalidCells := append([]runtimeTraceCell(nil), honestFixture.view.rounds[resultRoundIdx].cells...)
 		invalidCells[zEndpointModAIdx] = flippedExtTraceCell(invalidCells[zEndpointModAIdx])
 		invalidRounds[resultRoundIdx] = runtimeTraceRound{
-			commitment:    honestFixture.view.rounds[resultRoundIdx].commitment,
-			cells:         invalidCells,
-			expectedCoins: honestFixture.view.rounds[resultRoundIdx].expectedCoins,
+			commitment: honestFixture.view.rounds[resultRoundIdx].commitment,
+			cells:      invalidCells,
 		}
 		invalidFixture.view.rounds = invalidRounds
 		cases[last].invalid = &invalidFixture
@@ -827,25 +817,11 @@ func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
 	return rt
 }
 
-// extractVanishingProofView reads witness/quotient claims and round trace data
-// from an already-completed runtime.
+// extractVanishingProofView reads the public inputs, round trace data and
+// dynamic module sizes from an already-completed runtime.
 func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProofView {
-	verifiers := globalVerifiers(sys)
 	publicInputs := extractPublicInputs(sys, rt)
 	publicInputByID := publicInputIndex(sys)
-
-	var witnessClaims []field.Ext
-	var quotientClaims []field.Ext
-	for _, verifier := range verifiers {
-		for _, claim := range verifier.WitnessClaims {
-			witnessClaims = append(witnessClaims, rt.GetCellValue(claim).AsExt())
-		}
-		for _, bucket := range verifier.Buckets {
-			for _, claim := range bucket.QuotientClaims {
-				quotientClaims = append(quotientClaims, rt.GetCellValue(claim).AsExt())
-			}
-		}
-	}
 
 	rounds := make([]runtimeTraceRound, 0, len(sys.Rounds)-1)
 	for i := 0; i < len(sys.Rounds)-1; i++ {
@@ -853,11 +829,9 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 	}
 
 	return vanishingProofView{
-		rounds:         rounds,
-		publicInputs:   publicInputs,
-		witnessClaims:  witnessClaims,
-		quotientClaims: quotientClaims,
-		moduleSizes:    codegen.DynamicModuleSizes(sys, rt),
+		rounds:       rounds,
+		publicInputs: publicInputs,
+		moduleSizes:  codegen.DynamicModuleSizes(sys, rt),
 	}
 }
 
@@ -938,18 +912,6 @@ func addMultiSizeTwoDynModules(reg func(source, name string, sys *wiop.System, h
 		rt.AssignColumn(colB, fibVector(8))
 	}
 	return reg("MultiSize", "DynamicFibonacciTwoModules", sys, honest, alt)
-}
-
-func globalVerifiers(sys *wiop.System) []*global.Verifier {
-	var verifiers []*global.Verifier
-	for _, round := range sys.Rounds {
-		for _, action := range round.VerifierActions {
-			if verifier, ok := action.(*global.Verifier); ok {
-				verifiers = append(verifiers, verifier)
-			}
-		}
-	}
-	return verifiers
 }
 
 func publicInputIndex(sys *wiop.System) map[wiop.ObjectID]int {
