@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -278,12 +279,7 @@ func evalLagrangeBaseExt(p []field.Element, z field.Ext, gen field.Element) fiel
 	invDenom := make([]field.Ext, n)
 	field.VecBatchInvExt(invDenom, denom)
 
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&invDenom[i], &weightedP[i])
-		sum.Add(&sum, &term)
-	}
+	sum := extensions.VectorE6(invDenom).InnerProductByElement(weightedP)
 
 	var result field.Ext
 	result.Mul(&zPowNMinusOne, &sum)
@@ -322,12 +318,7 @@ func evalLagrangeExtBase(p []field.Ext, z, gen field.Element) field.Ext {
 	invDenom := make([]field.Element, n)
 	field.VecBatchInvBase(invDenom, denom)
 
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
+	sum := extensions.VectorE6(weightedP).InnerProductByElement(invDenom)
 
 	var result field.Ext
 	result.MulByElement(&sum, &zPowNMinusOne)
@@ -434,12 +425,7 @@ func evalBatchBaseExt(weightedP []field.Element, z field.Ext, omegaPowers []fiel
 	invDenom := make([]field.Ext, n)
 	field.VecBatchInvExt(invDenom, denom)
 
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&invDenom[i], &weightedP[i])
-		sum.Add(&sum, &term)
-	}
+	sum := extensions.VectorE6(invDenom).InnerProductByElement(weightedP)
 
 	var result field.Ext
 	result.Mul(&zPowNMinusOne, &sum)
@@ -464,12 +450,7 @@ func evalBatchExtBase(weightedP []field.Ext, z field.Element, omegaPowers []fiel
 	invDenom := make([]field.Element, n)
 	field.VecBatchInvBase(invDenom, denom)
 
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
+	sum := extensions.VectorE6(weightedP).InnerProductByElement(invDenom)
 
 	var result field.Ext
 	result.MulByElement(&sum, &zPowNMinusOne)
