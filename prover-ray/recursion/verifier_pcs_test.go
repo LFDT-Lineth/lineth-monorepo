@@ -1,7 +1,6 @@
 package recursion
 
 import (
-	"fmt"
 	"math/bits"
 	"slices"
 	"testing"
@@ -19,9 +18,9 @@ func pcsOuter(t *testing.T, c innerCase) outer {
 	t.Helper()
 	m := &Machine{}
 	v, err := NewVerifier(m, c.sys)
-	require.NoError(t, err)
+	require.NoError(t, err, "the verifier of the %s system should build", c.name)
 	p, err := m.Compile(testPCSOpts...)
-	require.NoError(t, err)
+	require.NoError(t, err, "the verifier of the %s system should compile", c.name)
 	return outer{v, p}
 }
 
@@ -37,7 +36,7 @@ func TestVerifierPCS(t *testing.T) {
 	for _, c := range pcsCases(t) {
 		t.Run(c.name, func(t *testing.T) {
 			_, err := pcsOuter(t, c).run(c.proof, c.pub)
-			require.NoError(t, err)
+			require.NoError(t, err, "the honest %s proof should verify in the machine", c.name)
 		})
 	}
 }
@@ -75,7 +74,7 @@ func shapesProof(t *testing.T, lie string) innerCase {
 	one.NewVanishing(ctx.Childf("bool-u"), wiop.Sub(u.View(), wiop.Mul(u.View(), u.View())))
 
 	r1.RegisterAction(assignColumn{s, func(*wiop.Runtime) *wiop.ConcreteVector { return vec(0, 0, 0, 0) }})
-	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
+	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the inner system should compile")
 	// after the round's commitment
 	switch lie {
 	case "a":
@@ -95,33 +94,37 @@ func shapesProof(t *testing.T, lie string) innerCase {
 		rt.AssignColumn(u, vec(1))
 	})
 	if lie == "" {
-		require.NoError(t, sys.Verify(proof, pub))
+		require.NoError(t, sys.Verify(proof, pub), "the honest shapes proof should verify natively")
 	}
 	return innerCase{"shapes", sys, proof, pub}
 }
 
-// TestVerifierPCSRejects: every input of an honest proof, changed in turn,
+// TestVerifierPCS_Rejects: every input of an honest proof, changed in turn,
 // is rejected: by the transcript and the Merkle paths, which bind every value
-// of the proof.
-func TestVerifierPCSRejects(t *testing.T) {
+// of the proof. Each input is changed at lane 0, and at lanes 5 and 7, which
+// a base row's last cell may not use: there, the witness chip (lanes past the
+// input's kind) or the verifier's assertions bind them to zero.
+func TestVerifierPCS_Rejects(t *testing.T) {
 	for _, c := range pcsCases(t) {
 		t.Run(c.name, func(t *testing.T) {
 			o := pcsOuter(t, c)
 			in, err := o.v.Inputs(c.proof, c.pub)
-			require.NoError(t, err)
+			require.NoError(t, err, "the honest %s proof's inputs", c.name)
 			for k := range in {
-				bad := slices.Clone(in)
-				bad[k][0].Add(&bad[k][0], new(field.Element).SetOne())
-				require.Error(t, o.runInputs(bad), "input %d", k)
+				for _, lane := range []int{0, 5, 7} {
+					bad := slices.Clone(in)
+					bad[k][lane].Add(&bad[k][lane], new(field.Element).SetOne())
+					require.Error(t, o.runInputs(bad), "input %d changed at lane %d should be rejected", k, lane)
+				}
 			}
 		})
 	}
 }
 
-// TestVerifierPCSRejectsForged: proofs whose claims are not the committed
+// TestVerifierPCS_RejectsForged: proofs whose claims are not the committed
 // columns', which only the PCS opening rejects natively, at a column of the
 // top level, of a middle one, and of the boundary one.
-func TestVerifierPCSRejectsForged(t *testing.T) {
+func TestVerifierPCS_RejectsForged(t *testing.T) {
 	for _, col := range []string{"a", "s", "u"} {
 		t.Run(col, func(t *testing.T) {
 			c := shapesProof(t, col)
@@ -129,10 +132,10 @@ func TestVerifierPCSRejectsForged(t *testing.T) {
 			require.ErrorContains(t, c.sys.Verify(c.proof, c.pub), "pcs.Verify")
 			o := pcsOuter(t, c)
 			in, err := o.v.Inputs(c.proof, c.pub)
-			require.NoError(t, err)
+			require.NoError(t, err, "the forged proof's inputs")
 			r, err := o.p.Execute(in)
 			require.NoError(t, err, "the Merkle paths hold")
-			require.Error(t, proveAndVerify(o.p, r))
+			require.Error(t, proveAndVerify(o.p, r), "the forged claims of %s should be rejected", col)
 		})
 	}
 }
@@ -166,10 +169,10 @@ func (a assignColumn) Run(rt *wiop.Runtime) {
 func cheatOpening(t *testing.T, sys *wiop.System) {
 	t.Helper()
 	op, err := actionOf[*pcs.OpeningVerifierAction](sys).Static(sys)
-	require.NoError(t, err)
+	require.NoError(t, err, "the opening's static structure")
 	last := sys.Rounds[len(sys.Rounds)-1]
 	for k, a := range last.ProverActions {
-		if fmt.Sprintf("%T", a) == "*pcs.openingProverAction" {
+		if pcs.IsOpeningProverAction(a) {
 			last.ProverActions[k] = cheatingOpening{op.QueryRange}
 			return
 		}
@@ -203,11 +206,11 @@ func (a cheatingOpening) Run(rt *wiop.Runtime) {
 		panic(err)
 	}
 	for i, b := range batches {
-		st, ok := rt.GetState(fmt.Sprintf("pcs/committedState/%d", b.Round.ID))
+		st, ok := pcs.CommittedState(rt, b.Round.ID)
 		if b.IsPrecomp || !ok {
 			panic("cheatingOpening: no committed state")
 		}
-		if err := p.AddOpening(*st.(*fri.CommitterState), zeta, shifts[i], claims[i]); err != nil {
+		if err := p.AddOpening(*st, zeta, shifts[i], claims[i]); err != nil {
 			panic(err)
 		}
 	}
@@ -237,9 +240,9 @@ func foldAnyway(state *fri.ProverState, alpha field.Ext) (root field.Octuplet) {
 	return state.Fold(alpha)
 }
 
-// TestVerifierPCSUnsupported: the verifier fails closed on the PCS
+// TestVerifierPCS_Unsupported: the verifier fails closed on the PCS
 // configurations it does not handle.
-func TestVerifierPCSUnsupported(t *testing.T) {
+func TestVerifierPCS_Unsupported(t *testing.T) {
 	for _, tc := range []struct {
 		opt  pcs.Option
 		want string
@@ -258,18 +261,31 @@ func TestVerifierPCSUnsupported(t *testing.T) {
 			a, s := mod.NewColumn(sys.Context.Childf("a"), r0), small.NewColumn(sys.Context.Childf("s"), r0)
 			mod.NewVanishing(sys.Context.Childf("a"), wiop.Sub(a.View(), wiop.Mul(a.View(), a.View())))
 			small.NewVanishing(sys.Context.Childf("s"), wiop.Sub(s.View(), wiop.Mul(s.View(), s.View())))
-			require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2), tc.opt)))
+			require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2), tc.opt)), "the inner system should compile")
 			_, err := NewVerifier(&Machine{}, sys)
-			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, tc.want, "the verifier should reject %s", tc.want)
 		})
 	}
+
+	// Only one-row modules: round 0 folds the zero codeword, and the only
+	// level joins at round 1.
+	t.Run("one-row modules", func(t *testing.T) {
+		sys := wiop.NewSystemf("one-row")
+		r0 := sys.NewRound()
+		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 1, wiop.PaddingDirectionNone)
+		a := mod.NewColumn(sys.Context.Childf("a"), r0)
+		mod.NewVanishing(sys.Context.Childf("a"), wiop.Sub(a.View(), wiop.Mul(a.View(), a.View())))
+		require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the inner system should compile")
+		_, err := NewVerifier(&Machine{}, sys)
+		require.ErrorContains(t, err, "no level at the first FRI round", "the verifier should reject an opening of one-row columns")
+	})
 }
 
-// TestVerifierPCSInputs: Inputs rejects an opening proof of another shape.
-func TestVerifierPCSInputs(t *testing.T) {
+// TestVerifierPCS_Inputs: Inputs rejects an opening proof of another shape.
+func TestVerifierPCS_Inputs(t *testing.T) {
 	c := shapesInner(t)
 	v, err := NewVerifier(&Machine{}, c.sys)
-	require.NoError(t, err)
+	require.NoError(t, err, "the verifier of the shapes system")
 	for _, tc := range []struct {
 		name   string
 		mutate func(p *fri.OpeningProof)
@@ -294,13 +310,13 @@ func TestVerifierPCSInputs(t *testing.T) {
 			tc.mutate(&op)
 			proof.PCSOpeningProof = &op
 			_, err := v.Inputs(proof, c.pub)
-			require.ErrorContains(t, err, "PCS opening")
+			require.ErrorContains(t, err, "PCS opening", "Inputs should reject %s", tc.name)
 		})
 	}
 	proof := c.proof
 	proof.PCSOpeningProof = nil
 	_, err = v.Inputs(proof, c.pub)
-	require.ErrorContains(t, err, "no PCS opening proof")
+	require.ErrorContains(t, err, "no PCS opening proof", "Inputs should reject a proof without opening")
 }
 
 // cloneOpening deep-copies the parts of an opening proof the tests mutate.
@@ -332,4 +348,30 @@ func cloneOpening(p fri.OpeningProof) fri.OpeningProof {
 		}
 	}
 	return p
+}
+
+// TestVerifierPCS_LastRoundCell: a cell in the last round, the PCS opening's,
+// is a proof value but is never absorbed natively (no AdvanceRound follows
+// it): the machine's PCS transcript must not absorb it either.
+func TestVerifierPCS_LastRoundCell(t *testing.T) {
+	sys := wiop.NewSystemf("last-round-cell")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	mod.NewVanishing(sys.Context.Childf("bool"), wiop.Sub(a.View(), wiop.Mul(a.View(), a.View())))
+	addCell := func(sys *wiop.System) error {
+		last := sys.Rounds[len(sys.Rounds)-1]
+		last.NewLazyCell(sys.Context.Childf("late"), false, func(*wiop.Runtime) field.Gen {
+			return field.ElemFromBase(field.NewElement(7))
+		})
+		return nil
+	}
+	require.NoError(t, compilers.CompileFull(sys,
+		compilers.ConfigurePCS(pcs.WithFRINumQueries(2)),
+		compilers.WithPostHook(compilers.PCS, addCell)), "the inner system should compile")
+	require.NotEmpty(t, sys.Rounds[len(sys.Rounds)-1].Cells, "the last round has a cell")
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(a, vec(0, 1, 1, 0)) })
+	require.NoError(t, sys.Verify(proof, pub), "the native verifier accepts the proof")
+	_, err := pcsOuter(t, innerCase{"last-round-cell", sys, proof, pub}).run(proof, pub)
+	require.NoError(t, err, "the machine accepts the proof")
 }

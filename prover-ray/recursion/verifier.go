@@ -35,9 +35,9 @@ type Verifier struct {
 	inputs      []verifierInput // the machine inputs the verifier allocated, in order
 	cells       map[wiop.ObjectID]int
 	coins       map[wiop.ObjectID]int
-	commitments map[int]int // round ID → digest cell
-	public      []int       // the public inputs' cells, in sys.PublicInputs order
-	t           *transcript   // the inner transcript, after the replay of the rounds
+	commitments map[int]int  // round ID → digest cell
+	public      []int        // the public inputs' cells, in sys.PublicInputs order
+	t           *transcript  // the inner transcript, after the replay of the rounds
 	pcs         *pcsVerifier // the PCS opening, nil if skipped
 
 	// skipPCS skips the PCS opening (tests only): the verifier then checks a
@@ -114,7 +114,9 @@ func (v *Verifier) PublicInput(i int) int { return v.public[i] }
 // replay allocates the proof's inputs and derives the coins, as
 // Runtime.AdvanceRound does between rounds: each round but the last absorbs its
 // commitment (if committed) and its cells, then the next round's coins are
-// squeezed, one challenge each. The last round's cells are not absorbed.
+// squeezed, one challenge each. The last round's commitment and cells are
+// inputs, but not absorbed: the transcript left in v.t, which the PCS opening
+// continues, is the native one after the last AdvanceRound.
 func (v *Verifier) replay() error {
 	pi := map[wiop.ObjectID]int{}
 	for i, c := range v.sys.PublicInputs {
@@ -128,11 +130,17 @@ func (v *Verifier) replay() error {
 		if i == 0 && len(r.Coins) > 0 {
 			return fmt.Errorf("recursion: round 0 declares %d coins", len(r.Coins))
 		}
+		next, hasNext := r.Next()
+		absorb := func(addr, kind int) {
+			if hasNext {
+				t.absorb(addr, kind)
+			}
+		}
 		if r.HasCommitment {
 			d := v.m.InputDigest()
 			v.inputs = append(v.inputs, verifierInput{round: r.ID, pub: -1})
 			v.commitments[r.ID] = d
-			t.absorb(d, KindDigest)
+			absorb(d, KindDigest)
 		}
 		for _, c := range r.Cells {
 			kind := KindScalar
@@ -147,10 +155,9 @@ func (v *Verifier) replay() error {
 			}
 			v.inputs = append(v.inputs, in)
 			v.cells[c.Context.ID] = a
-			t.absorb(a, kind)
+			absorb(a, kind)
 		}
-		next, ok := r.Next()
-		if !ok {
+		if !hasNext {
 			break
 		}
 		for _, coin := range next.Coins {

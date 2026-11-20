@@ -10,10 +10,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
-// leafDomainTag is fri's Merkle leaf domain separator ("Lfri_lf1"), the first
-// element every leaf hash absorbs, before the row's widths.
-const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631
-
 // The PCS opening (pcs.OpeningVerifierAction, fri.PCS.Verify), in the
 // machine. Its structure is static (pcs.StaticOpening, fri.VerifierPlan),
 // so the machine checks one proof shape:
@@ -93,6 +89,7 @@ func (v *Verifier) checkPCS(a *pcs.OpeningVerifierAction) error {
 	if err != nil {
 		return fmt.Errorf("PCS opening: %w", err)
 	}
+	pv.outOfDomain(zeta)
 	positions := pv.transcript()
 	if err := pv.levelConstants(zeta); err != nil {
 		return fmt.Errorf("PCS opening: %w", err)
@@ -124,7 +121,11 @@ func (pv *pcsVerifier) supported() error {
 		return fmt.Errorf("query positions below %d, for a codeword of size 2^%d",
 			pv.op.QueryRange, plan.LogCodewordSize)
 	case len(plan.Levels) == 0 || plan.Levels[0].Round != 0:
-		return fmt.Errorf("no level at the first FRI round")
+		// The largest opened size is below 2^MinFoldedSizeLog2: restrictTo
+		// raises the top size, round 0 folds the zero codeword, and no input
+		// tree gives the query point. A fixed FRI domain has the same shape.
+		return fmt.Errorf("no level at the first FRI round (an opening whose columns are all below 2^%d rows)",
+			plan.Params.MinFoldedSizeLog2())
 	}
 	pv.xTree = -1
 	for t, tree := range plan.Trees {
@@ -149,6 +150,21 @@ func (pv *pcsVerifier) supported() error {
 		}
 	}
 	return nil
+}
+
+// outOfDomain checks that ζ is not in the top codeword domain, as
+// checkClaimPointsOutOfDomain does: ζ^N − 1 ≠ 0, N = 2^LogCodewordSize, by
+// dividing one by it (Div binds d·q = 1, which no q satisfies for d = 0).
+// Every claim point ζ·ω_n^s then avoids every level's domain, a subgroup of
+// the top one, where z^N = ζ^N: the DEEP divisors x − z are nonzero, so their
+// quotients bound.
+func (pv *pcsVerifier) outOfDomain(zeta int) {
+	m := pv.v.m
+	zN := zeta
+	for range pv.plan.LogCodewordSize {
+		zN = m.Mul(zN, zN)
+	}
+	m.Div(pv.one, m.Sub(zN, pv.one))
 }
 
 // claims checks what RecoverBatchClaims checks: every manifest says Present
@@ -335,6 +351,12 @@ func treeSizes(tree fri.PlanTree) []int {
 
 // rowInputs allocates the input cells of one side (0: the queried row, 1: its
 // conjugate) of a tree opening's pair at a level.
+//
+// The base values are packed eight per cell. The last cell's lanes past the
+// row are bound to zero by the leaf hash: every row is hashed (directly, or
+// through the Selects ordering an injected pair, both of whose outputs are),
+// and Pack constrains an item's lanes past the width it is packed with to
+// zero (see the window chip).
 func (pv *pcsVerifier) rowInputs(q, t, level, side int, shape fri.SizedShape) rowCells {
 	var rc rowCells
 	for k := 0; k < shape.BaseWidth; k += CellWidth {
@@ -357,7 +379,7 @@ func (pv *pcsVerifier) rowInputs(q, t, level, side int, shape fri.SizedShape) ro
 // their kinds.
 func (pv *pcsVerifier) leafItems(shape fri.SizedShape, rows ...rowCells) (items, kinds []int) {
 	var hdr Cell
-	hdr[0].SetUint64(leafDomainTag)
+	hdr[0].SetUint64(fri.LeafDomainTag)
 	hdr[1].SetUint64(uint64(shape.BaseWidth))
 	hdr[2].SetUint64(uint64(shape.ExtWidth))
 	items, kinds = []int{pv.v.m.Const(hdr)}, []int{3}
