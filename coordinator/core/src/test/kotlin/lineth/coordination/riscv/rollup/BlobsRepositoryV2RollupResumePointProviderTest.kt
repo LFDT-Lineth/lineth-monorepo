@@ -94,6 +94,16 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
   }
 
   @Test
+  fun `a chain that is RISC-V from genesis resumes at the genesis position`() {
+    assertThat(resume(0UL, cutover))
+      .isEqualTo(RollupResumePoint(0UL, DaStreamPosition.fresh(genesisDataRollingHash)))
+
+    val last = addRow(1UL, 10UL)
+    assertThat(resume(0UL, cutover + 1.seconds))
+      .isEqualTo(RollupResumePoint(10UL, DaStreamPosition.fresh(last.dataRollingHash)))
+  }
+
+  @Test
   fun `before the cutover it resumes after the rows that follow the finalized block`() {
     addRow(101UL, 110UL)
     val last = addRow(111UL, 120UL)

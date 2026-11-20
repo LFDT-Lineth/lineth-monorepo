@@ -14,7 +14,9 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.nio.file.Path
 import java.util.stream.Stream
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -210,6 +212,73 @@ class ConflationParsingTest {
     )
     assertThat(domainConfigMinimal.riscvStartingBlockTimestampInclusive).isNull()
     assertThat(domainConfigMinimal.l2EngineEndpoint).isNull()
+  }
+
+  @Test
+  fun `should parse and reify the rollup section`() {
+    val toml =
+      """
+      [conflation.rollup]
+      genesis-data-rolling-hash = "0x${"11".repeat(32)}"
+      da-codec = "fake-v1"
+      dictionary-path = "/data/dictionary.bin"
+      polling-interval = "PT2S"
+      max-conflations-to-feed-per-tick = 50
+      blob-deadline = "PT10M"
+      blob-target-end-blocks = [100, 200]
+      conflations-limit = 10
+      target-end-blocks = [300]
+      deadline = "PT30M"
+      data-limit = 786432
+      gas-limit = 300000000
+      tx-count-limit = 10000
+      """.trimIndent()
+
+    val rollup = parseConfig<WrapperConfig>(toml).conflation.rollup!!.reified()
+
+    assertThat(rollup).isEqualTo(
+      ConflationConfig.Rollup(
+        genesisDataRollingHash = ByteArray(32) { 0x11 },
+        daCodec = "fake-v1",
+        dictionaryPath = Path.of("/data/dictionary.bin"),
+        pollingInterval = 2.seconds,
+        maxConflationsToFeedPerTick = 50u,
+        blobDeadline = 10.minutes,
+        blobTargetEndBlocks = setOf(100UL, 200UL),
+        conflationsLimit = 10u,
+        targetEndBlocks = setOf(300UL),
+        deadline = 30.minutes,
+        dataLimit = 786432UL,
+        gasLimit = 300000000UL,
+        txCountLimit = 10000UL,
+      ),
+    )
+  }
+
+  @Test
+  fun `should default the rollup section to the fake codec without limits`() {
+    val toml =
+      """
+      [conflation.rollup]
+      genesis-data-rolling-hash = "0x${"00".repeat(32)}"
+      """.trimIndent()
+
+    assertThat(parseConfig<WrapperConfig>(toml).conflation.rollup!!.reified())
+      .isEqualTo(ConflationConfig.Rollup(genesisDataRollingHash = ByteArray(32)))
+    assertThat(parseConfig<WrapperConfig>("[conflation]").conflation.rollup).isNull()
+  }
+
+  @Test
+  fun `should reject a genesis data rolling hash that is not 32 bytes`() {
+    val toml =
+      """
+      [conflation.rollup]
+      genesis-data-rolling-hash = "0x1234"
+      """.trimIndent()
+
+    assertThrows<IllegalArgumentException> {
+      parseConfig<WrapperConfig>(toml).conflation.rollup!!.reified()
+    }
   }
 
   @Test

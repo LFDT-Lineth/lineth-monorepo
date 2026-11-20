@@ -5,6 +5,7 @@ import linea.DisabledService
 import linea.LongRunningService
 import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+import linea.da.RollupResumePoint
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl
@@ -13,6 +14,7 @@ import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
+import lineth.coordination.riscv.rollup.BlobsRepositoryV2RollupResumePointProvider
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
@@ -68,6 +70,25 @@ class ConflationAppOrchestrator(
       .ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(lastFinalizedBlock.toLong()))
       .thenApply { block -> Instant.fromEpochSeconds(block.timestamp.toLong()) }
       .get()
+  }
+
+  // Also true when the last finalized block is the last pre-RISC-V block: V1 has nothing left to do then, and a restart
+  // must take the RISC-V path so V1's resume does not walk into RISC-V rows.
+  private val riscvCutoverCrossed: Boolean = riscvCutoverTimestamp != null &&
+    ConflationAppHelper.isRiscvCutoverFinalized(
+      lastFinalizedBlock = lastFinalizedBlock,
+      lastFinalizedBlockTimestamp = lastFinalizedBlockTimestamp,
+      riscvCutoverTimestamp = riscvCutoverTimestamp,
+      l2EthClient = l2EthClient,
+    ).get()
+
+  init {
+    ConflationAppHelper.validateRiscvRollupTransition(
+      rollupConfigured = configs.conflation.rollup != null,
+      riscvCutoverConfigured = riscvCutoverTimestamp != null,
+      riscvCutoverCrossed = riscvCutoverCrossed,
+      waitTargetBlockL1Finalization = configs.conflation.proofAggregation.waitTargetBlockL1Finalization,
+    )
   }
 
   private val chainId: ULong = l2EthClient.ethChainId().get()
@@ -182,6 +203,39 @@ class ConflationAppOrchestrator(
     ).get()
   }
 
+  /**
+   * Where the rollup stage resumes, or null without a rollup stage.
+   * - Cutover crossed: resolved now from the same last finalized block as [lastProcessedBlocks], before the L1
+   *   finalization monitor starts, so finalization cleanup cannot delete the anchor row first.
+   * - Live transition: once L1 has finalized every pre-RISC-V block. ConflationAppV2 pauses at the cutover until then
+   *   (required by [ConflationAppHelper.validateRiscvRollupTransition]), so no RISC-V rollup exists before it.
+   */
+  private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)? =
+    configs.conflation.rollup?.let { rollupConfig ->
+      val resumePointProvider = BlobsRepositoryV2RollupResumePointProvider(
+        blobsRepository = blobsRepositoryV2,
+        riscvCutoverTimestamp = riscvCutoverTimestamp!!,
+        genesisDataRollingHashProvider = ConfigRiscvGenesisDataRollingHashProvider(rollupConfig.genesisDataRollingHash),
+      )
+      if (riscvCutoverCrossed) {
+        val resumePoint = resumePointProvider.getResumePoint(lastFinalizedBlock, lastFinalizedBlockTimestamp).get()
+        log.info("rollup stage resume point: {}", resumePoint)
+        return@let { SafeFuture.completedFuture(resumePoint) }
+      }
+      {
+        ConflationAppHelper.awaitRiscvCutoverFinalized(
+          vertx = vertx,
+          pollingInterval = rollupConfig.pollingInterval,
+          riscvCutoverTimestamp = riscvCutoverTimestamp,
+          latestL1FinalizedBlock = { lastProvenBlockNumberProvider.getLatestL1FinalizedBlock().toULong() },
+          l2EthClient = l2EthClient,
+        ).thenCompose { finalized ->
+          log.info("L1 finalized every pre-RISC-V block: lastFinalizedBlock={}", finalized.number)
+          resumePointProvider.getResumePoint(finalized.number, finalized.headerSummary.timestamp)
+        }
+      }
+    }
+
   private val lastProvenBlockNumberProvider = run {
     val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
       lastProcessedBlocks.lastConflatedBlock.number.toLong(),
@@ -268,6 +322,8 @@ class ConflationAppOrchestrator(
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,
+        blobsRepositoryV2 = blobsRepositoryV2,
+        rollupResumePointSupplier = rollupResumePointSupplier,
       )
     } else {
       DisabledService("conflation-app-v2")
@@ -370,8 +426,7 @@ class ConflationAppOrchestrator(
       lastAggregatedBlockNumber = lastAggregatedBlockNumber,
     ).thenApply { }
 
-  fun riscvCutoverCrossed(): Boolean =
-    riscvCutoverTimestamp != null && lastFinalizedBlockTimestamp >= riscvCutoverTimestamp
+  fun riscvCutoverCrossed(): Boolean = riscvCutoverCrossed
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> =
     lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(blockNumber)

@@ -55,7 +55,9 @@ fun interface L2BlocksFetcher {
  * [l2BlocksFetcher] otherwise.
  *
  * Each tick of [action]:
- * 1. on the first tick, opens the [DaStream] and the calculators at the resume point;
+ * 1. until the resume point is known, only waits for it: the [resumePointSupplier] future may take long (e.g. until L1
+ *    finalizes the last pre-RISC-V block), so a tick never blocks on it. Then opens the [DaStream] and the calculators
+ *    at the resume point;
  * 2. feeds the next persisted batches to the [GlobalBlobCalculator], which emits rollups to [onRollup];
  * 3. checks the blob and rollup deadlines;
  * 4. submits the pending rollups in order. A rollup is dropped from the queue only once its request succeeds.
@@ -135,8 +137,8 @@ class RollupProofGeneratingCoordinator(
       log.error("rollup stage stopped after a DA pipeline error: errorMessage={}", it.message)
       return SafeFuture.completedFuture(Unit)
     }
-    return ensureInitialized()
-      .thenCompose { loadNextProvenConflations() }
+    if (!ensureInitialized()) return SafeFuture.completedFuture(Unit)
+    return loadNextProvenConflations()
       .thenApply { conflations -> feed(conflations) }
       .thenCompose { submitPendingRollups() }
   }
@@ -153,9 +155,20 @@ class RollupProofGeneratingCoordinator(
     }
   }
 
-  private fun ensureInitialized(): SafeFuture<Unit> {
-    if (synchronized(this) { pipeline != null }) return SafeFuture.completedFuture(Unit)
-    return resumePointSupplier().thenApply { resumePoint -> synchronized(this) { initPipeline(resumePoint) } }
+  private var pendingResumePoint: SafeFuture<RollupResumePoint>? = null
+
+  /**
+   * Whether the pipeline is open. Requests the resume point once and opens the pipeline when it is known; a failed
+   * request is retried on the next tick.
+   */
+  @Synchronized
+  private fun ensureInitialized(): Boolean {
+    if (pipeline != null) return true
+    val resumePoint = pendingResumePoint ?: resumePointSupplier().also { pendingResumePoint = it }
+    if (!resumePoint.isDone) return false
+    pendingResumePoint = null
+    initPipeline(resumePoint.join())
+    return true
   }
 
   private fun initPipeline(resumePoint: RollupResumePoint) {

@@ -12,9 +12,11 @@ import kotlin.time.Instant
 /**
  * Resumes after the last persisted rollup row that follows the L1 finalized block F without gaps.
  *
- * - F before the RISC-V cutover: no RISC-V rollup is finalized yet, so the anchor is the genesis position at F. This
- *   assumes the pre-RISC-V flow has finalized every pre-RISC-V block, so F is the last pre-RISC-V block.
- * - F at or after the cutover: the anchor is the row ending at F. A missing row is an error.
+ * - F before the RISC-V cutover, or F the genesis block: no RISC-V rollup is finalized yet, so the anchor is the genesis
+ *   position at F. Before the cutover, this assumes the pre-RISC-V flow has finalized every pre-RISC-V block, so F is
+ *   the last pre-RISC-V block. The genesis block is never in a rollup, so a chain that is RISC-V from genesis starts
+ *   there.
+ * - Otherwise the anchor is the row ending at F. A missing row is an error.
  *
  * The resume point is then the end of the last row in the gap-free run from F + 1, or the anchor if there is none.
  */
@@ -28,7 +30,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
     lastFinalizedBlock: ULong,
     lastFinalizedBlockTimestamp: Instant,
   ): SafeFuture<RollupResumePoint> {
-    val anchor = if (lastFinalizedBlockTimestamp < riscvCutoverTimestamp) {
+    val anchor = if (lastFinalizedBlock == 0UL || lastFinalizedBlockTimestamp < riscvCutoverTimestamp) {
       genesisDataRollingHashProvider.getGenesisDataRollingHash()
         .thenApply { RollupResumePoint(lastFinalizedBlock, DaStreamPosition.fresh(it)) }
     } else {

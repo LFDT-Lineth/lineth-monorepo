@@ -42,6 +42,7 @@ import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -131,11 +132,12 @@ class RollupProofGeneratingCoordinatorTest {
     rollupTriggers: List<RollupTriggerCalculator> = listOf(RollupTriggerCalculatorByConflationCount(3)),
     blobTriggers: List<BlobTriggerCalculator> = emptyList(),
     rollupDeadline: Duration? = null,
+    resumePointSupplier: () -> SafeFuture<RollupResumePoint> = { SafeFuture.completedFuture(resumePoint) },
   ): RollupProofGeneratingCoordinator =
     RollupProofGeneratingCoordinator(
       rollupProverClient = proverClient,
       batchesRepository = batchesRepository,
-      resumePointSupplier = { SafeFuture.completedFuture(resumePoint) },
+      resumePointSupplier = resumePointSupplier,
       rollupProofPoller = rollupProofPoller,
       l2BlocksFetcher = { start, end ->
         fetchedRanges += start..end
@@ -216,6 +218,52 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(context2.parentDataTailTakeBytes).isEqualTo(70_094u)
     assertThat(context2.blobsData.map { it.batchesCount }).containsExactly(2U, 0U, 2U)
     assertThat(context2.finalDataTailDiscardBytes).isEqualTo(0u)
+  }
+
+  @Test
+  fun `ticks do not wait for a pending resume point, which is requested once`() {
+    val resumePoint = SafeFuture<RollupResumePoint>()
+    var supplierCalls = 0
+    val coordinator = createCoordinator(
+      blobTriggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(1UL))),
+      resumePointSupplier = {
+        supplierCalls++
+        resumePoint
+      },
+    )
+    prove(a)
+
+    coordinator.action().get(1, TimeUnit.SECONDS)
+    coordinator.action().get(1, TimeUnit.SECONDS)
+    assertThat(supplierCalls).isEqualTo(1)
+    assertThat(requests).isEmpty()
+
+    resumePoint.complete(RollupResumePoint(0UL, DaStreamPosition.fresh(genesisDataRollingHash)))
+    coordinator.action().get()
+    assertThat(supplierCalls).isEqualTo(1)
+    assertThat(requests).hasSize(1)
+  }
+
+  @Test
+  fun `a failed resume point request is retried on the next tick`() {
+    var attempts = 0
+    val coordinator = createCoordinator(
+      blobTriggers = listOf(BlobTriggerCalculatorByTargetBlockNumbers(setOf(1UL))),
+      resumePointSupplier = {
+        attempts++
+        if (attempts == 1) {
+          SafeFuture.failedFuture(IllegalStateException("L1 unavailable"))
+        } else {
+          SafeFuture.completedFuture(RollupResumePoint(0UL, DaStreamPosition.fresh(genesisDataRollingHash)))
+        }
+      },
+    )
+    prove(a)
+
+    assertThatThrownBy { coordinator.action().get() }.hasMessageContaining("L1 unavailable")
+    coordinator.action().get()
+    assertThat(attempts).isEqualTo(2)
+    assertThat(requests).hasSize(1)
   }
 
   @Test

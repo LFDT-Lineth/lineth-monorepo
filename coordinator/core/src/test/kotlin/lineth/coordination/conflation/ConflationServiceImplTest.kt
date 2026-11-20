@@ -109,6 +109,15 @@ class ConflationServiceImplTest {
   }
 
   @Test
+  fun `a second conflated batch handler is rejected instead of replacing the first`() {
+    conflationService.onConflatedBatch { SafeFuture.completedFuture(Unit) }
+
+    assertThatThrownBy { conflationService.onConflatedBatch { SafeFuture.completedFuture(Unit) } }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessageContaining("already set")
+  }
+
+  @Test
   fun `sends blocks in correct order to calculator`() {
     val numberOfThreads = 10
     val numberOfBlocks = 2000

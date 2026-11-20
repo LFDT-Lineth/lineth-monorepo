@@ -2,9 +2,12 @@ package lineth.coordinator.app.conflation
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.da.DaCodecVersion
+import linea.da.RollupResumePoint
 import linea.domain.Batch
 import linea.domain.Block
 import linea.domain.BlockCounters
+import linea.domain.BlocksConflation
 import linea.ethapi.EthApiClient
 import linea.ethapi.systemContracts
 import linea.ftx.ForcedTransactionsApp
@@ -18,19 +21,27 @@ import linea.web3j.ethapi.validateLinethBlock
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
+import lineth.coordination.SimpleCompositeSafeFutureHandler
 import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
 import lineth.coordination.proofcreation.BatchProofHandlerImpl
+import lineth.coordination.riscv.da.FakeDaCompressorFactory
+import lineth.coordination.riscv.da.FakeDaStreamFactory
 import lineth.coordination.riscv.execution.ExecutionProofGeneratingCoordinator
 import lineth.coordination.riscv.execution.L2ExecutionProofHandler
 import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
+import lineth.coordination.riscv.rollup.RollupProofGeneratingCoordinator
+import lineth.coordination.riscv.rollup.RollupProofPersistenceHandler
+import lineth.coordination.riscv.rollup.RollupProofPoller
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
 import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
+import lineth.coordinator.config.v2.RiscvProverConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository
+import lineth.persistence.BlobsRepositoryV2
 import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.async.toSafeFutureNonNull
@@ -38,6 +49,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration
@@ -63,6 +75,8 @@ class ConflationAppV2(
   private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
   private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val lastProcessedBlocks: LastProcessedBlocks,
+  private val blobsRepositoryV2: BlobsRepositoryV2,
+  private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)?,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppV2::class.java)
@@ -91,7 +105,10 @@ class ConflationAppV2(
     blockValidator = ::validateLinethBlock,
   )
 
-  private val executionPipeline: ExecutionPipeline = configs.proversConfig.let { riscvProversConfig ->
+  private val riscvProverConfig: RiscvProverConfig =
+    configs.proversConfig.currentProver.riscvConfig ?: configs.proversConfig.nextProver?.riscvConfig!!
+
+  private val executionPipeline: ExecutionPipeline = configs.proversConfig.let {
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
       "conflation.blocksLimit must be set when riscv is enabled"
     }
@@ -145,15 +162,71 @@ class ConflationAppV2(
       vertx = vertx,
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
-        executionProofPollingInterval =
-        (riscvProversConfig.currentProver.riscvConfig ?: riscvProversConfig.nextProver?.riscvConfig!!)
-          .l2Execution.pollingInterval,
+        executionProofPollingInterval = riscvProverConfig.l2Execution.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )
-    conflationService.onConflatedBatch(coordinator::handleConflatedBatch)
-
     ExecutionPipeline(conflationCalculator, conflationService, coordinator)
+  }
+
+  private val rollupStage: RollupStage? = configs.conflation.rollup?.let { rollupConfig ->
+    require(configs.database.schemaVersion >= ROLLUP_MIN_DB_SCHEMA_VERSION) {
+      "conflation.rollup requires database.schema-version >= $ROLLUP_MIN_DB_SCHEMA_VERSION: rollup requests carry " +
+        "each batch's proof index hash, stored from that version on"
+    }
+    val resumePointSupplier = requireNotNull(rollupResumePointSupplier) {
+      "conflation.rollup is set but no rollup resume point supplier was provided"
+    }
+    val daCodecVersion = DaCodecVersion.entries.find { it.version == rollupConfig.daCodec }
+      ?: throw IllegalArgumentException(
+        "unsupported conflation.rollup.da-codec=${rollupConfig.daCodec}, " +
+          "supported: ${DaCodecVersion.entries.map { it.version }}",
+      )
+    val rollupProverClient = proverClientFactory.rollupProverClient()
+    val rollupProofPoller = RollupProofPoller(
+      rollupProverClient = rollupProverClient,
+      rollupProofHandler = RollupProofPersistenceHandler(blobsRepositoryV2),
+      vertx = vertx,
+      config = RollupProofPoller.Config(pollingInterval = riscvProverConfig.rollup.pollingInterval),
+      metricsFacade = metricsFacade,
+    )
+    val coordinator = RollupProofGeneratingCoordinator(
+      rollupProverClient = rollupProverClient,
+      batchesRepository = batchesRepository,
+      resumePointSupplier = resumePointSupplier,
+      rollupProofPoller = rollupProofPoller,
+      l2BlocksFetcher = EthApiL2BlocksFetcher(l2EthClient),
+      daCompressorFactory = when (daCodecVersion) {
+        DaCodecVersion.FAKE -> FakeDaCompressorFactory()
+      },
+      daStreamFactory = when (daCodecVersion) {
+        DaCodecVersion.FAKE -> FakeDaStreamFactory()
+      },
+      blobTriggers = ConflationAppHelper.rollupBlobTriggers(rollupConfig),
+      rollupTriggers = ConflationAppHelper.rollupTriggers(rollupConfig),
+      blockEncoder = BlockRLPEncoder::encode,
+      config = RollupProofGeneratingCoordinator.Config(
+        pollingInterval = rollupConfig.pollingInterval,
+        daCodecVersion = daCodecVersion,
+        dictionaryPath = rollupConfig.dictionaryPath ?: Path.of(""),
+        blobDeadline = rollupConfig.blobDeadline,
+        rollupDeadline = rollupConfig.deadline,
+        maxConflationsToFeedPerTick = rollupConfig.maxConflationsToFeedPerTick.toInt(),
+      ),
+      vertx = vertx,
+    )
+    RollupStage(coordinator, rollupProofPoller)
+  }
+
+  init {
+    // The conflation service has a single handler, so it fans out to every stage that consumes conflations.
+    val conflationHandler: (BlocksConflation) -> SafeFuture<*> = SimpleCompositeSafeFutureHandler(
+      listOfNotNull(
+        executionPipeline.executionProofCoordinator::handleConflatedBatch,
+        rollupStage?.coordinator?.let { it::handleConflatedBatch },
+      ),
+    )
+    executionPipeline.conflationService.onConflatedBatch(conflationHandler)
   }
 
   // When pipeline is active, on the first block we initialize the calculator's lastBlockNumber
@@ -235,6 +308,7 @@ class ConflationAppV2(
         targetCheckpointPauseController = targetCheckpointPauseController,
       )
     return executionPipeline.executionProofCoordinator.start()
+      .thenCompose { rollupStage?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { blockCreationMonitor!!.start() }
       .thenPeek { log.info("ConflationAppV2 started with startingPoint={}", startingPoint) }
   }
@@ -242,8 +316,23 @@ class ConflationAppV2(
   override fun stop(): CompletableFuture<Unit> {
     val monitorStop = blockCreationMonitor?.stop() ?: SafeFuture.completedFuture(Unit)
     val coordinatorStop = executionPipeline.executionProofCoordinator.stop().toSafeFuture()
-    return SafeFuture.allOf(monitorStop, coordinatorStop)
+    val rollupStageStop = rollupStage?.stop() ?: SafeFuture.completedFuture(Unit)
+    return SafeFuture.allOf(monitorStop, coordinatorStop, rollupStageStop)
       .thenApply { log.info("ConflationAppV2 stopped") }
+  }
+
+  companion object {
+    /** The first schema version with `batches.proof_index_hash`. */
+    const val ROLLUP_MIN_DB_SCHEMA_VERSION = 5
+  }
+
+  private class RollupStage(
+    val coordinator: RollupProofGeneratingCoordinator,
+    val proofPoller: RollupProofPoller,
+  ) {
+    fun start(): SafeFuture<Unit> = proofPoller.start().thenCompose { coordinator.start() }
+
+    fun stop(): SafeFuture<Unit> = coordinator.stop().thenCompose { proofPoller.stop() }
   }
 
   private data class ExecutionPipeline(
