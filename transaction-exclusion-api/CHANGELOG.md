@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.0.1] - 2026-11-19
 
 ### 🚜 Refactor
 
@@ -11,3 +11,4 @@
 - *(misc)* Fix gradle build correctness bugs (#4044)
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)

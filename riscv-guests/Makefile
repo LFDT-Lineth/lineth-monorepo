@@ -22,7 +22,7 @@ ZIG    ?= zig
 PACKAGES := $(patsubst %/build.zig,%,$(wildcard */build.zig))
 FMT_EXCLUDES := $(foreach p,$(PACKAGES),--exclude $(p)/zig-pkg --exclude $(p)/zig-out --exclude $(p)/.zig-cache)
 
-.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
+.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset docker-artifacts
 
 # Each common target fans out to every guest's own Makefile.
 compile test fetch clean:
@@ -41,6 +41,21 @@ release-check:
 
 release-asset:
 	$(MAKE) -C $(GUEST_DIR) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
+
+# release-asset in Docker (see Dockerfile), used by prover-ray CI and e2e.
+# sha256 of zig-x86_64-linux-<.zigversion>.tar.xz (minisign-verified); update with .zigversion.
+ZIG_LINUX_X64_SHA256 := 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+DOCKER ?= docker
+OUT ?= $(RELEASE_DIR)
+docker-artifacts:
+	@test -n "$(GUEST)" || { echo "GUEST is required (e.g. GUEST=l2-execution)" >&2; exit 1; }
+	$(DOCKER) buildx build --platform linux/amd64 --target artifacts \
+		--build-arg ZIG_VERSION="$$(cat $(CURDIR)/.zigversion)" \
+		--build-arg ZIG_SHA256="$(ZIG_LINUX_X64_SHA256)" \
+		--build-arg GUEST="$(GUEST)" \
+		--build-arg RELEASE_VERSION="$(or $(RELEASE_VERSION),0.0.0-dev)" \
+		--output type=local,dest="$(abspath $(OUT))" \
+		$(CURDIR)
 
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
@@ -101,4 +116,6 @@ help:
 	@echo "  make fmt         # format every package's Zig sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
+	@echo "  make docker-artifacts GUEST=l2-execution [RELEASE_VERSION=x] [OUT=dir]"
+	@echo "                   # build the guest ELF in Docker, named for prover-ray's guests folder"
 	@echo ""

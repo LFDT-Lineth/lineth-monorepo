@@ -264,7 +264,9 @@ jobs:
     # always() so Slack still runs when ai-analysis is skipped, fails, or succeeds; needs still gates ordering.
     needs: [ai-analysis]
     if: always()
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub and Slack APIs, and still alerts when the
+    # self-hosted runners are the thing failing.
+    runs-on: ubuntu-24.04
     steps:
       - name: Compute context values
         id: ctx

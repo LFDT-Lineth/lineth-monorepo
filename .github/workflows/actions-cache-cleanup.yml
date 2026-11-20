@@ -11,7 +11,8 @@ on:
 
 jobs:
   sweep-stale-pr-caches:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub API, so it doesn't need a self-hosted runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Delete PR caches not accessed for 1 day

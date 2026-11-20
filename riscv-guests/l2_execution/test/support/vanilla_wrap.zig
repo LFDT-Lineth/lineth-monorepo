@@ -54,8 +54,8 @@ pub fn wrapVanillaAsExtended(alloc: std.mem.Allocator, vanilla_stateless_input_s
 
     const payloads = try alloc.alloc(l2_execution_ssz.LineaPayloadInput, 1);
     payloads[0] = .{
-        .stateless_input_ssz = vanilla_stateless_input_ssz,
-        .forced_transactions = &.{},
+        .stateless_input_ssz = .{ .bytes = vanilla_stateless_input_ssz },
+        .forced_transactions = .{ .items = &.{} },
     };
 
     const extended_input = l2_execution_ssz.L2ExecutionProofPrivateInput{
@@ -67,7 +67,7 @@ pub fn wrapVanillaAsExtended(alloc: std.mem.Allocator, vanilla_stateless_input_s
             .l2_message_service_address = DUMMY_L2_MESSAGE_SERVICE_ADDRESS,
             .system_contracts = defaultSystemContracts(si.chain_config.chain_id),
         },
-        .payloads = payloads,
+        .payloads = .{ .items = payloads },
     };
 
     return l2_execution_ssz.encodeInput(alloc, extended_input);
