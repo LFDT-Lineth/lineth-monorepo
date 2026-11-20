@@ -147,8 +147,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err != nil {
 			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
+		// Every scenario must reach verify.zig: a protocol that compiles to no
+		// vanishing modules would otherwise drop out of the end-to-end sweep
+		// without a generator failure.
 		if len(compiled.Vanishing.Modules) == 0 {
-			return nil
+			return fmt.Errorf("compiled system %s/%s has no vanishing modules", source, name)
 		}
 
 		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
