@@ -58,6 +58,7 @@ COPY --from=builder /build/build/bin/erigon /usr/local/bin/
 
 EXPOSE 8545 8550 30303 30303/udp
 
-USER erigon
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 ENTRYPOINT ["erigon"]

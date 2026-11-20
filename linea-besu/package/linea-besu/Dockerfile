@@ -22,7 +22,8 @@ RUN apt-get update $NO_PROXY_CACHE  && \
   chown besu:besu /data  && \
   chmod 0755 /data
 
-USER besu
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 WORKDIR /opt/besu
 
 COPY --chown=besu:besu besu /opt/besu/

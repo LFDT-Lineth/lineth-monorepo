@@ -52,7 +52,8 @@ WORKDIR /opt/linea/prover-ray
 RUN useradd --uid 1000 --no-create-home --home-dir /opt/linea/prover-ray prover-ray \
     && chown -R prover-ray:prover-ray /opt/linea/prover-ray
 
-USER prover-ray
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 # Configuration is a TOML file. No default is baked in (fail loudly rather than
 # run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the

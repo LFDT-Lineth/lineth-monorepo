@@ -18,7 +18,8 @@ COPY --from=libs --chown=maru:maru ./** ./
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/
 
-USER maru
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 ARG LINETH_APP_JAR=/opt/lineth/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR

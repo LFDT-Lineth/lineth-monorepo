@@ -11,7 +11,8 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
 COPY --from=libs --chown=txexclusion:txexclusion ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
-USER txexclusion
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 # Remove once the base image ships Temurin 25.0.5.1+2 or later.
 ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 

@@ -85,9 +85,10 @@ WORKDIR /usr/src/app
 COPY --from=builder --chown=nonroot:nonroot /usr/src/app/prod/postman ./postman
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
-# The :nonroot tag already sets USER 65532; re-assert it so the non-root
-# invariant is explicit in this Dockerfile (and survives a tag-variant change).
-USER nonroot
+# The :nonroot tag already sets USER 65532; re-assert it (numerically —
+# Kubernetes cannot verify runAsNonRoot against the named "nonroot" user) so
+# the non-root invariant is explicit here and survives a tag-variant change.
+USER 65532:65532
 
 # The image entrypoint is the node binary.
 CMD ["./postman/dist/src/main.js"]

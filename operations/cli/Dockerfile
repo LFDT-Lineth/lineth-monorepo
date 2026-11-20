@@ -39,7 +39,8 @@ ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
-USER node
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 COPY --from=builder /usr/src/app/prod ./
 COPY LICENSE-APACHE LICENSE-MIT /licenses/

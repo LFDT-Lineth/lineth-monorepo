@@ -42,7 +42,8 @@ COPY --from=builder --chown=coordinator:coordinator /libs/** libs/
 # (scripts/docker/build-image.sh --no-license-check).
 COPY LICENSE-* /licenses/
 
-USER coordinator
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 ARG LINETH_APP_JAR=/opt/lineth/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR

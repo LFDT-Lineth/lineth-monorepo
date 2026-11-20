@@ -68,7 +68,8 @@ RUN mkdir -p /usr/src/app/ipfs-cache && \
     chown -R node:node /usr/src/app/ipfs-cache && \
     chmod 755 /usr/src/app/ipfs-cache
 
-USER node
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 COPY --from=builder /usr/src/app/prod/operations/native-yield/automation-service ./operations/native-yield/automation-service
 COPY LICENSE-APACHE LICENSE-MIT /licenses/

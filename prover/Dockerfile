@@ -53,7 +53,8 @@ RUN mkdir -p /opt/linea/prover/config
 RUN adduser -D -u 1000 prover && \
     chown -R prover:prover /opt/linea/prover /app/logs
 
-USER prover
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 # Useful ENV variables that you may want to pass at runtime
 ENV GOMEMLIMIT=340GiB

@@ -96,7 +96,8 @@ RUN chown -R node:node node_modules/.pnpm/@prisma+engines@*/node_modules/@prisma
 # One-shot batch job (run.ts exits after a single run); nothing long-running to probe.
 HEALTHCHECK NONE
 
-USER node
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 CMD [ "node", "./dist/run.js" ]
 
