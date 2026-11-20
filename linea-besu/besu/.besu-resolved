@@ -2,5 +2,5 @@
 # Written by Gradle (:linea-besu:resolveBesuVersion) and refreshed by CI
 # (.github/workflows/linea-besu-build-and-publish.yml) on besuCommit bumps.
 # Do NOT edit by hand and do NOT commit local changes — this file is gitignored.
-besuCommit=e8442971f02d1504bd8d8518498a7303ccc62141
-besuVersion=26.10.2-e844297
+besuCommit=a243c656bc128ca65a733f9daaa0cd08151bc78c
+besuVersion=26.11.1-a243c65

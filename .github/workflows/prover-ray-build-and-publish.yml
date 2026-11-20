@@ -71,13 +71,15 @@ jobs:
           dockerfile_path: ./prover-ray/Dockerfile
           docker_context: prover-ray
           build_contexts: |
-            riscv-guests=riscv-guests/
             licenses=.
           push_platforms: linux/amd64
 
-      # Smoke gate: on the local (push_image=false) build the image is loaded
-      # locally, so run the same smoke test used in dev. If it fails, the release
-      # is blocked before anything is pushed.
+      # Smoke gate on the local (push_image=false) build, against the guest built
+      # from this commit. If it fails, the release is blocked before any push.
+      - name: Build guest artifacts
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        run: make -C riscv-guests docker-artifacts GUEST=l2-execution OUT="$RUNNER_TEMP/guest-artifacts"
+
       - name: Smoke test the image
         if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}"
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" "$RUNNER_TEMP/guest-artifacts"

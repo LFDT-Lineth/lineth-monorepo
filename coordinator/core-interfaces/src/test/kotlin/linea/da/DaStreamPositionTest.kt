@@ -13,7 +13,7 @@ class DaStreamPositionTest {
   fun `fresh position starts the next blob after the data rolling hash`() {
     val position = DaStreamPosition.fresh(hash)
 
-    assertThat(position.sharedBlobCarryOverTailBytes).isZero()
+    assertThat(position.sharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(position.sharedBlob).isNull()
     assertThat(position.parentBlobDataRollingHash).isEqualTo(hash)
     assertThatThrownBy { DaStreamPosition(hash, prevHash) }.isInstanceOf(IllegalArgumentException::class.java)
@@ -21,18 +21,18 @@ class DaStreamPositionTest {
 
   @Test
   fun `position inside a shared blob requires the blob`() {
-    val position = DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100, sharedBlob = sharedBlob)
+    val position = DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100u, sharedBlob = sharedBlob)
 
     assertThat(position).isEqualTo(
       position.copy(parentBlobDataRollingHash = prevHash.copyOf(), sharedBlob = sharedBlob.copyOf()),
     )
-    assertThatThrownBy { DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100) }
+    assertThatThrownBy { DaStreamPosition(hash, prevHash, sharedBlobCarryOverTailBytes = 100u) }
       .isInstanceOf(IllegalArgumentException::class.java)
     assertThatThrownBy {
       DaStreamPosition(
         hash,
         prevHash,
-        sharedBlobCarryOverTailBytes = 100,
+        sharedBlobCarryOverTailBytes = 100u,
         sharedBlob = ByteArray(10),
       )
     }
@@ -40,19 +40,17 @@ class DaStreamPositionTest {
   }
 
   @Test
-  fun `rejects invalid hashes, tail bytes and a stray shared blob`() {
+  fun `rejects invalid hashes, a tail past the payload and a stray shared blob`() {
     assertThatThrownBy { DaStreamPosition.fresh(ByteArray(31)) }.isInstanceOf(IllegalArgumentException::class.java)
     assertThatThrownBy {
-      DaStreamPosition(hash, ByteArray(31), sharedBlobCarryOverTailBytes = 100, sharedBlob = sharedBlob)
+      DaStreamPosition(hash, ByteArray(31), sharedBlobCarryOverTailBytes = 100u, sharedBlob = sharedBlob)
     }
-      .isInstanceOf(IllegalArgumentException::class.java)
-    assertThatThrownBy { DaStreamPosition(hash, hash, sharedBlobCarryOverTailBytes = -1) }
       .isInstanceOf(IllegalArgumentException::class.java)
     assertThatThrownBy {
       DaStreamPosition(
         hash,
         prevHash,
-        sharedBlobCarryOverTailBytes = DaConstants.BLOB_PAYLOAD_CAPACITY,
+        sharedBlobCarryOverTailBytes = DaConstants.BLOB_PAYLOAD_CAPACITY.toUInt(),
         sharedBlob = sharedBlob,
       )
     }.isInstanceOf(IllegalArgumentException::class.java)

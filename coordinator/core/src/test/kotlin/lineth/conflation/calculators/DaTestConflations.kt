@@ -4,12 +4,14 @@ import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
+import linea.domain.TransactionFactory
 import linea.domain.createBlock
 import linea.domain.toBesu
 import linea.rlp.RLP
 import lineth.coordination.riscv.da.FakeDaStream
 import lineth.encoding.BlockEncoder
 import net.consensys.linea.traces.TracesCountersV5
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -28,8 +30,9 @@ object DaTestConflations {
   ): BlocksConflation = conflation(number, number, segmentSize, timestamp, gasUsed)
 
   /**
-   * Conflation of blocks [startNumber]..[endNumber], 2 seconds apart from [firstTimestamp] and each using [gasUsed],
-   * whose DA segment is exactly [segmentSize] bytes. The last block's extraData pads the segment.
+   * Conflation of blocks [startNumber]..[endNumber], [blockInterval] apart from [firstTimestamp], each using [gasUsed]
+   * and holding [txsPerBlock] signed transactions, whose DA segment is exactly [segmentSize] bytes. The last block's
+   * extraData pads the segment.
    */
   fun conflation(
     startNumber: ULong,
@@ -37,11 +40,15 @@ object DaTestConflations {
     segmentSize: Int,
     firstTimestamp: Instant = baseTime + (startNumber.toLong() * 2).seconds,
     gasUsed: ULong = 1_000UL,
+    blockInterval: Duration = 2.seconds,
+    txsPerBlock: Int = 0,
   ): BlocksConflation {
-    fun timestamp(number: ULong) = firstTimestamp + ((number - startNumber).toLong() * 2).seconds
+    fun timestamp(number: ULong) = firstTimestamp + blockInterval * (number - startNumber).toInt()
+    fun transactions() = List(txsPerBlock) { TransactionFactory.createTransaction(nonce = it.toULong(), chainId = 1UL) }
     val leading = (startNumber until endNumber).map {
-      createBlock(number = it, timestamp = timestamp(it), gasUsed = gasUsed)
+      createBlock(number = it, timestamp = timestamp(it), gasUsed = gasUsed, transactions = transactions())
     }
+    val lastTransactions = transactions()
     val leadingBytes = SEGMENT_LENGTH_PREFIX_BYTES + leading.sumOf { encoder.encode(it).size }
     var extraDataSize = segmentSize - leadingBytes
     repeat(10) {
@@ -49,6 +56,7 @@ object DaTestConflations {
         number = endNumber,
         timestamp = timestamp(endNumber),
         gasUsed = gasUsed,
+        transactions = lastTransactions,
         extraData = ByteArray(extraDataSize) { 0x2a },
       )
       val size = leadingBytes + encoder.encode(last).size

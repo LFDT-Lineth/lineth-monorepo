@@ -71,7 +71,7 @@
    - **`has-changes-requiring-linea-besu-package-build`** - `true` when the sequencer plugin, tracer, tracer-constraints, linea-besu, or linea-besu-package changed.
 4. **besuCommit check** - `besu-commit-changed` is `true` when `besuCommit` in `gradle/libs.versions.toml` changed; it gates `prepare-linea-besu-maven`.
 5. **Image tags** (`.github/actions/compute-version-tags`) - `commit_tag` (short SHA of the PR head or pushed commit) and `develop_tag`.
-6. **E2E change detection** (`.github/actions/e2e-detect-changes`) - a stricter path filter plus `make e2e-ci-detect-changes`, which ignores test and doc files. Outputs `has-changes-requiring-e2e-testing` (zkEVM stack), `has-changes-requiring-riscv-e2e-testing` and `riscv-prover-mode`.
+6. **E2E change detection** (`.github/actions/e2e-detect-changes`) - a stricter path filter plus `make e2e-ci-detect-changes`, which ignores test and doc files. Outputs `has-changes-requiring-e2e-testing` (zkEVM stack) and `has-changes-requiring-riscv-e2e-testing`.
 7. **CodeQL languages** (`.github/actions/codeql-languages`) - which languages `code-analysis` should scan.
 
 Draft PRs skip `plan`, and therefore the whole pipeline.
