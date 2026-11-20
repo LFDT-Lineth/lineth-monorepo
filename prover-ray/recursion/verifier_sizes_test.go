@@ -59,7 +59,7 @@ func newDynamicSystem(t *testing.T) dynamicSystem {
 	q := sys.NewPermutation(ctx.Childf("perm"), []wiop.Table{wiop.NewTable(d.pa.View())}, []wiop.Table{wiop.NewTable(d.pb.View())})
 	r0.RegisterVerifierAction(&grandproduct.RowLimitAction{Query: q, Limit: dynLimit})
 
-	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
+	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the dynamic system should compile")
 	return d
 }
 
@@ -95,9 +95,9 @@ func TestVerifierDynamic(t *testing.T) {
 	for _, sz := range [][2]int{{4, 4}, {8, 4}, {16, 8}, {4, 8}} {
 		c := d.prove(t, sz[0], sz[1])
 		t.Run(c.name, func(t *testing.T) {
-			require.NoError(t, c.sys.Verify(c.proof, c.pub))
+			require.NoError(t, c.sys.Verify(c.proof, c.pub), "the honest %s proof should verify natively", c.name)
 			r, err := o.run(c.proof, c.pub)
-			require.NoError(t, err)
+			require.NoError(t, err, "the honest %s proof should verify in the machine", c.name)
 			rt := nativeReplay(c.sys, c.proof, c.pub)
 			for _, rd := range c.sys.Rounds {
 				for _, coin := range rd.Coins {
@@ -110,10 +110,10 @@ func TestVerifierDynamic(t *testing.T) {
 	}
 }
 
-// TestVerifierDynamicRejects: every changed cell and every other valid size
+// TestVerifierDynamic_Rejects: every changed cell and every other valid size
 // is rejected iff the native verifier's actions (the PCS opening aside)
 // reject it; sizes out of bounds are rejected.
-func TestVerifierDynamicRejects(t *testing.T) {
+func TestVerifierDynamic_Rejects(t *testing.T) {
 	d := newDynamicSystem(t)
 	o := newOuter(t, d.sys)
 	c := d.prove(t, 8, 4)
@@ -153,7 +153,7 @@ func TestVerifierDynamicRejects(t *testing.T) {
 			rejected++
 		}
 	}
-	require.Positive(t, rejected)
+	require.Positive(t, rejected, "some changes should be rejected")
 	t.Logf("%d of %d changes rejected", rejected, len(tampers))
 
 	// Sizes System.Verify rejects before any action: below the minimum
@@ -168,21 +168,21 @@ func TestVerifierDynamicRejects(t *testing.T) {
 	} {
 		proof := cloneProof(c.proof)
 		f(&proof)
-		require.Error(t, verifyRecovered(d.sys, proof, c.pub), name)
+		require.Error(t, verifyRecovered(d.sys, proof, c.pub), "the native verifier should reject a size %s", name)
 		_, err := o.run(proof, c.pub)
-		require.Error(t, err, name)
+		require.Error(t, err, "the machine should reject a size %s", name)
 	}
 }
 
-// TestVerifierDynamicRowLimit: a proof whose perm module breaks the extra row
+// TestVerifierDynamic_RowLimit: a proof whose perm module breaks the extra row
 // limit is rejected, by that action alone.
-func TestVerifierDynamicRowLimit(t *testing.T) {
+func TestVerifierDynamic_RowLimit(t *testing.T) {
 	d := newDynamicSystem(t)
 	o := newOuter(t, d.sys)
 	c := d.prove(t, 4, 16)
-	require.Equal(t, []string{"*grandproduct.RowLimitAction"}, nativeFailures(c.sys, c.proof, c.pub))
+	require.Equal(t, []string{"*grandproduct.RowLimitAction"}, nativeFailures(c.sys, c.proof, c.pub), "only the row limit should reject it natively")
 	_, err := o.run(c.proof, c.pub)
-	require.Error(t, err)
+	require.Error(t, err, "the machine should reject a proof breaking the row limit")
 }
 
 func moduleIndex(sys *wiop.System, mod *wiop.Module) int {
