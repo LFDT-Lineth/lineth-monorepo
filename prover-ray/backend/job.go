@@ -113,6 +113,12 @@ type Result struct {
 	// dev-partial, for the runner's native runner check. nil in the other modes.
 	GuestOutput []byte
 
+	// ProgramVK is the program VK in the statement of the proof, the response's
+	// programVk: 8 KoalaBear limbs, 4 big-endian canonical bytes each. It is
+	// zero in the dev modes: the devmode proof of dev-partial commits nothing,
+	// and dev-mock and dev-zkvm have no proof.
+	ProgramVK [32]byte
+
 	// Node is the non-root conglomeration node when Status is
 	// ResultStatusNode: the shard proof itself for a single requested shard,
 	// a merged node otherwise. NumShards is the trace's shard count, so that

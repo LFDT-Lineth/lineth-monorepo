@@ -198,7 +198,8 @@ jobs:
     secrets: inherit
 
   manual-docker-build-and-e2e-tests:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: an approval gate with a single echo step.
+    runs-on: ubuntu-24.04
     needs: [plan, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
@@ -337,7 +338,8 @@ jobs:
           needs.plan.result == 'success'
         )
       )
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub API.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       deployments: write

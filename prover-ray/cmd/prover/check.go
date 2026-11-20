@@ -15,8 +15,9 @@ const (
 	ignored use = iota
 	// optional: the mode uses the setting when it is set.
 	optional
-	// required: the mode does not work without the setting.
-	required
+	// required: the mode does not work without the setting. No setting uses
+	// it yet.
+	// required
 )
 
 // layers says on which layers the prover may start in a mode. A layer is false
@@ -66,13 +67,13 @@ type settings struct{ nativeRunner, shardSize use }
 //
 //	mode                 native_runner_bin  shard_size
 //	dev-mock             ignored            ignored
-//	dev-zkvm             required           ignored
+//	dev-zkvm             optional           ignored
 //	dev-partial          optional           optional
 //	full                 ignored            optional
 //	dev-full-dummy-wrap  -                  -           (planned, aggregation only)
 var modeSettings = map[backend.ProverMode]settings{
 	backend.ProverModeDevMock:    {nativeRunner: ignored, shardSize: ignored},
-	backend.ProverModeDevZkVM:    {nativeRunner: required, shardSize: ignored},
+	backend.ProverModeDevZkVM:    {nativeRunner: optional, shardSize: ignored},
 	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional},
 	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional},
 	// Planned, not a mode yet. It runs on aggregation only, so the
@@ -103,13 +104,9 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 		return nil, fmt.Errorf("%s.prover_mode %q is not supported yet: use dev-mock", sectionNames[t], p.mode)
 	}
 
-	// 3. The native runner must be set when required (modeSettings). When the
-	// mode uses it, it must be a program that can be run: a path, or a name
-	// found on PATH.
+	// 3. When the mode uses the native runner (modeSettings), it must be a
+	// program that can be run: a path, or a name found on PATH.
 	runnerSet := p.nativeRunnerBin != ""
-	if uses.nativeRunner == required && !runnerSet {
-		return nil, fmt.Errorf("execution.native_runner_bin must be set in prover_mode %q", p.mode)
-	}
 	if uses.nativeRunner != ignored && runnerSet {
 		// The same lookup as the one that starts the runner.
 		if _, err := exec.LookPath(p.nativeRunnerBin); err != nil {

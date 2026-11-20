@@ -10,5 +10,4 @@ guests_dir = "/opt/linea/prover-ray/guests"
 [execution]
 prover_mode = "dev-partial"
 requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
 shard_size = 500000

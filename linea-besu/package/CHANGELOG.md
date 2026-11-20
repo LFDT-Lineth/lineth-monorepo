@@ -1,4 +1,8 @@
-## [unreleased]
+## [2.4.0] - 2026-11-19
+
+### 🚀 Features
+
+- *(linea-besu)* Update to 26.11.1 (#4532)
 
 ### 🐛 Bug Fixes
 

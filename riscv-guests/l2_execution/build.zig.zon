@@ -17,14 +17,13 @@
             .hash = "zlob-1.6.5-zzE2lWoNCQCFLMTpuNAhGEPVNsyTbftabd_2_A6fEHob",
             .lazy = true,
         },
-        // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
-        // primitives l2_execution_ssz.zig's container codec builds on, and the l2-execution proof
-        // wire contract.
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ codec the guest input
+        // and output are encoded with, and the l2-execution proof wire contract.
         .guest_common = .{ .path = "../guest_common" },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
-        // Zig version this package pins. Test-only: gives the test-side vanilla StatelessInput
-        // encoder a real implementation to serialize against instead of a hand-rolled
-        // offset-table encoder. Pinned to the v0.0.11 tag.
+        // Zig version this package pins. The guest's codec reaches it through guest_common; the
+        // test-side vanilla StatelessInput encoder serializes with it directly. Pinned to the
+        // v0.0.11 tag.
         .ssz = .{
             .url = "https://github.com/blockblaz/ssz.zig/archive/refs/tags/v0.0.11.tar.gz",
             .hash = "ssz-0.0.9-Lfwd68m_AwAFGpz2g1kHvokWjp_UsvqDb3Z2D46w5s_-",
