@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata generate-devmode-system verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-devmode zkc-trace-devmode profile-zkc-case clean
+.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-codegen generate-testdata generate-devmode-system verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected zkc-verify-devmode zkc-trace-devmode profile-zkc-case clean
 
 RISCV_SYSTEM ?= testdata/generated/riscv_system.zig
 ZIG_OUT ?= zig-out
@@ -19,7 +19,6 @@ DEVMODE_PROOF_IMAGE := testdata/devmode_proof_image.bin
 # The default smoke-test run/zkc path loads the generated real proof image.
 EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
-NATIVE_BIN := zig-out/bin/verifier-ray
 
 # elf-to-json accepts @path for raw bytes placed directly at `_in_start`.
 IN_BYTES = @$(abspath $(PROOF_IMAGE))
@@ -59,13 +58,12 @@ help:
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
 		'  clean                 Remove Zig build artifacts' \
 		'zkc variables:' \
-		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
 		'  PROOF_IMAGE          Proof paired with RISCV_SYSTEM, default testdata/riscv_proof_image.bin' \
 		'' \
 		'Zig build variables:' \
 		'  RISCV_SYSTEM         Generated verifier system source, default testdata/generated/riscv_system.zig' \
 		'  ZIG_OUT              Per-build output prefix, default zig-out' \
-		'  DISABLE_ACCELERATORS  Disable Lineth zkVM accelerator wrappers (for compatibility testing), default false' \
+		'  DISABLE_ACCELERATORS  Disable Lineth zkVM accelerator wrappers (for compatibility testing), default true' \
 
 fmt: fmt-zig fmt-go
 
@@ -90,11 +88,11 @@ build-release: $(RISCV_SYSTEM)
 build-r5: $(RISCV_SYSTEM)
 	$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
-# The single proof image is generated with the RISC-V system (see
-# .gitignore); every target that reads it depends on it, so it is produced
-# when missing. The generator writes this default path only, so an overridden
-# PROOF_IMAGE must already exist.
-testdata/riscv_proof_image.bin:
+# The RISC-V system and its proof image are generated together and not
+# committed (see .gitignore); every target that reads them depends on them, so
+# they are produced when missing. The generator writes these default paths
+# only, so an overridden RISCV_SYSTEM / PROOF_IMAGE must already exist.
+testdata/generated/riscv_system.zig testdata/riscv_proof_image.bin &:
 	cd codegen/generate-riscv-system && go run .
 
 run: $(PROOF_IMAGE)
@@ -118,11 +116,12 @@ run-failing-expected: $(PROOF_IMAGE)
 
 test: test-zig test-codegen
 
-test-zig: generate-testdata
+# Depends on the generated files, not on generate-testdata, so CI's
+# verify-testdata followed by test proves each system once. Run
+# generate-testdata to refresh them against prover-ray HEAD.
+test-zig: testdata/generated/riscv_system.zig $(DEVMODE_SYSTEM)
 	$(ZIG_BUILD) test
 	$(ZIG_BUILD) -Dverifier-profiling=true test-profiling
-
-test-generated-zig: test-zig
 
 test-codegen:
 	cd codegen && go test ./...
@@ -135,11 +134,11 @@ generate-testdata:
 generate-devmode-system:
 	cd codegen/generate-devmode-system && go run .
 
-$(DEVMODE_SYSTEM) $(DEVMODE_PROOF_IMAGE): codegen/devmode_bootstrap.go codegen/generate-devmode-system/main.go
+$(DEVMODE_SYSTEM) $(DEVMODE_PROOF_IMAGE) &: codegen/devmode_bootstrap.go codegen/generate-devmode-system/main.go
 	cd codegen/generate-devmode-system && go run .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
+	git diff --exit-code -- testdata/generated/verify.zig
 
 zkc-build: $(PROOF_IMAGE) build-r5
 	$(ELF_TO_JSON) "$(abspath $(R5_BIN))" $(IN_BYTES) > $(R5_JSON)
