@@ -192,3 +192,28 @@ func TestProveFull_Subset_ReturnsNode(t *testing.T) {
 	require.Equal(t, []uint{1}, res.Node.Coverage)
 	require.Equal(t, uint(3), res.NumShards)
 }
+
+// TestShardSizeHint checks what the error says to change when a shard does not
+// fit in a column.
+func TestShardSizeHint(t *testing.T) {
+	cases := map[string]struct {
+		shardSize uint64
+		noMerger  bool
+		shard     uint
+		want      string
+	}{
+		"unsharded":     {0, false, 0, "set shard_size to split the trace into shards"},
+		"no merger":     {0, true, 0, "this mode cannot split the trace into shards yet"},
+		"first shard":   {100, false, 0, "it does not help for ram in shard 0 or for blobs_data"},
+		"a later shard": {100, false, 1, "it does not help for blobs_data"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := &Core{cfg: Config{ShardSize: tc.shardSize}}
+			if !tc.noMerger {
+				c.merger = conglomeration.NewMockMerger(nil)
+			}
+			require.Contains(t, c.shardSizeHint(tc.shard), tc.want, "the hint should say what to change")
+		})
+	}
+}

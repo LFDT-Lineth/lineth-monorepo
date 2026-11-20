@@ -58,6 +58,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # CodeQL expects every toolchain to be installed before `init` (it records `which go`
+      # there and warns if Go changes afterwards), so Go is set up first.
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: ./.github/actions/setup-go
+        with:
+          # No go-version: the action installs the highest go directive across the repo's
+          # modules (a newer toolchain handles older directives), avoiding per-run downloads.
+          # CodeQL's dependency-caching already manages the Go module cache.
+          cache: "false"
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:

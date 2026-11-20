@@ -15,8 +15,9 @@ const (
 	ignored use = iota
 	// optional: the mode uses the setting when it is set.
 	optional
-	// required: the mode does not work without the setting.
-	required
+	// required: the mode does not work without the setting. No setting uses
+	// it yet.
+	// required
 )
 
 // layers says on which layers the prover may start in a mode. A layer is false
@@ -60,24 +61,24 @@ func (l layers) allows(t backend.ProofType) bool {
 }
 
 // settings says how a mode treats each [execution] setting.
-type settings struct{ nativeRunner, shardSize use }
+type settings struct{ nativeRunner, shardSize, shardWorkers use }
 
 // modeSettings says how each mode treats the [execution] settings:
 //
-//	mode                 native_runner_bin  shard_size
-//	dev-mock             ignored            ignored
-//	dev-zkvm             required           ignored
-//	dev-partial          optional           optional
-//	full                 ignored            optional
-//	dev-full-dummy-wrap  -                  -           (planned, aggregation only)
+//	mode                 native_runner_bin  shard_size  shard_workers
+//	dev-mock             ignored            ignored     ignored
+//	dev-zkvm             optional           ignored     ignored
+//	dev-partial          optional           optional    optional
+//	full                 ignored            optional    optional
+//	dev-full-dummy-wrap  -                  -           -              (planned, aggregation only)
 var modeSettings = map[backend.ProverMode]settings{
-	backend.ProverModeDevMock:    {nativeRunner: ignored, shardSize: ignored},
-	backend.ProverModeDevZkVM:    {nativeRunner: required, shardSize: ignored},
-	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional},
-	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional},
+	backend.ProverModeDevMock:    {nativeRunner: ignored, shardSize: ignored, shardWorkers: ignored},
+	backend.ProverModeDevZkVM:    {nativeRunner: optional, shardSize: ignored, shardWorkers: ignored},
+	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional, shardWorkers: optional},
+	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional, shardWorkers: optional},
 	// Planned, not a mode yet. It runs on aggregation only, so the
 	// [execution] settings do not apply to it.
-	// backend.ProverModeDevFullDummyWrap: {nativeRunner: ignored, shardSize: ignored},
+	// backend.ProverModeDevFullDummyWrap: {nativeRunner: ignored, shardSize: ignored, shardWorkers: ignored},
 }
 
 // sectionNames are the config sections of the proof types.
@@ -103,13 +104,9 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 		return nil, fmt.Errorf("%s.prover_mode %q is not supported yet: use dev-mock", sectionNames[t], p.mode)
 	}
 
-	// 3. The native runner must be set when required (modeSettings). When the
-	// mode uses it, it must be a program that can be run: a path, or a name
-	// found on PATH.
+	// 3. When the mode uses the native runner (modeSettings), it must be a
+	// program that can be run: a path, or a name found on PATH.
 	runnerSet := p.nativeRunnerBin != ""
-	if uses.nativeRunner == required && !runnerSet {
-		return nil, fmt.Errorf("execution.native_runner_bin must be set in prover_mode %q", p.mode)
-	}
 	if uses.nativeRunner != ignored && runnerSet {
 		// The same lookup as the one that starts the runner.
 		if _, err := exec.LookPath(p.nativeRunnerBin); err != nil {
@@ -124,6 +121,13 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 	}
 	if uses.shardSize == ignored && p.shardSize > 0 {
 		warn("shard_size")
+	}
+	// One worker, the default, is one shard at a time: nothing to ignore.
+	switch {
+	case uses.shardWorkers == ignored && p.shardWorkers > 1:
+		warn("shard_workers")
+	case p.shardWorkers > 1 && p.shardSize == 0:
+		warnings = append(warnings, "execution.shard_workers is ignored without execution.shard_size: there is one shard")
 	}
 	if uses.nativeRunner == ignored && runnerSet {
 		warn("native_runner_bin")

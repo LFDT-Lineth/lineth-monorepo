@@ -7,6 +7,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 // TestExecuteLargeGuestOutput checks that the no-trace execution path returns a
@@ -46,7 +47,7 @@ func TestExecuteLargeGuestOutput(t *testing.T) {
 	}
 
 	start := time.Now()
-	outputs, errs := binf.Execute(inputs)
+	outputs, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
 	if len(errs) > 0 {
 		t.Fatalf("execution failed: %v", errors.Join(errs...))
 	}

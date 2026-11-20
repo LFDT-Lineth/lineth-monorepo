@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { execFile } from "node:child_process";
 import { posix } from "node:path";
 import { promisify } from "node:util";
-import { encodeFunctionData, keccak256, stringToHex } from "viem";
+import { encodeFunctionData, keccak256, stringToHex, zeroHash } from "viem";
 
 import { awaitUntil, estimateLineaGas, sendTransactionWithRetry } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";
@@ -173,7 +173,7 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
     proverVersion: `riscv-local-${proverMode}`,
     startBlockNumber,
     publicInputs: { endBlockNumber },
-    programVk: request.guestProgramId,
+    programVk: zeroHash,
     proof: stringToHex(`dev-proof:${proverMode}`),
   });
 
