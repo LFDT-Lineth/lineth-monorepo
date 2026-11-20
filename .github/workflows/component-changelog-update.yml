@@ -1,0 +1,160 @@
+name: "Component Changelog Update"
+
+# Single-job replacement for the old component-changelog-upload.yml +
+# component-changelog-commit.yml pair: one runner detects which components
+# changed, regenerates their [Unreleased] CHANGELOG.md sections with git-cliff
+# (all components in parallel as background subshells) and pushes one commit
+# with everything. Compared to the matrix design this saves one runner per
+# changed component (each previously paying its own full-history checkout and
+# git-cliff install) and the artifact upload/download round-trip between the
+# two workflows.
+#
+# The parallel generation logic lives in
+# .github/actions/run-git-cliff-commands/scripts/update-unreleased-changelogs.sh
+# so it can be reproduced locally (see the script's header for usage).
+#
+# Security note: the release-bot App token is minted only after all git-cliff
+# work is done, and only when a CHANGELOG.md actually changed on disk, so the
+# generation phase (tool installers, git-cliff) never runs with credentials
+# that can bypass branch protection. The checkout uses the default
+# GITHUB_TOKEN with persist-credentials: false.
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+concurrency:
+  group: component-changelog-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-changelogs:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    environment: ${{ github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval' }}
+    name: Update [Unreleased] changelogs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Read-only GITHUB_TOKEN, not persisted: the push at the end
+          # authenticates as the release-bot App via the remote URL instead.
+          persist-credentials: false
+          # Pin to the immutable triggering commit rather than a mutable ref name (CodeQL actions/untrusted-checkout).
+          ref: ${{ github.sha }}
+          # Shallow is enough for the path filter; full history is fetched
+          # below only when a component actually changed (git-cliff needs it).
+          submodules: false
+
+      - name: Filter commit changes
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          list-files: "json"
+          filters: .github/path-filters/changelog.yml
+
+      - name: Resolve changed components
+        id: check
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+        run: |
+          set -euo pipefail
+          echo "Changed components: ${CHANGES:-[]}"
+          if [ "${CHANGES:-[]}" = "[]" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # git-cliff needs full history + tags to compute changelog/version, but
+      # most pushes touch no component — pay the full fetch only when needed.
+      - name: Fetch full history for git-cliff
+        if: steps.check.outputs.has_changes == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: false
+          clean: false
+
+      - name: Install git-cliff
+        if: steps.check.outputs.has_changes == 'true'
+        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2.89.1
+        with:
+          tool: git-cliff
+
+      - name: Generate changelogs for changed components (parallel)
+        id: changelogs
+        if: steps.check.outputs.has_changes == 'true'
+        env:
+          CHANGED_COMPONENTS: ${{ steps.filter.outputs.changes }}
+        run: .github/actions/run-git-cliff-commands/scripts/update-unreleased-changelogs.sh
+
+      # Mint the App token only now — after git-cliff, and only when a
+      # CHANGELOG.md actually changed on disk — so the generation phase above
+      # never runs with credentials that bypass branch protection.
+      - name: Generate release bot App token
+        if: steps.changelogs.outputs.updated == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      # Look up the App's bot user id so the commit author email follows
+      # GitHub's canonical noreply format and shows up under the App in the UI.
+      - name: Resolve bot user id
+        if: steps.changelogs.outputs.updated == 'true'
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity and push auth
+        if: steps.changelogs.outputs.updated == 'true'
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          USER_ID: ${{ steps.bot-user.outputs.user-id }}
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git"
+
+      - name: Commit and push all CHANGELOG.md
+        if: steps.changelogs.outputs.updated == 'true'
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No CHANGELOG.md changes to commit."
+            exit 0
+          fi
+          git add 'CHANGELOG.md' '**/CHANGELOG.md'
+          git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"
+
+          # Rebase on top of any commits that landed on the branch between
+          # checkout and now (e.g. a concurrent component-changelog-update push),
+          # then push. Retry a few times in case of repeated races.
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting."
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
+          done
+          echo "Failed to push CHANGELOG.md changes after 3 attempts." >&2
+          exit 1

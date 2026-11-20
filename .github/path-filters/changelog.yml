@@ -1,5 +1,6 @@
-# Changelog component filters for .github/workflows/component-changelog-upload.yml
-# (dorny/paths-filter). Each key must also appear in that workflow's component map.
+# Changelog component filters for .github/workflows/component-changelog-update.yml
+# (dorny/paths-filter). Each key must also have scopes/include-path/folder entries in
+# .github/actions/run-git-cliff-commands/scripts/components.sh.
 coordinator:
   - 'coordinator/**'
 riscv-l2-execution:
@@ -11,6 +12,8 @@ riscv-l2-execution:
   - 'riscv-guests/guest_crypto_ctt/**'
   - 'riscv-guests/.zigversion'
   - 'riscv-guests/Makefile'
+  - 'riscv-guests/Dockerfile'
+  - 'riscv-guests/.dockerignore'
 riscv-rollup:
   - 'riscv-guests/rollup/**'
   - 'riscv-guests/guest_common/**'
@@ -19,6 +22,8 @@ riscv-rollup:
   - 'riscv-guests/lineth_accelerators/**'
   - 'riscv-guests/.zigversion'
   - 'riscv-guests/Makefile'
+  - 'riscv-guests/Dockerfile'
+  - 'riscv-guests/.dockerignore'
 maru:
   - 'maru/**'
 postman:
@@ -27,14 +32,6 @@ prover:
   - 'prover/**'
 prover-ray:
   - 'prover-ray/**'
-  - 'riscv-guests/l2_execution/**'
-  - 'riscv-guests/guest_common/**'
-  - 'riscv-guests/build_common/**'
-  - 'riscv-guests/release/**'
-  - 'riscv-guests/lineth_accelerators/**'
-  - 'riscv-guests/guest_crypto_ctt/**'
-  - 'riscv-guests/.zigversion'
-  - 'riscv-guests/Makefile'
 tx-exclusion-api:
   - 'transaction-exclusion-api/**'
 linea-besu-package:

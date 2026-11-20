@@ -17,7 +17,7 @@ const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = main_config.input_path ++ "";
 const native_pair_input_path: [:0]const u8 = main_config.pair_input_path ++ "";
-const input_guest_base: usize = 0x08800000;
+const input_guest_base = image_relocation.guest_base;
 
 extern const _in_start: u8;
 extern const _in_end: u8;

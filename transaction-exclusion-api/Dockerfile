@@ -6,6 +6,9 @@ RUN mkdir -p logs
 COPY --from=libs ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
+# Remove once the base image ships Temurin 25.0.5.1+2 or later.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
+
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF

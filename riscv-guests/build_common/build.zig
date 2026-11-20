@@ -2,8 +2,9 @@
 //! bits: the pinned toolchain, the common freestanding rv64im target (every guest targets the same
 //! ZkC profile), freestanding-linkage hygiene, the package layout (`src/root.zig` is the package
 //! module, `src/main.zig` the guest entry point), the standalone-ELF link (entry stub + memory
-//! layout, shared because every guest links the same way), the host build of the `zkvm_*` crypto
-//! providers that native tests and tools link, and small utilities.
+//! layout, shared because every guest links the same way), the crypto-provider options and the
+//! accelerator package they select, the host build of the `zkvm_*` crypto providers that native
+//! tests and tools link, the host module that runs a guest ELF under zkc, and small utilities.
 //!
 //! Anything tied to a specific workload stays in the guest that uses it. In particular the zesu /
 //! EVM-execution wiring (executor + SSZ module imports) lives in l2-execution's build.zig: the
@@ -171,8 +172,70 @@ fn nativeRoot(b: *std.Build, root_file: []const u8, native: NativeOptions) *std.
     });
 }
 
+/// The host module that runs a guest ELF under zkc (`zkc.zig`).
+pub fn zkcModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.dependency("build_common", .{}).path("zkc.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+}
+
 pub fn parseAddress(comptime name: []const u8, value: []const u8) u64 {
     return std.fmt.parseInt(u64, value, 0) catch @panic("invalid -D" ++ name ++ " value");
+}
+
+/// The secp256k1 ecrecover/verify provider of `zkvm_provide`: standard zig or the Constantine staticlib.
+pub const Secp256k1Backend = enum { std, constantine };
+
+/// The `-D` options that select the crypto providers behind the guests' `zkvm_*` symbols.
+pub const CryptoOptions = struct {
+    /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
+    keccak_accel: bool = false,
+    secp256k1_backend: Secp256k1Backend = .constantine,
+    /// Constantine delegates field operations to the field accelerator (guest only).
+    ctt_field_accel: bool = true,
+
+    pub fn parse(b: *std.Build) CryptoOptions {
+        return parseIfSet(b) orelse .{};
+    }
+
+    /// The options with an unset one at its default; null when none is set.
+    pub fn parseIfSet(b: *std.Build) ?CryptoOptions {
+        const default: CryptoOptions = .{};
+        const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)");
+        const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std");
+        const ctt_field_accel = b.option(bool, "ctt-field-accel", "Delegate Constantine field operations to the field accelerator, guest only (default: true)");
+        if (keccak_accel == null and secp256k1_backend == null and ctt_field_accel == null) return null;
+        return .{
+            .keccak_accel = keccak_accel orelse default.keccak_accel,
+            .secp256k1_backend = secp256k1_backend orelse default.secp256k1_backend,
+            .ctt_field_accel = ctt_field_accel orelse default.ctt_field_accel,
+        };
+    }
+
+    /// The options of a native build: the arithmetization keccak wrapper and the field accelerator exist on the guest target only.
+    pub fn native(crypto: CryptoOptions) CryptoOptions {
+        return .{ .keccak_accel = false, .secp256k1_backend = crypto.secp256k1_backend, .ctt_field_accel = false };
+    }
+};
+
+/// The accelerator package with its opt-in `zkvm_*` providers. The wrappers and every provider
+/// module come from this one instance, so they share one set of sources and build options.
+pub fn acceleratorsDependency(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    crypto: CryptoOptions,
+) *std.Build.Dependency {
+    return b.dependency("lineth_accelerators", .{
+        .target = target,
+        .optimize = optimize,
+        .@"zkvm-provide" = true,
+        .@"keccak-accel" = crypto.keccak_accel,
+        .@"secp256k1-backend" = crypto.secp256k1_backend,
+        .@"ctt-field-accel" = crypto.ctt_field_accel,
+    });
 }
 
 /// The host build of the `zkvm_*` crypto providers, which native tests and tools link: the
@@ -180,6 +243,13 @@ pub fn parseAddress(comptime name: []const u8, value: []const u8) u64 {
 pub const HostCrypto = struct {
     provider: *std.Build.Step.Compile,
     constantine: std.Build.LazyPath,
+
+    /// The host crypto of `target`, built from the accelerator package with the native form of
+    /// `crypto`. The provider is compiled optimized: the compiler's own linker crashes on a
+    /// debug-built provider object. Null while the Constantine archive is not fetched, as `init`.
+    pub fn forTarget(b: *std.Build, target: std.Build.ResolvedTarget, crypto: CryptoOptions) ?HostCrypto {
+        return init(b, acceleratorsDependency(b, target, .ReleaseSafe, crypto.native()));
+    }
 
     /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
     /// native target, which publishes the Constantine archive of its provider as

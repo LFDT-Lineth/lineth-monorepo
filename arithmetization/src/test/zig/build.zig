@@ -2,7 +2,7 @@ const std = @import("std");
 const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
-    const keccak_accel = b.option(bool, "keccak-accel", "Enable zkc accelerated keccak precompile (argument passthrough to lineth_accelerators)") orelse false;
+    const keccak_accel = b.option(bool, "keccak-accel", "Enable zkc accelerated keccak precompile (argument passthrough to lineth_accelerators)");
     const zkvm_provide = b.option(bool, "zkvm-provide", "Link the zkvm_* precompile providers (argument passthrough to lineth_accelerators; fetches zesu, builds Constantine)") orelse false;
     // The shared freestanding rv64im ZkC profile every guest builds for (build_common).
     const target = common.standardGuestTarget(b);
@@ -29,11 +29,15 @@ pub fn build(b: *std.Build) void {
     // The zkvm wrappers: accelerated ops, exit codes and exit. With -Dzkvm-provide the same dependency
     // instance also provides the zkvm_* precompile providers; keccak-accel=false selects the standard
     // zig keccak among them.
-    const lineth_accel_dep = b.dependency("lineth_accelerators", .{
+    const lineth_accel_dep = if (keccak_accel) |accel| b.dependency("lineth_accelerators", .{
         .target = target,
         .optimize = optimize,
         .@"zkvm-provide" = zkvm_provide,
-        .@"keccak-accel" = keccak_accel,
+        .@"keccak-accel" = accel,
+    }) else b.dependency("lineth_accelerators", .{
+        .target = target,
+        .optimize = optimize,
+        .@"zkvm-provide" = zkvm_provide,
     });
     root_mod.addImport("lineth_zkvm_accel", lineth_accel_dep.module("lineth_accelerators"));
     if (zkvm_provide) root_mod.addImport("zkvm_provide", lineth_accel_dep.module("zkvm_provide"));

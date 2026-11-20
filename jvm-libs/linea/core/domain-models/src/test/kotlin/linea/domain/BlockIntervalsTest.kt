@@ -62,6 +62,19 @@ class BlockIntervalsTest {
   }
 
   @Test
+  fun `isSameInterval compares the blocks across implementations`() {
+    val other = object : BlockInterval {
+      override val startBlockNumber = 10UL
+      override val endBlockNumber = 20UL
+    }
+
+    assertTrue(BlockInterval(10UL, 20UL).isSameInterval(other))
+    assertFalse(BlockInterval(10UL, 20UL) == other)
+    assertFalse(BlockInterval(10UL, 21UL).isSameInterval(other))
+    assertFalse(BlockInterval(11UL, 20UL).isSameInterval(other))
+  }
+
+  @Test
   fun `contains should return true when other interval is fully contained`() {
     // Interval completely within
     assertTrue(BlockIntervalData(10UL, 100UL).contains(BlockIntervalData(20UL, 80UL)))

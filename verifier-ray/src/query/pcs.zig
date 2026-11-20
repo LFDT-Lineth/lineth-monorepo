@@ -1006,10 +1006,10 @@ fn InputQuerySource(comptime system: System) type {
             }
         }
 
-        fn pairAtLevel(self: Self, batch_idx: usize, level_size: usize) Error!merkle.RowPair {
+        fn pairAtLevel(self: *const Self, batch_idx: usize, level_size: usize) Error!merkle.RowPair {
             const branch_idx = self.routing.index_by_batch[batch_idx];
             if (branch_idx >= self.opening.len or branch_idx >= self.caps.len) return Error.InputTreeCountMismatch;
-            const info = self.infos[branch_idx];
+            const info = &self.infos[branch_idx];
             if (level_size == 0 or level_size & (level_size - 1) != 0) return Error.InvalidLevelSize;
             const level_log: usize = @ctz(level_size);
             if (level_log > 0) {

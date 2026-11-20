@@ -12,6 +12,7 @@ import maru.crypto.PrivateKeyGenerator
 import maru.p2p.P2PNetwork
 import maru.p2p.P2PNetworkImpl
 import java.nio.file.Path
+import java.util.Optional
 
 class NodeBuilder(
   maruConfigTemplate: MaruConfig,
@@ -51,6 +52,8 @@ class NodeBuilder(
   private var overridingP2PNetwork: P2PNetwork? = null
   private var p2pNetworkFactory: P2pNetworkFactory = ::P2PNetworkImpl
   private var besuValidator: Boolean? = null
+  private var besuJsonRpcPort: Int? = null
+  private var besuEngineRpcPort: Int? = null
   private var payloadValidationEnabled: Boolean? = null
   private val maruConfigurators = mutableListOf<(MaruConfig) -> MaruConfig>()
   private var maruConfig: MaruConfig = updatePersistenceDataPath(nodeLabel, maruConfigTemplate)
@@ -144,6 +147,21 @@ class NodeBuilder(
     return this
   }
 
+  /**
+   * Pins the default Besu EL's JSON-RPC and Engine API ports (default: OS-assigned ephemeral ports).
+   * Use ports outside the OS ephemeral range (see NetworkUtil.findStablePorts) when the same ports must
+   * be re-bound after a Besu restart: an ephemeral port released by the stopped node can otherwise be
+   * taken by any other socket on the host before it is re-bound.
+   */
+  fun besuRpcPorts(
+    jsonRpcPort: Int,
+    engineRpcPort: Int,
+  ): NodeBuilder {
+    this.besuJsonRpcPort = jsonRpcPort
+    this.besuEngineRpcPort = engineRpcPort
+    return this
+  }
+
   /** Overrides EL payload validation (default: enabled only for sequencers) */
   fun payloadValidation(enabled: Boolean): NodeBuilder {
     this.payloadValidationEnabled = enabled
@@ -161,6 +179,8 @@ class NodeBuilder(
             genesisFile = besuGenesisProvider(),
             validator = besuValidator ?: nodeRole.isSequencer(),
             nodeName = "$nodeLabel-besu",
+            jsonRpcPort = Optional.ofNullable(besuJsonRpcPort),
+            engineRpcPort = Optional.ofNullable(besuEngineRpcPort),
           ),
           besuCluster = besuCluster,
         )

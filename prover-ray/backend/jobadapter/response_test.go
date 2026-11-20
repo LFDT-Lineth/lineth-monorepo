@@ -37,9 +37,8 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 		},
 	}
 
-	vkArr := filledHash(0xbb)
-	vk := vkArr[:]
-	resp := newExecutionResponse(result, 1000501, "test-version", vk)
+	result.ProgramVK = filledHash(0xbb)
+	resp := newExecutionResponse(result, 1000501, "test-version")
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
 	assert.Equal(t, "0xcafe", resp.ProofHex)
@@ -66,7 +65,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
-	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version", make([]byte, 32)))
+	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version"))
 	require.NoError(t, err)
 
 	assertResponseShapeMatchesReference(t, raw)
@@ -82,7 +81,7 @@ func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {
 	// backend result.
 	t.Skip("enable after proof serialization, public-input extraction, and l2L1Messages/txFroms/filteredAddresses response arrays are wired")
 
-	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, "", make([]byte, 32)))
+	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, ""))
 	require.NoError(t, err)
 
 	assert.Equal(t, readReferenceResponse(t), got)
