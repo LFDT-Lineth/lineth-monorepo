@@ -36,7 +36,7 @@ func NewNonNativeScenario() *Scenario {
 	result := newLimbs("result")
 	quotient := newLimbs("quotient")
 
-	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 
 	assignLimbs := func(rt *wiop.Runtime, cols []*wiop.Column, limb0, limb1 uint64) {
 		rt.AssignColumn(cols[0], makeVec(limb0))
