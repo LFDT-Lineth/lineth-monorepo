@@ -23,4 +23,10 @@ interface BlobsRepositoryG<T> {
 }
 
 interface BlobsRepository : BlobsRepositoryG<BlobRecord>
-interface BlobsRepositoryV2 : BlobsRepositoryG<BlobRecordV2>
+interface BlobsRepositoryV2 : BlobsRepositoryG<BlobRecordV2> {
+  /**
+   * End block of the last rollup row in the gap-free run starting at [startingBlockNumberInclusive], or null if no row
+   * starts there. Reads block numbers only.
+   */
+  fun findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<ULong?>
+}

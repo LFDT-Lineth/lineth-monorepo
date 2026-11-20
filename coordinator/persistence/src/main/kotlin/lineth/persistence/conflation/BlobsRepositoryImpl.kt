@@ -56,4 +56,10 @@ class BlobsRepositoryImpl(
 
 class BlobsRepositoryImplV2(
   private val blobsDao: BlobsDaoV2,
-) : BlobsRepositoryImplG<BlobRecordV2>(blobsDao), BlobsRepositoryV2
+) : BlobsRepositoryImplG<BlobRecordV2>(blobsDao), BlobsRepositoryV2 {
+  override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
+    startingBlockNumberInclusive: ULong,
+  ): SafeFuture<ULong?> {
+    return blobsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive)
+  }
+}
