@@ -17,8 +17,10 @@ class RecordsCleanupFinalizationHandler(
   override fun handleUpdate(update: FinalizationMonitor.FinalizationUpdate): SafeFuture<*> {
     // We do not need to keep batches, blobs and aggregation objects in the DB that are not needed after finalization.
     // We only need to keep
-    // - the last blob because BlobCompressionProofCoordinator needs the shnarf from the previous blob and
+    // - the last blob because BlobCompressionProofCoordinator needs the shnarf from the previous blob and, after the
+    //   RISC-V cutover, the rollup row ending at the finalized block is where the rollup stage resumes from;
     // - the last aggregation because we do not want to delete the last aggregation.
+    // The blobs and aggregations tables hold both pre-RISC-V and RISC-V rows, so this cleans both.
     //
     // Consider the case when we have a finalization event for block 100.
     //
@@ -32,14 +34,8 @@ class RecordsCleanupFinalizationHandler(
     // - Blobs with endBlockNumber <= 100 - 1 so that the blob [100, 100] remains in DB
     // - Aggregation with endBlockNumber <= 100 - 1 so that the aggregation [90, 100] remains in DB
     //
-    // If we subtract 2 instead of 1, ie cleanup all blobs and aggregation with endBlockNumber <= 100 - 2
-    // we end up keeping
-    // - Blobs [97, 99] and [100, 100]
-    // - Aggregation [90, 100]
-    //
-    // Ideally subtracting 1 to clean up blobs and aggregation should work however subtracting 2 is more conservative
-    // and can result in an extra blob (and possibly aggregation) object in the DB after cleanup
-    // but does not impact any functionality.
+    // Cleaning blobs up to the finalized block itself would delete the blob [100, 100], so the cleanup must stay at
+    // 100 - 1. Batches are cleaned up to 100: nothing reads the batch ending at the finalized block.
 
     val batchesCleanup = batchesRepository.deleteBatchesUpToEndBlockNumber(update.blockNumber.toLong())
     val blobsCleanup = blobsRepository.deleteBlobsUpToEndBlockNumber(

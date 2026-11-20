@@ -1,5 +1,8 @@
 package lineth.coordinator.app.conflation
 
+import linea.clients.L2ExecutionProverClientV1
+import linea.clients.RollupAggregationProverClientV1
+import linea.clients.RollupProverClientV1
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import lineth.coordinator.config.v2.ForcedTransactionsConfig
@@ -7,6 +10,7 @@ import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
+import lineth.persistence.BlobsRepositoryV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 object ConflationAppHelper {
@@ -86,14 +90,90 @@ object ConflationAppHelper {
   }
 
   /**
-   * Returns the block number of the last block processed by the RISC-V proof pipeline
+   * Where the RISC-V pipeline resumes after the cutover, all from the same last finalized block:
+   * - conflation after the highest consecutive persisted batch from the last finalized block + 1, so already proven
+   *   batches are kept;
+   * - the rollup stage after the highest consecutive rollup row from the last finalized block + 1;
+   * - aggregation at the last finalized block, as there is no RISC-V aggregation yet.
+   * Each falls back to the last finalized block when nothing follows it.
    */
   fun getLastRiscvProcessedBlocks(
     lastFinalizedBlock: ULong,
+    batchesRepository: BatchesRepository,
+    blobsRepository: BlobsRepositoryV2,
     l2EthClient: EthApiClient,
-  ): SafeFuture<LastProcessedBlocks> {
-    return l2EthClient.ethGetBlockByNumberTxHashes(lastFinalizedBlock.toBlockParameter())
-      .thenApply { LastProcessedBlocks(lastConflatedBlock = it, lastAggregatedBlock = it) }
+  ): SafeFuture<RiscvLastProcessedBlocks> {
+    val lastConflatedBlock = batchesRepository
+      .findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock.toLong() + 1)
+      .thenCompose { highestEnd ->
+        l2EthClient.ethGetBlockByNumberTxHashes((highestEnd?.toULong() ?: lastFinalizedBlock).toBlockParameter())
+      }
+    val lastAggregatedBlock = l2EthClient.ethGetBlockByNumberTxHashes(lastFinalizedBlock.toBlockParameter())
+    val lastRollupEndBlockNumber = resumeRiscvRollupFrom(blobsRepository, lastFinalizedBlock)
+    return SafeFuture.collectAll(lastConflatedBlock, lastAggregatedBlock)
+      .thenCombine(lastRollupEndBlockNumber) { blocks, lastRollupEnd ->
+        RiscvLastProcessedBlocks(
+          lastConflatedBlock = blocks.first(),
+          lastAggregatedBlock = blocks.last(),
+          lastRollupEndBlockNumber = lastRollupEnd,
+        )
+      }
+  }
+
+  /**
+   * End block of the last consecutive RISC-V rollup row from the last finalized block + 1, or the last finalized block
+   * if there is none.
+   */
+  internal fun resumeRiscvRollupFrom(
+    blobsRepository: BlobsRepositoryV2,
+    lastFinalizedBlock: ULong,
+  ): SafeFuture<ULong> {
+    return blobsRepository
+      .findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
+      .thenApply { it ?: lastFinalizedBlock }
+  }
+
+  /**
+   * Deletes what the RISC-V pipeline will rebuild: batches after [lastConflatedBlockNumber], rollup rows after
+   * [lastRollupEndBlockNumber] and aggregations after [lastAggregatedBlockNumber].
+   */
+  fun cleanupRiscvDbDataAfterBlockNumbers(
+    lastConflatedBlockNumber: ULong,
+    lastRollupEndBlockNumber: ULong,
+    lastAggregatedBlockNumber: ULong,
+    batchesRepository: BatchesRepository,
+    blobsRepository: BlobsRepositoryV2,
+    aggregationsRepository: AggregationsRepository,
+  ): SafeFuture<*> {
+    if (lastRollupEndBlockNumber > lastConflatedBlockNumber) {
+      return SafeFuture.failedFuture<Unit>(
+        IllegalStateException(
+          "last rollup ends at block $lastRollupEndBlockNumber, after the last persisted batch " +
+            "$lastConflatedBlockNumber: rollups are only built from persisted batches",
+        ),
+      )
+    }
+    return SafeFuture.allOf(
+      batchesRepository.deleteBatchesAfterBlockNumber((lastConflatedBlockNumber + 1UL).toLong()),
+      blobsRepository.deleteBlobsAfterBlockNumber(lastRollupEndBlockNumber + 1UL),
+      aggregationsRepository.deleteAggregationsAfterBlockNumber((lastAggregatedBlockNumber + 1UL).toLong()),
+    )
+  }
+
+  /** Removes the RISC-V prover request files past each stage's resume point. */
+  fun cleanupRiscvProverRequests(
+    l2ExecutionProverClient: L2ExecutionProverClientV1,
+    rollupProverClient: RollupProverClientV1,
+    rollupAggregationProverClient: RollupAggregationProverClientV1,
+    lastConflatedBlockNumber: ULong,
+    lastRollupEndBlockNumber: ULong,
+    lastAggregatedBlockNumber: ULong,
+  ): SafeFuture<*> {
+    return SafeFuture.allOf(
+      l2ExecutionProverClient.removeRequests((lastConflatedBlockNumber + 1UL).toLong()),
+      rollupProverClient.removeRequests((lastRollupEndBlockNumber + 1UL).toLong()),
+      rollupAggregationProverClient.removeRequests((lastAggregatedBlockNumber + 1UL).toLong()),
+    )
   }
 
   fun cleanupDbDataAfterBlockNumbers(

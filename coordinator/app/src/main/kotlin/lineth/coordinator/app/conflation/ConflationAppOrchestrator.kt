@@ -23,6 +23,7 @@ import lineth.metrics.LineaMetricsCategory
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
+import lineth.persistence.BlobsRepositoryV2
 import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
@@ -35,16 +36,16 @@ import kotlin.time.Instant
 
 /**
  * Owns the lifecycle of ConflationAppV1, ConflationAppV2, and ForcedTransactionsApp.
- * Decides which conflation apps to instantiate based on configuration and coordinates
- * their start/stop sequencing.
- *
- * Future responsibility: resume block number resolution and DB cleanup on V1→V2 cutover.
+ * Decides which conflation apps to instantiate based on configuration, resolves where they resume,
+ * cleans up the DB and prover requests past those points on startup, and coordinates their
+ * start/stop sequencing.
  */
 class ConflationAppOrchestrator(
   private val vertx: Vertx,
   private val clock: Clock,
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
+  private val blobsRepositoryV2: BlobsRepositoryV2,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val lastFinalizedBlock: ULong,
@@ -164,8 +165,15 @@ class ConflationAppOrchestrator(
     }
   }
 
-  private val lastProcessedBlocks = if (riscvCutoverCrossed()) {
-    ConflationAppHelper.getLastRiscvProcessedBlocks(lastFinalizedBlock, l2EthClient).get()
+  // Resolved here, before the L1 finalization monitor starts, so finalization cleanup cannot delete the start of the
+  // batch or rollup run before startupCleanup reads these values.
+  private val lastProcessedBlocks: LastProcessedBlocks = if (riscvCutoverCrossed()) {
+    ConflationAppHelper.getLastRiscvProcessedBlocks(
+      lastFinalizedBlock = lastFinalizedBlock,
+      batchesRepository = batchesRepository,
+      blobsRepository = blobsRepositoryV2,
+      l2EthClient = l2EthClient,
+    ).get()
   } else {
     ConflationAppHelper.getLastConflatedAndAggregatedBlocks(
       lastFinalizedBlock = lastFinalizedBlock,
@@ -272,7 +280,8 @@ class ConflationAppOrchestrator(
   private var v2StartFuture: CompletableFuture<*>? = null
 
   override fun start(): CompletableFuture<Unit> {
-    return forcedTransactionsApp.start()
+    return startupCleanup()
+      .thenCompose { forcedTransactionsApp.start() }
       .thenCompose { provenBlockNumberMonitor.start() }
       .thenCompose { conflationAppV1.start() }
       .thenCompose {
@@ -299,6 +308,67 @@ class ConflationAppOrchestrator(
       .thenCompose { forcedTransactionsApp.stop() }
       .thenCompose { provenBlockNumberMonitor.stop() }
   }
+
+  /**
+   * Deletes the DB rows and prover requests past the points the conflation apps resume from, so they are rebuilt
+   * consistently.
+   *
+   * - Before the RISC-V cutover: the pre-RISC-V cleanup. It also deletes any RISC-V rows past V1's resume point;
+   *   ConflationAppV2 then starts again from the cutover timestamp, so its request files go too.
+   * - After the cutover: batches after the last consecutive persisted batch, rollup rows after the last consecutive
+   *   rollup row, and aggregations after the last finalized block, with the matching RISC-V request files.
+   */
+  private fun startupCleanup(): SafeFuture<Unit> {
+    val lastProcessedBlocks = this.lastProcessedBlocks
+    val lastConflatedBlockNumber = lastProcessedBlocks.lastConflatedBlock.number
+    val lastAggregatedBlockNumber = lastProcessedBlocks.lastAggregatedBlock.number
+    if (lastProcessedBlocks !is RiscvLastProcessedBlocks) {
+      return ConflationAppHelper.cleanupDbDataAfterBlockNumbers(
+        lastProcessedBlockNumber = lastConflatedBlockNumber,
+        lastConsecutiveAggregatedBlockNumber = lastAggregatedBlockNumber,
+        batchesRepository = batchesRepository,
+        blobsRepository = blobsRepository,
+        aggregationsRepository = aggregationsRepository,
+      ).thenCompose<Unit> {
+        if (riscvCutoverTimestamp != null) {
+          cleanupRiscvProverRequests(lastConflatedBlockNumber, lastConflatedBlockNumber, lastConflatedBlockNumber)
+        } else {
+          SafeFuture.completedFuture(Unit)
+        }
+      }
+    }
+    val lastRollupEndBlockNumber = lastProcessedBlocks.lastRollupEndBlockNumber
+    log.info(
+      "RISC-V startup cleanup: lastConflatedBlock={} lastRollupEndBlock={} lastAggregatedBlock={}",
+      lastConflatedBlockNumber,
+      lastRollupEndBlockNumber,
+      lastAggregatedBlockNumber,
+    )
+    return ConflationAppHelper.cleanupRiscvDbDataAfterBlockNumbers(
+      lastConflatedBlockNumber = lastConflatedBlockNumber,
+      lastRollupEndBlockNumber = lastRollupEndBlockNumber,
+      lastAggregatedBlockNumber = lastAggregatedBlockNumber,
+      batchesRepository = batchesRepository,
+      blobsRepository = blobsRepositoryV2,
+      aggregationsRepository = aggregationsRepository,
+    ).thenCompose<Unit> {
+      cleanupRiscvProverRequests(lastConflatedBlockNumber, lastRollupEndBlockNumber, lastAggregatedBlockNumber)
+    }
+  }
+
+  private fun cleanupRiscvProverRequests(
+    lastConflatedBlockNumber: ULong,
+    lastRollupEndBlockNumber: ULong,
+    lastAggregatedBlockNumber: ULong,
+  ): SafeFuture<Unit> =
+    ConflationAppHelper.cleanupRiscvProverRequests(
+      l2ExecutionProverClient = proverClientFactory.l2ExecutionProverClient(),
+      rollupProverClient = proverClientFactory.rollupProverClient(),
+      rollupAggregationProverClient = proverClientFactory.rollupAggregationProverClient(),
+      lastConflatedBlockNumber = lastConflatedBlockNumber,
+      lastRollupEndBlockNumber = lastRollupEndBlockNumber,
+      lastAggregatedBlockNumber = lastAggregatedBlockNumber,
+    ).thenApply { }
 
   fun riscvCutoverCrossed(): Boolean =
     riscvCutoverTimestamp != null && lastFinalizedBlockTimestamp >= riscvCutoverTimestamp
