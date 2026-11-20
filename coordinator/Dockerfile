@@ -2,14 +2,15 @@
 FROM eclipse-temurin:25-jdk-noble AS builder
 
 RUN mkdir -p /libs
-COPY --from=libs ./** /libs
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . /libs
 WORKDIR /libs
 
 RUN mkdir -p unpacked-blob-compressor unpacked-blob-shnarf-calculator
-RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
-    bscJar=$(set -- blob-shnarf-calculator*.jar; echo $1) && \
-    cd unpacked-blob-compressor/ && jar -xf ../$bcJar && cd .. && \
-    cd unpacked-blob-shnarf-calculator/ && jar -xf ../$bscJar && cd .. && \
+RUN bcJar=$(find /libs -name 'blob-compressor*.jar') && \
+    bscJar=$(find /libs -name 'blob-shnarf-calculator*.jar') && \
+    cd unpacked-blob-compressor/ && jar -xf $bcJar && cd .. && \
+    cd unpacked-blob-shnarf-calculator/ && jar -xf $bscJar && cd .. && \
     rm -rf unpacked-blob-compressor/darwin-** unpacked-blob-shnarf-calculator/darwin-** && \
     case $(uname -m) in \
     x86_64) \
@@ -32,13 +33,16 @@ WORKDIR /opt/consensys/linea/coordinator
 
 RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
-COPY --from=builder /libs/** libs/
+COPY --from=builder /libs/ libs/
 # The glob lets downstream builds whose context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY LICENSE-* /licenses/
 
 ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
+
+# Remove once the base image ships Temurin 25.0.5.1+2 or later.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

@@ -12,7 +12,9 @@ import (
 
 func TestRunner_RunRollup(t *testing.T) {
 	mock := &mockProver{result: func(job backend.Job) backend.Result {
-		return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xab, 0xcd}}
+		return backend.Result{
+			JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xab, 0xcd}, ProgramVK: filledHash(0x33),
+		}
 	}}
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
@@ -34,7 +36,8 @@ func TestRunner_RunRollup(t *testing.T) {
 	resp, ok := result.ResponseBody.(rollupResponse)
 	require.True(t, ok)
 	assert.Equal(t, testProverVersion, resp.ProverVersion)
-	assert.Equal(t, repeatHex(0x22), resp.ProgramVk)
+	assert.Equal(t, repeatHex(0x33), resp.ProgramVk,
+		"programVk should be the VK of the prover's proof, not the request's guestProgramId")
 	assert.Equal(t, "0xabcd", resp.ProofHex)
 	assert.Equal(t, uint64(10), resp.StartBlockNumber)
 }

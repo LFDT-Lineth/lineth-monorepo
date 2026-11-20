@@ -48,6 +48,30 @@ shard_size = 500000
 	assert.Equal(t, uint64(500000), cfg.Execution.ShardSize)
 }
 
+func TestNewConfigFromFile_ShardWorkers(t *testing.T) {
+	cfg, err := NewConfigFromFile(writeConfig(t, `
+version = "0.0.0-riscv"
+
+[execution]
+prover_mode = "dev-partial"
+shard_size = 500000
+shard_workers = 10
+`))
+	require.NoError(t, err)
+	assert.Equal(t, 10, cfg.Execution.ShardWorkers)
+}
+
+func TestNewConfigFromFile_NegativeShardWorkers(t *testing.T) {
+	_, err := NewConfigFromFile(writeConfig(t, `
+version = "0.0.0-riscv"
+
+[execution]
+prover_mode = "dev-partial"
+shard_workers = -1
+`))
+	require.ErrorContains(t, err, "execution.shard_workers must not be negative")
+}
+
 func TestNewConfigFromFile_GuestELFRejected(t *testing.T) {
 	_, err := NewConfigFromFile(writeConfig(t, `
 version = "t"
