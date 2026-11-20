@@ -1,11 +1,18 @@
-FROM eclipse-temurin:25-jre-noble
-WORKDIR /opt/consensys/linea/transaction-exclusion-api/
+FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
+WORKDIR /opt/lineth/transaction-exclusion-api/
 
-RUN mkdir -p logs
+# Run as a dedicated non-root user (uid 1000, same convention as the besu image).
+# Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
+RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
+    adduser --uid 1000 --disabled-password --gecos "" --home /opt/lineth/transaction-exclusion-api txexclusion && \
+    mkdir -p logs && \
+    chown -R txexclusion:txexclusion /opt/lineth/transaction-exclusion-api
 
-COPY --from=libs ./** libs/
+COPY --from=libs --chown=txexclusion:txexclusion ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 # Remove once the base image ships Temurin 25.0.5.1+2 or later.
 ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 

@@ -1,4 +1,8 @@
 # syntax=docker/dockerfile:1
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the digest-pinned debian base images; pinning would break the build
+# on base refresh for negligible security gain on top of --no-install-recommends.
 #
 # One prover-ray image for all modes; the mode is set per pipeline in the mounted
 # config (CONFIG_FILE), not on the command line.
@@ -13,7 +17,7 @@
 ########################################
 # Go builder: the static prover binary
 ########################################
-FROM docker.io/library/golang:1.27.1-bookworm AS go-builder
+FROM docker.io/library/golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS go-builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -27,7 +31,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prove
 # Final runtime image: debian:bookworm-slim, with a shell so the CMD expands
 # $CONFIG_FILE and $WORKER_ID.
 ########################################
-FROM docker.io/library/debian:bookworm-slim AS final
+FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS final
 ARG VERSION
 ARG VCS_REF
 ARG BUILD_DATE
@@ -41,6 +45,15 @@ COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
+
+# Run as a dedicated non-root user (uid 1000). Volumes mounted at runtime
+# (e.g. /data, guests/) must be readable/writable by uid 1000 — chown them
+# on the host (1000:1000) before docker run.
+RUN useradd --uid 1000 --no-create-home --home-dir /opt/linea/prover-ray prover-ray \
+    && chown -R prover-ray:prover-ray /opt/linea/prover-ray
+
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 # Configuration is a TOML file. No default is baked in (fail loudly rather than
 # run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the
