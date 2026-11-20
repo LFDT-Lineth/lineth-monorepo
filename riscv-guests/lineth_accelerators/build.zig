@@ -17,11 +17,12 @@
 //! the program's final link: `zkvm_provide` (defines every `zkvm_*` symbol, linking the Constantine
 //! archive for the target), `guest_crypto` (the Zig bindings to that archive) and `secp256k1_std`.
 //! `-Dkeccak-accel=true` makes `zkvm_provide` export the prover-accelerated keccak instead of the
-//! standard Zig one, and `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine`
-//! (default) or `std`. The provider instance is the one place these choices take effect: the build
-//! fails when they reach an instance without `-Dzkvm-provide`, or when a program takes
-//! `zkvm_accelerators` from the provider instance. zesu and Constantine are lazy dependencies
-//! behind `-Dzkvm-provide`, fetched and built only for consumers that pass it:
+//! standard Zig one, `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine`
+//! (default) or `std`, and `-Dctt-field-accel` (default true) makes the guest Constantine archive
+//! delegate its field operations to the field accelerator. The provider instance is the one place
+//! these choices take effect: the build fails when they reach an instance without `-Dzkvm-provide`,
+//! or when a program takes `zkvm_accelerators` from the provider instance. zesu and Constantine are
+//! lazy dependencies behind `-Dzkvm-provide`, fetched and built only for consumers that pass it:
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize, .@"zkvm-provide" = true });
 
 const std = @import("std");
@@ -55,7 +56,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
     } else {
-        if (crypto != null) std.process.fatal("lineth_accelerators: -Dkeccak-accel and -Dsecp256k1-backend " ++
+        if (crypto != null) std.process.fatal("lineth_accelerators: -Dkeccak-accel, -Dsecp256k1-backend and -Dctt-field-accel " ++
             "configure zkvm_provide and apply with -Dzkvm-provide=true only; set them on the instance whose " ++
             "zkvm_provide the program links", .{});
         _ = b.addModule("zkvm_accelerators", .{
@@ -127,7 +128,7 @@ fn addCryptoProviders(
     zesu_crypto_backend.addImport("zesu_ripemd160_impl", zesuBackendImpl(b, zesu, "ripemd160_impl", target, optimize));
     zesu_crypto_backend.addImport("zesu_blake2f_impl", zesuBackendImpl(b, zesu, "blake2f_impl", target, optimize));
 
-    const constantine = b.lazyDependency("guest_crypto_ctt", .{}) orelse return;
+    const constantine = b.lazyDependency("guest_crypto_ctt", .{ .@"ctt-field-accel" = crypto.ctt_field_accel and is_guest }) orelse return;
     const archive_name = if (is_guest) "riscv_staticlib" else "host_staticlib";
     // The archives exist once Constantine is fetched.
     const archive = constantine.builder.named_lazy_paths.get(archive_name) orelse return;

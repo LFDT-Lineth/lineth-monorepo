@@ -3,7 +3,7 @@ module github.com/LFDT-Lineth/lineth-monorepo/arithmetization
 go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/zkc v1.2.36
+	github.com/LFDT-Lineth/zkc v1.2.37
 	golang.org/x/arch v0.28.0
 )
 
