@@ -28,30 +28,23 @@ var RootPowers = []int{1, 1, 0, 3}
 // BatchInvertExt returns the inverses of the elements of a, using the
 // Montgomery trick; zeroes map to zero.
 func BatchInvertExt(a []Ext) []Ext {
-	res := make([]Ext, len(a))
-	BatchInvertExtInto(res, a)
-	return res
+	return extensions.BatchInvertE6(a)
 }
 
-// batchInvStackLen is the length up to which [BatchInvertExtInto] keeps its
-// scratch on the stack rather than in [ExtPool].
-const batchInvStackLen = 256
-
 // BatchInvertExtInto computes the inverses of all elements in a and writes
-// the result into res; zeroes map to zero. res may alias a. Its scratch comes
-// from the stack or [ExtPool]; see [BatchInvertExtScratch] to pass it.
+// the result into res; zeroes map to zero. res and a must have the same
+// length; res may be a itself but must not otherwise overlap it. In place,
+// its scratch comes from gnark-crypto's pool; see [BatchInvertExtScratch] to
+// pass it.
 func BatchInvertExtInto(res, a []Ext) {
-	if len(a) != len(res) {
-		panic("input and output slices must have the same length")
-	}
-	if len(a) <= batchInvStackLen {
-		var scratch [batchInvStackLen]Ext
-		BatchInvertExtScratch(res, a, scratch[:len(a)])
-		return
-	}
-	scratch := ExtPool.Get(len(a))
-	BatchInvertExtScratch(res, a, scratch)
-	ExtPool.Put(scratch)
+	extensions.BatchInvertE6Into(res, a)
+}
+
+// BatchInvertExtScratch is [BatchInvertExtInto] with caller-provided scratch:
+// it allocates nothing. scratch must hold at least len(a) elements, is
+// overwritten, and must overlap neither res nor a.
+func BatchInvertExtScratch(res, a, scratch []Ext) {
+	extensions.BatchInvertE6IntoScratch(res, a, scratch)
 }
 
 // NewExtFromString only sets the first coordinate of the field extension

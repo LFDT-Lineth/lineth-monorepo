@@ -49,6 +49,13 @@ var (
 	One         = koalabear.One
 )
 
+// BatchInvertInto sets res[i] = 1/a[i] for every i; zeroes map to zero. res
+// and a must have the same length; res may be a itself but must not otherwise
+// overlap it. It allocates nothing in steady state.
+func BatchInvertInto(res, a []Element) {
+	koalabear.BatchInvertInto(res, a)
+}
+
 // MulR multiplies by montConstant, where montConstant is the Montgommery constant
 func MulR(x Element) Element {
 	var res Element
