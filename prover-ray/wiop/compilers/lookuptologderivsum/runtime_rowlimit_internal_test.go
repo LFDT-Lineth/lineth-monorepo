@@ -130,3 +130,24 @@ func TestRowLimitVerifierAction_RegisteredOnWitnessRound(t *testing.T) {
 	assert.Equal(t, 1, proverHits, "exactly one row-limit prover action must be registered on the subgroup's witness round")
 	assert.Equal(t, 1, verifierHits, "exactly one row-limit verifier action must be registered on the subgroup's witness round")
 }
+
+// TestTotalRowLimitAction checks the cross-group row budget: listing a 2^30-row
+// module 2^11 times reaches MaxTotalLookupRows = 2^41, so the verifier rejects
+// and the prover panics; one fewer listing stays within the budget.
+func TestTotalRowLimitAction(t *testing.T) {
+	g, rt := buildRuntimeLimitGroup(t, 1<<30, 2)
+	big := g.included[0].module
+
+	modules := make([]*wiop.Module, 1<<11)
+	for i := range modules {
+		modules[i] = big
+	}
+
+	over := &TotalRowLimitAction{Modules: modules}
+	require.ErrorContains(t, over.Check(rt), "total row limit")
+	assert.Panics(t, func() { over.Run(rt) })
+
+	within := &TotalRowLimitAction{Modules: modules[1:]}
+	require.NoError(t, within.Check(rt))
+	assert.NotPanics(t, func() { within.Run(rt) })
+}
