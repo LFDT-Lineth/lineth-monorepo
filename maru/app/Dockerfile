@@ -3,7 +3,8 @@ FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /opt/consensys/maru
 
-COPY --from=libs ./** ./
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/

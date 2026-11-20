@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 ## [2.4.0] - 2026-11-19
 
 ### 🚀 Features
