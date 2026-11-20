@@ -13,7 +13,8 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     mkdir -p /tmp/maru-db && \
     chown -R maru:maru /opt/lineth/maru /tmp/maru-db
 
-COPY --from=libs --chown=maru:maru ./** ./
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs --chown=maru:maru  . ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/

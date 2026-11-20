@@ -2,14 +2,15 @@
 FROM eclipse-temurin:25-jdk-noble@sha256:80f67fb3d6f76e2d817d98a4cc2a9cf05f054d4e6adc5e2144bde671d722e63f AS builder
 
 RUN mkdir -p /libs
-COPY --from=libs ./** /libs
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . /libs
 WORKDIR /libs
 
 RUN mkdir -p unpacked-blob-compressor unpacked-blob-shnarf-calculator
-RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
-    bscJar=$(set -- blob-shnarf-calculator*.jar; echo $1) && \
-    cd unpacked-blob-compressor/ && jar -xf ../$bcJar && cd .. && \
-    cd unpacked-blob-shnarf-calculator/ && jar -xf ../$bscJar && cd .. && \
+RUN bcJar=$(find /libs -name 'blob-compressor*.jar') && \
+    bscJar=$(find /libs -name 'blob-shnarf-calculator*.jar') && \
+    cd unpacked-blob-compressor/ && jar -xf $bcJar && cd .. && \
+    cd unpacked-blob-shnarf-calculator/ && jar -xf $bscJar && cd .. && \
     rm -rf unpacked-blob-compressor/darwin-** unpacked-blob-shnarf-calculator/darwin-** && \
     case $(uname -m) in \
     x86_64) \
@@ -37,7 +38,7 @@ RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     mkdir -p logs /tmp/prover/request /tmp/prover/response && \
     chown -R coordinator:coordinator /opt/lineth/coordinator /tmp/prover
 
-COPY --from=builder --chown=coordinator:coordinator /libs/** libs/
+COPY --from=builder --chown=coordinator:coordinator /libs/ libs/
 # The glob lets downstream builds whose context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY LICENSE-* /licenses/
