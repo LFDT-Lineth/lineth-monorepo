@@ -8,10 +8,9 @@
 # and read responses from the matching responses/ folders. The prover-ray config
 # (config/prover-ray/prover-ray-config.toml) points each pipeline at those paths.
 #
-# The native runner is bundled in the image. Guest ELFs are mounted read-only at
-# /opt/linea/prover-ray/guests, like the legacy prover-assets. Stage the bundled
-# one with
-#   prover-ray/scripts/stage-guest.sh <image> tmp/local/prover-ray/guests
+# Guest ELFs are mounted read-only at /opt/linea/prover-ray/guests,
+# like the legacy prover-assets. Stage one with
+#   prover-ray/scripts/stage-guest.sh tmp/local/prover-ray/guests [assets dir]
 # and give the coordinator the Program ID it prints.
 # Logs go to stdout (container logs), so no /logs mount is needed.
 services:

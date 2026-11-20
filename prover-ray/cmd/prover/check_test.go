@@ -53,10 +53,6 @@ func TestCheckPipeline_Rejects(t *testing.T) {
 			backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeDevPartial},
 			"aggregation.prover_mode \"dev-partial\" is not supported yet",
 		},
-		"dev-zkvm without a native runner": {
-			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM},
-			"execution.native_runner_bin must be set in prover_mode \"dev-zkvm\"",
-		},
 		"missing native runner": {
 			backend.ProofTypeL2Execution,
 			pipeline{mode: backend.ProverModeDevPartial, nativeRunnerBin: filepath.Join(t.TempDir(), "missing")},
@@ -99,6 +95,7 @@ func TestCheckPipeline_Accepts(t *testing.T) {
 		p   pipeline
 	}{
 		"execution in dev-mock":            {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevMock}},
+		"dev-zkvm without a runner":        {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM}},
 		"dev-zkvm with a native runner":    {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: runner}},
 		"native runner is a symlink":       {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: link}},
 		"native runner is a name on PATH":  {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, nativeRunnerBin: runnerName}},
@@ -109,6 +106,22 @@ func TestCheckPipeline_Accepts(t *testing.T) {
 		"aggregation in dev-mock":          {backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeDevMock}},
 		// full is not ready on any layer, but stays startable while it is built.
 		"aggregation in full": {backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeFull}},
+		"dev-partial, 10 shard workers": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevPartial, shardSize: 500000, shardWorkers: 10},
+		},
+		"full, 10 shard workers": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeFull, shardSize: 500000, shardWorkers: 10},
+		},
+		// One worker is the default, one shard at a time: nothing is ignored.
+		"one shard worker without shard_size": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevPartial, shardWorkers: 1},
+		},
+		"one shard worker in dev-mock": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevMock, shardWorkers: 1},
+		},
+		"one shard worker in dev-zkvm": {
+			backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevZkVM, shardWorkers: 1, nativeRunnerBin: runner},
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -135,6 +148,18 @@ func TestCheckPipeline_Warns(t *testing.T) {
 		"shard_size in dev-zkvm": {
 			pipeline{mode: backend.ProverModeDevZkVM, shardSize: 500000, nativeRunnerBin: runner},
 			"execution.shard_size is ignored in prover_mode \"dev-zkvm\"",
+		},
+		"shard_workers in dev-mock": {
+			pipeline{mode: backend.ProverModeDevMock, shardWorkers: 10},
+			"execution.shard_workers is ignored in prover_mode \"dev-mock\"",
+		},
+		"shard_workers in dev-zkvm": {
+			pipeline{mode: backend.ProverModeDevZkVM, shardWorkers: 10, nativeRunnerBin: runner},
+			"execution.shard_workers is ignored in prover_mode \"dev-zkvm\"",
+		},
+		"shard_workers without shard_size": {
+			pipeline{mode: backend.ProverModeDevPartial, shardWorkers: 10},
+			"execution.shard_workers is ignored without execution.shard_size: there is one shard",
 		},
 		"native runner in dev-mock": {
 			pipeline{mode: backend.ProverModeDevMock, nativeRunnerBin: runner},

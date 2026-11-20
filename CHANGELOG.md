@@ -50,6 +50,9 @@
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
 - *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
 - *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
+- *(linea-besu)* Update to 26.11.1 (#4532)
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
+- *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 
 ### 🐛 Bug Fixes
 
@@ -222,3 +225,4 @@
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
 - *(deps)* Bump Node.js to 24.22.3 (#4457)
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)

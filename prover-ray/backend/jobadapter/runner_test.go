@@ -40,6 +40,7 @@ func TestRunner_RunSingleBlock(t *testing.T) {
 				EndBlockNumber:  job.EndBlock,
 			},
 			ProofBytes: []byte{0xab, 0xcd},
+			ProgramVK:  filledHash(0x33),
 		}
 	}}
 	runner, err := NewRunner(mock, testProverVersion)
@@ -65,6 +66,7 @@ func TestRunner_RunSingleBlock(t *testing.T) {
 	assert.Equal(t, uint64(1000501), execResp.StartBlockNumber)
 	assert.Equal(t, uint64(1000501), execResp.PublicInputs.EndBlockNumber)
 	assert.Equal(t, repeatHex(0x22), execResp.PublicInputs.ParentBlockHash)
+	assert.Equal(t, repeatHex(0x33), execResp.ProgramVk, "programVk should be the VK of the prover's proof")
 }
 
 func TestRunner_RunMalformedRequest(t *testing.T) {
