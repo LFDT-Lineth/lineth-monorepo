@@ -10,8 +10,8 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
-// minusOne and oneExt are the scalars of the vectorised negations and
-// base-by-extension accumulations below.
+// minusOne and oneExt are the scalars of the vectorised negations and of the
+// base-by-extension accumulation in [VecSubBaseExt].
 var (
 	minusOne = func() (m Element) { m.SetOne(); m.Neg(&m); return m }()
 	oneExt   = func() (o Ext) { o.SetOne(); return o }()
@@ -128,14 +128,12 @@ func VecAddBaseExt(res []Ext, a []Element, b []Ext) {
 	VecAddExtBase(res, b, a)
 }
 
-// VecAddExtExt sets res[i] = a[i] + b[i] over the extension field.
-// Cost: 6 base additions per element, run as one koalabear.Vector.Add over
-// the limb views (see [ExtLimbs]). All slices must have equal length; res
-// may alias a or b.
+// VecAddExtExt sets res[i] = a[i] + b[i] over the extension field, using
+// gnark-crypto's VectorE6.Add (6 base additions per element, vectorised over
+// the coordinates). All slices must have equal length; res may alias a or b.
 func VecAddExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	limbs := ExtLimbs(res)
-	limbs.Add(ExtLimbs(a), ExtLimbs(b))
+	extensions.VectorE6(res).Add(a, b)
 }
 
 // VecAddInto sets res[i] = a[i] + b[i] for all i, dispatching to the typed
@@ -191,14 +189,13 @@ func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	extensions.VectorE6(res).ScalarMulAccByElement(a, &oneExt)
 }
 
-// VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
-// Cost: 6 base subtractions per element, run as one koalabear.Vector.Sub over
-// the limb views (see [ExtLimbs]). All slices must have equal length; res
-// may alias a or b.
+// VecSubExtExt sets res[i] = a[i] - b[i] over the extension field, using
+// gnark-crypto's VectorE6.Sub (6 base subtractions per element, vectorised
+// over the coordinates). All slices must have equal length; res may alias a
+// or b.
 func VecSubExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	limbs := ExtLimbs(res)
-	limbs.Sub(ExtLimbs(a), ExtLimbs(b))
+	extensions.VectorE6(res).Sub(a, b)
 }
 
 // VecSubInto sets res[i] = a[i] - b[i] for all i, dispatching to the typed
@@ -289,13 +286,18 @@ func VecMulInto(res, a, b Vec) {
 
 // VecNegBase sets res[i] = -a[i] over the base field.
 // All slices must have equal length.
+//
+// It scales by −1 with the vectorised koalabear.Vector.ScalarMul rather than
+// calling koalabear.Vector.Neg, which is a scalar loop and measured ~5x
+// slower at 2^16.
 func VecNegBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
 	(*koalabear.Vector)(&res).ScalarMul(a, &minusOne)
 }
 
 // VecNegExt sets res[i] = -a[i] over the extension field.
-// All slices must have equal length.
+// All slices must have equal length. Like [VecNegBase], it scales the limb
+// view by −1 rather than calling VectorE6.Neg (~3x slower at 2^16).
 func VecNegExt(res, a []Ext) {
 	mustEqualLen2(len(res), len(a))
 	limbs := ExtLimbs(res)
@@ -330,23 +332,19 @@ func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 // ---------------------------------------------------------------------------
 
 // VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector:
-// a vectorised scaling of acc, then a vectorised base-by-extension
-// accumulation of b into the first coordinates (about 4x faster than one
-// fused scalar pass). acc and b must have equal length.
+// one Horner step, run as gnark-crypto's fused VectorE6.ScalarMulAddBase.
+// acc and b must have equal length.
 func VecScaleAddExtBase(acc []Ext, s Ext, b []Element) {
 	mustEqualLen2(len(acc), len(b))
-	extensions.VectorE6(acc).ScalarMul(acc, &s)
-	extensions.VectorE6(acc).ScalarMulAccByElement(b, &oneExt)
+	extensions.VectorE6(acc).ScalarMulAddBase(b, &s)
 }
 
-// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field: a
-// vectorised scaling of acc, then a limb-view addition of b (about 5x faster
-// than one fused scalar pass). acc and b must have equal length.
+// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field:
+// one Horner step, run as gnark-crypto's fused VectorE6.ScalarMulAdd. acc and
+// b must have equal length; acc may alias b.
 func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 	mustEqualLen2(len(acc), len(b))
-	extensions.VectorE6(acc).ScalarMul(acc, &s)
-	limbs := ExtLimbs(acc)
-	limbs.Add(limbs, ExtLimbs(b))
+	extensions.VectorE6(acc).ScalarMulAdd(b, &s)
 }
 
 // ---------------------------------------------------------------------------

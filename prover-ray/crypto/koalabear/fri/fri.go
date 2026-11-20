@@ -685,21 +685,10 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 		invTwiddles = foldTwiddles(domain)
 	)
 
-	// Pairs are independent: the fold is chunked across CPUs.
+	// Pairs are independent: the fold is chunked across CPUs, each chunk one
+	// VectorE6.FoldPairs. invTwiddles holds (2x)⁻¹, the factor it expects.
 	parallel.Execute(half, func(start, end int) {
-		for j := start; j < end; j++ {
-			p, q := layer[2*j], layer[2*j+1]
-
-			var sum, diff field.Ext
-			sum.Add(&p, &q)
-			sum.Halve()
-
-			diff.Sub(&p, &q)
-			diff.MulByElement(&diff, &invTwiddles[j])
-			diff.Mul(&diff, &alpha)
-
-			next[j].Add(&sum, &diff)
-		}
+		extensions.VectorE6(next[start:end]).FoldPairs(layer[2*start:2*end], invTwiddles[start:end], &alpha)
 	})
 
 	return next
