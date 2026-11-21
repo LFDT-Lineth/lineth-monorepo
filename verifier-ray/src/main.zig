@@ -5,6 +5,7 @@ const embedded_data_conf = @import("embedded_data_config");
 const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
 const main_config = @import("main_config");
+const r5_mem = verifier_ray.r5_mem;
 
 const verifier = verifier_ray.verifier;
 const image_relocation = verifier_ray.image_relocation;
@@ -91,6 +92,10 @@ fn r5_main() callconv(.c) noreturn {
 comptime {
     if (is_r5_zkvm) {
         @export(&r5_main, .{ .name = "main" });
+        // Override compiler_rt's byte-loop memcpy/memmove/memset (see r5_mem.zig).
+        @export(&r5_mem.memcpy, .{ .name = "memcpy" });
+        @export(&r5_mem.memmove, .{ .name = "memmove" });
+        @export(&r5_mem.memset, .{ .name = "memset" });
     }
 }
 
