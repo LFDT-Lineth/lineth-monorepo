@@ -549,47 +549,41 @@ pub fn reconstructWithManifest(
     }
 
     // Canonical enumeration: size DESC, batch ASC (0..num_batches), base rows
-    // then ext rows, position ASC (declaration order within a bucket). We assign
-    // entry_idx as a running counter and record each entry's origin column.
-    // Positions restart at 0 per (batch, size_log2, is_ext); col_position[c] was
-    // precomputed above in a single O(columns) pass — exactly prover GetLayout's
-    // running counter, restricted to one batch. colCodeOf handles the
-    // manifest-less (all-Present) case without touching the empty borrow.
-    const colCodeOf = struct {
-        fn get(m: []const u32, c: usize) u32 {
-            return if (m.len == 0) manifest_present else m[c];
-        }
-    }.get;
-    var entry_idx: usize = 0;
-    var size: i32 = @intCast(system.max_size_log2);
-    while (size >= 0) : (size -= 1) {
-        const size_u8: u8 = @intCast(size);
-        var batch: usize = 0;
-        while (batch < system.num_batches) : (batch += 1) {
-            // Base rows first, then ext rows, each in declaration order.
-            inline for ([_]bool{ false, true }) |want_ext| {
-                for (system.columns, 0..) |col, c| {
-                    if (col.batch_idx != batch) continue;
-                    if (col.is_ext != want_ext) continue;
-                    if (col_size_log2[c] != size_u8) continue;
-                    if (colCodeOf(manifest, c) != manifest_present) {
-                        r.col_to_entry[c] = no_entry;
-                        continue;
-                    }
-
-                    if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
-                    r.entry_size_log2[entry_idx] = size_u8;
-                    r.entry_batch[entry_idx] = @intCast(batch);
-                    r.entry_is_ext[entry_idx] = want_ext;
-                    r.entry_row_idx[entry_idx] = @intCast(col_position[c]);
-                    r.entry_col_decl_idx[entry_idx] = @intCast(c);
-                    r.col_to_entry[c] = @intCast(entry_idx);
-                    entry_idx += 1;
-                }
+    // then ext rows, position ASC (declaration order within a bucket). Each
+    // (batch, size_log2, is_ext) bucket is one contiguous run of entries in that
+    // order, so a column's entry is its bucket's first entry plus its position
+    // in the bucket (col_position, from the pass above): one pass over the
+    // buckets to place them, one over the columns to fill the entries.
+    var bucket_start: [num_batches_cap][system.max_size_log2 + 1][2]usize = undefined;
+    var next_entry: usize = 0;
+    var size: usize = system.max_size_log2 + 1;
+    while (size > 0) {
+        size -= 1;
+        for (0..system.num_batches) |batch| {
+            for (0..2) |ext_idx| {
+                bucket_start[batch][size][ext_idx] = next_entry;
+                next_entry += bucket_count[batch][size][ext_idx];
             }
         }
     }
-    if (entry_idx != num_present) return Error.LayoutOverflow;
+    if (next_entry != num_present or num_present > system.max_entries) return Error.LayoutOverflow;
+
+    for (system.columns, 0..) |col, c| {
+        const code: u32 = if (manifest.len == 0) manifest_present else manifest[c];
+        if (code != manifest_present) {
+            r.col_to_entry[c] = no_entry;
+            continue;
+        }
+        const size_log2 = col_size_log2[c];
+        const ext_idx: usize = if (col.is_ext) 1 else 0;
+        const entry_idx = bucket_start[col.batch_idx][size_log2][ext_idx] + col_position[c];
+        r.entry_size_log2[entry_idx] = size_log2;
+        r.entry_batch[entry_idx] = @intCast(col.batch_idx);
+        r.entry_is_ext[entry_idx] = col.is_ext;
+        r.entry_row_idx[entry_idx] = @intCast(col_position[c]);
+        r.entry_col_decl_idx[entry_idx] = @intCast(c);
+        r.col_to_entry[c] = @intCast(entry_idx);
+    }
 
     r.params = system.envelope_params.restrictTo(r.top_size) catch return Error.RestrictOutOfRange;
     return r;
@@ -1037,7 +1031,15 @@ fn InputQuerySource(comptime system: System) type {
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const recon = try reconstructWithManifest(system, input.module_sizes, input.manifest);
-    const routing = try routeInputRoots(system, &recon, input.roots);
+    return verifyReconstructed(system, &recon, input);
+}
+
+/// `verify` on a layout the caller has already reconstructed. `recon` must be
+/// `reconstructWithManifest(system, input.module_sizes, input.manifest)`; the
+/// full verifier builds it once and shares it with claim routing instead of
+/// rebuilding it here.
+pub fn verifyReconstructed(comptime system: System, recon: *const Reconstructed(system), input: VerifyInput) Error!void {
+    const routing = try routeInputRoots(system, recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
@@ -1096,7 +1098,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [inputAuxCapacity(system)]?poseidon2.Digest = undefined;
     for (0..routing.tree_count) |tree_idx| {
-        const info = try buildInputCapInfo(system, &recon, routing, tree_idx);
+        const info = try buildInputCapInfo(system, recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
             if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
@@ -1105,7 +1107,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         } else {
             input_frontiers[tree_idx] = try authenticateInputCap(
                 system,
-                &recon,
+                recon,
                 info,
                 input.proof.input_caps[tree_idx],
                 routing.roots[tree_idx],
@@ -1181,7 +1183,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            try bindInputTreeOpenings(system, &recon, source, e0, e1, level_size);
+            try bindInputTreeOpenings(system, recon, source, e0, e1, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -1195,7 +1197,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
             const self_val = try reconstructQueryValueAt(
                 system,
-                &recon,
+                recon,
                 source,
                 e0,
                 e1,
@@ -1210,7 +1212,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             );
             const sib_val = try reconstructQueryValueAt(
                 system,
-                &recon,
+                recon,
                 source,
                 e0,
                 e1,
