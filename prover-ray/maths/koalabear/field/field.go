@@ -6,11 +6,9 @@ import (
 	"math/big"
 	"math/bits"
 	"math/rand/v2"
-	"runtime"
 	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 )
 
@@ -50,6 +48,13 @@ var (
 	BatchInvert = koalabear.BatchInvert
 	One         = koalabear.One
 )
+
+// BatchInvertInto sets res[i] = 1/a[i] for every i; zeroes map to zero. res
+// and a must have the same length; res may be a itself but must not otherwise
+// overlap it. It allocates nothing in steady state.
+func BatchInvertInto(res, a []Element) {
+	koalabear.BatchInvertInto(res, a)
+}
 
 // MulR multiplies by montConstant, where montConstant is the Montgommery constant
 func MulR(x Element) Element {
@@ -209,26 +214,6 @@ func WriteOctupletTo(w io.Writer, octuplet Octuplet) error {
 		}
 	}
 	return nil
-}
-
-// ParBatchInvert is as a parallel implementation of [BatchInvert]. The caller
-// can supply the target number of cores to use to perform the paralellization.
-// If `numCPU=0` is provided, the function defaults to using all the available
-// cores exposed by the OS.
-func ParBatchInvert(a []Element, numCPU int) []Element {
-
-	if numCPU == 0 {
-		numCPU = runtime.NumCPU()
-	}
-
-	res := make([]Element, len(a))
-
-	parallel.Execute(len(a), func(start, stop int) {
-		subRes := BatchInvert(a[start:stop])
-		copy(res[start:stop], subRes)
-	}, numCPU)
-
-	return res
 }
 
 // ToInt returns the field element as a native int.
