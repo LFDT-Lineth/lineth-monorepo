@@ -73,10 +73,25 @@ jobs:
         uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended
+          # Go uses the default query suite on PRs and main pushes: custom queries disable
+          # overlay (improved incremental) analysis under GitHub's code-scanning-scoped rollout
+          # (diagnostic reason "non-default-queries"). Main pushes create the overlay-base
+          # databases that PR runs restore; the weekly scheduled sweep keeps security-extended.
+          queries: ${{ (matrix.language != 'go' || (github.event_name != 'pull_request' && github.event_name != 'push')) && 'security-extended' || '' }}
           config-file: .github/codeql/codeql-config.yml
           # Only main populates shared dependencies; PRs restore without saving duplicates.
           dependency-caching: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && 'full' || 'restore' }}
+
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: ./.github/actions/setup-go
+        with:
+          # Greatest Go version required by the repo's modules (prover: 1.25.7, others: 1.27.1).
+          # A newer toolchain handles older go directives, so this avoids per-run toolchain
+          # downloads (the runner image ships go1.23.5).
+          go-version: "1.27.1"
+          # CodeQL's dependency-caching above already manages the Go module cache.
+          cache: "false"
 
       - name: Setup Java
         if: matrix.language == 'java-kotlin'
