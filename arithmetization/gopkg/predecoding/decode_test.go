@@ -2,775 +2,1501 @@ package predecoding
 
 import (
 	"bytes"
-	"encoding/binary"
-	"encoding/hex"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
-	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
-func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
-	_, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
-		Address: 0x1000,
-		Data:    []byte{1, 2, 3, 4},
-	}}})
-	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("no executable blobs")) {
-		t.Fatalf("Predecode() error = %v, want missing executable blob error", err)
+// TestInstructionTypeFromOpcode
+// checks the opcode -> instruction-type mapping.
+func TestInstructionTypeFromOpcode(t *testing.T) {
+	tests := []struct {
+		name          string
+		opcode        uint32
+		type_expected uint32
+	}{
+		{"op", opcodeOP, rType},
+		{"op32", opcodeOP32, rType},
+		{"custom1", opcodeCUSTOM1, rType},
+		{"load", opcodeLOAD, iType},
+		{"opimm", opcodeOPIMM, iType},
+		{"opimm32", opcodeOPIMM32, iType},
+		{"jalr", opcodeJALR, iType},
+		{"system", opcodeSYSTEM, iType},
+		{"store", opcodeSTORE, sType},
+		{"branch", opcodeBRANCH, bType},
+		{"lui", opcodeLUI, uType},
+		{"auipc", opcodeAUIPC, uType},
+		{"jal", opcodeJAL, jType},
+		{"miscmem", opcodeMISCMEM, miscMemType},
+		{"unknown zero", 0b0000000, undefinedType},
+		{"unknown all-ones", 0b1111111, undefinedType},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if type_value := instructionTypeFromOpcode(tt.opcode); type_value != tt.type_expected {
+				t.Fatalf("instructionTypeFromOpcode(%#09b) = %d, want %d", tt.opcode, type_value, tt.type_expected)
+			}
+		})
 	}
 }
 
-func TestPredecodeHonorsExplicitRecordLimit(t *testing.T) {
-	program := elfmapping.Program{Blobs: []elfmapping.Blob{{
-		Address:    0x1000,
-		Data:       make([]byte, 8),
-		Executable: true,
-	}}}
-	_, err := Predecode(program, WithMaxDecodedRecords(1))
-	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("2 records (cap 1)")) {
-		t.Fatalf("Predecode() error = %v, want record cap error", err)
-	}
-	_, err = Predecode(program, WithMaxDecodedRecords(0))
-	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("cap 0")) {
-		t.Fatalf("Predecode() zero-cap error = %v, want record cap error", err)
-	}
+// ------------------------------------------------------------
+// IMM12 FIELD EXTRACTORS
+// ------------------------------------------------------------
+// TestImm12Funct6, TestImm12Funct7, TestImm12Uimm6, TestImm12Uimm5
+// checks the imm12 field extractors.
+// ------------------------------------------------------------
+
+// extractBits returns bits [lo:hi] of v (inclusive), right-aligned to bit 0.
+// It uses math.Pow plus division and modulo, giving a shift-free reference
+// independent of the >>/& idiom the imm12 field extractors use. Exponents here
+// are tiny (<= 12), well within float64's exact-integer range.
+func extractBits(v uint32, lo, hi int) uint32 {
+	width := hi - lo + 1
+	return (v / uint32(math.Pow(2, float64(lo)))) % uint32(math.Pow(2, float64(width)))
 }
 
-func TestPredecodeDenseExecutableSpan(t *testing.T) {
-	first := make([]byte, 4)
-	second := make([]byte, 4)
-	binary.LittleEndian.PutUint32(first, encodeIType(opcodeOPIMM, 0, 1, 0, 1))
-	binary.LittleEndian.PutUint32(second, encodeIType(opcodeOPIMM, 0, 2, 0, 2))
-	decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{
-		{Address: 0x1008, Data: second, Executable: true},
-		{Address: 0x1000, Data: first, Executable: true},
-	}})
-	if err != nil {
-		t.Fatalf("Predecode() error = %v", err)
-	}
-	if decoded.InstructionBase != 0x1000 {
-		t.Errorf("InstructionBase = %#x, want 0x1000", decoded.InstructionBase)
-	}
-	ops := decodeComputeOpsFromHex(hex.EncodeToString(decoded.Decoded), 3)
-	want := []uint32{computeITypeBase + itypeOpAddiWB, computeInvalid, computeITypeBase + itypeOpAddiWB}
-	for i := range want {
-		if ops[i] != want[i] {
-			t.Errorf("compute op %d = %d, want %d", i, ops[i], want[i])
+// TestImm12Funct6 checks imm12Funct6 extracts bits [11:6] for every imm12 in the
+// full 12-bit domain, cross-checked against extractBits.
+func TestImm12Funct6(t *testing.T) {
+	for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+		want := extractBits(imm12, 6, 11)
+		if got := imm12Funct6(imm12); got != want {
+			t.Fatalf("imm12Funct6(%#05x) = %#x, want %#x", imm12, got, want)
 		}
 	}
 }
 
-func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
+// TestImm12Funct7 checks imm12Funct7 extracts bits [11:5] for every imm12 in the
+// full 12-bit domain, cross-checked against extractBits.
+func TestImm12Funct7(t *testing.T) {
+	for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+		want := extractBits(imm12, 5, 11)
+		if got := imm12Funct7(imm12); got != want {
+			t.Fatalf("imm12Funct7(%#05x) = %#x, want %#x", imm12, got, want)
+		}
+	}
+}
+
+// TestImm12Uimm6 checks imm12Uimm6 extracts bits [5:0] for every imm12 in the
+// full 12-bit domain, cross-checked against extractBits.
+func TestImm12Uimm6(t *testing.T) {
+	for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+		want := extractBits(imm12, 0, 5)
+		if got := imm12Uimm6(imm12); got != want {
+			t.Fatalf("imm12Uimm6(%#05x) = %#x, want %#x", imm12, got, want)
+		}
+	}
+}
+
+// TestImm12Uimm5 checks imm12Uimm5 extracts bits [4:0] for every imm12 in the
+// full 12-bit domain, cross-checked against extractBits.
+func TestImm12Uimm5(t *testing.T) {
+	for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+		want := extractBits(imm12, 0, 4)
+		if got := imm12Uimm5(imm12); got != want {
+			t.Fatalf("imm12Uimm5(%#05x) = %#x, want %#x", imm12, got, want)
+		}
+	}
+}
+
+// signExtend12_oracle is a shift-free reference for 12-bit two's-complement sign
+// extension: it keeps the low 12 bits (via modulo, not masking) and subtracts
+// 2^12 = 4096 when bit 11 is set (value >= 2^11 = 2048), independent of the
+// <<20/>>20 idiom signExtend12 uses.
+func signExtend12_oracle(x uint32) int64 {
+	// keep the low 12 bits
+	v := int64(x % 4096)
+	// if bit 11 is set
+	if v >= 2048 {
+		// subtract 2^12 = 4096 to get the two's-complement sign extension
+		v -= 4096
+	}
+	return v
+}
+
+// TestSignExtend12 checks signExtend12 over the full 12-bit domain against
+// signExtend12_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 11 are ignored (masked) and only bit 11 drives the
+// sign, so the result always lands in [-2048, 2047].
+func TestSignExtend12(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xfffff000, 0xaaaaa000, 0x55555000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<12; low++ {
+			x := bg | low
+			want := signExtend12_oracle(x)
+			if got := signExtend12(x); got != want {
+				t.Fatalf("signExtend12(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
+// signExtend13_oracle is a shift-free reference for 13-bit two's-complement sign
+// extension: it keeps the low 13 bits (via modulo, not masking) and subtracts
+// 2^13 = 8192 when bit 12 is set (value >= 2^12 = 4096), independent of the
+// <<19/>>19 idiom signExtend13 uses.
+func signExtend13_oracle(x uint32) int64 {
+	// keep the low 13 bits
+	v := int64(x % 8192)
+	// if bit 12 is set
+	if v >= 4096 {
+		// subtract 2^13 = 8192 to get the two's-complement sign extension
+		v -= 8192
+	}
+	return v
+}
+
+// TestSignExtend13 checks signExtend13 over the full 13-bit domain against
+// signExtend13_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 12 are ignored (masked) and only bit 12 drives the
+// sign, so the result always lands in [-4096, 4095].
+func TestSignExtend13(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xffffe000, 0xaaaaa000, 0x55554000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<13; low++ {
+			x := bg | low
+			want := signExtend13_oracle(x)
+			if got := signExtend13(x); got != want {
+				t.Fatalf("signExtend13(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
+// signExtend21_oracle is a shift-free reference for 21-bit two's-complement sign
+// extension: it keeps the low 21 bits (via modulo, not masking) and subtracts
+// 2^21 = 2097152 when bit 20 is set (value >= 2^20 = 1048576), independent of
+// the <<11/>>11 idiom signExtend21 uses.
+func signExtend21_oracle(x uint32) int64 {
+	// keep the low 21 bits
+	v := int64(x % 2097152)
+	// if bit 20 is set
+	if v >= 1048576 {
+		// subtract 2^21 = 2097152 to get the two's-complement sign extension
+		v -= 2097152
+	}
+	return v
+}
+
+// TestSignExtend21 checks signExtend21 over the full 21-bit domain against
+// signExtend21_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 20 are ignored (masked) and only bit 20 drives the
+// sign, so the result always lands in [-1048576, 1048575].
+func TestSignExtend21(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xffe00000, 0xaaa00000, 0x55400000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<21; low++ {
+			x := bg | low
+			want := signExtend21_oracle(x)
+			if got := signExtend21(x); got != want {
+				t.Fatalf("signExtend21(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeITypeSemantic tests : translation of opcode and funct3 to computed op
+// (local op) and normalized imm12.
+// ------------------------------------------------------------
+
+// iTypeArm is an (opcode, funct3) pair.
+type iTypeArm struct {
+	opcode uint32
+	funct3 uint32
+}
+
+// iTypeInput is a full (opcode, funct3, imm12) decode input.
+type iTypeInput struct {
+	opcode uint32
+	funct3 uint32
+	imm12  uint32
+}
+
+// iTypeResult is the (local op, normalized imm12) pair decodeITypeSemantic
+// returns.
+type iTypeResult struct {
+	op  uint32
+	imm uint32
+}
+
+// decodeITypeVectors is the static truth table mapping a decode input to the
+// (op, normalized imm12) decodeITypeSemantic must produce.
+// It lists every valid arm, meaning an opcode and funct3 pair that can decode
+// to a non-invalid op for at least one imm12.
+// The expected imm is imm12 unchanged except for the arithmetic shifts (srai/sraiw),
+// where it is the stripped shift amount.
+// The stripping itself is exhaustively verified separately by the imm12 field-extractor
+// tests, so here we only pin the value passed through for each vector.
+var decodeITypeVectors = map[iTypeInput]iTypeResult{
+	// LOAD: op fixed by funct3, imm12 passed through (min + max sampled).
+	{opcodeLOAD, 0b000, 0x008}: {itypeRead8SgnWB, 0x008},   // LB, read signed 8 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b000, 0xfff}: {itypeRead8SgnWB, 0xfff},   // LB, read signed 8 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b001, 0x004}: {itypeRead16SgnWB, 0x004},  // LH, read signed 16 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b010, 0x000}: {itypeRead32SgnWB, 0x000},  // LW, read signed 32 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b011, 0x7ff}: {itypeRead64WB, 0x7ff},     // LD, read signed 64 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b100, 0x001}: {itypeRead8ZextWB, 0x001},  // LBU, read unsigned 8 bits, zero extend to 64 bits
+	{opcodeLOAD, 0b101, 0x002}: {itypeRead16ZextWB, 0x002}, // LHU, read unsigned 16 bits, zero extend to 64 bits
+	{opcodeLOAD, 0b110, 0x003}: {itypeRead32ZextWB, 0x003}, // LWU, read unsigned 32 bits, zero extend to 64 bits
+
+	// OPIMM non-shift: op fixed by funct3, imm12 passed through.
+	{opcodeOPIMM, 0b000, 0x02a}: {itypeOpAddiWB, 0x02a},  // ADDI
+	{opcodeOPIMM, 0b000, 0xfff}: {itypeOpAddiWB, 0xfff},  // ADDI
+	{opcodeOPIMM, 0b010, 0x005}: {itypeOpSltiWB, 0x005},  // SLTI
+	{opcodeOPIMM, 0b011, 0x007}: {itypeOpSltiuWB, 0x007}, // SLTIU
+	{opcodeOPIMM, 0b100, 0x0ff}: {itypeOpXoriWB, 0x0ff},  // XORI
+	{opcodeOPIMM, 0b110, 0x0f0}: {itypeOpOriWB, 0x0f0},   // ORI
+	{opcodeOPIMM, 0b111, 0xabc}: {itypeOpAndiWB, 0xabc},  // ANDI
+
+	// OPIMM shifts: op depends on funct6 (imm12[11:6]); srai strips to uimm6.
+	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000},  // funct6 0, SLLI
+	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f},  // funct6 0, SLLI, shamt 63
+	{opcodeOPIMM, 0b001, 0x040}: {computeInvalid, 0x040}, // funct6 != 0
+	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003},  // funct6 000000, SRLI
+	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f},  // funct6 000000, SRLI, shamt 63
+	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005},  // funct6 010000, SRAI -> uimm6 5
+	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f},  // funct6 010000, SRAI -> uimm6 63
+	{opcodeOPIMM, 0b101, 0x100}: {computeInvalid, 0x100}, // funct6 neither 0 nor 010000, INVALID
+
+	// OPIMM32: word shifts depend on funct7 (imm12[11:5]); sraiw strips to uimm5.
+	{opcodeOPIMM32, 0b000, 0x007}: {itypeOpAddiwWB, 0x007}, // ADDIW
+	{opcodeOPIMM32, 0b001, 0x000}: {itypeOpSlliwWB, 0x000}, // funct7 0, SLLIW
+	{opcodeOPIMM32, 0b001, 0x01f}: {itypeOpSlliwWB, 0x01f}, // funct7 0, SLLIW, shamt 31
+	{opcodeOPIMM32, 0b001, 0x020}: {computeInvalid, 0x020}, // funct7 != 0, INVALID
+	{opcodeOPIMM32, 0b101, 0x003}: {itypeOpSrliwWB, 0x003}, // funct7 0000000, SRLIW
+	{opcodeOPIMM32, 0b101, 0x01f}: {itypeOpSrliwWB, 0x01f}, // funct7 0000000, SRLIW, shamt 31
+	{opcodeOPIMM32, 0b101, 0x405}: {itypeOpSraiwWB, 0x005}, // funct7 0100000 -> uimm5 5
+	{opcodeOPIMM32, 0b101, 0x41f}: {itypeOpSraiwWB, 0x01f}, // funct7 0100000 -> uimm5 31
+	{opcodeOPIMM32, 0b101, 0x200}: {computeInvalid, 0x200}, // funct7 neither 0 nor 0100000, INVALID
+
+	// JALR: op fixed, imm12 passed through.
+	{opcodeJALR, 0b000, 0x123}: {itypeJalr, 0x123}, // JALR
+	{opcodeJALR, 0b000, 0xfff}: {itypeJalr, 0xfff}, // JALR
+
+	// SYSTEM: op selected by funct12 (== imm12), passed through.
+	{opcodeSYSTEM, 0b000, funct12Ecall}:  {itypeEcall, funct12Ecall},   // ECALL
+	{opcodeSYSTEM, 0b000, funct12Ebreak}: {itypeEbreak, funct12Ebreak}, // EBREAK
+	{opcodeSYSTEM, 0b000, 0x002}:         {computeInvalid, 0x002},      // unknown funct12, INVALID
+}
+
+// validITypeArms is the static set of (opcode, funct3) pairs that can decode to
+// a non-invalid op for at least one imm12
+var validITypeArms = map[iTypeArm]bool{
+	{opcodeLOAD, 0b000}: true, {opcodeLOAD, 0b001}: true,
+	{opcodeLOAD, 0b010}: true, {opcodeLOAD, 0b011}: true,
+	{opcodeLOAD, 0b100}: true, {opcodeLOAD, 0b101}: true,
+	{opcodeLOAD, 0b110}: true,
+
+	{opcodeOPIMM, 0b000}: true, {opcodeOPIMM, 0b001}: true,
+	{opcodeOPIMM, 0b010}: true, {opcodeOPIMM, 0b011}: true,
+	{opcodeOPIMM, 0b100}: true, {opcodeOPIMM, 0b101}: true,
+	{opcodeOPIMM, 0b110}: true, {opcodeOPIMM, 0b111}: true,
+
+	{opcodeOPIMM32, 0b000}: true, {opcodeOPIMM32, 0b001}: true,
+	{opcodeOPIMM32, 0b101}: true,
+
+	{opcodeJALR, 0b000}:   true,
+	{opcodeSYSTEM, 0b000}: true,
+}
+
+// TestDecodeITypeSemanticOp checks both return values (computed op and normalized
+// imm12) against the decodeITypeVectors static truth table.
+func TestDecodeITypeSemanticOp(t *testing.T) {
+	for in, want := range decodeITypeVectors {
+		// Guard: every input in the table must belong to a valid arm.
+		if !validITypeArms[iTypeArm{in.opcode, in.funct3}] {
+			t.Fatalf("decodeITypeVectors has entry for non-valid arm opcode=%#x funct3=%#03b", in.opcode, in.funct3)
+		}
+		gotOp, gotImm := decodeITypeSemantic(in.opcode, in.funct3, in.imm12)
+		if gotOp != want.op || gotImm != want.imm {
+			t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#03b, imm=%#05x) = (%d, %#x), want (%d, %#x)",
+				in.opcode, in.funct3, in.imm12, gotOp, gotImm, want.op, want.imm)
+		}
+	}
+}
+
+// TestDecodeITypeSemanticInvalidArms scans
+// - every opcode (0..127)
+// - every funct3 (0..7)
+// - add funct3 is 8 to test the default case on OPIMM
+// which pair is NOT in the list of validITypeArms and asserts
+// decodeITypeSemantic returns computeInvalid with imm12 unchanged
+// for all imm12 (0..4095).
+func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		for funct3 := uint32(0); funct3 <= 8; funct3++ {
+			if validITypeArms[iTypeArm{opcode, funct3}] {
+				// if the pair is in the list of validITypeArms, skip
+				continue
+			}
+			for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+				gotOp, gotImm := decodeITypeSemantic(opcode, funct3, imm12)
+				if gotOp != computeInvalid || gotImm != imm12 {
+					t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#03b, imm=%#05x) = (%d, %#x), want (%d, %#x)",
+						opcode, funct3, imm12, gotOp, gotImm, computeInvalid, imm12)
+				}
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeBTypeSemantic
+// ------------------------------------------------------------
+
+// decodeBTypeVectors is the static truth table mapping each valid branch funct3
+// code to its unified B-type compute op. Every funct3 NOT listed here must
+// return computeInvalid (asserted exhaustively by TestDecodeBTypeSemanticInvalid).
+var decodeBTypeVectors = map[uint32]uint32{
+	0b000: btypeBeq,
+	0b001: btypeBne,
+	0b100: btypeBlt,
+	0b101: btypeBge,
+	0b110: btypeBltu,
+	0b111: btypeBgeu,
+}
+
+// TestDecodeBTypeSemantic checks the valid branch codes against the
+// decodeBTypeVectors static truth table.
+func TestDecodeBTypeSemantic(t *testing.T) {
+	for funct3, want := range decodeBTypeVectors {
+		if got := decodeBTypeSemantic(funct3); got != want {
+			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, want)
+		}
+	}
+}
+
+// TestDecodeBTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
+// decodeBTypeVectors and asserts decodeBTypeSemantic returns computeInvalid.
+func TestDecodeBTypeSemanticInvalid(t *testing.T) {
+	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+		if _, ok := decodeBTypeVectors[funct3]; ok {
+			// if the funct3 is in the list of validBTypeArms, skip
+			continue
+		}
+		if got := decodeBTypeSemantic(funct3); got != computeInvalid {
+			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, computeInvalid)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeJTypeSemantic
+// ------------------------------------------------------------
+
+// decodeJTypeVectors is the static truth table of the valid J-type opcodes, each
+// mapped to the base compute op decodeJTypeSemantic returns. Every opcode NOT
+// listed here must return computeInvalid (asserted exhaustively by
+// TestDecodeJTypeSemanticInvalid).
+var decodeJTypeVectors = map[uint32]uint32{
+	opcodeJAL: jtypeJal, // jal
+}
+
+// TestDecodeJTypeSemantic checks the valid opcodes against the
+// decodeJTypeVectors static truth table.
+func TestDecodeJTypeSemantic(t *testing.T) {
+	for opcode, want := range decodeJTypeVectors {
+		if got := decodeJTypeSemantic(opcode); got != want {
+			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, want)
+		}
+	}
+}
+
+// TestDecodeJTypeSemanticInvalid sweeps every opcode (0..127) NOT in
+// decodeJTypeVectors and asserts decodeJTypeSemantic returns computeInvalid.
+func TestDecodeJTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		if _, ok := decodeJTypeVectors[opcode]; ok {
+			continue
+		}
+		if got := decodeJTypeSemantic(opcode); got != computeInvalid {
+			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, computeInvalid)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeSTypeSemantic
+// ------------------------------------------------------------
+
+// decodeSTypeVectors is the static truth table of the valid S-type funct3
+// codes, each mapped to the store-width compute op decodeSTypeSemantic returns.
+// Every funct3 NOT listed here must return computeInvalid (asserted exhaustively
+// by TestDecodeSTypeSemanticInvalid).
+var decodeSTypeVectors = map[uint32]uint32{
+	0b000: stypeStore8,  // sb
+	0b001: stypeStore16, // sh
+	0b010: stypeStore32, // sw
+	0b011: stypeStore64, // sd
+}
+
+// TestDecodeSTypeSemantic checks the valid store codes against the
+// decodeSTypeVectors static truth table.
+func TestDecodeSTypeSemantic(t *testing.T) {
+	for funct3, want := range decodeSTypeVectors {
+		if got := decodeSTypeSemantic(funct3); got != want {
+			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, want)
+		}
+	}
+}
+
+// TestDecodeSTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
+// decodeSTypeVectors and asserts decodeSTypeSemantic returns computeInvalid.
+func TestDecodeSTypeSemanticInvalid(t *testing.T) {
+	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+		if _, ok := decodeSTypeVectors[funct3]; ok {
+			continue
+		}
+		if got := decodeSTypeSemantic(funct3); got != computeInvalid {
+			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, computeInvalid)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeRTypeSemantic
+// ------------------------------------------------------------
+
+// rTypeInput is a full (opcode, funct3, funct7) R-type decode input.
+type rTypeInput struct {
+	opcode uint32
+	funct3 uint32
+	funct7 uint32
+}
+
+// decodeRTypeVectors is the static truth table of every valid (opcode, funct3,
+// funct7) R-type combination mapped to the local op decodeRTypeSemantic returns.
+// It is the complete set of valid points: every input NOT listed here must
+// return computeInvalid (asserted exhaustively by TestDecodeRTypeSemanticInvalid).
+var decodeRTypeVectors = map[rTypeInput]uint32{
+	// OP, funct7 0000000: base integer.
+	{opcodeOP, 0b000, 0b0000000}: rtypeOpAddWB,
+	{opcodeOP, 0b001, 0b0000000}: rtypeOpSllWB,
+	{opcodeOP, 0b010, 0b0000000}: rtypeOpSltWB,
+	{opcodeOP, 0b011, 0b0000000}: rtypeOpSltuWB,
+	{opcodeOP, 0b100, 0b0000000}: rtypeOpXorWB,
+	{opcodeOP, 0b101, 0b0000000}: rtypeOpSrlWB,
+	{opcodeOP, 0b110, 0b0000000}: rtypeOpOrWB,
+	{opcodeOP, 0b111, 0b0000000}: rtypeOpAndWB,
+	// OP, funct7 0100000: sub/sra.
+	{opcodeOP, 0b000, 0b0100000}: rtypeOpSubWB,
+	{opcodeOP, 0b101, 0b0100000}: rtypeOpSraWB,
+	// OP, funct7 0000001: M extension.
+	{opcodeOP, 0b000, 0b0000001}: rtypeOpMulWB,
+	{opcodeOP, 0b001, 0b0000001}: rtypeOpMulhWB,
+	{opcodeOP, 0b010, 0b0000001}: rtypeOpMulhsuWB,
+	{opcodeOP, 0b011, 0b0000001}: rtypeOpMulhuWB,
+	{opcodeOP, 0b100, 0b0000001}: rtypeOpDivWB,
+	{opcodeOP, 0b101, 0b0000001}: rtypeOpDivuWB,
+	{opcodeOP, 0b110, 0b0000001}: rtypeOpRemWB,
+	{opcodeOP, 0b111, 0b0000001}: rtypeOpRemuWB,
+
+	// OP32, funct7 0000000: word base integer.
+	{opcodeOP32, 0b000, 0b0000000}: rtypeOpAddwWB,
+	{opcodeOP32, 0b001, 0b0000000}: rtypeOpSllwWB,
+	{opcodeOP32, 0b101, 0b0000000}: rtypeOpSrlwWB,
+	// OP32, funct7 0100000: word sub/sra.
+	{opcodeOP32, 0b000, 0b0100000}: rtypeOpSubwWB,
+	{opcodeOP32, 0b101, 0b0100000}: rtypeOpSrawWB,
+	// OP32, funct7 0000001: word M extension.
+	{opcodeOP32, 0b000, 0b0000001}: rtypeOpMulwWB,
+	{opcodeOP32, 0b100, 0b0000001}: rtypeOpDivwWB,
+	{opcodeOP32, 0b101, 0b0000001}: rtypeOpDivuwWB,
+	{opcodeOP32, 0b110, 0b0000001}: rtypeOpRemwWB,
+	{opcodeOP32, 0b111, 0b0000001}: rtypeOpRemuwWB,
+
+	// CUSTOM1, funct7 must be 0000000.
+	{opcodeCUSTOM1, 0b000, 0b0000000}: rtypeOpKeccak,
+	{opcodeCUSTOM1, 0b001, 0b0000000}: rtypeOpPoseidon2,
+}
+
+// TestDecodeRTypeSemantic checks every valid combination against the
+// decodeRTypeVectors static truth table.
+func TestDecodeRTypeSemantic(t *testing.T) {
+	for in, want := range decodeRTypeVectors {
+		if got := decodeRTypeSemantic(in.opcode, in.funct3, in.funct7); got != want {
+			t.Fatalf("decodeRTypeSemantic(op=%#09b, f3=%#03b, f7=%#09b) = %d, want %d",
+				in.opcode, in.funct3, in.funct7, got, want)
+		}
+	}
+}
+
+// TestDecodeRTypeSemanticInvalid sweeps the full (opcode, funct3, funct7)
+// universe (128 x 8 x 128) and asserts every combination NOT in
+// decodeRTypeVectors returns computeInvalid.
+func TestDecodeRTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+			for funct7 := uint32(0); funct7 < 1<<7; funct7++ {
+				if _, ok := decodeRTypeVectors[rTypeInput{opcode, funct3, funct7}]; ok {
+					// if the combination is in the list of valid R-type combinations, skip
+					continue
+				}
+				if got := decodeRTypeSemantic(opcode, funct3, funct7); got != computeInvalid {
+					t.Fatalf("decodeRTypeSemantic(op=%#09b, f3=%#03b, f7=%#09b) = %d, want %d",
+						opcode, funct3, funct7, got, computeInvalid)
+				}
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeUTypeSemantic
+// ------------------------------------------------------------
+
+// decodeUTypeVectors is the static truth table of the valid U-type opcodes, each
+// mapped to the local op decodeUTypeSemantic returns. Every opcode NOT listed
+// here must return computeInvalid (asserted exhaustively by
+// TestDecodeUTypeSemanticInvalid).
+var decodeUTypeVectors = map[uint32]uint32{
+	opcodeLUI:   utypeLuiWB,   // lui
+	opcodeAUIPC: utypeAuipcWB, // auipc
+}
+
+// TestDecodeUTypeSemantic checks the valid opcodes against the
+// decodeUTypeVectors static truth table.
+func TestDecodeUTypeSemantic(t *testing.T) {
+	for opcode, want := range decodeUTypeVectors {
+		if got := decodeUTypeSemantic(opcode); got != want {
+			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, want)
+		}
+	}
+}
+
+// TestDecodeUTypeSemanticInvalid sweeps every opcode (0..127) NOT in
+// decodeUTypeVectors and asserts decodeUTypeSemantic returns computeInvalid.
+func TestDecodeUTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		if _, ok := decodeUTypeVectors[opcode]; ok {
+			continue
+		}
+		if got := decodeUTypeSemantic(opcode); got != computeInvalid {
+			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, computeInvalid)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// extractFields
+// ------------------------------------------------------------
+
+// extractFieldSpecs describes each field extractFields slices out: its inclusive
+// bit range [lo, hi] and an accessor.
+var extractFieldSpecs = []struct {
+	name string
+	lo   int
+	hi   int
+	get  func(instructionFields) uint32
+}{
+	{"opcode", 0, 6, func(f instructionFields) uint32 { return f.opcode }},
+	{"rd", 7, 11, func(f instructionFields) uint32 { return f.rd }},
+	{"funct3", 12, 14, func(f instructionFields) uint32 { return f.funct3 }},
+	{"rs1", 15, 19, func(f instructionFields) uint32 { return f.rs1 }},
+	{"rs2", 20, 24, func(f instructionFields) uint32 { return f.rs2 }},
+	{"imm12", 20, 31, func(f instructionFields) uint32 { return f.imm12 }},
+	{"funct7", 25, 31, func(f instructionFields) uint32 { return f.funct7 }},
+}
+
+// assertExtractFields checks every field of extractFields(instr) against the
+// independent extractBits oracle for a single instruction word.
+func assertExtractFields(t *testing.T, instr uint32) {
+	t.Helper()
+	got := extractFields(instr)
+	for _, s := range extractFieldSpecs {
+		// check if the field (opcode, rd, funct3, rs1, rs2, imm12, funct7)
+		// is valid for the instruction
+		if v, want := s.get(got), extractBits(instr, s.lo, s.hi); v != want {
+			t.Fatalf("extractFields(%#010x).%s = %#x, want %#x", instr, s.name, v, want)
+		}
+	}
+}
+
+// TestExtractFields verifies extractFields against extractBits.
+// The full 32-bit word space (2^32) is too large to enumerate, so we sweep each
+// field's own value domain against both an all-zero and an all-ones background
+// (to catch mask bleed).
+func TestExtractFields(t *testing.T) {
+	// Per-field full-domain sweep against zero and all-ones backgrounds.
+	for _, s := range extractFieldSpecs {
+		// number of bits in the field
+		width := uint(s.hi - s.lo + 1)
+		// mask to extract the field
+		mask := ((uint32(1) << width) - 1) << uint(s.lo)
+		// sweep the field's own value domain against both an all-zero and an all-ones background
+		for val := uint32(0); val < uint32(1)<<width; val++ {
+			field := val << uint(s.lo)
+			// first we test the shift is correct, with a zero background
+			assertExtractFields(t, field) // value in field, zero background
+			// then we test the mask is correct, with an all-ones background
+			assertExtractFields(t, field|^mask) // value in field, all-ones background
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// checkNoOp — writeback promotion (rd != x0)
+// ------------------------------------------------------------
+
+// checkNoOpPromoteVectors is the truth table for the rd != x0 branch of
+// checkNoOp. That branch is independent of instruction type: only the two link
+// ops are promoted to their *_WB variant; every other op passes through
+// unchanged.
+var checkNoOpPromoteVectors = []struct {
+	name string
+	op   uint32
+	want uint32
+}{
+	{"jalr -> jalr_wb", itypeJalr, itypeJalrWB},
+	{"jal -> jal_wb", jtypeJal, jtypeJalWB},
+	{"jalr_wb passthrough", itypeJalrWB, itypeJalrWB},
+	{"jal_wb passthrough", jtypeJalWB, jtypeJalWB},
+	{"load passthrough", itypeRead8SgnWB, itypeRead8SgnWB},
+	{"addi passthrough", itypeOpAddiWB, itypeOpAddiWB},
+	{"rtype passthrough", rtypeOpAddWB, rtypeOpAddWB},
+	{"keccak passthrough", rtypeOpKeccak, rtypeOpKeccak},
+	{"store passthrough", stypeStore8, stypeStore8},
+	{"branch passthrough", btypeBeq, btypeBeq},
+	{"lui passthrough", utypeLuiWB, utypeLuiWB},
+	{"ecall passthrough", itypeEcall, itypeEcall},
+	{"ebreak passthrough", itypeEbreak, itypeEbreak},
+	{"invalid passthrough", computeInvalid, computeInvalid},
+}
+
+// TestCheckNoOpRdNonZero exercises the rd != x0 branch of checkNoOp: link ops
+// gain their writeback variant, every other op passes through, and the result is
+// independent of the instruction type for every rd in 1..31.
+func TestCheckNoOpRdNonZero(t *testing.T) {
+	instrTypes := []uint32{
+		undefinedType, iType, rType, sType, bType, jType, uType, miscMemType,
+	}
+	for _, tv := range checkNoOpPromoteVectors {
+		for _, instrType := range instrTypes {
+			for rd := uint32(1); rd < 1<<5; rd++ {
+				if got := checkNoOp(instrType, tv.op, rd); got != tv.want {
+					t.Fatalf("%s: checkNoOp(instrType=%d, op=%d, rd=%d) = %d, want %d",
+						tv.name, instrType, tv.op, rd, got, tv.want)
+				}
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// checkNoOp — rd == x0 collapse (full truth table)
+// ------------------------------------------------------------
+
+// checkNoOpRdZeroVectors is the full truth table for checkNoOp when rd == x0.
+// Writeback-only ops collapse to NO_OP; control-flow, memory, syscall, and
+// precompile ops keep their semantic op, and COMPUTE_INVALID stays invalid.
+var checkNoOpRdZeroVectors = []struct {
+	name      string
+	instrType uint32
+	op        uint32
+	want      uint32
+}{
+	// misc-mem (FENCE / FENCE.I): always NO_OP.
+	{"fence", miscMemType, computeNoOp, computeNoOp},
+
+	// I-type loads: inert when rd == x0.
+	{"lb", iType, itypeRead8SgnWB, computeNoOp},
+	{"lh", iType, itypeRead16SgnWB, computeNoOp},
+	{"lw", iType, itypeRead32SgnWB, computeNoOp},
+	{"ld", iType, itypeRead64WB, computeNoOp},
+	{"lbu", iType, itypeRead8ZextWB, computeNoOp},
+	{"lhu", iType, itypeRead16ZextWB, computeNoOp},
+	{"lwu", iType, itypeRead32ZextWB, computeNoOp},
+	// I-type ALU-immediate: inert when rd == x0.
+	{"addi", iType, itypeOpAddiWB, computeNoOp},
+	{"slti", iType, itypeOpSltiWB, computeNoOp},
+	{"sltiu", iType, itypeOpSltiuWB, computeNoOp},
+	{"xori", iType, itypeOpXoriWB, computeNoOp},
+	{"ori", iType, itypeOpOriWB, computeNoOp},
+	{"andi", iType, itypeOpAndiWB, computeNoOp},
+	{"slli", iType, itypeOpSlliWB, computeNoOp},
+	{"srli", iType, itypeOpSrliWB, computeNoOp},
+	{"srai", iType, itypeOpSraiWB, computeNoOp},
+	{"addiw", iType, itypeOpAddiwWB, computeNoOp},
+	{"slliw", iType, itypeOpSlliwWB, computeNoOp},
+	{"srliw", iType, itypeOpSrliwWB, computeNoOp},
+	{"sraiw", iType, itypeOpSraiwWB, computeNoOp},
+	// I-type control / syscall: kept even when rd == x0.
+	{"jalr", iType, itypeJalr, itypeJalr},
+	{"ecall", iType, itypeEcall, itypeEcall},
+	{"ebreak", iType, itypeEbreak, itypeEbreak},
+	{"itype invalid", iType, computeInvalid, computeInvalid},
+
+	// R-type ALU: inert when rd == x0.
+	{"add", rType, rtypeOpAddWB, computeNoOp},
+	{"sub", rType, rtypeOpSubWB, computeNoOp},
+	{"sll", rType, rtypeOpSllWB, computeNoOp},
+	{"slt", rType, rtypeOpSltWB, computeNoOp},
+	{"sltu", rType, rtypeOpSltuWB, computeNoOp},
+	{"xor", rType, rtypeOpXorWB, computeNoOp},
+	{"srl", rType, rtypeOpSrlWB, computeNoOp},
+	{"sra", rType, rtypeOpSraWB, computeNoOp},
+	{"or", rType, rtypeOpOrWB, computeNoOp},
+	{"and", rType, rtypeOpAndWB, computeNoOp},
+	{"mul", rType, rtypeOpMulWB, computeNoOp},
+	{"mulh", rType, rtypeOpMulhWB, computeNoOp},
+	{"mulhsu", rType, rtypeOpMulhsuWB, computeNoOp},
+	{"mulhu", rType, rtypeOpMulhuWB, computeNoOp},
+	{"div", rType, rtypeOpDivWB, computeNoOp},
+	{"divu", rType, rtypeOpDivuWB, computeNoOp},
+	{"rem", rType, rtypeOpRemWB, computeNoOp},
+	{"remu", rType, rtypeOpRemuWB, computeNoOp},
+	{"addw", rType, rtypeOpAddwWB, computeNoOp},
+	{"subw", rType, rtypeOpSubwWB, computeNoOp},
+	{"sllw", rType, rtypeOpSllwWB, computeNoOp},
+	{"srlw", rType, rtypeOpSrlwWB, computeNoOp},
+	{"sraw", rType, rtypeOpSrawWB, computeNoOp},
+	{"mulw", rType, rtypeOpMulwWB, computeNoOp},
+	{"divw", rType, rtypeOpDivwWB, computeNoOp},
+	{"divuw", rType, rtypeOpDivuwWB, computeNoOp},
+	{"remw", rType, rtypeOpRemwWB, computeNoOp},
+	{"remuw", rType, rtypeOpRemuwWB, computeNoOp},
+	// R-type Custom-1 precompiles: kept (memory side effects).
+	{"keccak", rType, rtypeOpKeccak, rtypeOpKeccak},
+	{"poseidon2", rType, rtypeOpPoseidon2, rtypeOpPoseidon2},
+	{"write_output", rType, rtypeOpWriteOutput, rtypeOpWriteOutput},
+	{"rtype invalid", rType, computeInvalid, computeInvalid},
+
+	// S-type stores: side effects, kept.
+	{"sb", sType, stypeStore8, stypeStore8},
+	{"sh", sType, stypeStore16, stypeStore16},
+	{"sw", sType, stypeStore32, stypeStore32},
+	{"sd", sType, stypeStore64, stypeStore64},
+	{"stype invalid", sType, computeInvalid, computeInvalid},
+
+	// B-type branches: control flow, kept.
+	{"beq", bType, btypeBeq, btypeBeq},
+	{"bne", bType, btypeBne, btypeBne},
+	{"blt", bType, btypeBlt, btypeBlt},
+	{"bge", bType, btypeBge, btypeBge},
+	{"bltu", bType, btypeBltu, btypeBltu},
+	{"bgeu", bType, btypeBgeu, btypeBgeu},
+	{"btype invalid", bType, computeInvalid, computeInvalid},
+
+	// J-type: control flow, kept (JAL not collapsed even into x0).
+	{"jal", jType, jtypeJal, jtypeJal},
+	{"jtype invalid", jType, computeInvalid, computeInvalid},
+
+	// U-type: inert when rd == x0.
+	{"lui", uType, utypeLuiWB, computeNoOp},
+	{"auipc", uType, utypeAuipcWB, computeNoOp},
+	{"utype invalid", uType, computeInvalid, computeInvalid},
+
+	// Unknown opcode: invalid stays invalid.
+	{"undefined", undefinedType, computeInvalid, computeInvalid},
+}
+
+// TestCheckNoOpRdZero verifies the rd == x0 collapse across every instruction
+// type and op using the full truth table.
+func TestCheckNoOpRdZero(t *testing.T) {
+	for _, tv := range checkNoOpRdZeroVectors {
+		if got := checkNoOp(tv.instrType, tv.op, 0); got != tv.want {
+			t.Fatalf("%s: checkNoOp(instrType=%d, op=%d, rd=0) = %d, want %d",
+				tv.name, tv.instrType, tv.op, got, tv.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// classifyInstruction
+// ------------------------------------------------------------
+
+// classifyInstructionVectors checks the join inside classifyInstruction: the
+// instruction type selects a format decoder (decodeITypeSemantic etc, then
+// checkNoOp folds rd. The format decoders and checkNoOp are tested on their
+// own; these rows pin that the switch calls the right one and passes rd through.
+var classifyInstructionVectors = []struct {
+	name   string
+	typ    uint32
+	opcode uint32
+	funct3 uint32
+	funct7 uint32
+	imm12  uint32
+	rd     uint32
+	want   uint32
+}{
+	// misc-mem ignores the other fields and is always NO_OP.
+	{"fence", miscMemType, opcodeMISCMEM, 0b000, 0, 0, 0, computeNoOp},
+	{"fence rd set", miscMemType, opcodeMISCMEM, 0b000, 0, 0, 1, computeNoOp},
+
+	// I-type: a real op, the rd == x0 collapse, JALR writeback, and an invalid arm.
+	{"addi", iType, opcodeOPIMM, 0b000, 0, 1, 5, itypeOpAddiWB},
+	{"addi x0", iType, opcodeOPIMM, 0b000, 0, 1, 0, computeNoOp},
+	{"jalr", iType, opcodeJALR, 0b000, 0, 0, 1, itypeJalrWB},
+	{"jalr x0", iType, opcodeJALR, 0b000, 0, 0, 0, itypeJalr},
+	{"ecall", iType, opcodeSYSTEM, 0b000, 0, funct12Ecall, 0, itypeEcall},
+	{"load funct3 111", iType, opcodeLOAD, 0b111, 0, 0, 5, computeInvalid},
+
+	// R-type: writeback collapse, a precompile kept at x0, and custom-1 funct3 010 invalid case.
+	{"add", rType, opcodeOP, 0b000, 0b0000000, 0, 5, rtypeOpAddWB},
+	{"add x0", rType, opcodeOP, 0b000, 0b0000000, 0, 0, computeNoOp},
+	{"keccak x0", rType, opcodeCUSTOM1, 0b000, 0b0000000, 0, 0, rtypeOpKeccak},
+	{"custom-1 funct3 010", rType, opcodeCUSTOM1, 0b010, 0b0000000, 0, 1, computeInvalid},
+
+	// S and B keep their op for any rd. Invalid funct3 stays invalid.
+	{"sb", sType, opcodeSTORE, 0b000, 0, 0, 0, stypeStore8},
+	{"store funct3 111", sType, opcodeSTORE, 0b111, 0, 0, 0, computeInvalid},
+	{"beq", bType, opcodeBRANCH, 0b000, 0, 0, 0, btypeBeq},
+	{"branch funct3 010", bType, opcodeBRANCH, 0b010, 0, 0, 0, computeInvalid},
+
+	// J-type promotes JAL when rd != x0 and keeps it when rd == x0.
+	{"jal", jType, opcodeJAL, 0, 0, 0, 1, jtypeJalWB},
+	{"jal x0", jType, opcodeJAL, 0, 0, 0, 0, jtypeJal},
+	{"jal bad opcode", jType, 0, 0, 0, 0, 1, computeInvalid},
+
+	// U-type collapses LUI into x0. An unknown U opcode stays invalid.
+	{"lui", uType, opcodeLUI, 0, 0, 0, 5, utypeLuiWB},
+	{"lui x0", uType, opcodeLUI, 0, 0, 0, 0, computeNoOp},
+	{"u bad opcode", uType, 0, 0, 0, 0, 5, computeInvalid},
+
+	// No switch arm matches. op stays 0, so checkNoOp returns NO_OP.
+	{"undefined", undefinedType, 0, 0, 0, 0, 0, computeNoOp},
+	{"undefined rd set", undefinedType, opcodeOPIMM, 0b000, 0, 1, 5, computeNoOp},
+}
+
+func TestClassifyInstruction(t *testing.T) {
+	for _, tv := range classifyInstructionVectors {
+		got := classifyInstruction(tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd)
+		if got != tv.want {
+			t.Fatalf("%s: classifyInstruction(type=%d, op=%#x, f3=%#x, f7=%#x, imm=%#x, rd=%d) = %d, want %d",
+				tv.name, tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd, got, tv.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// ASSEMBLE FUNCTIONS
+// ------------------------------------------------------------
+// TestAssembleITypeImm, TestAssembleSTypeImm, TestAssembleBTypeImm, TestAssembleJTypeImm, TestAssembleUTypeImm
+// checks the assemble functions.
+// ------------------------------------------------------------
+
+// TestAssembleITypeImm checks assembleITypeImm over the full 12-bit domain
+// against signExtend12_oracle. Each value is tested under several high-bit
+// backgrounds to confirm bits above bit 11 are ignored.
+func TestAssembleITypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xfffff000, 0xaaaaa000, 0x55555000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<12; low++ {
+			x := bg | low
+			want := uint64(signExtend12_oracle(x))
+			if got := assembleITypeImm(x); got != want {
+				t.Fatalf("assembleITypeImm(%#x) = %#x, want %#x", x, got, want)
+			}
+		}
+	}
+}
+
+// assembleUTypeImm_oracle is a shift-free reference for the U-type immediate.
+// It drops the low 12 bits via division by 2^12 = 4096, places the 20-bit
+// immediate into bits [31:12] by multiplying by 4096, and subtracts 2^32 when
+// bit 31 is set (value >= 2^31 = 2147483648), independent of the >>12/<<12
+// and int32 cast assembleUTypeImm uses.
+func assembleUTypeImm_oracle(instr uint32) uint64 {
+	imm20 := int64(instr / 4096)
+	word := imm20 * 4096
+	if word >= 2147483648 {
+		word -= 4294967296
+	}
+	return uint64(word)
+}
+
+// TestAssembleUTypeImm checks assembleUTypeImm over the full 20-bit immediate
+// against assembleUTypeImm_oracle. Each value is tested under several low-bit
+// backgrounds to confirm bits below bit 12 are ignored.
+func TestAssembleUTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x000, 0xfff, 0xaaa, 0x555}
+	for _, bg := range backgrounds {
+		for imm20 := uint32(0); imm20 < 1<<20; imm20++ {
+			instr := imm20*4096 + bg
+			want := assembleUTypeImm_oracle(instr)
+			if got := assembleUTypeImm(instr); got != want {
+				t.Fatalf("assembleUTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleSTypeImm_oracle is a shift-free reference for the S-type store offset.
+// It pulls imm[4:0] from bits [11:7], imm[10:5] from bits [30:25], and imm[11]
+// from bit 31, then sign-extends that 12-bit value with signExtend12_oracle.
+// Opcode, funct3, rs1, and rs2 are dropped by the divisions.
+func assembleSTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm4_0 := (v / 128) % 32
+	imm10_5 := (v / 33554432) % 64
+	imm11 := v / 2147483648
+	simm12 := uint32(imm11*2048 + imm10_5*32 + imm4_0)
+	return uint64(signExtend12_oracle(simm12))
+}
+
+// TestAssembleSTypeImm checks assembleSTypeImm over the full 12-bit store offset
+// against assembleSTypeImm_oracle. Each value is tested under several backgrounds
+// in the bits the offset does not occupy, to confirm opcode, funct3, rs1, and rs2
+// are ignored.
+func TestAssembleSTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0x01fff07f, 0x00aaa02a, 0x01555055}
+	for _, bg := range backgrounds {
+		for simm12 := uint32(0); simm12 < 1<<12; simm12++ {
+			imm11 := simm12 / 2048
+			imm10_5 := (simm12 / 32) % 64
+			imm4_0 := simm12 % 32
+			instr := imm11*2147483648 + imm10_5*33554432 + imm4_0*128 + bg
+			want := assembleSTypeImm_oracle(instr)
+			if got := assembleSTypeImm(instr); got != want {
+				t.Fatalf("assembleSTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleBTypeImm_oracle is a shift-free reference for the B-type branch offset.
+// It pulls imm[12] from bit 31, imm[10:5] from bits [30:25], imm[4:1] from bits
+// [11:8], and imm[11] from bit 7. Bit 0 stays clear. The 13-bit value is
+// sign-extended with signExtend13_oracle.
+func assembleBTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm12 := v / 2147483648
+	imm10_5 := (v / 33554432) % 64
+	imm4_1 := (v / 256) % 16
+	imm11 := (v / 128) % 2
+	imm13 := uint32(imm12*4096 + imm11*2048 + imm10_5*32 + imm4_1*2)
+	return uint64(signExtend13_oracle(imm13))
+}
+
+// TestAssembleBTypeImm checks assembleBTypeImm over every encodable 13-bit branch
+// offset against assembleBTypeImm_oracle. Bit 0 is always clear. Each value is
+// tested under several backgrounds in the bits the offset does not occupy, to
+// confirm opcode, funct3, rs1, and rs2 are ignored.
+func TestAssembleBTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0x01fff07f, 0x00aaa02a, 0x01555055}
+	for _, bg := range backgrounds {
+		for imm13 := uint32(0); imm13 < 1<<13; imm13 += 2 {
+			imm12 := imm13 / 4096
+			imm11 := (imm13 / 2048) % 2
+			imm10_5 := (imm13 / 32) % 64
+			imm4_1 := (imm13 / 2) % 16
+			instr := imm12*2147483648 + imm10_5*33554432 + imm4_1*256 + imm11*128 + bg
+			want := assembleBTypeImm_oracle(instr)
+			if got := assembleBTypeImm(instr); got != want {
+				t.Fatalf("assembleBTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// assembleJTypeImm_oracle is a shift-free reference for the J-type jump offset.
+// It pulls imm[20] from bit 31, imm[10:1] from bits [30:21], imm[11] from bit 20,
+// and imm[19:12] from bits [19:12]. Bit 0 stays clear. The 21-bit value is
+// sign-extended with signExtend21_oracle.
+func assembleJTypeImm_oracle(instr uint32) uint64 {
+	v := int64(instr)
+	imm20 := v / 2147483648
+	imm10_1 := (v / 2097152) % 1024
+	imm11 := (v / 1048576) % 2
+	imm19_12 := (v / 4096) % 256
+	imm21 := uint32(imm20*1048576 + imm19_12*4096 + imm11*2048 + imm10_1*2)
+	return uint64(signExtend21_oracle(imm21))
+}
+
+// TestAssembleJTypeImm checks assembleJTypeImm over every encodable 21-bit jump
+// offset against assembleJTypeImm_oracle. Bit 0 is always clear. Each value is
+// tested under several low-bit backgrounds to confirm rd and the opcode are ignored.
+func TestAssembleJTypeImm(t *testing.T) {
+	backgrounds := []uint32{0x000, 0xfff, 0xaaa, 0x555}
+	for _, bg := range backgrounds {
+		for imm21 := uint32(0); imm21 < 1<<21; imm21 += 2 {
+			imm20 := imm21 / 1048576
+			imm19_12 := (imm21 / 4096) % 256
+			imm11 := (imm21 / 2048) % 2
+			imm10_1 := (imm21 / 2) % 1024
+			instr := imm20*2147483648 + imm10_1*2097152 + imm11*1048576 + imm19_12*4096 + bg
+			want := assembleJTypeImm_oracle(instr)
+			if got := assembleJTypeImm(instr); got != want {
+				t.Fatalf("assembleJTypeImm(%#x) = %#x, want %#x", instr, got, want)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// WriteBits
+// ------------------------------------------------------------
+
+// writeBitsOracle appends the low width bits of val, most-significant bit first.
+// Bits are taken by division by two, so this does not use the shifts writeBits uses.
+func writeBitsOracle(val uint64, width int) ([]byte, int) {
+	var out []byte
+	place := uint64(1)
+	for i := 1; i < width; i++ {
+		place *= 2
+	}
+	nbits := 0
+	for i := width - 1; i >= 0; i-- {
+		bit := (val / place) % 2
+		if place > 1 {
+			place /= 2
+		}
+		if nbits%8 == 0 {
+			out = append(out, 0)
+		}
+		if bit == 1 {
+			out[nbits/8] |= [8]byte{128, 64, 32, 16, 8, 4, 2, 1}[nbits%8]
+		}
+		nbits++
+	}
+	return out, nbits
+}
+
+// TestWriteBits checks every width up to 16 and every value in that width.
+// The same value is also written with every bit above width set. The packed
+// bytes must match the low width bits only.
+func TestWriteBits(t *testing.T) {
+	for width := 0; width <= 16; width++ {
+		for low := uint64(0); low < uint64(1)<<uint(width); low++ {
+			for _, val := range []uint64{low, low | (^uint64(0) << uint(width))} {
+				var w bitWriter
+				w.writeBits(val, width)
+				want, n := writeBitsOracle(low, width)
+				if w.nbits != n || !bytes.Equal(w.buf, want) {
+					t.Fatalf("writeBits(%#x, %d) nbits=%d buf=%x, want nbits=%d buf=%x",
+						val, width, w.nbits, w.buf, n, want)
+				}
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// UnifiedOperands
+// ------------------------------------------------------------
+
+// unifiedOperandsOracle is the unifiedOperands oracle function.
+// Immediates come from the assemble oracles. Registers the format does not use
+// are zero. Misc-mem, undefined, and any other type contribute nothing, just as
+// unifiedOperands does.
+func unifiedOperandsOracle(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) (uint64, uint64, uint64, uint64) {
+	switch instrType {
+	case iType:
+		_, norm := decodeITypeSemantic(opcode, funct3, imm12)
+		return uint64(signExtend12_oracle(norm)), uint64(rs1), 0, uint64(rd)
+	case rType:
+		return 0, uint64(rs1), uint64(rs2), uint64(rd)
+	case sType:
+		return assembleSTypeImm_oracle(instruction), uint64(rs1), uint64(rs2), 0
+	case bType:
+		return assembleBTypeImm_oracle(instruction), uint64(rs1), uint64(rs2), 0
+	case jType:
+		return assembleJTypeImm_oracle(instruction), 0, 0, uint64(rd)
+	case uType:
+		return assembleUTypeImm_oracle(instruction), 0, 0, uint64(rd)
+	default:
+		return 0, 0, 0, 0
+	}
+}
+
+// TestUnifiedOperands checks every register for each instruction type.
+// Opcode, imm12, and funct3 are set to 0 and to all-ones for the types that
+// do not read them. The instruction word stays fixed, with bit 31 and bit 7 set.
+func TestUnifiedOperands(t *testing.T) {
+	check := func(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) {
+		t.Helper()
+		gotImm, gotRs1, gotRs2, gotRd := unifiedOperands(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd)
+		wantImm, wantRs1, wantRs2, wantRd := unifiedOperandsOracle(instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd)
+		if gotImm != wantImm || gotRs1 != wantRs1 || gotRs2 != wantRs2 || gotRd != wantRd {
+			t.Fatalf("unifiedOperands(type=%d, instr=%#x, op=%#x, imm12=%#x, f3=%#x, rs1=%d, rs2=%d, rd=%d) = (%#x, %d, %d, %d), want (%#x, %d, %d, %d)",
+				instrType, instruction, opcode, imm12, funct3, rs1, rs2, rd,
+				gotImm, gotRs1, gotRs2, gotRd, wantImm, wantRs1, wantRs2, wantRd)
+		}
+	}
+
+	// Bit 31 and bit 7 are set, so S, B, J, and U each assemble a different immediate.
+	instr := uint32(0x80000080)
+	// Sweep through every background and every register combination.
+	for _, bg := range []uint32{0, 0xffffffff} {
+		for rs1 := uint32(0); rs1 < 32; rs1++ {
+			for rs2 := uint32(0); rs2 < 32; rs2++ {
+				for rd := uint32(0); rd < 32; rd++ {
+					check(rType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(iType, instr, opcodeOPIMM, 0xabc, 0b000, rs1, rs2, rd)
+					check(iType, instr, opcodeOPIMM, 0x43f, 0b101, rs1, rs2, rd)
+					check(sType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(bType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(jType, instr, bg, bg, bg, rs1, rs2, rd)
+					check(uType, instr, bg, bg, bg, rs1, rs2, rd)
+					for _, typ := range []uint32{miscMemType, undefinedType, 8} {
+						check(typ, instr, bg, bg, bg, rs1, rs2, rd)
+					}
+				}
+			}
+		}
+	}
+
+	// I-type is swept again over every imm12. It is the only arm not calling
+	// an assemble function and where the immediate is the sign extension of
+	// the normalized imm12, not of the raw instruction.
+	// OPIMM and OPIMM32 are the opcodes that can replace imm12 with a shift amount.
+	// funct3 runs through 8 so the OPIMM default arm is reached. The instruction
+	// word and rs2 are set and must not affect the row.
+	for _, opcode := range []uint32{opcodeOPIMM, opcodeOPIMM32} {
+		for funct3 := uint32(0); funct3 <= 8; funct3++ {
+			for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
+				check(iType, 0xffffffff, opcode, imm12, funct3, 1, 31, 2)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// DecodeInstruction
+// ------------------------------------------------------------
+
+// TestDecodeInstruction checks that decodeInstruction joins the pieces already
+// tested: one word per instruction format, written as compute op, immediate,
+// rs1, rs2, rd. The same words are then written back to back, so the next row
+// starts at bit 87.
+func TestDecodeInstruction(t *testing.T) {
+	tests := []struct {
+		name              string
+		instr             uint32
+		op                uint32
+		imm, rs1, rs2, rd uint64
+	}{
+		{"addi", (1 << 20) | (1 << 15) | (5 << 7) | opcodeOPIMM, itypeOpAddiWB, 1, 1, 0, 5},
+		{"addi x0", (1 << 20) | (1 << 15) | opcodeOPIMM, computeNoOp, 1, 1, 0, 0},
+		{"addi -1", (0xfff << 20) | (1 << 7) | opcodeOPIMM, itypeOpAddiWB, ^uint64(0), 0, 0, 1},
+		{"ecall", opcodeSYSTEM, itypeEcall, 0, 0, 0, 0},
+		{"add", (2 << 20) | (1 << 15) | (5 << 7) | opcodeOP, rtypeOpAddWB, 0, 1, 2, 5},
+		{"sb", (2 << 20) | (1 << 15) | opcodeSTORE, stypeStore8, 0, 1, 2, 0},
+		{"beq", (2 << 20) | (1 << 15) | opcodeBRANCH, btypeBeq, 0, 1, 2, 0},
+		{"jal", (1 << 7) | opcodeJAL, jtypeJalWB, 0, 0, 0, 1},
+		{"jal x0", opcodeJAL, jtypeJal, 0, 0, 0, 0},
+		{"lui", (5 << 7) | opcodeLUI, utypeLuiWB, 0, 0, 0, 5},
+		{"lui x0", opcodeLUI, computeNoOp, 0, 0, 0, 0},
+		{"fence", opcodeMISCMEM, computeNoOp, 0, 0, 0, 0},
+		{"unknown", 0x7f, computeNoOp, 0, 0, 0, 0},
+	}
+
+	var got, want bitWriter
+	for _, tt := range tests {
+		var row bitWriter
+		decodeInstruction(&row, tt.instr)
+		var one bitWriter
+		one.writeBits(uint64(tt.op), 8)
+		one.writeBits(tt.imm, 64)
+		one.writeBits(tt.rs1, 5)
+		one.writeBits(tt.rs2, 5)
+		one.writeBits(tt.rd, 5)
+		if row.nbits != int(BitsPerRowOfModuleDecoded) || !bytes.Equal(row.buf, one.buf) {
+			t.Fatalf("%s: decodeInstruction(%#08x) nbits=%d buf=%x, want nbits=%d buf=%x",
+				tt.name, tt.instr, row.nbits, row.buf, BitsPerRowOfModuleDecoded, one.buf)
+		}
+		decodeInstruction(&got, tt.instr)
+		want.writeBits(uint64(tt.op), 8)
+		want.writeBits(tt.imm, 64)
+		want.writeBits(tt.rs1, 5)
+		want.writeBits(tt.rs2, 5)
+		want.writeBits(tt.rd, 5)
+	}
+	if got.nbits != 87*len(tests) || !bytes.Equal(got.buf, want.buf) {
+		t.Fatalf("stream nbits=%d buf=%x, want nbits=%d buf=%x", got.nbits, got.buf, 87*len(tests), want.buf)
+	}
+}
+
+// ------------------------------------------------------------
+// DecodeImage
+// ------------------------------------------------------------
+
+// TestDecodeImage checks that decodeImage walks the image as little-endian
+// words and appends one decodeInstruction row per record. Bytes past the last
+// record are ignored. Zero records return an empty buffer.
+func TestDecodeImage(t *testing.T) {
+	addi := uint32((1 << 20) | (1 << 15) | (5 << 7) | opcodeOPIMM)
+	add := uint32((2 << 20) | (1 << 15) | (5 << 7) | opcodeOP)
+	tests := []struct {
+		name  string
+		words []uint32
+		tail  byte
+	}{
+		{"empty", nil, 0},
+		{"one", []uint32{0x01020304}, 0},
+		{"two with tail", []uint32{addi, add}, 0xff},
+	}
+	for _, tt := range tests {
+		image := make([]byte, len(tt.words)*4)
+		for i, word := range tt.words {
+			image[i*4] = byte(word)
+			image[i*4+1] = byte(word >> 8)
+			image[i*4+2] = byte(word >> 16)
+			image[i*4+3] = byte(word >> 24)
+		}
+		if tt.tail != 0 {
+			image = append(image, tt.tail)
+		}
+		var want bitWriter
+		for _, word := range tt.words {
+			decodeInstruction(&want, word)
+		}
+		got := decodeImage(image, uint64(len(tt.words)))
+		if !bytes.Equal(got, want.buf) {
+			t.Fatalf("%s: decodeImage(%x) = %x, want %x", tt.name, image, got, want.buf)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// EXECUTABLE IMAGE AND EXECUTABLE HELPERS
+// ------------------------------------------------------------
+// TestExecutableBlobs, TestExecutableSpanEnd, TestExecutableImage
+// checks the executable helpers.	
+// ------------------------------------------------------------
+
+// TestExecutableBlobs checks that executableBlobs keeps only executable blobs
+// and sorts them by address. Equal addresses keep their input order. No
+// executable blob is an error.
+func TestExecutableBlobs(t *testing.T) {
 	tests := []struct {
 		name    string
 		blobs   []elfmapping.Blob
-		wantErr string
+		want    []elfmapping.Blob
+		wantErr bool
 	}{
-		{
-			name: "overlap",
-			blobs: []elfmapping.Blob{
-				{Address: 0x1000, Data: make([]byte, 4), Executable: true},
-				{Address: 0x1002, Data: make([]byte, 4), Executable: true},
-			},
-			wantErr: "overlaps",
-		},
-		{
-			name: "blob overflow",
-			blobs: []elfmapping.Blob{{
-				Address: math.MaxUint64, Data: []byte{1}, Executable: true,
-			}},
-			wantErr: "overflows address space",
-		},
-		{
-			name: "above 4 GiB",
-			blobs: []elfmapping.Blob{{
-				Address: math.MaxUint32 - 4, Data: []byte{1, 2}, Executable: true,
-			}},
-			wantErr: "outside the 32-bit address space",
-		},
+		{name: "none", wantErr: true},
+		{name: "data only", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Executable: false},
+		}, wantErr: true},
+		{name: "one", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
+		}},
+		{name: "drops data and sorts", blobs: []elfmapping.Blob{
+			{Address: 0x3000, Data: []byte{3}, Executable: true},
+			{Address: 0x2000, Data: []byte{9}, Executable: false},
+			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
+			{Address: 0x3000, Data: []byte{3}, Executable: true},
+		}},
+		{name: "stable on equal address", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
+			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
+		}, want: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
+			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
+		}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := Predecode(elfmapping.Program{Blobs: test.blobs})
-			if err == nil || !bytes.Contains([]byte(err.Error()), []byte(test.wantErr)) {
-				t.Fatalf("Predecode() error = %v, want containing %q", err, test.wantErr)
+	for _, tt := range tests {
+		got, err := executableBlobs(tt.blobs)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
 			}
-		})
-	}
-}
-
-func TestDecodedInputsPreserveExactRowLength(t *testing.T) {
-	// Exercise every final-byte alignment, including empty and byte-aligned tables.
-	for records := 0; records <= 8; records++ {
-		decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
-			Address: 0x1000, Data: make([]byte, records*4), Executable: true,
-		}}})
+			continue
+		}
 		if err != nil {
-			t.Fatalf("Predecode(%d records): %v", records, err)
+			t.Fatalf("%s: %v", tt.name, err)
 		}
-		input := decoded.EncodeInputs()[DecodedInput]
-		want := bit.NewArray(append([]byte(nil), decoded.Decoded...), uint(records*87), bit.BigEndian)
-		if !input.Equals(want) {
-			t.Errorf("%d records: input = %s, want %s", records, input.String(), want.String())
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: got %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
 }
 
-func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
-	var (
-		program       = DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
-		first         = program.EncodeInputs()
-		second        = program.EncodeInputs()
-		firstDecoded  = first[DecodedInput]
-		secondDecoded = second[DecodedInput]
-	)
-	//
-	if got := first[InstructionBaseInput]; uint64(binary.BigEndian.Uint32(got.Bytes())) != program.InstructionBase {
-		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
+// TestExecutableSpanEnd checks the highest end address of blobs already in
+// address order. An empty blob does not move the previous end. Overlap, an
+// end that wraps the address space, and an end past a 32-bit address are errors.
+func TestExecutableSpanEnd(t *testing.T) {
+	tests := []struct {
+		name    string
+		blobs   []elfmapping.Blob
+		want    uint64
+		wantErr bool
+	}{
+		{name: "one", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+		}, want: 0x1004},
+		{name: "gap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x2000, Data: []byte{5, 6}},
+		}, want: 0x2002},
+		{name: "contiguous", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x1004, Data: []byte{5, 6, 7, 8}},
+		}, want: 0x1008},
+		{name: "empty does not move previous end", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004},
+			{Address: 0x1008, Data: []byte{9}},
+		}, want: 0x1009},
+		{name: "empty extends the end", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
+			{Address: 0x3000},
+		}, want: 0x3000},
+		{name: "overlap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004, Data: []byte{9}},
+		}, wantErr: true},
+		{name: "overlap across an empty blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+			{Address: 0x1004},
+			{Address: 0x1006, Data: []byte{9}},
+		}, wantErr: true},
+		{name: "wraps", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint64, Data: []byte{1}},
+		}, wantErr: true},
+		{name: "wraps before the top", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint64 - 1, Data: []byte{1, 2}},
+		}, wantErr: true},
+		{name: "fits 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 3},
+		}, want: math.MaxUint32 - 3},
+		{name: "past 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 2},
+		}, wantErr: true},
+		{name: "data passes 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32 - 4, Data: []byte{1, 2}},
+		}, wantErr: true},
+		{name: "data crosses 32-bit address", blobs: []elfmapping.Blob{
+			{Address: math.MaxUint32, Data: []byte{1}},
+		}, wantErr: true},
 	}
-	//
-	firstDecoded.Bytes()[0] = 0xff
-	if secondDecoded.Bytes()[0] != 1 || program.Decoded[0] != 1 {
-		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
-	}
-}
-
-func TestBitsPerRowOfModuleDecoded(t *testing.T) {
-	compiled, err := embedded.CompiledBinaryFile()
-	if err != nil {
-		t.Fatalf("get compiled R5 arithmetizaton: %v", err)
-	}
-	//
-	pg := compiled.ExecutionProgram()
-	//
-	if m, ok := pg.HasModule(DecodedInput); ok {
-		var (
-			sumLength uint = 0
-			decoded        = pg.Module(m)
-		)
-		// Iterate output columns of decoded module
-		for _, o := range decoded.Outputs() {
-			sumLength += o.Bitwidth().Unwrap()
+	for _, tt := range tests {
+		got, err := executableSpanEnd(tt.blobs)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
 		}
-		// Check that sum matches constant
-		if sumLength != BitsPerRowOfModuleDecoded {
-			t.Fatalf("bits-per-row mismatch for module \"decoded\", expected %d got %d",
-				BitsPerRowOfModuleDecoded, sumLength)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
 		}
-		//
-		return
-	}
-	// Catch situation where decoded module does not exist
-	t.Fatalf("compiled R5 arithmetization has no %q input", DecodedInput)
-}
-
-type memoryBlob struct {
-	offset     uint64
-	data       []byte
-	name       string
-	executable bool
-}
-
-func buildDecodedProgram(blobs []memoryBlob) (uint64, uint64, string) {
-	program := elfmapping.Program{Blobs: make([]elfmapping.Blob, len(blobs))}
-	for i, blob := range blobs {
-		program.Blobs[i] = elfmapping.Blob{
-			Address: blob.offset, Data: blob.data, Name: blob.name,
-			Executable: blob.executable,
-		}
-	}
-	decoded, err := Predecode(program)
-	if err != nil {
-		panic(err)
-	}
-	_, _, records, err := executableImage(program.Blobs, DefaultMaxDecodedRecords)
-	if err != nil {
-		panic(err)
-	}
-	return decoded.InstructionBase, records, hex.EncodeToString(decoded.Decoded)
-}
-
-func collectExecutableImage(blobs []memoryBlob) (uint64, []byte, uint64) {
-	program := make([]elfmapping.Blob, len(blobs))
-	for i, blob := range blobs {
-		program[i] = elfmapping.Blob{
-			Address: blob.offset, Data: blob.data, Name: blob.name,
-			Executable: blob.executable,
-		}
-	}
-	base, image, records, err := executableImage(program, DefaultMaxDecodedRecords)
-	if err != nil {
-		panic(err)
-	}
-	return base, image, records
-}
-
-func encodeIType(opcode, funct3, rd, rs1, imm12 uint32) uint32 {
-	return (imm12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
-}
-
-func encodeRType(opcode, funct7, rs2, rs1, funct3, rd uint32) uint32 {
-	return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
-}
-
-func encodeSType(funct3, rs1, rs2, simm12 uint32) uint32 {
-	imm11 := (simm12 >> 11) & 0x1
-	imm10_5 := (simm12 >> 5) & 0x3f
-	imm4_0 := simm12 & 0x1f
-	return opcodeSTORE | (imm4_0 << 7) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm11 << 31)
-}
-
-func encodeUType(opcode, rd, imm20 uint32) uint32 {
-	return (imm20 << 12) | (rd << 7) | opcode
-}
-
-func encodeJType(rd uint32, offset int32) uint32 {
-	imm20 := (uint32(offset) >> 20) & 0x1
-	imm10_1 := (uint32(offset) >> 1) & 0x3ff
-	imm11 := (uint32(offset) >> 11) & 0x1
-	imm19_12 := (uint32(offset) >> 12) & 0xff
-	return opcodeJAL | (rd << 7) | (imm19_12 << 12) | (imm11 << 20) | (imm10_1 << 21) | (imm20 << 31)
-}
-
-func encodeBType(funct3, rs1, rs2 uint32, offset int32) uint32 {
-	imm13 := uint32(offset) & 0x1fff
-	imm12 := (imm13 >> 12) & 0x1
-	imm11 := (imm13 >> 11) & 0x1
-	imm10_5 := (imm13 >> 5) & 0x3f
-	imm4_1 := (imm13 >> 1) & 0xf
-	return opcodeBRANCH | (imm11 << 7) | (imm4_1 << 8) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm12 << 31)
-}
-
-func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) {
-	opcode = instr & 0x7f
-	instrType = instructionTypeFromOpcode(opcode)
-	rd = (instr >> 7) & 0x1f
-	funct3 = (instr >> 12) & 0x7
-	rs1 = (instr >> 15) & 0x1f
-	rs2 = (instr >> 20) & 0x1f
-	imm12 = (instr >> 20) & 0xfff
-	funct7 = (instr >> 25) & 0x7f
-	return
-}
-
-func TestShouldUseNoOp(t *testing.T) {
-	tests := []struct {
-		name  string
-		instr uint32
-		want  bool
-	}{
-		{name: "addi x0 x0 0", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: true},
-		{name: "addi x0 t0 5", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 5), want: true},
-		{name: "lui x0 0", instr: encodeUType(opcodeLUI, 0, 0), want: true},
-		{name: "auipc x0 0", instr: encodeUType(opcodeAUIPC, 0, 0), want: true},
-		{name: "add x0 x0 x0", instr: encodeRType(opcodeOP, 0, 0, 0, 0b000, 0), want: true},
-		{name: "add x0 t0 t1", instr: encodeRType(opcodeOP, 0, 6, 5, 0b000, 0), want: true},
-		{name: "sub x0 x0 x0", instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b000, 0), want: true},
-		{
-			name:  "invalid op x0 x0 x0",
-			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b010, 0),
-			want:  false,
-		},
-		{name: "ld x0 0 t0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: true},
-		{name: "jalr x0 t0 0", instr: encodeIType(opcodeJALR, 0, 0, 5, 0), want: false},
-		{name: "xori x0 x0 0xff", instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff), want: true},
-		{name: "slli x0 x0 4", instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4), want: true},
-		{name: "keccak x0", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 0), want: false},
-		{name: "jal x0", instr: encodeJType(0, 8), want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(tt.instr)
-			var localOp uint32 = itypeInvalid
-			switch instrType {
-			case iType:
-				localOp, _ = decodeITypeSemantic(opcode, funct3, imm12)
-			case rType:
-				localOp = decodeRTypeSemantic(opcode, funct3, funct7)
-			case uType:
-				localOp = decodeUTypeSemantic(opcode)
-			}
-			got := shouldUseNoOp(instrType, rd, localOp, opcode)
-			if got != tt.want {
-				t.Fatalf("shouldUseNoOp(%#x) = %v, want %v", tt.instr, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
-	// A single `addi x0, x0, 0` (an rd-zero noop) in an executable blob at
-	// base 0x1000. buildDecodedProgram must rewrite it to a NO_OP record so
-	// the interpreter only advances PC by 4.
-	const base uint64 = 0x1000
-	instr := encodeIType(opcodeOPIMM, 0b000, 0, 0, 0)
-	code := make([]byte, 4)
-	binary.LittleEndian.PutUint32(code, instr)
-
-	blobs := []memoryBlob{{offset: base, data: code, executable: true, name: ".text"}}
-	gotBase, nRecords, decodedHex := buildDecodedProgram(blobs)
-	if gotBase != base {
-		t.Fatalf("base = %#x, want %#x", gotBase, base)
-	}
-	if nRecords != 1 {
-		t.Fatalf("nRecords = %d, want 1", nRecords)
-	}
-
-	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
-	if ops[0] != computeNoOp {
-		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to NO_OP)", ops[0], computeNoOp)
-	}
-}
-
-func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
-	const base uint64 = 0x1000
-	textInstr := encodeIType(opcodeOPIMM, 0b000, 5, 5, 1)
-	textCode := make([]byte, 4)
-	binary.LittleEndian.PutUint32(textCode, textInstr)
-
-	// Only loadable executable blob bytes belong in the pre-decoded image; a
-	// non-allocated SHF_EXECINSTR section at base+0x100 must not affect decoding.
-	blobs := []memoryBlob{
-		{offset: base, data: textCode, executable: true, name: ".text"},
-		{offset: base + 0x100, data: []byte{0xde, 0xad, 0xbe, 0xef}, executable: false, name: ".data"},
-	}
-
-	gotBase, image, nRecords := collectExecutableImage(blobs)
-	if gotBase != base {
-		t.Fatalf("base = %#x, want %#x", gotBase, base)
-	}
-	if nRecords != 1 {
-		t.Fatalf("nRecords = %d, want 1", nRecords)
-	}
-	if !bytes.Equal(image, textCode) {
-		t.Fatalf("image = %x, want %x", image, textCode)
-	}
-}
-
-func TestDecodeITypeSemantic(t *testing.T) {
-	tests := []struct {
-		name      string
-		opcode    uint32
-		funct3    uint32
-		imm12     uint32
-		wantOp    uint32
-		wantImm12 uint32
-	}{
-		{name: "lb", opcode: opcodeLOAD, funct3: 0b000, imm12: 8, wantOp: itypeRead8SgnWB, wantImm12: 8},
-		{name: "lh", opcode: opcodeLOAD, funct3: 0b001, imm12: 4, wantOp: itypeRead16SgnWB, wantImm12: 4},
-		{name: "lw", opcode: opcodeLOAD, funct3: 0b010, imm12: 0, wantOp: itypeRead32SgnWB, wantImm12: 0},
-		{name: "ld", opcode: opcodeLOAD, funct3: 0b011, imm12: 0, wantOp: itypeRead64WB, wantImm12: 0},
-		{name: "lbu", opcode: opcodeLOAD, funct3: 0b100, imm12: 1, wantOp: itypeRead8ZextWB, wantImm12: 1},
-		{name: "lhu", opcode: opcodeLOAD, funct3: 0b101, imm12: 2, wantOp: itypeRead16ZextWB, wantImm12: 2},
-		{name: "lwu", opcode: opcodeLOAD, funct3: 0b110, imm12: 3, wantOp: itypeRead32ZextWB, wantImm12: 3},
-		{name: "addi", opcode: opcodeOPIMM, funct3: 0b000, imm12: 42, wantOp: itypeOpAddiWB, wantImm12: 42},
-		{name: "slli", opcode: opcodeOPIMM, funct3: 0b001, imm12: 4, wantOp: itypeOpSlliWB, wantImm12: 4},
-		{name: "srli", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliWB, wantImm12: 3},
-		{name: "srai", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b010000000101, wantOp: itypeOpSraiWB, wantImm12: 5},
-		{name: "xori", opcode: opcodeOPIMM, funct3: 0b100, imm12: 0xff, wantOp: itypeOpXoriWB, wantImm12: 0xff},
-		{name: "addiw", opcode: opcodeOPIMM32, funct3: 0b000, imm12: 7, wantOp: itypeOpAddiwWB, wantImm12: 7},
-		{name: "slliw", opcode: opcodeOPIMM32, funct3: 0b001, imm12: 2, wantOp: itypeOpSlliwWB, wantImm12: 2},
-		{name: "srliw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliwWB, wantImm12: 3},
-		{name: "sraiw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b010000000100, wantOp: itypeOpSraiwWB, wantImm12: 4},
-		{name: "jalr", opcode: opcodeJALR, funct3: 0, imm12: 0, wantOp: itypeJalr, wantImm12: 0},
-		{name: "invalid jalr funct3", opcode: opcodeJALR, funct3: 0b001, imm12: 0, wantOp: itypeInvalid, wantImm12: 0},
-		{name: "ecall", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ecall, wantOp: itypeEcall, wantImm12: funct12Ecall},
-		{name: "ebreak", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ebreak, wantOp: itypeEbreak, wantImm12: funct12Ebreak},
-		{name: "invalid slli funct6", opcode: opcodeOPIMM, funct3: 0b001, imm12: 0b010000000100, wantOp: itypeInvalid, wantImm12: 0b010000000100},
-		{name: "invalid load funct3", opcode: opcodeLOAD, funct3: 0b111, imm12: 0, wantOp: itypeInvalid, wantImm12: 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp, gotImm := decodeITypeSemantic(tt.opcode, tt.funct3, tt.imm12)
-			if gotOp != tt.wantOp || gotImm != tt.wantImm12 {
-				t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#x, imm=%#x) = (%d, %#x), want (%d, %#x)",
-					tt.opcode, tt.funct3, tt.imm12, gotOp, gotImm, tt.wantOp, tt.wantImm12)
-			}
-		})
-	}
-}
-
-func TestItypeOpForRd(t *testing.T) {
-	if got := itypeOpForRd(itypeOpAddiWB, 0); got != itypeOpAddiWB {
-		t.Fatalf("itypeOpForRd(addi, x0) = %d, want %d", got, itypeOpAddiWB)
-	}
-	if got := itypeOpForRd(itypeOpAddiWB, 5); got != itypeOpAddiWB {
-		t.Fatalf("itypeOpForRd(addi, x5) = %d, want %d", got, itypeOpAddiWB)
-	}
-	if got := itypeOpForRd(itypeJalr, 5); got != itypeJalrWB {
-		t.Fatalf("itypeOpForRd(jalr, x5) = %d, want %d", got, itypeJalrWB)
-	}
-	if got := itypeOpForRd(itypeEcall, 5); got != itypeEcall {
-		t.Fatalf("itypeOpForRd(ecall, x5) = %d, want %d", got, itypeEcall)
-	}
-	if got := itypeOpForRd(itypeInvalid, 5); got != itypeInvalid {
-		t.Fatalf("itypeOpForRd(invalid, x5) = %d, want %d", got, itypeInvalid)
-	}
-}
-
-func TestDecodeRTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		opcode uint32
-		funct3 uint32
-		funct7 uint32
-		wantOp uint32
-	}{
-		{name: "add", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddWB},
-		{name: "sub", opcode: opcodeOP, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubWB},
-		{name: "sll", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllWB},
-		{name: "slt", opcode: opcodeOP, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpSltWB},
-		{name: "sltu", opcode: opcodeOP, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSltuWB},
-		{name: "xor", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeOpXorWB},
-		{name: "srl", opcode: opcodeOP, funct3: 0b101, funct7: 0b0000000, wantOp: rtypeOpSrlWB},
-		{name: "sra", opcode: opcodeOP, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSraWB},
-		{name: "or", opcode: opcodeOP, funct3: 0b110, funct7: 0b0000000, wantOp: rtypeOpOrWB},
-		{name: "and", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000000, wantOp: rtypeOpAndWB},
-		{name: "mul", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulWB},
-		{name: "mulh", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeOpMulhWB},
-		{name: "div", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivWB},
-		{name: "remu", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000001, wantOp: rtypeOpRemuWB},
-		{name: "addw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddwWB},
-		{name: "subw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubwWB},
-		{name: "sllw", opcode: opcodeOP32, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllwWB},
-		{name: "sraw", opcode: opcodeOP32, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSrawWB},
-		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulwWB},
-		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivwWB},
-		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
-		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
-		{name: "removed write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeInvalid},
-		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeRTypeSemantic(tt.opcode, tt.funct3, tt.funct7)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeRTypeSemantic(op=%#x, f3=%#x, f7=%#x) = %d, want %d",
-					tt.opcode, tt.funct3, tt.funct7, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
-func TestRtypeOpForRd(t *testing.T) {
-	if got := rtypeOpForRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
-		t.Fatalf("rtypeOpForRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
-	}
-	if got := rtypeOpForRd(rtypeOpAddWB, 5); got != rtypeOpAddWB {
-		t.Fatalf("rtypeOpForRd(add, x5) = %d, want %d", got, rtypeOpAddWB)
-	}
-	if got := rtypeOpForRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
-		t.Fatalf("rtypeOpForRd(keccak, x5) = %d, want %d", got, rtypeOpKeccak)
-	}
-	if got := rtypeOpForRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
-		t.Fatalf("rtypeOpForRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
-	}
-}
-
-func TestDecodeSTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		funct3 uint32
-		wantOp uint32
-	}{
-		{name: "sb", funct3: 0b000, wantOp: stypeStore8},
-		{name: "sh", funct3: 0b001, wantOp: stypeStore16},
-		{name: "sw", funct3: 0b010, wantOp: stypeStore32},
-		{name: "sd", funct3: 0b011, wantOp: stypeStore64},
-		{name: "invalid", funct3: 0b111, wantOp: stypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeSTypeSemantic(tt.funct3)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeSTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
-func TestAssembleITypeImm(t *testing.T) {
-	tests := []struct {
-		name      string
-		normImm12 uint32
-		want      uint64
-	}{
-		{name: "zero", normImm12: 0, want: 0},
-		{name: "positive_42", normImm12: 42, want: 42},
-		{name: "shift_3", normImm12: 3, want: 3},
-		{name: "negative_1", normImm12: 0xfff, want: 0xffffffffffffffff},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := assembleITypeImm(tt.normImm12)
-			if got != tt.want {
-				t.Fatalf("assembleITypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAssembleSTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		simm12 uint32
-		want   uint64
-	}{
-		{name: "zero", simm12: 0, want: 0},
-		{name: "positive_8", simm12: 8, want: 8},
-		{name: "negative_1", simm12: 0xfff, want: 0xffffffffffffffff},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeSType(0b000, 1, 2, tt.simm12)
-			simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
-			got := assembleSTypeImm(simm12)
-			if got != tt.want {
-				t.Fatalf("assembleSTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDecodeBTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		funct3 uint32
-		wantOp uint32
-	}{
-		{name: "beq", funct3: 0b000, wantOp: 0b000},
-		{name: "bne", funct3: 0b001, wantOp: 0b001},
-		{name: "blt", funct3: 0b100, wantOp: 0b100},
-		{name: "invalid", funct3: 0b010, wantOp: btypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := decodeBTypeSemantic(tt.funct3)
-			if got != tt.wantOp {
-				t.Fatalf("decodeBTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, got, tt.wantOp)
-			}
-		})
-	}
-}
-
-func TestAssembleBTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		offset int32
-		want   uint64
-	}{
-		{name: "zero", offset: 0, want: 0},
-		{name: "forward_8", offset: 8, want: 8},
-		{name: "backward_16", offset: -16, want: 0xfffffffffffffff0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeBType(0b000, 1, 2, tt.offset)
-			got := assembleBTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleBTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDecodeJTypeSemantic(t *testing.T) {
-	gotOp := decodeJTypeSemantic(opcodeJAL)
-	if gotOp != jtypeJal {
-		t.Fatalf("decodeJTypeSemantic(jal) = %d, want %d", gotOp, jtypeJal)
-	}
-}
-
-func TestJtypeOpForRd(t *testing.T) {
-	if got := jtypeOpForRd(jtypeJal, 0); got != jtypeJal {
-		t.Fatalf("jtypeOpForRd(jal, x0) = %d, want %d", got, jtypeJal)
-	}
-	if got := jtypeOpForRd(jtypeJal, 5); got != jtypeJalWB {
-		t.Fatalf("jtypeOpForRd(jal, x5) = %d, want %d", got, jtypeJalWB)
-	}
-}
-
-func TestAssembleJTypeImm(t *testing.T) {
-	tests := []struct {
-		name   string
-		offset int32
-		want   uint64
-	}{
-		{name: "zero", offset: 0, want: 0},
-		{name: "forward_4k", offset: 4096, want: 4096},
-		{name: "backward_2k", offset: -2048, want: 0xfffffffffffff800},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeJType(1, tt.offset)
-			got := assembleJTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleJTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDecodeUTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		opcode uint32
-		wantOp uint32
-	}{
-		{name: "lui", opcode: opcodeLUI, wantOp: utypeLuiWB},
-		{name: "auipc", opcode: opcodeAUIPC, wantOp: utypeAuipcWB},
-		{name: "invalid", opcode: 0, wantOp: utypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeUTypeSemantic(tt.opcode)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeUTypeSemantic(op=%#x) = %d, want %d", tt.opcode, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
-func TestUtypeOpForRd(t *testing.T) {
-	if got := utypeOpForRd(utypeAuipcWB, 0); got != utypeAuipcWB {
-		t.Fatalf("utypeOpForRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
-	}
-	if got := utypeOpForRd(utypeAuipcWB, 5); got != utypeAuipcWB {
-		t.Fatalf("utypeOpForRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
-	}
-}
-
-func TestAssembleUTypeImm(t *testing.T) {
-	tests := []struct {
-		name  string
-		imm20 uint32
-		want  uint64
-	}{
-		{name: "zero", imm20: 0, want: 0},
-		{name: "positive", imm20: 0x12345, want: 0x12345000},
-		{name: "negative", imm20: 0xfffff, want: 0xfffffffffffff000},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			instr := encodeUType(opcodeLUI, 1, tt.imm20)
-			got := assembleUTypeImm(instr)
-			if got != tt.want {
-				t.Fatalf("assembleUTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
-			}
-		})
-	}
-}
-
-type bitReader struct {
-	buf []byte
-	pos int
-}
-
-func (r *bitReader) readBits(width int) uint64 {
-	var val uint64
-	for range width {
-		bit := (r.buf[r.pos/8] >> uint(7-(r.pos%8))) & 1
-		val = (val << 1) | uint64(bit)
-		r.pos++
-	}
-	return val
-}
-
-func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
-	data, err := hex.DecodeString(hexStr)
-	if err != nil {
-		panic(err)
-	}
-	r := &bitReader{buf: data}
-	ops := make([]uint32, nRecords)
-	for i := range nRecords {
-		ops[i] = uint32(r.readBits(8))
-		r.readBits(64)
-		r.readBits(5)
-		r.readBits(5)
-		r.readBits(5)
-	}
-	return ops
-}
-
-func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
-	t.Helper()
-	nRecords := uint64(len(image) / 4)
-	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
-	for i := range nRecords {
-		instr := binary.LittleEndian.Uint32(image[i*4:])
-		got := classifyInstruction(instr)
-		want := ops[i]
-		if got != want {
-			t.Fatalf("index %d instr=%#x: classify=%d decoded=%d", i, instr, got, want)
+		if got != tt.want {
+			t.Fatalf("%s: end = %#x, want %#x", tt.name, got, tt.want)
 		}
 	}
 }
 
-func TestClassifyInstructionExamples(t *testing.T) {
+// TestExecutableSpan checks rounding of the blob range to 4-byte words.
+// base is rounded down and the end is rounded up. records equal to the cap is
+// accepted. One record past the cap, and a span that does not fit in a Go
+// slice, are errors.
+func TestExecutableSpan(t *testing.T) {
+	largestSpan := uint64(math.MaxInt) &^ 3
 	tests := []struct {
-		name  string
-		instr uint32
-		want  uint32
+		name                      string
+		first, maxEnd, maxRecords uint64
+		wantBase, wantRecords     uint64
+		wantErr                   bool
 	}{
-		{name: "undefined opcode", instr: 0, want: computeInvalid},
-		{name: "csr csrrw", instr: encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02), want: computeInvalid},
-		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeNoOp},
-		{name: "addi x0 t0 1", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 1), want: computeNoOp},
-		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeNoOp},
-		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeNoOp},
-		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeNoOp},
-		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
-		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
-		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
-		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
-		{name: "removed write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeInvalid},
+		{name: "aligned", first: 0x1000, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round base down", first: 0x1001, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round end up", first: 0x1000, maxEnd: 0x1001, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
+		{name: "round both", first: 0x1002, maxEnd: 0x1005, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
+		{name: "empty span", first: 0x1000, maxEnd: 0x1000, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
+		{name: "records equal cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
+		{name: "records above cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 1, wantErr: true},
+		{name: "span fits max int", first: 0, maxEnd: largestSpan, maxRecords: largestSpan / 4, wantBase: 0, wantRecords: largestSpan / 4},
+		{name: "span above max int", first: 0, maxEnd: 1 << 63, maxRecords: math.MaxUint64, wantErr: true},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := classifyInstruction(tt.instr); got != tt.want {
-				t.Fatalf("classifyInstruction(%#x) = %d, want %d", tt.instr, got, tt.want)
+		base, records, err := executableSpan(tt.first, tt.maxEnd, tt.maxRecords)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
 			}
-		})
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if base != tt.wantBase || records != tt.wantRecords {
+			t.Fatalf("%s: base=%#x records=%d, want base=%#x records=%d",
+				tt.name, base, records, tt.wantBase, tt.wantRecords)
+		}
 	}
 }
 
-func TestClassifyRoundTripSyntheticImage(t *testing.T) {
-	words := []uint32{
-		0,
-		encodeIType(opcodeOPIMM, 0b000, 0, 0, 0),
-		encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02),
-		encodeIType(opcodeOPIMM, 0b000, 5, 5, 1),
-		encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 2),
-		encodeBType(0b010, 1, 2, 8),
-		opcodeMISCMEM | (0b000 << 12) | (0b001 << 7),
+// TestExecutableImage checks the image built from the executable blobs. Bytes
+// are copied at address-base, and gaps stay zero. The end is padded to a whole
+// word. No executable blob, a span-end error, and a record count above the cap
+// are returned as errors.
+func TestExecutableImage(t *testing.T) {
+	tests := []struct {
+		name        string
+		blobs       []elfmapping.Blob
+		maxRecords  uint64
+		wantBase    uint64
+		wantImage   []byte
+		wantRecords uint64
+		wantErr     bool
+	}{
+		{name: "none", maxRecords: 1, wantErr: true},
+		{name: "one word", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4}, wantRecords: 1},
+		{name: "empty blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Executable: true},
+		}, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
+		{name: "short blob", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 0, 0}, wantRecords: 1},
+		{name: "unaligned", blobs: []elfmapping.Blob{
+			{Address: 0x1002, Data: []byte{1, 2}, Executable: true},
+		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{0, 0, 1, 2}, wantRecords: 1},
+		{name: "gap stays zero", blobs: []elfmapping.Blob{
+			{Address: 0x1008, Data: []byte{2}, Executable: true},
+			{Address: 0x1004, Data: []byte{9}, Executable: false},
+			{Address: 0x1000, Data: []byte{1}, Executable: true},
+		}, maxRecords: 3, wantBase: 0x1000, wantImage: []byte{1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}, wantRecords: 3},
+		{name: "contiguous", blobs: []elfmapping.Blob{
+			{Address: 0x1004, Data: []byte{5, 6, 7, 8}, Executable: true},
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 5, 6, 7, 8}, wantRecords: 2},
+		{name: "empty extends the image", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+			{Address: 0x1008, Executable: true},
+		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 0, 0, 0, 0}, wantRecords: 2},
+		{name: "overlap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}, Executable: true},
+			{Address: 0x1004, Data: []byte{9}, Executable: true},
+		}, maxRecords: 4, wantErr: true},
+		{name: "records above cap", blobs: []elfmapping.Blob{
+			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
+			{Address: 0x1008, Data: []byte{5, 6, 7, 8}, Executable: true},
+		}, maxRecords: 2, wantErr: true},
 	}
-	image := make([]byte, len(words)*4)
-	var decodedBits bitWriter
-	for i, instr := range words {
-		binary.LittleEndian.PutUint32(image[i*4:], instr)
-		opcode := instr & 0x7f
-		rd := (instr >> 7) & 0x1f
-		funct3 := (instr >> 12) & 0x7
-		rs1 := (instr >> 15) & 0x1f
-		imm12 := (instr >> 20) & 0xfff
-		instrType := instructionTypeFromOpcode(opcode)
-		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
-		if instrType != iType {
-			normImm12 = imm12
+	for _, tt := range tests {
+		base, image, records, err := executableImage(tt.blobs, tt.maxRecords)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
 		}
-		decodedBits.writeBits(uint64(classifyInstruction(instr)), 8)
-		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
-		decodedBits.writeBits(uint64(rs1), 5)
-		decodedBits.writeBits(0, 5)
-		decodedBits.writeBits(uint64(rd), 5)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if base != tt.wantBase || records != tt.wantRecords || !bytes.Equal(image, tt.wantImage) {
+			t.Fatalf("%s: base=%#x records=%d image=%x, want base=%#x records=%d image=%x",
+				tt.name, base, records, image, tt.wantBase, tt.wantRecords, tt.wantImage)
+		}
 	}
-	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
 }
+
+// commit 88fe45d
+// TestDecodedInputsPreserveExactRowLength
+// TestDecodedProgramEncodeInputsReturnsFreshBytes
+// TestBitsPerRowOfModuleDecoded
+
+// commit

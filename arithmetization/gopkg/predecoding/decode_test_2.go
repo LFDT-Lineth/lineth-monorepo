@@ -1,0 +1,405 @@
+package predecoding
+
+import (
+	"bytes"
+	"encoding/binary"
+	"encoding/hex"
+	"math"
+	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+)
+
+func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
+	_, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
+		Address: 0x1000,
+		Data:    []byte{1, 2, 3, 4},
+	}}})
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("no executable blobs")) {
+		t.Fatalf("Predecode() error = %v, want missing executable blob error", err)
+	}
+}
+
+func TestPredecodeHonorsExplicitRecordLimit(t *testing.T) {
+	program := elfmapping.Program{Blobs: []elfmapping.Blob{{
+		Address:    0x1000,
+		Data:       make([]byte, 8),
+		Executable: true,
+	}}}
+	_, err := Predecode(program, WithMaxDecodedRecords(1))
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("2 records (cap 1)")) {
+		t.Fatalf("Predecode() error = %v, want record cap error", err)
+	}
+	_, err = Predecode(program, WithMaxDecodedRecords(0))
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("cap 0")) {
+		t.Fatalf("Predecode() zero-cap error = %v, want record cap error", err)
+	}
+}
+
+func TestPredecodeDenseExecutableSpan(t *testing.T) {
+	first := make([]byte, 4)
+	second := make([]byte, 4)
+	binary.LittleEndian.PutUint32(first, encodeIType(opcodeOPIMM, 0, 1, 0, 1))
+	binary.LittleEndian.PutUint32(second, encodeIType(opcodeOPIMM, 0, 2, 0, 2))
+	decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{
+		{Address: 0x1008, Data: second, Executable: true},
+		{Address: 0x1000, Data: first, Executable: true},
+	}})
+	if err != nil {
+		t.Fatalf("Predecode() error = %v", err)
+	}
+	if decoded.InstructionBase != 0x1000 {
+		t.Errorf("InstructionBase = %#x, want 0x1000", decoded.InstructionBase)
+	}
+	ops := decodeComputeOpsFromHex(hex.EncodeToString(decoded.Decoded), 3)
+	want := []uint32{itypeOpAddiWB, computeInvalid, itypeOpAddiWB}
+	for i := range want {
+		if ops[i] != want[i] {
+			t.Errorf("compute op %d = %d, want %d", i, ops[i], want[i])
+		}
+	}
+}
+
+func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
+	tests := []struct {
+		name    string
+		blobs   []elfmapping.Blob
+		wantErr string
+	}{
+		{
+			name: "overlap",
+			blobs: []elfmapping.Blob{
+				{Address: 0x1000, Data: make([]byte, 4), Executable: true},
+				{Address: 0x1002, Data: make([]byte, 4), Executable: true},
+			},
+			wantErr: "overlaps",
+		},
+		{
+			name: "blob overflow",
+			blobs: []elfmapping.Blob{{
+				Address: math.MaxUint64, Data: []byte{1}, Executable: true,
+			}},
+			wantErr: "overflows address space",
+		},
+		{
+			name: "alignment overflow",
+			blobs: []elfmapping.Blob{{
+				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
+			}},
+			wantErr: "aligning executable span",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Predecode(elfmapping.Program{Blobs: test.blobs})
+			if err == nil || !bytes.Contains([]byte(err.Error()), []byte(test.wantErr)) {
+				t.Fatalf("Predecode() error = %v, want containing %q", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
+	// One 87-bit row so EncodeInputs keeps the leading decoded byte.
+	program := DecodedProgram{InstructionBase: 0x11223344, Decoded: bytes.Repeat([]byte{1}, 11)}
+	first := program.EncodeInputs()
+	second := program.EncodeInputs()
+	if got := binary.BigEndian.Uint32(first[InstructionBaseInput].Bytes()); uint64(got) != program.InstructionBase {
+		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
+	}
+	first[DecodedInput].Bytes()[0] = 0xff
+	if second[DecodedInput].Bytes()[0] != 1 || program.Decoded[0] != 1 {
+		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
+	}
+}
+
+type memoryBlob struct {
+	offset     uint64
+	data       []byte
+	name       string
+	executable bool
+}
+
+func buildDecodedProgram(blobs []memoryBlob) (uint64, uint64, string) {
+	program := elfmapping.Program{Blobs: make([]elfmapping.Blob, len(blobs))}
+	for i, blob := range blobs {
+		program.Blobs[i] = elfmapping.Blob{
+			Address: blob.offset, Data: blob.data, Name: blob.name,
+			Executable: blob.executable,
+		}
+	}
+	decoded, err := Predecode(program)
+	if err != nil {
+		panic(err)
+	}
+	_, _, records, err := executableImage(program.Blobs, DefaultMaxDecodedRecords)
+	if err != nil {
+		panic(err)
+	}
+	return decoded.InstructionBase, records, hex.EncodeToString(decoded.Decoded)
+}
+
+func collectExecutableImage(blobs []memoryBlob) (uint64, []byte, uint64) {
+	program := make([]elfmapping.Blob, len(blobs))
+	for i, blob := range blobs {
+		program[i] = elfmapping.Blob{
+			Address: blob.offset, Data: blob.data, Name: blob.name,
+			Executable: blob.executable,
+		}
+	}
+	base, image, records, err := executableImage(program, DefaultMaxDecodedRecords)
+	if err != nil {
+		panic(err)
+	}
+	return base, image, records
+}
+
+func encodeIType(opcode, funct3, rd, rs1, imm12 uint32) uint32 {
+	return (imm12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+}
+
+func encodeRType(opcode, funct7, rs2, rs1, funct3, rd uint32) uint32 {
+	return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+}
+
+func encodeUType(opcode, rd, imm20 uint32) uint32 {
+	return (imm20 << 12) | (rd << 7) | opcode
+}
+
+func encodeJType(rd uint32, offset int32) uint32 {
+	imm20 := (uint32(offset) >> 20) & 0x1
+	imm10_1 := (uint32(offset) >> 1) & 0x3ff
+	imm11 := (uint32(offset) >> 11) & 0x1
+	imm19_12 := (uint32(offset) >> 12) & 0xff
+	return opcodeJAL | (rd << 7) | (imm19_12 << 12) | (imm11 << 20) | (imm10_1 << 21) | (imm20 << 31)
+}
+
+func encodeBType(funct3, rs1, rs2 uint32, offset int32) uint32 {
+	imm13 := uint32(offset) & 0x1fff
+	imm12 := (imm13 >> 12) & 0x1
+	imm11 := (imm13 >> 11) & 0x1
+	imm10_5 := (imm13 >> 5) & 0x3f
+	imm4_1 := (imm13 >> 1) & 0xf
+	return opcodeBRANCH | (imm11 << 7) | (imm4_1 << 8) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm12 << 31)
+}
+
+func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) {
+	opcode = instr & 0x7f
+	instrType = instructionTypeFromOpcode(opcode)
+	rd = (instr >> 7) & 0x1f
+	funct3 = (instr >> 12) & 0x7
+	rs1 = (instr >> 15) & 0x1f
+	rs2 = (instr >> 20) & 0x1f
+	imm12 = (instr >> 20) & 0xfff
+	funct7 = (instr >> 25) & 0x7f
+	return
+}
+
+// classifyWord extracts the fields of a raw instruction word and classifies it,
+// mirroring how decodeInstruction calls classifyInstruction.
+func classifyWord(instr uint32) uint32 {
+	opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(instr)
+	return classifyInstruction(instrType, opcode, funct3, funct7, imm12, rd)
+}
+
+func TestCheckNoOp(t *testing.T) {
+	tests := []struct {
+		name  string
+		instr uint32
+		want  bool // whether checkNoOp collapses the rd=x0 word to NO_OP
+	}{
+		{name: "addi x0 x0 0", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: true},
+		{name: "addi x0 t0 5", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 5), want: true},
+		{name: "lui x0 0", instr: encodeUType(opcodeLUI, 0, 0), want: true},
+		{name: "auipc x0 0", instr: encodeUType(opcodeAUIPC, 0, 0), want: true},
+		{name: "add x0 x0 x0", instr: encodeRType(opcodeOP, 0, 0, 0, 0b000, 0), want: true},
+		{name: "add x0 t0 t1", instr: encodeRType(opcodeOP, 0, 6, 5, 0b000, 0), want: true},
+		{name: "sub x0 x0 x0", instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b000, 0), want: true},
+		{
+			name:  "invalid op x0 x0 x0",
+			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b010, 0),
+			want:  false,
+		},
+		{name: "ld x0 0 t0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: true},
+		{name: "jalr x0 t0 0", instr: encodeIType(opcodeJALR, 0, 0, 5, 0), want: false},
+		{name: "xori x0 x0 0xff", instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff), want: true},
+		{name: "slli x0 x0 4", instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4), want: true},
+		{name: "keccak x0", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 0), want: false},
+		{name: "jal x0", instr: encodeJType(0, 8), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(tt.instr)
+			var localOp uint32 = computeInvalid
+			switch instrType {
+			case iType:
+				localOp, _ = decodeITypeSemantic(opcode, funct3, imm12)
+			case rType:
+				localOp = decodeRTypeSemantic(opcode, funct3, funct7)
+			case uType:
+				localOp = decodeUTypeSemantic(opcode)
+			}
+			got := checkNoOp(instrType, localOp, rd) == computeNoOp
+			if got != tt.want {
+				t.Fatalf("checkNoOp(%#x) noop=%v, want %v", tt.instr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
+	// A single `addi x0, x0, 0` (an rd-zero noop) in an executable blob at
+	// base 0x1000. buildDecodedProgram must rewrite it to a NO_OP record so
+	// the interpreter only advances PC by 4.
+	const base uint64 = 0x1000
+	instr := encodeIType(opcodeOPIMM, 0b000, 0, 0, 0)
+	code := make([]byte, 4)
+	binary.LittleEndian.PutUint32(code, instr)
+
+	blobs := []memoryBlob{{offset: base, data: code, executable: true, name: ".text"}}
+	gotBase, nRecords, decodedHex := buildDecodedProgram(blobs)
+	if gotBase != base {
+		t.Fatalf("base = %#x, want %#x", gotBase, base)
+	}
+	if nRecords != 1 {
+		t.Fatalf("nRecords = %d, want 1", nRecords)
+	}
+
+	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
+	if ops[0] != computeNoOp {
+		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to NO_OP)", ops[0], computeNoOp)
+	}
+}
+
+func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
+	const base uint64 = 0x1000
+	textInstr := encodeIType(opcodeOPIMM, 0b000, 5, 5, 1)
+	textCode := make([]byte, 4)
+	binary.LittleEndian.PutUint32(textCode, textInstr)
+
+	// Only loadable executable blob bytes belong in the pre-decoded image; a
+	// non-allocated SHF_EXECINSTR section at base+0x100 must not affect decoding.
+	blobs := []memoryBlob{
+		{offset: base, data: textCode, executable: true, name: ".text"},
+		{offset: base + 0x100, data: []byte{0xde, 0xad, 0xbe, 0xef}, executable: false, name: ".data"},
+	}
+
+	gotBase, image, nRecords := collectExecutableImage(blobs)
+	if gotBase != base {
+		t.Fatalf("base = %#x, want %#x", gotBase, base)
+	}
+	if nRecords != 1 {
+		t.Fatalf("nRecords = %d, want 1", nRecords)
+	}
+	if !bytes.Equal(image, textCode) {
+		t.Fatalf("image = %x, want %x", image, textCode)
+	}
+}
+
+type bitReader struct {
+	buf []byte
+	pos int
+}
+
+func (r *bitReader) readBits(width int) uint64 {
+	var val uint64
+	for range width {
+		bit := (r.buf[r.pos/8] >> uint(7-(r.pos%8))) & 1
+		val = (val << 1) | uint64(bit)
+		r.pos++
+	}
+	return val
+}
+
+func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
+	data, err := hex.DecodeString(hexStr)
+	if err != nil {
+		panic(err)
+	}
+	r := &bitReader{buf: data}
+	ops := make([]uint32, nRecords)
+	for i := range nRecords {
+		ops[i] = uint32(r.readBits(8))
+		r.readBits(64)
+		r.readBits(5)
+		r.readBits(5)
+		r.readBits(5)
+	}
+	return ops
+}
+
+func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
+	t.Helper()
+	nRecords := uint64(len(image) / 4)
+	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
+	for i := range nRecords {
+		instr := binary.LittleEndian.Uint32(image[i*4:])
+		got := classifyWord(instr)
+		want := ops[i]
+		if got != want {
+			t.Fatalf("index %d instr=%#x: classify=%d decoded=%d", i, instr, got, want)
+		}
+	}
+}
+
+func TestClassifyInstructionExamples(t *testing.T) {
+	tests := []struct {
+		name  string
+		instr uint32
+		want  uint32
+	}{
+		{name: "undefined opcode", instr: 0, want: computeInvalid},
+		{name: "csr csrrw", instr: encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02), want: computeInvalid},
+		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeNoOp},
+		{name: "addi x0 t0 1", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 1), want: computeNoOp},
+		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeNoOp},
+		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeNoOp},
+		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeNoOp},
+		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: itypeOpAddiWB},
+		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
+		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: rtypeOpKeccak},
+		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: rtypeOpPoseidon2},
+		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: rtypeOpWriteOutput},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := classifyWord(tt.instr); got != tt.want {
+				t.Fatalf("classifyWord(%#x) = %d, want %d", tt.instr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClassifyRoundTripSyntheticImage(t *testing.T) {
+	words := []uint32{
+		0,
+		encodeIType(opcodeOPIMM, 0b000, 0, 0, 0),
+		encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02),
+		encodeIType(opcodeOPIMM, 0b000, 5, 5, 1),
+		encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 2),
+		encodeBType(0b010, 1, 2, 8),
+		opcodeMISCMEM | (0b000 << 12) | (0b001 << 7),
+	}
+	image := make([]byte, len(words)*4)
+	var decodedBits bitWriter
+	for i, instr := range words {
+		binary.LittleEndian.PutUint32(image[i*4:], instr)
+		opcode := instr & 0x7f
+		rd := (instr >> 7) & 0x1f
+		funct3 := (instr >> 12) & 0x7
+		rs1 := (instr >> 15) & 0x1f
+		imm12 := (instr >> 20) & 0xfff
+		instrType := instructionTypeFromOpcode(opcode)
+		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		if instrType != iType {
+			normImm12 = imm12
+		}
+		decodedBits.writeBits(uint64(classifyWord(instr)), 8)
+		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
+		decodedBits.writeBits(uint64(rs1), 5)
+		decodedBits.writeBits(0, 5)
+		decodedBits.writeBits(uint64(rd), 5)
+	}
+	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
+}
