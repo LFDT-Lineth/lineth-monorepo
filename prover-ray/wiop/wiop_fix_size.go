@@ -24,6 +24,12 @@ import (
 // [Proof.DynamicSizes]. Provers and verifiers of the terminal layer must both
 // use the fixed system.
 //
+// [System.DynamicSizeRound] is deliberately left unchanged. Every size-related
+// use of it (transcript absorption, size tracking, the minimum-size check in
+// [System.Prove]) only acts on dynamic modules, so it is inert once none are
+// left; but callers also read it as the trace round (see zkcdriver.Define and
+// risc5.RegisterProgramVK), which resetting it would break.
+//
 // It must be called after the system is defined and before any compiler pass
 // runs, since passes read the module sizes. It is all or nothing: it returns
 // an error, and changes nothing, if
