@@ -147,9 +147,7 @@ func TestProveDevZkVM(t *testing.T) {
 	})
 }
 
-// TestProveDevZkVM_GoGen checks that Config.GoGen reaches zkc Execute: gogen
-// gives the same output as the interpreter, and it builds Go code, so it needs
-// the Go toolchain, which the interpreter does not.
+// TestProveDevZkVM_GoGen checks that gogen gives the interpreter's output and needs the Go toolchain.
 func TestProveDevZkVM_GoGen(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	dir := t.TempDir()

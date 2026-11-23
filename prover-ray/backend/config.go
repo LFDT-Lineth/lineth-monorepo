@@ -32,10 +32,7 @@ type Config struct {
 	// measured on the blocks listed in docs/prover-modes.md.
 	ShardWorkers int
 
-	// GoGen runs zkc Execute with gogen: zkc generates Go code for the circuit
-	// and builds it with the Go toolchain on PATH, instead of interpreting it.
-	// It is much faster (a 2M-gas block runs in about 1s instead of 78s) and
-	// gives the same output. Used by dev-zkvm, dev-partial and full (not
-	// implemented yet); dev-mock runs no guest.
+	// GoGen runs zkc Execute with gogen (Go code built with the Go toolchain on
+	// PATH) instead of the interpreter: same output, much faster.
 	GoGen bool
 }

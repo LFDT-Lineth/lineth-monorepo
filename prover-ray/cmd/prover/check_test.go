@@ -187,9 +187,7 @@ func TestCheckPipeline_Warns(t *testing.T) {
 	}
 }
 
-// TestCheckPipeline_GoGen checks that gogen needs the Go toolchain on PATH in
-// the modes that run the guest under zkc Execute, and that dev-mock, which runs
-// no guest, does not.
+// TestCheckPipeline_GoGen checks that gogen needs the Go toolchain on PATH, except in dev-mock.
 func TestCheckPipeline_GoGen(t *testing.T) {
 	const needsGo = "gogen needs the Go toolchain"
 	noGo := t.TempDir()

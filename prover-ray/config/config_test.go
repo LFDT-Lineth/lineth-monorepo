@@ -61,8 +61,7 @@ shard_workers = 10
 	assert.Equal(t, 10, cfg.Execution.ShardWorkers)
 }
 
-// TestNewConfigFromFile_GoGen checks that gogen is a top-level setting, like
-// guests_dir, on unless the config turns it off.
+// TestNewConfigFromFile_GoGen checks that gogen is a top-level setting, on by default.
 func TestNewConfigFromFile_GoGen(t *testing.T) {
 	const (
 		version   = "version = \"0.0.0-riscv\"\n"

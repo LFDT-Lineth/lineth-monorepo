@@ -6,8 +6,7 @@
 version = "0.0.0-riscv"
 log_level = 4
 guests_dir = "/opt/linea/prover-ray/guests"
-# Run the guests with gogen (Go code built with the Go toolchain on PATH)
-# instead of the interpreter: same output, much faster. On by default.
+# Run the guests with gogen instead of the interpreter (needs Go on PATH). On by default.
 gogen = true
 
 [execution]

@@ -117,9 +117,8 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 		}
 	}
 
-	// 4. gogen builds Go code with the Go toolchain on PATH, the same lookup
-	// as zkc's. It is a top-level setting, on by default, so a mode that
-	// ignores it does not warn.
+	// 4. gogen needs the Go toolchain on PATH, the same lookup as zkc's. It is on
+	// by default, so a mode that ignores it does not warn.
 	if uses.gogen != ignored && p.gogen {
 		if _, err := exec.LookPath("go"); err != nil {
 			return nil, fmt.Errorf("gogen needs the Go toolchain on PATH for %s (set gogen = false to use the "+
