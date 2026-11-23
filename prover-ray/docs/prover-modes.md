@@ -85,7 +85,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 
 - `dev-zkvm` and `dev-partial` run the guest under zkc Execute. With `gogen` (a top-level setting next to `guests_dir`, on by default, for every pipeline), zkc turns the circuit into Go code and builds it with the Go toolchain on `PATH`, instead of interpreting it.
 - Same output, much faster: a 2M-gas block runs in about 1s instead of 78s.
-- The first run in a new container builds the code (a few seconds, more memory); later runs reuse the Go build cache.
+- The first run in a new container builds the code (a few seconds, more memory); later runs reuse the Go build cache. In the image the cache is at `/tmp/go-build` (`GOCACHE`), which any user can write; mount a volume there to keep it across restarts.
 - The prover image includes the Go toolchain. Outside the image, when `gogen` is on, the prover does not start if `go` is not on `PATH`. Set `gogen = false` to use the interpreter.
 - `dev-mock` ignores it. The tracing in `dev-partial` (the shards) still uses the interpreter.
 

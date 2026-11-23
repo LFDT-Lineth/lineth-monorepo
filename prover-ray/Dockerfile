@@ -40,12 +40,15 @@ COPY --from=go-builder /out/prover /opt/linea/prover-ray/prover
 COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 # The Go toolchain for gogen (top-level setting, on by default): zkc Execute
 # builds the circuit as Go code at run time. GOTOOLCHAIN=local never downloads
-# another toolchain, and CGO off needs no C compiler.
+# another toolchain, and CGO off needs no C compiler. The Go build cache is in
+# /tmp, which any user can write: the container may run as a user with no home
+# (HOME=/), where the default $HOME/.cache cannot be created.
 COPY --from=go-builder /usr/local/go /usr/local/go
 
 ENV PATH="/opt/linea/prover-ray:/usr/local/go/bin:${PATH}" \
     GOTOOLCHAIN=local \
-    CGO_ENABLED=0
+    CGO_ENABLED=0 \
+    GOCACHE=/tmp/go-build
 WORKDIR /opt/linea/prover-ray
 
 # Configuration is a TOML file. No default is baked in (fail loudly rather than
