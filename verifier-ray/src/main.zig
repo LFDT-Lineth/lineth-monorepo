@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
-const riscv_system = @import("riscv_system");
+const devmode_system = @import("devmode_system");
 const lineth_accel = @import("lineth_accelerators");
 const main_config = @import("main_config");
 
@@ -38,19 +38,19 @@ else
 // being tested is still in `verifier.zig`, and this main function just serves as a
 // thin wrapper around it to handle environment-specific details.
 // The bound-round-message workspace lives here, in .bss, rather than in
-// `verify`'s stack frame: it holds every round cell (17,842 on the real RISC-V
-// system) and the guest's linker stack is a fixed 8 MiB.
+// `verify`'s stack frame: it holds every round cell of the verified system,
+// which can be large, and the guest's linker stack is a fixed 8 MiB.
 // The verified system: the embedded fixture's when the input is embedded at
-// build time, the generated RISC-V system's otherwise. The workspace is sized
+// build time, the generated devmode system's otherwise. The workspace is sized
 // from the same system, so both modes compile.
 const active_spec = if (embedded_data_conf.embed_input)
     embedded_data.get(embedded_data_conf.spec_index).spec
 else
-    riscv_system.system_0_spec;
+    devmode_system.system_0_spec;
 const active_systems = if (embedded_data_conf.embed_input)
     embedded_data.get(embedded_data_conf.spec_index).systems
 else
-    riscv_system.system_0_systems;
+    devmode_system.system_0_systems;
 
 var verifier_workspace: verifier.Workspace(active_systems.public_input) = undefined;
 

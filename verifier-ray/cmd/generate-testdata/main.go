@@ -29,13 +29,19 @@ import (
 
 func main() {
 	out := flag.String("out", filepath.Join("testdata", "generated", "verify.zig"), "path of the generated fixtures")
+	imageOut := flag.String("image-out", filepath.Join("testdata", "fixture_proof_image.bin"),
+		"path of the proof image of one fixture case (see writeFixtureProofImage)")
 	flag.Parse()
 
 	fixtureCases, compiledSystems, err := buildCompiledFixtureCases()
 	if err != nil {
 		panic(err)
 	}
-	if err := writeVerifyFixtures(*out, fixtureCases, compiledSystems); err != nil {
+	imageCase, err := writeFixtureProofImage(*imageOut, fixtureCases, compiledSystems)
+	if err != nil {
+		panic(err)
+	}
+	if err := writeVerifyFixtures(*out, fixtureCases, compiledSystems, imageCase); err != nil {
 		panic(err)
 	}
 }
@@ -86,6 +92,9 @@ type fixtureCase struct {
 	// different dynamic-module size, verified against the same baked
 	// PcsSystem. Multi-size cases only: hasAlt is the multi-size predicate.
 	alt *proofFixture
+	// sys and assign reproduce the honest proof, for the proof image.
+	sys    *wiop.System
+	assign assignFn
 }
 
 type vanishingProofView struct {
@@ -162,7 +171,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err != nil {
 			return err
 		}
-		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, sys: sys, assign: honest}
 		if invalid != nil {
 			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
 			if err != nil {
@@ -199,7 +208,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return err
 		}
 
-		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, alt: &altFixture}
+		tc := fixtureCase{
+			name: name, pcs: compiled.Pcs, honest: honestFixture, alt: &altFixture, sys: sys, assign: honest,
+		}
 
 		cases = append(cases, tc)
 		systems = append(systems, compiled)
@@ -226,7 +237,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err != nil {
 			return err
 		}
-		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, sys: sys, assign: honest}
 		if invalid != nil {
 			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
 			if err != nil {
@@ -641,7 +652,9 @@ func buildMessageBusFixtureCase(name string, sys *wiop.System, honest assignFn) 
 	invalidFixture.view.publicInputs = append([]runtimeTraceCell(nil), honestFixture.view.publicInputs...)
 	invalidFixture.view.publicInputs[statementIndex] = flippedTraceCell(invalidFixture.view.publicInputs[statementIndex])
 
-	tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, invalid: &invalidFixture}
+	tc := fixtureCase{
+		name: name, pcs: compiled.Pcs, honest: honestFixture, invalid: &invalidFixture, sys: sys, assign: honest,
+	}
 	return messageBusFixtureCase{tc: tc, compiled: compiled}, nil
 }
 
@@ -973,7 +986,7 @@ func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round, publicInp
 	return trace
 }
 
-func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.CompiledSystem) error {
+func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.CompiledSystem, imageCase int) error {
 	// verify.zig drives the mandatory-PCS verifier.verify, the only consumer of
 	// these fixtures: a case without a PCS System could not be verified, so it
 	// is an error rather than silently dropped.
@@ -1005,6 +1018,8 @@ func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.Com
 	writeVerifyCaseSwitch(&out, cases)
 	writeVerifyInputSwitch(&out, cases)
 	writeVerifyFailingInputSwitch(&out, cases)
+	fmt.Fprintf(&out, "\n/// The case whose honest proof testdata/fixture_proof_image.bin encodes (%s).\n", cases[imageCase].name)
+	fmt.Fprintf(&out, "pub const image_case_index: usize = %d;\n", imageCase)
 
 	data, err := codegen.FormatZig(out.Bytes())
 	if err != nil {

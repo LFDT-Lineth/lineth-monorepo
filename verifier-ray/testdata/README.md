@@ -8,19 +8,22 @@ The committed end-to-end fixtures live in:
 testdata/generated/verify.zig
 ```
 
-The real proof image used by the native and R5 smoke tests is generated (not
-committed) by prover-ray's `prover verifier-assets --system riscv`, alongside
-`riscv_system.zig`:
+The proof image used by the native and R5 smoke tests is generated (not
+committed) by prover-ray's `prover verifier-assets --system devmode`, alongside
+the system it proves:
 
 ```text
-testdata/generated/riscv_system.zig
-testdata/riscv_proof_image.bin
+testdata/generated/devmode_system.zig
+testdata/devmode_proof_image.bin
 ```
 
-Both are generated from proving `zkc_r5.AllInOneGuestELF` (the one guest in
-`prover-ray/verifierray/codegen`'s `HonestRiscvGuests`, which exercises the full RV64I +
-M-extension + custom-precompile surface in a single witness) against the
-real `arithmetization/src/main/riscv/main.zkc` interpreter circuit.
+`cmd/generate-testdata` also writes the proof image of one `verify.zig` case
+(`image_case_index`), which `test/proof_image_test.zig` validates, verifies and
+tampers with:
+
+```text
+testdata/fixture_proof_image.bin
+```
 
 Refresh generated Zig fixtures from `verifier-ray/` with:
 

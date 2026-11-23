@@ -102,7 +102,7 @@ const abi = struct {
 ///
 /// Call this after loading an image at an address other than the one it was
 /// encoded for: the native loader in main.zig and the fixture loader in
-/// riscv_proof_image_test.zig both do.
+/// proof_image_test.zig both do.
 ///
 /// The walk is memory-safe on arbitrary bytes: every read and write is bounded
 /// to the image, every element count is clamped to what fits, and a pointer

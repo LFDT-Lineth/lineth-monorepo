@@ -9,6 +9,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
+// HonestArtifacts are the verifier-facing outputs of compiling a prover-ray system and proving an
+// honest statement against it.
+type HonestArtifacts struct {
+	CompiledSystem CompiledSystem
+	VerifyInput    proofserialization.VerifyInput
+}
+
 // SampleDevmodePublicInputs returns deterministic base-field public inputs
 // (1000 + i) for devmode fixture generation and tests.
 func SampleDevmodePublicInputs() wiop.PublicInput {
@@ -24,33 +31,33 @@ func SampleDevmodePublicInputs() wiop.PublicInput {
 // BuildDevmodeHonestArtifacts compiles the devmode circuit from prover-ray,
 // proves a deterministic 40-cell statement, verifies it in Go, and returns both
 // the extracted CompiledSystem and the projected VerifyInput.
-func BuildDevmodeHonestArtifacts() (HonestRiscvArtifacts, error) {
+func BuildDevmodeHonestArtifacts() (HonestArtifacts, error) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
-		return HonestRiscvArtifacts{}, err
+		return HonestArtifacts{}, err
 	}
 	compiledSystem, err := BuildCompiledSystem(sys)
 	if err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("BuildCompiledSystem: %w", err)
+		return HonestArtifacts{}, fmt.Errorf("BuildCompiledSystem: %w", err)
 	}
 
 	proof, pub, err := devmode.Prove(sys, SampleDevmodePublicInputs())
 	if err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("devmode.Prove: %w", err)
+		return HonestArtifacts{}, fmt.Errorf("devmode.Prove: %w", err)
 	}
 	if err := devmode.Verify(sys, proof, pub); err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("verifying devmode proof: %w", err)
+		return HonestArtifacts{}, fmt.Errorf("verifying devmode proof: %w", err)
 	}
 	if err := AssertAllVerifierActionsHandled(sys); err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
+		return HonestArtifacts{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
 	}
 
 	verifyInput, err := proofserialization.Project(sys, proof, pub)
 	if err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("proofserialization.Project: %w", err)
+		return HonestArtifacts{}, fmt.Errorf("proofserialization.Project: %w", err)
 	}
 
-	return HonestRiscvArtifacts{
+	return HonestArtifacts{
 		CompiledSystem: compiledSystem,
 		VerifyInput:    verifyInput,
 	}, nil

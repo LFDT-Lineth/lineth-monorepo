@@ -1,6 +1,5 @@
 .zig-cache/
 zig-out/
-testdata/generated/riscv_system.zig
-testdata/riscv_proof_image.bin
 testdata/generated/devmode_system.zig
 testdata/devmode_proof_image.bin
+testdata/fixture_proof_image.bin

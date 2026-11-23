@@ -10,17 +10,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
-// Asset systems: the prover-ray systems whose verifier assets verifier-ray consumes.
-const (
-	// AssetSystemDevmode is the devmode circuit of prover-ray/backend/devmode, the system the
-	// rollup guest verifies l2-execution proofs against until recursion is wired in.
-	AssetSystemDevmode = "devmode"
-	// AssetSystemRiscv is the real RISC-V main.zkc arithmetization.
-	AssetSystemRiscv = "riscv"
-)
+// AssetSystemDevmode is the devmode circuit of prover-ray/backend/devmode, the system the rollup
+// guest verifies l2-execution proofs against until the recursion root is wired in.
+const AssetSystemDevmode = "devmode"
 
-// AssetSystems lists the systems VerifierAssets accepts.
-var AssetSystems = []string{AssetSystemDevmode, AssetSystemRiscv}
+// AssetSystems lists the systems BuildVerifierAssets accepts: the roots verifier-ray verifies.
+// verifier-ray never verifies an R5 shard proof directly, so the RISC-V system is not one of them.
+var AssetSystems = []string{AssetSystemDevmode}
 
 // VerifierAssets are the verifier-facing files of one prover-ray system.
 type VerifierAssets struct {
@@ -55,16 +51,6 @@ func BuildVerifierAssets(system string, withProof bool) (VerifierAssets, error) 
 			return VerifierAssets{}, fmt.Errorf("building devmode honest artifacts: %w", err)
 		}
 		compiled, input = artifacts.CompiledSystem, &artifacts.VerifyInput
-	case system == AssetSystemRiscv:
-		// The riscv system is only extracted from an honest proof.
-		artifacts, err := BuildAllInOneHonestRiscvArtifacts()
-		if err != nil {
-			return VerifierAssets{}, fmt.Errorf("building riscv honest artifacts: %w", err)
-		}
-		compiled = artifacts.CompiledSystem
-		if withProof {
-			input = &artifacts.VerifyInput
-		}
 	default:
 		return VerifierAssets{}, fmt.Errorf("unknown system %q, want one of %v", system, AssetSystems)
 	}

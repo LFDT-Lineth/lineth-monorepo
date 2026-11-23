@@ -19270,3 +19270,6 @@ pub fn hasAlt(comptime index: usize) bool {
         else => false,
     };
 }
+
+/// The case whose honest proof testdata/fixture_proof_image.bin encodes (OpenedCellPublicInput).
+pub const image_case_index: usize = 68;

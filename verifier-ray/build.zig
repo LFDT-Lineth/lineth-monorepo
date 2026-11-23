@@ -30,21 +30,11 @@ pub fn build(b: *std.Build) void {
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
     const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
     const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
-    const riscv_system_path = b.option(
-        []const u8,
-        "riscv-system",
-        "Path to the generated RISC-V verifier system Zig source",
-    ) orelse @panic("'-Driscv-system=<path>' is required");
-    if (riscv_system_path.len == 0) @panic("'-Driscv-system=<path>' must not be empty");
-    const riscv_system_source: std.Build.LazyPath = if (std.fs.path.isAbsolute(riscv_system_path))
-        .{ .cwd_relative = riscv_system_path }
-    else
-        b.path(riscv_system_path);
     const input_path = b.option(
         []const u8,
         "input-path",
         "Path to the single proof image for the native smoke runner",
-    ) orelse "testdata/riscv_proof_image.bin";
+    ) orelse "testdata/devmode_proof_image.bin";
     const target = if (r5)
         common.standardGuestTarget(b)
     else
@@ -94,17 +84,8 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // The generated production system for the recursive single-proof
-    // verifier bootstrap (`prover verifier-assets --system riscv`), smoke-
-    // tested by test/riscv_system_test.zig.
-    const riscv_system_mod = b.addModule("riscv_system", .{
-        .root_source_file = riscv_system_source,
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "verifier_ray", .module = verifier_mod },
-        },
-    });
+    // The generated devmode system (`prover verifier-assets --system devmode`
+    // in prover-ray): the system the smoke runner and the rollup guest verify.
     const devmode_system_mod = b.addModule("devmode_system", .{
         .root_source_file = b.path("testdata/generated/devmode_system.zig"),
         .target = target,
@@ -140,7 +121,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "embedded_data", .module = embedded_data_mod },
             .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
             .{ .name = "main_config", .module = main_opts.createModule() },
-            .{ .name = "riscv_system", .module = riscv_system_mod },
+            .{ .name = "devmode_system", .module = devmode_system_mod },
         },
     });
 
@@ -166,13 +147,12 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("test/all.zig"),
                 .target = target,
                 .optimize = optimize,
-                // riscv_proof_image_test.zig privately maps and rebases a
+                // proof_image_test.zig privately maps and rebases a
                 // Go-produced image, which needs mmap from libc.
                 .link_libc = true,
                 .imports = &.{
                     .{ .name = "verifier_ray", .module = verifier_mod },
                     .{ .name = "test_verify", .module = test_verify_mod },
-                    .{ .name = "riscv_system", .module = riscv_system_mod },
                     .{ .name = "devmode_system", .module = devmode_system_mod },
                 },
             }),
