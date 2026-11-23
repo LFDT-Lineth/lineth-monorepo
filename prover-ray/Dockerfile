@@ -38,7 +38,7 @@ LABEL org.label-schema.version=$VERSION \
 
 COPY --from=go-builder /out/prover /opt/linea/prover-ray/prover
 COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
-# The Go toolchain for gogen (execution.gogen, on by default): ZkC Execute
+# The Go toolchain for gogen (top-level setting, on by default): ZkC Execute
 # builds the circuit as Go code at run time. GOTOOLCHAIN=local never downloads
 # another toolchain, and CGO off needs no C compiler.
 COPY --from=go-builder /usr/local/go /usr/local/go

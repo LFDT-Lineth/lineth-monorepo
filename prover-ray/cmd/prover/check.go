@@ -60,10 +60,11 @@ func (l layers) allows(t backend.ProofType) bool {
 	return false
 }
 
-// settings says how a mode treats each [execution] setting.
+// settings says how a mode treats each [execution] setting and the top-level
+// gogen.
 type settings struct{ nativeRunner, shardSize, shardWorkers, gogen use }
 
-// modeSettings says how each mode treats the [execution] settings:
+// modeSettings says how each mode treats the [execution] settings and gogen:
 //
 //	mode                 native_runner_bin  shard_size  shard_workers  gogen
 //	dev-mock             ignored            ignored     ignored        ignored
@@ -117,11 +118,12 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 	}
 
 	// 4. gogen builds Go code with the Go toolchain on PATH, the same lookup
-	// as zkc's. It is on by default, so a mode that ignores it does not warn.
+	// as zkc's. It is a top-level setting, on by default, so a mode that
+	// ignores it does not warn.
 	if uses.gogen != ignored && p.gogen {
 		if _, err := exec.LookPath("go"); err != nil {
-			return nil, fmt.Errorf("execution.gogen needs the Go toolchain on PATH (set execution.gogen = false "+
-				"to use the interpreter): %w", err)
+			return nil, fmt.Errorf("gogen needs the Go toolchain on PATH for %s (set gogen = false to use the "+
+				"interpreter): %w", sectionNames[t], err)
 		}
 	}
 

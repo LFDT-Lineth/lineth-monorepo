@@ -25,6 +25,11 @@ type Config struct {
 	// GuestsDir holds the guest ELFs, found by the guestProgramId of each
 	// request. Required by every mode that runs a guest.
 	GuestsDir string `mapstructure:"guests_dir"`
+	// GoGen runs every guest under ZkC Execute with gogen, which builds Go code
+	// with the Go toolchain on PATH, instead of the interpreter. It applies to
+	// every pipeline, like guests_dir. On by default; set it to false to use
+	// the interpreter. dev-mock ignores it.
+	GoGen bool `mapstructure:"gogen"`
 }
 
 // Execution holds the L2-execution pipeline settings.
@@ -49,10 +54,6 @@ type Execution struct {
 	// docs/prover-modes.md. It needs shard_size, and dev-mock and dev-zkvm
 	// ignore it.
 	ShardWorkers int `mapstructure:"shard_workers"`
-	// GoGen runs the guest under ZkC Execute with gogen, which builds Go code
-	// with the Go toolchain on PATH, instead of the interpreter. On by default;
-	// set it to false to use the interpreter. dev-mock ignores it.
-	GoGen bool `mapstructure:"gogen"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
@@ -73,7 +74,7 @@ func (p Pipeline) Configured() bool {
 func NewConfigFromFile(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
-	v.SetDefault("execution.gogen", true)
+	v.SetDefault("gogen", true)
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("reading config %q: %w", path, err)
 	}

@@ -61,22 +61,23 @@ shard_workers = 10
 	assert.Equal(t, 10, cfg.Execution.ShardWorkers)
 }
 
-// TestNewConfigFromFile_GoGen checks that gogen is on unless the config turns
-// it off.
+// TestNewConfigFromFile_GoGen checks that gogen is a top-level setting, like
+// guests_dir, on unless the config turns it off.
 func TestNewConfigFromFile_GoGen(t *testing.T) {
-	const base = `
-version = "0.0.0-riscv"
-
-[execution]
-prover_mode = "dev-zkvm"
-`
-	cfg, err := NewConfigFromFile(writeConfig(t, base))
+	const (
+		version   = "version = \"0.0.0-riscv\"\n"
+		execution = "[execution]\nprover_mode = \"dev-zkvm\"\n"
+	)
+	cfg, err := NewConfigFromFile(writeConfig(t, version+execution))
 	require.NoError(t, err)
-	assert.True(t, cfg.Execution.GoGen, "gogen should be on by default")
+	assert.True(t, cfg.GoGen, "gogen should be on by default")
 
-	cfg, err = NewConfigFromFile(writeConfig(t, base+"gogen = false\n"))
+	cfg, err = NewConfigFromFile(writeConfig(t, version+"gogen = false\n"+execution))
 	require.NoError(t, err)
-	assert.False(t, cfg.Execution.GoGen)
+	assert.False(t, cfg.GoGen)
+
+	_, err = NewConfigFromFile(writeConfig(t, version+execution+"gogen = false\n"))
+	require.ErrorContains(t, err, "gogen", "gogen is not a pipeline setting")
 }
 
 func TestNewConfigFromFile_NegativeShardWorkers(t *testing.T) {

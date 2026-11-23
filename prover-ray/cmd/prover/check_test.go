@@ -191,34 +191,54 @@ func TestCheckPipeline_Warns(t *testing.T) {
 // the modes that run the guest under ZkC Execute, and that dev-mock, which runs
 // no guest, does not.
 func TestCheckPipeline_GoGen(t *testing.T) {
-	const needsGo = "execution.gogen needs the Go toolchain"
+	const needsGo = "gogen needs the Go toolchain"
 	noGo := t.TempDir()
 	withGo := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(withGo, "go"), []byte("#!/bin/sh\n"), 0o700)) //nolint:gosec // G306: test stub
 
+	execution, rollup := backend.ProofTypeL2Execution, backend.ProofTypeRollup
 	cases := map[string]struct {
 		path    string
+		typ     backend.ProofType
 		p       pipeline
 		wantErr string
 	}{
-		"dev-zkvm without go":    {noGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, needsGo},
-		"dev-partial without go": {noGo, pipeline{mode: backend.ProverModeDevPartial, gogen: true}, needsGo},
-		"full without go":        {noGo, pipeline{mode: backend.ProverModeFull, gogen: true}, needsGo},
-		"dev-zkvm with go":       {withGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, ""},
-		"gogen off without go":   {noGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: false}, ""},
-		"dev-mock without go":    {noGo, pipeline{mode: backend.ProverModeDevMock, gogen: true}, ""},
+		"dev-zkvm without go":       {noGo, execution, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, needsGo},
+		"dev-partial without go":    {noGo, execution, pipeline{mode: backend.ProverModeDevPartial, gogen: true}, needsGo},
+		"full without go":           {noGo, execution, pipeline{mode: backend.ProverModeFull, gogen: true}, needsGo},
+		"rollup in full without go": {noGo, rollup, pipeline{mode: backend.ProverModeFull, gogen: true}, needsGo},
+		"dev-zkvm with go":          {withGo, execution, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, ""},
+		"gogen off without go":      {noGo, execution, pipeline{mode: backend.ProverModeDevZkVM, gogen: false}, ""},
+		"dev-mock without go":       {noGo, execution, pipeline{mode: backend.ProverModeDevMock, gogen: true}, ""},
+		"rollup in dev-mock":        {noGo, rollup, pipeline{mode: backend.ProverModeDevMock, gogen: true}, ""},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("PATH", tc.path)
-			warnings, err := checkPipeline(backend.ProofTypeL2Execution, tc.p)
+			warnings, err := checkPipeline(tc.typ, tc.p)
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
+				assert.NotContains(t, err.Error(), "execution.gogen", "gogen is a top-level setting")
 				return
 			}
 			require.NoError(t, err)
 			assert.Empty(t, warnings, "gogen is on by default, so a mode that ignores it does not warn")
 		})
+	}
+}
+
+// TestPipelineFor_GoGen checks that the top-level gogen reaches every pipeline.
+func TestPipelineFor_GoGen(t *testing.T) {
+	cfg := &config.Config{
+		GoGen:       true,
+		Execution:   config.Execution{ProverMode: string(backend.ProverModeDevZkVM)},
+		Rollup:      config.Pipeline{ProverMode: string(backend.ProverModeDevMock)},
+		Aggregation: config.Pipeline{ProverMode: string(backend.ProverModeDevMock)},
+	}
+	for _, typ := range proofTypes {
+		p, ok := pipelineFor(cfg, typ)
+		require.True(t, ok, "%s should be configured", typ)
+		assert.True(t, p.gogen, "%s should use the top-level gogen", typ)
 	}
 }
 
