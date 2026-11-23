@@ -431,7 +431,7 @@ func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 	return field.OctupletToBytes(risc5.GetProgramVK(c.sys, pub))
 }
 
-// executeGuest runs the guest under ZkC Execute (the no-trace path), with gogen
+// executeGuest runs the guest under zkc Execute (the no-trace path), with gogen
 // or the interpreter, and returns its validated 0x0003 output.
 func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool) (bit.Array, error) {
 	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))

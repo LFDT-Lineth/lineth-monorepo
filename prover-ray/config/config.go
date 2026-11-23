@@ -25,7 +25,7 @@ type Config struct {
 	// GuestsDir holds the guest ELFs, found by the guestProgramId of each
 	// request. Required by every mode that runs a guest.
 	GuestsDir string `mapstructure:"guests_dir"`
-	// GoGen runs every guest under ZkC Execute with gogen, which builds Go code
+	// GoGen runs every guest under zkc Execute with gogen, which builds Go code
 	// with the Go toolchain on PATH, instead of the interpreter. It applies to
 	// every pipeline, like guests_dir. On by default; set it to false to use
 	// the interpreter. dev-mock ignores it.
