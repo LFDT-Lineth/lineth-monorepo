@@ -53,6 +53,7 @@
 - *(linea-besu)* Update to 26.11.1 (#4532)
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
+- *(maru)* Add and use native Engine API JSON-RPC client (#4397)
 
 ### 🐛 Bug Fixes
 
