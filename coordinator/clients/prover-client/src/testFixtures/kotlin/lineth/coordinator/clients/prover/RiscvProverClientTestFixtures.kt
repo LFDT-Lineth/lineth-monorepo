@@ -7,6 +7,7 @@ import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.RollupAggregationProofRequestV1
 import linea.clients.RollupProofRequestV1
+import linea.da.DaConstants
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
@@ -142,10 +143,10 @@ object RiscvProverClientTestFixtures {
   fun blobChunkWitness(fill: Byte = 0x20): ChunkWitness = ChunkWitness(
     chunkHash = ByteArray(32) { fill },
     isCalldata = false,
-    blobBytes = ByteArray(ChunkWitness.BLOB_BYTES_LENGTH) { fill },
+    blobBytes = ByteArray(DaConstants.BLOB_BYTES) { fill },
     calldataBytes = ByteArray(0),
-    kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 1).toByte() },
-    kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 2).toByte() },
+    kzgCommitment = ByteArray(DaConstants.KZG_POINT_BYTES) { (fill + 1).toByte() },
+    kzgProof = ByteArray(DaConstants.KZG_POINT_BYTES) { (fill + 2).toByte() },
   )
 
   fun calldataChunkWitness(fill: Byte = 0x30): ChunkWitness = ChunkWitness(

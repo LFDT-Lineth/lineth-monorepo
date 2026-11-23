@@ -316,6 +316,13 @@ func TestPipelineFor_ShardSize(t *testing.T) {
 	assert.Equal(t, uint64(500000), p.shardSize, "the execution pipeline must shard its trace as configured")
 }
 
+func TestPipelineFor_ShardWorkers(t *testing.T) {
+	cfg := &config.Config{Execution: config.Execution{ProverMode: "dev-partial", ShardSize: 500000, ShardWorkers: 10}}
+	p, ok := pipelineFor(cfg, backend.ProofTypeL2Execution)
+	require.True(t, ok)
+	assert.Equal(t, 10, p.shardWorkers, "the execution pipeline must prove its shards as many at a time as configured")
+}
+
 func TestRunProve_DevZkVMRequiresGuestsDir(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config.toml")

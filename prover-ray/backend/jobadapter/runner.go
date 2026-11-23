@@ -56,7 +56,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 }
 
 // WithNativeRunnerBin sets the path to the native l2_execution_runner binary,
-// required by dev-zkvm mode and optional in dev-partial.
+// optional in dev-zkvm and dev-partial.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
 }
@@ -176,7 +176,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -205,7 +205,7 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 		return proverFailure(runReq.ID, result)
 	}
 	return RunResult{
-		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
+		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -241,14 +241,9 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 // runL2ExecutionExtended runs the guest on the extended input (dev-zkvm and
 // dev-partial) and shapes the response from the result: the public inputs
 // decoded from the guest output and the mode's proof. The guest's end block and
-// block count must match the request. With a native runner set, which dev-zkvm
-// requires, the guest output must also equal the native runner's --ssz output
-// byte for byte.
+// block count must match the request. With a native runner set, the guest
+// output must also equal the native runner's --ssz output byte for byte.
 func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
-	if r.mode == backend.ProverModeDevZkVM && r.nativeRunnerBin == "" {
-		return failedRunResult(runReq.ID, FailureCodeInternalError,
-			fmt.Errorf("dev-zkvm mode requires a native runner binary path"))
-	}
 	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
 	startBlock := req.Payloads[0].BlockNumber
 	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
@@ -286,7 +281,7 @@ func (r *Runner) runL2ExecutionExtended(ctx context.Context, runReq RunRequest, 
 	}
 
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.GuestProgramID),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }

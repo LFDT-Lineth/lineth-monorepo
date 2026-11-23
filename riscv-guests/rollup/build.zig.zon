@@ -3,22 +3,33 @@
     .version = "0.0.0",
     .fingerprint = 0x9e91b56136b3846b,
     .minimum_zig_version = "0.16.0",
+    // The sibling packages are spelled through the repository root: the verifier package refers to
+    // them that way, and a package is identified by the spelling of its path.
     .dependencies = .{
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
-        .build_common = .{ .path = "../build_common" },
-        // Lineth zkVM accelerator wrappers (sibling path dependency): only `write_output` (the
-        // zkvm-standards io-interface custom opcode) is used — this guest runs no EVM and needs no
-        // other precompile accelerator.
-        .lineth_accelerators = .{ .path = "../lineth_accelerators" },
-        // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
-        // primitives `rollup_ssz.zig`'s container codec builds on.
-        .guest_common = .{ .path = "../guest_common" },
+        .build_common = .{ .path = "../../riscv-guests/build_common" },
+        // Lineth zkVM accelerator wrappers (sibling path dependency): the io-interface
+        // (read_input/write_output) and, through -Dzkvm-provide, the zkvm_* crypto providers that
+        // data-availability verification and sender recovery resolve to.
+        .lineth_accelerators = .{ .path = "../../riscv-guests/lineth_accelerators" },
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ codec the guest input
+        // is decoded with, and the l2-execution proof and rollup proof wire contracts.
+        .guest_common = .{ .path = "../../riscv-guests/guest_common" },
+        // Data-availability building blocks (sibling path dependency): block truncation, the blob
+        // packing and verification, the dictionary-based zstd decompression and the verification
+        // of a DA stream against its chunks. With -Dhost-tools it also exposes the modules that
+        // build real DA streams for tests.
+        .lineth_da = .{ .path = "../../riscv-guests/lineth_da" },
+        // The recursive verifier of the l2-execution proofs and the generated devmode system it
+        // verifies against (sibling path dependency): `make` generates the system, a gitignored
+        // file, before the first build.
+        .verifier_ray = .{ .path = "../../verifier-ray" },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src", // production guest code (compiled into the rv64im object/ELF)
-        "test", // host-only: unit tests and the shared sample-input builder
+        "test", // host-only: unit tests, test support and the reference tests
         "tools", // host-only: fixture generator
     },
 }

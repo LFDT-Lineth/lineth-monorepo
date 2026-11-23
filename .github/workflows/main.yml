@@ -60,7 +60,6 @@ jobs:
       # E2E change detection
       has-changes-requiring-e2e-testing: ${{ steps.e2e.outputs.zkevm }}
       has-changes-requiring-riscv-e2e-testing: ${{ steps.e2e.outputs.riscv }}
-      riscv-prover-mode: ${{ steps.e2e.outputs.riscv-prover-mode }}
       # CodeQL
       codeql-languages: ${{ steps.codeql-languages.outputs.languages }}
     steps:
@@ -198,7 +197,8 @@ jobs:
     secrets: inherit
 
   manual-docker-build-and-e2e-tests:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: an approval gate with a single echo step.
+    runs-on: ubuntu-24.04
     needs: [plan, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
@@ -264,7 +264,7 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.plan.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
-  # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
+  # Not a required check. Runs dev-zkvm with prover-ray and the guest built from this commit.
   run-riscv-e2e-tests:
     permissions:
       contents: read
@@ -288,7 +288,6 @@ jobs:
     with:
       image_tag: ${{ needs.plan.outputs.commit_tag }}
       stack: riscv
-      riscv_prover_mode: ${{ needs.plan.outputs.riscv-prover-mode }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
     secrets: inherit
@@ -337,7 +336,8 @@ jobs:
           needs.plan.result == 'success'
         )
       )
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub API.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       deployments: write

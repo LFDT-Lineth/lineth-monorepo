@@ -1,7 +1,6 @@
 package fri
 
 import (
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -19,14 +18,15 @@ type layerTree interface {
 // in the rounds before its largest size opened joins.
 type zeroLayerTree struct {
 	height int
+	hash   MerkleHash
 }
 
 // digest returns the node of the zero tree whose subtree has height h: the
 // zero leaf for h = 0, then C(z_{h-1}, z_{h-1}).
-func (zeroLayerTree) digest(h int) field.Octuplet {
+func (t zeroLayerTree) digest(h int) field.Octuplet {
 	var z field.Octuplet
 	for range h {
-		z = poseidon2.Compress(z, z)
+		z = t.hash.compress(z, z)
 	}
 	return z
 }
@@ -67,7 +67,7 @@ func (t zeroLayerTree) OpenBranchToDepth(idx, depth int) Branch {
 	node := field.Octuplet{}
 	for i := len(branch.Siblings) - 1; i >= 0; i-- {
 		branch.Siblings[i] = node
-		node = poseidon2.Compress(node, node)
+		node = t.hash.compress(node, node)
 	}
 	return branch
 }

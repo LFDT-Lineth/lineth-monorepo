@@ -11,5 +11,7 @@
         "start.s",
         "linker_script.ld",
         "program_id.zig",
+        // The host module that runs a guest ELF under zkc.
+        "zkc.zig",
     },
 }

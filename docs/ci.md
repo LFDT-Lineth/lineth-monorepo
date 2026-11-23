@@ -71,7 +71,7 @@
    - **`has-changes-requiring-linea-besu-package-build`** - `true` when the sequencer plugin, tracer, tracer-constraints, linea-besu, or linea-besu-package changed.
 4. **besuCommit check** - `besu-commit-changed` is `true` when `besuCommit` in `gradle/libs.versions.toml` changed; it gates `prepare-linea-besu-maven`.
 5. **Image tags** (`.github/actions/compute-version-tags`) - `commit_tag` (short SHA of the PR head or pushed commit) and `develop_tag`.
-6. **E2E change detection** (`.github/actions/e2e-detect-changes`) - a stricter path filter plus `make e2e-ci-detect-changes`, which ignores test and doc files. Outputs `has-changes-requiring-e2e-testing` (zkEVM stack), `has-changes-requiring-riscv-e2e-testing` and `riscv-prover-mode`.
+6. **E2E change detection** (`.github/actions/e2e-detect-changes`) - a stricter path filter plus `make e2e-ci-detect-changes`, which ignores test and doc files. Outputs `has-changes-requiring-e2e-testing` (zkEVM stack) and `has-changes-requiring-riscv-e2e-testing`.
 7. **CodeQL languages** (`.github/actions/codeql-languages`) - which languages `code-analysis` should scan.
 
 Draft PRs skip `plan`, and therefore the whole pipeline.
@@ -199,6 +199,21 @@ Docker images are built during PR CI so they can be used for E2E, but they are o
 
 - On PRs: runs are cancelled in-progress when a new commit is pushed (saves runner cost).
 - On `main`: runs are never cancelled; all runs complete in order.
+
+### When a job fails
+
+Use **Re-run failed jobs**, not **Re-run all jobs**. GitHub re-runs the failed jobs and the jobs that depend on them, and keeps every result that already passed. Re-running all jobs repeats `plan`, CodeQL and every passing test on fresh runners.
+
+The Jacoco coverage report only runs when every JVM test job that ran passed, so it is skipped after a test failure and runs again when the failed tests are re-run.
+
+These failures are not caused by your change. Re-run the failed jobs:
+
+| Log shows | Cause |
+|---|---|
+| `The runner has received a shutdown signal` | The self-hosted runner was stopped mid-job. |
+| `Execution failed for task ':spotlessInternalRegisterDependencies'` / `Cannot fingerprint input property 'steps'` | An intermittent Spotless plugin error during Gradle setup. |
+
+If a test fails, passes on re-run, and you didn't change it, report it as flaky.
 
 ---
 

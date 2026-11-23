@@ -67,4 +67,5 @@ func TestProve_DevMockReadsNoGuest(t *testing.T) {
 	require.NoError(t, err)
 	res := c.Prove(context.Background(), Job{ID: "dev-mock", GuestProgramID: [32]byte{1}})
 	assert.Equal(t, ResultStatusOK, res.Status, "dev-mock runs no guest, so it must not read the guests folder")
+	assert.Equal(t, [32]byte{}, res.ProgramVK, "dev-mock has no proof, so its VK should be zero, not the guest program ID")
 }

@@ -126,6 +126,67 @@
     "unit/fixed_array_22.zkc": {
         "0": "zkc trace/check failed"
     },
+    "unit/native_01.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed",
+        "5": "prover failed",
+        "6": "prover failed",
+        "7": "prover failed"
+    },
+    "unit/native_02.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed"
+    },
+    "unit/native_03.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed",
+        "5": "prover failed",
+        "6": "prover failed",
+        "7": "prover failed",
+        "8": "prover failed",
+        "9": "prover failed"
+    },
+    "unit/native_04.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed",
+        "5": "prover failed",
+        "6": "prover failed",
+        "7": "prover failed",
+        "8": "prover failed",
+        "9": "prover failed"
+    },
+    "unit/native_05.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed"
+    },
+    "unit/native_06.zkc": {
+        "0": "prover failed",
+        "1": "prover failed",
+        "2": "prover failed",
+        "3": "prover failed",
+        "4": "prover failed",
+        "5": "prover failed",
+        "6": "prover failed",
+        "7": "prover failed",
+        "8": "prover failed",
+        "9": "prover failed",
+        "10": "prover failed"
+    },
     "unit/switch_19.zkc": {
         "0": "zkc trace/check failed",
         "1": "zkc trace/check failed",

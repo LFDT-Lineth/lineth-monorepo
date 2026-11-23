@@ -62,15 +62,15 @@ pub fn chunkOf(a: Allocator, blob: *const [blob_payload.blob_len]u8, commitment:
     proof_bytes.* = proof;
     return .{
         .chunk_hash = da_stream.versionedHash(commitment_bytes),
-        .is_calldata = false,
-        .blob_bytes = blob,
-        .kzg_commitment = commitment_bytes,
-        .kzg_proof = proof_bytes,
+        .is_calldata = .{ .value = false },
+        .blob_bytes = .{ .bytes = blob },
+        .kzg_commitment = .{ .bytes = commitment_bytes },
+        .kzg_proof = .{ .bytes = proof_bytes },
     };
 }
 
 pub fn calldataChunk(bytes: []const u8) Chunk {
-    return .{ .chunk_hash = keccak(bytes), .is_calldata = true, .calldata_bytes = bytes };
+    return .{ .chunk_hash = keccak(bytes), .is_calldata = .{ .value = true }, .calldata_bytes = .{ .bytes = bytes } };
 }
 
 /// The dataRollingHash after folding `chunks` onto `from`.
