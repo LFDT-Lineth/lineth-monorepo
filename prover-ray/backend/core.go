@@ -438,7 +438,7 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen
 	return classifyGuestOutput(output, errs)
 }
 
-// executeGuestPublicInputs runs the guest under ZkC Execute and returns its
+// executeGuestPublicInputs runs the guest under zkc Execute and returns its
 // 0x0003 output (hash || frame) and the public inputs decoded from it.
 func executeGuestPublicInputs(
 	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool,
