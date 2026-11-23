@@ -20,7 +20,7 @@ from rollup_spec import stateless_input as ref
 # The spec's reference l2-execution response: its public inputs are what the
 # guest output frame encodes.
 L2_EXECUTION_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
-# The spec's reference rollup request: the rollup guest input encodes it.
+# The spec's reference rollup request.
 ROLLUP_REQUEST = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.request.json"
 
 

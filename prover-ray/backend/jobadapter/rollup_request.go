@@ -43,8 +43,7 @@ const (
 	l2MessagingBlocksOffsetsKey = "l2MessagingBlocksOffsets"
 )
 
-// ConflationWitness and ChunkWitness are the guest input types, so the request
-// decodes straight into what the rollup input encodes.
+// The request decodes straight into the guest input types.
 type (
 	ConflationWitness = ssz.ConflationWitness
 	ChunkWitness      = ssz.ChunkWitness

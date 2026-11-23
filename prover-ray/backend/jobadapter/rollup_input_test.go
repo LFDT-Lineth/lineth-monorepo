@@ -9,14 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestBuildRollupInput_MatchesSpec checks that the rollup guest input built from
-// a request equals the bytes rollup_spec encodes for the same request
-// (utils/ssz/testdata/generate.py).
+// The goldens come from rollup_spec, see utils/ssz/testdata/generate.py.
 func TestBuildRollupInput_MatchesSpec(t *testing.T) {
 	reference := readSpecFixture(t, referenceRollupRequest)
 
-	// No boundary hash, which the spec only allows with no tail bytes, and a
-	// calldata chunk in place of the blob.
+	// No boundary hash (the spec needs no tail bytes then) and a calldata chunk.
 	obj := unmarshalObject(t, reference)
 	pr := obj[proofRequestKey].(map[string]any)
 	pr[parentDataTailTakeBytesKey] = 0

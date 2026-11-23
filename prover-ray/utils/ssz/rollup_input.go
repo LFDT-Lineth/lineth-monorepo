@@ -6,13 +6,10 @@ import (
 	"slices"
 )
 
-// This file encodes the rollup guest input (schema 0x0004), mirroring
-// rollup_spec/rollup_ssz.py::encode_rollup_input and the guest's
-// riscv-guests/rollup/src/rollup_ssz.zig. Golden-vector pinned against the
-// Python reference in backend/jobadapter/rollup_input_test.go.
+// This file encodes the rollup guest input (schema 0x0004), as
+// rollup_spec/rollup_ssz.py::encode_rollup_input.
 
-// rollupInputSchemaID is the two-byte big-endian schema id framing the 0x0004
-// rollup input.
+// rollupInputSchemaID is the big-endian schema id of the rollup input.
 var rollupInputSchemaID = []byte{0x00, 0x04}
 
 // ConflationWitness is one conflation: the RLP blocks its paired proof attests.
@@ -34,9 +31,8 @@ type ChunkWitness struct {
 	KZGProof      []byte
 }
 
-// L2ExecutionPublicInputs are the public inputs of an l2-execution proof. The
-// fields are those of backend.PublicInputs, in the same order, so that one
-// converts to the other; the wire order is in encodeL2ExecutionPublicInputs.
+// L2ExecutionPublicInputs has the fields of backend.PublicInputs, in the same
+// order, so that one converts to the other.
 type L2ExecutionPublicInputs struct {
 	ParentBlockHash                       [32]byte
 	EndBlockHash                          [32]byte
@@ -56,8 +52,7 @@ type L2ExecutionPublicInputs struct {
 	L2L1Messages                          [][32]byte
 }
 
-// L2ExecutionProof is one l2-execution proof the rollup guest verifies, with
-// the program VK it is verified under.
+// L2ExecutionProof is an l2-execution proof the rollup guest verifies under ProgramVk.
 type L2ExecutionProof struct {
 	PublicInputs     L2ExecutionPublicInputs
 	StartBlockNumber uint64
@@ -65,8 +60,7 @@ type L2ExecutionProof struct {
 	ProgramVk        [32]byte
 }
 
-// RollupInput is the decoded RollupProofPrivateInput ready to encode.
-// BoundaryPrevDataRollingHash is optional.
+// RollupInput is the rollup guest input. BoundaryPrevDataRollingHash is optional.
 type RollupInput struct {
 	ParentDataRollingHash       [32]byte
 	ParentDataTailTakeBytes     uint64
@@ -77,8 +71,7 @@ type RollupInput struct {
 	BoundaryPrevDataRollingHash *[32]byte
 }
 
-// EncodeRollupInput encodes a RollupInput into framed SSZ bytes (0x0004 schema
-// id) that the rollup guest reads.
+// EncodeRollupInput encodes in as 0x0004 || SSZ(RollupProofPrivateInput).
 func EncodeRollupInput(in RollupInput) ([]byte, error) {
 	conflations, err := encodeList(in.Conflations, encodeConflationWitness)
 	if err != nil {
@@ -147,8 +140,6 @@ func encodeChunkWitness(c ChunkWitness) ([]byte, error) {
 	)
 }
 
-// encodeL2ExecutionProof encodes the verifiable proof: the proof (public
-// inputs, start block, proof bytes), then the program VK.
 func encodeL2ExecutionProof(p L2ExecutionProof) ([]byte, error) {
 	publicInputs, err := encodeL2ExecutionPublicInputs(p.PublicInputs)
 	if err != nil {
@@ -165,8 +156,7 @@ func encodeL2ExecutionProof(p L2ExecutionProof) ([]byte, error) {
 	return sszContainer(variable(proof), fixed(p.ProgramVk[:]))
 }
 
-// encodeL2ExecutionPublicInputs encodes the public inputs in the wire order of
-// the l2-execution guest output (0x0003).
+// encodeL2ExecutionPublicInputs uses the field order of the 0x0003 guest output.
 func encodeL2ExecutionPublicInputs(pi L2ExecutionPublicInputs) ([]byte, error) {
 	messages := make([][]byte, len(pi.L2L1Messages))
 	for i := range pi.L2L1Messages {
