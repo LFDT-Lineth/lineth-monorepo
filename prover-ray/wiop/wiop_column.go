@@ -43,6 +43,10 @@ type Module struct {
 	// via [WithModuleSize] instead of being fixed once via [Module.SetSize].
 	// Dynamic modules always report IsSized() == false from the static API.
 	isDynamic bool
+	// pinned marks a module that was dynamic and was given a fixed size by
+	// [System.FixDynamicSizes]. It only improves the overflow error: such a
+	// size is a measured plan, and overflowing it means the plan is stale.
+	pinned bool
 	// index is the position of this module in [System.Modules]. Set once at
 	// registration time by [System.NewModule] and used to construct column IDs.
 	index int

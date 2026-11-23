@@ -343,7 +343,7 @@ func TestCompileFull_AuditReduced(t *testing.T) {
 func TestCompileFull_FixDynamicModuleSizes(t *testing.T) {
 	sc := wioptest.NewDynamicQuadraticVanishingScenario()
 	require.NoError(t, compilers.CompileFull(sc.Sys,
-		compilers.FixDynamicModuleSizes(map[int]int{0: 16}),
+		compilers.FixDynamicModuleSizes(wiop.ModuleSizes{"dyn-quad/mod": 16}),
 		compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
 	require.False(t, sc.Sys.Modules[0].IsDynamic(), "the module must be static after compilation")
 	require.Equal(t, 16, sc.Sys.Modules[0].Size())
@@ -355,10 +355,11 @@ func TestCompileFull_FixDynamicModuleSizes(t *testing.T) {
 	// The scenario assigns 8 rows: a fixed size of 4 cannot hold them.
 	small := wioptest.NewDynamicQuadraticVanishingScenario()
 	require.NoError(t, compilers.CompileFull(small.Sys,
-		compilers.FixDynamicModuleSizes(map[int]int{0: 4}),
+		compilers.FixDynamicModuleSizes(wiop.ModuleSizes{"dyn-quad/mod": 4}),
 		compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
 	require.PanicsWithValue(t,
-		`wiop: AssignColumn: column "dyn-quad/col" has data length 8 which overflows module "dyn-quad/mod" size 4`,
+		`wiop: AssignColumn: column "dyn-quad/col" has data length 8 which overflows module "dyn-quad/mod", pinned to size 4 `+
+			`by System.FixDynamicSizes: the size plan is stale, re-measure it (see System.MeasureDynamicSizes)`,
 		func() { small.Sys.Prove(small.AssignHonest) })
 }
 
@@ -366,7 +367,7 @@ func TestCompileFull_FixDynamicModuleSizes(t *testing.T) {
 // fails compilation before any pass runs, naming the cause.
 func TestCompileFull_FixDynamicModuleSizesErrors(t *testing.T) {
 	sc := wioptest.NewDynamicQuadraticVanishingScenario()
-	err := compilers.CompileFull(sc.Sys, compilers.FixDynamicModuleSizes(map[int]int{0: 12}))
+	err := compilers.CompileFull(sc.Sys, compilers.FixDynamicModuleSizes(wiop.ModuleSizes{"dyn-quad/mod": 12}))
 	require.ErrorContains(t, err, "compilers: wiop: FixDynamicSizes")
 	require.ErrorContains(t, err, "size 12 is not a power of two")
 	require.True(t, sc.Sys.Modules[0].IsDynamic(), "a rejected size map must leave the module dynamic")
@@ -374,7 +375,7 @@ func TestCompileFull_FixDynamicModuleSizesErrors(t *testing.T) {
 
 	require.PanicsWithValue(t, "compilers: FixDynamicModuleSizes given twice", func() {
 		_ = compilers.CompileFull(wioptest.NewDynamicQuadraticVanishingScenario().Sys,
-			compilers.FixDynamicModuleSizes(map[int]int{0: 8}),
-			compilers.FixDynamicModuleSizes(map[int]int{0: 16}))
+			compilers.FixDynamicModuleSizes(wiop.ModuleSizes{"dyn-quad/mod": 8}),
+			compilers.FixDynamicModuleSizes(wiop.ModuleSizes{"dyn-quad/mod": 16}))
 	}, "giving the option twice must panic")
 }

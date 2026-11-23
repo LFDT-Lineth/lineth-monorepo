@@ -217,6 +217,12 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 			"wiop: AssignColumn: data length of a dynamic module may not be updated anymore after round %d: %v -> %v",
 			run.System.DynamicSizeRound, dataLen, run.dynamicSizes[m.index],
 		))
+	} else if m.IsSized() && dataLen > m.Size() && m.pinned {
+		panic(fmt.Sprintf(
+			"wiop: AssignColumn: column %q has data length %d which overflows module %q, pinned to size %d "+
+				"by System.FixDynamicSizes: the size plan is stale, re-measure it (see System.MeasureDynamicSizes)",
+			col.Context.Path(), dataLen, m.Context.Path(), m.Size(),
+		))
 	} else if m.IsSized() && dataLen > m.Size() {
 		panic(fmt.Sprintf(
 			"wiop: AssignColumn: column %q has data length %d which overflows module %q size %d",

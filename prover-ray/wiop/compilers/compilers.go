@@ -76,7 +76,7 @@ type options struct {
 	pcsOptions        []pcs.Option
 	messageBusOptions []messagebus.Option
 	withoutPCS        bool
-	fixedSizes        map[int]int
+	fixedSizes        wiop.ModuleSizes
 	hooks             []hookRegistration
 }
 
@@ -114,11 +114,12 @@ func ConfigureMessageBus(opts ...messagebus.Option) Option {
 // pass and its hooks. It conflicts with [ConfigurePCS] and with a previously
 // configured PCS selection.
 // FixDynamicModuleSizes turns every dynamic module into a statically sized
-// one before any pass runs, via [wiop.System.FixDynamicSizes]: sizes maps each
-// dynamic module's index in sys.Modules to its fixed size. Use it to compile
-// the terminal recursion layer, whose gnark verifier circuit needs a proof
-// shape independent of the trace.
-func FixDynamicModuleSizes(sizes map[int]int) Option {
+// one before any pass runs, via [wiop.System.FixDynamicSizesByPath]: sizes
+// maps each dynamic module's path to its fixed size. Use it to compile the
+// terminal recursion layer, whose gnark verifier circuit needs a proof shape
+// independent of the trace; measure the sizes with
+// [wiop.System.MeasureDynamicSizes].
+func FixDynamicModuleSizes(sizes wiop.ModuleSizes) Option {
 	if len(sizes) == 0 {
 		utils.Panic("compilers: FixDynamicModuleSizes requires at least one size")
 	}
@@ -126,7 +127,7 @@ func FixDynamicModuleSizes(sizes map[int]int) Option {
 		if o.fixedSizes != nil {
 			utils.Panic("compilers: FixDynamicModuleSizes given twice")
 		}
-		o.fixedSizes = make(map[int]int, len(sizes))
+		o.fixedSizes = make(wiop.ModuleSizes, len(sizes))
 		for k, v := range sizes {
 			o.fixedSizes[k] = v
 		}
@@ -201,7 +202,7 @@ func (cfg *options) apply(sys *wiop.System) error {
 	// Fixing sizes comes first: the option validators and every pass read the
 	// module sizes.
 	if cfg.fixedSizes != nil {
-		if err := sys.FixDynamicSizes(cfg.fixedSizes); err != nil {
+		if err := sys.FixDynamicSizesByPath(cfg.fixedSizes); err != nil {
 			return fmt.Errorf("compilers: %w", err)
 		}
 	}

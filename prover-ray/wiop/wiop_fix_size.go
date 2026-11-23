@@ -89,6 +89,7 @@ func (sys *System) FixDynamicSizes(sizes map[int]int) error {
 			continue
 		}
 		mod.isDynamic = false
+		mod.pinned = true
 		mod.size = sizes[k]
 	}
 	return nil
