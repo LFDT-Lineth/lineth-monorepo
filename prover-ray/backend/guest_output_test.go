@@ -139,7 +139,7 @@ func withOffset(framed []byte, pos int, v uint32) []byte {
 
 func TestDecodeGuestPublicInputs(t *testing.T) {
 	hash, framed := referenceFrame(t)
-	require.NoError(t, checkGuestOutputFrame(hash, framed, guestOutputSchemaID),
+	require.NoError(t, checkGuestOutputFrame(hash, framed, l2ExecutionOutputSchemaID),
 		"the reference output should pass the frame check")
 
 	got, err := decodeGuestPublicInputs(framed)

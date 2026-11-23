@@ -27,49 +27,49 @@ func specFrame(schema uint16, pi []byte) []byte {
 var samplePublicInputs = []byte("public inputs")
 
 func TestClassifyGuestOutput(t *testing.T) {
-	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
+	valid := specFrame(l2ExecutionOutputSchemaID, samplePublicInputs)
 
 	t.Run("valid output is returned", func(t *testing.T) {
-		got, err := classifyGuestOutput(guestOutputs(valid), nil, guestOutputSchemaID)
+		got, err := classifyGuestOutput(guestOutputs(valid), nil, l2ExecutionOutputSchemaID)
 		require.NoError(t, err)
 		assert.Equal(t, bitsFromBytes(valid...), got)
 	})
 
 	t.Run("guest rejection is distinguished from a VM bug", func(t *testing.T) {
 		errs := []error{&vm.Failure{Message: "block 42 invalid: bad state root"}}
-		_, err := classifyGuestOutput(nil, errs, guestOutputSchemaID)
+		_, err := classifyGuestOutput(nil, errs, l2ExecutionOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest rejected the block")
 		assert.Contains(t, err.Error(), "bad state root")
 	})
 
 	t.Run("internal VM error is reported as such", func(t *testing.T) {
-		_, err := classifyGuestOutput(nil, []error{fmt.Errorf("interpreter panic")}, guestOutputSchemaID)
+		_, err := classifyGuestOutput(nil, []error{fmt.Errorf("interpreter panic")}, l2ExecutionOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest VM execution failed")
 	})
 
 	t.Run("missing output means the block was rejected", func(t *testing.T) {
-		_, err := classifyGuestOutput(map[string]bit.Array{"other": bitsFromBytes(1)}, nil, guestOutputSchemaID)
+		_, err := classifyGuestOutput(map[string]bit.Array{"other": bitsFromBytes(1)}, nil, l2ExecutionOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
 
 	t.Run("a single blob in guest_output is not the split frame", func(t *testing.T) {
 		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid...)}
-		_, err := classifyGuestOutput(out, nil, guestOutputSchemaID)
+		_, err := classifyGuestOutput(out, nil, l2ExecutionOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), fmt.Sprintf("guest wrote %d bytes to guest_output, want the 32-byte hash", len(valid)))
 	})
 
 	t.Run("hash without guest_log is reported", func(t *testing.T) {
 		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid[:guestOutputHashSize]...)}
-		_, err := classifyGuestOutput(out, nil, guestOutputSchemaID)
+		_, err := classifyGuestOutput(out, nil, l2ExecutionOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest wrote the hash but no guest_log")
 	})
 
-	badHash := specFrame(guestOutputSchemaID, samplePublicInputs)
+	badHash := specFrame(l2ExecutionOutputSchemaID, samplePublicInputs)
 	badHash[0] ^= 0xff
 
 	rejected := map[string]struct {
@@ -82,7 +82,7 @@ func TestClassifyGuestOutput(t *testing.T) {
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {
-			_, err := classifyGuestOutput(guestOutputs(tc.out), nil, guestOutputSchemaID)
+			_, err := classifyGuestOutput(guestOutputs(tc.out), nil, l2ExecutionOutputSchemaID)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
 			assert.Contains(t, err.Error(), tc.wantErr)
@@ -95,7 +95,7 @@ func TestClassifyGuestOutput(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, rollup, got.Bytes())
 
-		_, err = classifyGuestOutput(guestOutputs(rollup), nil, guestOutputSchemaID)
+		_, err = classifyGuestOutput(guestOutputs(rollup), nil, l2ExecutionOutputSchemaID)
 		require.ErrorContains(t, err, "schema id is 0x0005, want 0x0003")
 		_, err = classifyGuestOutput(guestOutputs(valid), nil, rollupOutputSchemaID)
 		assert.ErrorContains(t, err, "schema id is 0x0003, want 0x0005")

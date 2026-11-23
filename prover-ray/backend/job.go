@@ -99,7 +99,8 @@ type PublicInputs struct {
 // RollupPublicInputs carries the public output fields of the rollup response.
 // dev-zkvm and dev-partial decode them from the rollup guest's 0x0005 output.
 //
-// Field names and wire order follow the getZkRollupProofV1 response schema.
+// Field names follow the getZkRollupProofV1 response schema; the field order is
+// the SSZ order of the rollup guest output.
 type RollupPublicInputs struct {
 	EndBlockNumber                        uint64
 	EndBlockTimestamp                     uint64

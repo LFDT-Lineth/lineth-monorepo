@@ -23,8 +23,8 @@ func decodeGuestPublicInputs(framed []byte) (PublicInputs, error) {
 	if len(framed) < guestOutputSchemaIDSize {
 		return PublicInputs{}, fmt.Errorf("%d bytes, shorter than the schema id", len(framed))
 	}
-	if id := binary.BigEndian.Uint16(framed); id != guestOutputSchemaID {
-		return PublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, guestOutputSchemaID)
+	if id := binary.BigEndian.Uint16(framed); id != l2ExecutionOutputSchemaID {
+		return PublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, l2ExecutionOutputSchemaID)
 	}
 	body := framed[guestOutputSchemaIDSize:]
 	if len(body) < publicInputsFixedSize {

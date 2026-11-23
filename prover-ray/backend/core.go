@@ -48,17 +48,17 @@ const (
 // Spec frame of the guest output: the schema id is 0x0003 for the l2-execution
 // guest and 0x0005 for the rollup guest.
 const (
-	guestOutputSchemaID     = 0x0003
-	rollupOutputSchemaID    = 0x0005
-	guestOutputSchemaIDSize = 2
-	guestOutputHashSize     = 32
+	l2ExecutionOutputSchemaID = 0x0003
+	rollupOutputSchemaID      = 0x0005
+	guestOutputSchemaIDSize   = 2
+	guestOutputHashSize       = 32
 )
 
 // outputSchemaID returns the schema id of the guest output for proof type t.
 func outputSchemaID(t ProofType) (uint16, error) {
 	switch t {
 	case ProofTypeL2Execution:
-		return guestOutputSchemaID, nil
+		return l2ExecutionOutputSchemaID, nil
 	case ProofTypeRollup:
 		return rollupOutputSchemaID, nil
 	}
@@ -489,10 +489,10 @@ func executeGuestPublicInputs(
 // classifyGuestOutput turns a ZkC Execute result into either the guest's
 // validated output, framed with schema, or an error that distinguishes a guest
 // block rejection (a recognized [vm.Failure], the guest's own exit on an
-// invalid block) from an internal VM failure (a prover-side bug). A guest that rejects the block writes
-// no output, so a missing guest_output is also a rejection. The guest_output
-// must be exactly the hash, the only bytes the proof binds, and the guest_log
-// the schema id and public inputs it commits to.
+// invalid block) from an internal VM failure (a prover-side bug). A guest that
+// rejects the block writes no output, so a missing guest_output is also a
+// rejection. The guest_output must be exactly the hash, the only bytes the
+// proof binds, and the guest_log the schema id and public inputs it commits to.
 func classifyGuestOutput(output map[string]bit.Array, errs []error, schema uint16) (res bit.Array, err error) {
 	if len(errs) > 0 {
 		return res, guestError(errors.Join(errs...))
