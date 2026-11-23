@@ -198,6 +198,8 @@ class MaruApp internal constructor(
 
   override fun close() {
     Helpers.closeAll(
+      { validatorEngineApiEndpoint?.close() },
+      { followerEngineApiEndpoints.values.forEach(EngineApiEndpoint::close) },
       { l2EthWeb3j?.shutdown() },
       p2pNetwork::close,
       { vertx.close() },

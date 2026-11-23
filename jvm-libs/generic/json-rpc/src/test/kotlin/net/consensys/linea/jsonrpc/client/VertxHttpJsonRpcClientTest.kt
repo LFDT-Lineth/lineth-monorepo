@@ -55,6 +55,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class VertxHttpJsonRpcClientTest {
   private lateinit var vertx: Vertx
@@ -527,6 +528,18 @@ class VertxHttpJsonRpcClientTest {
 
     client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList())).get()
       .also { response -> assertThat(response).isEqualTo(Ok(JsonRpcSuccessResponse(1, "OK"))) }
+  }
+
+  @Test
+  fun close_failsInFlightRequests() {
+    testingServer.delayResponses("engine_newPayloadV1", 5.seconds)
+    client = clientWithHooks(endpoint = testingServerEndpoint)
+
+    val inFlightRequest = client.makeRequest(JsonRpcRequestListParams("2.0", 1, "engine_newPayloadV1", emptyList()))
+    await().atMost(5.seconds.toJavaDuration()).until { testingServer.recordedRequests().isNotEmpty() }
+    client.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS)
+
+    assertThatThrownBy { inFlightRequest.get() }.isInstanceOf(ExecutionException::class.java)
   }
 
   private fun clientWithHooks(

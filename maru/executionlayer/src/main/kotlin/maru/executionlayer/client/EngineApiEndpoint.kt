@@ -15,21 +15,30 @@ import org.apache.logging.log4j.Logger
 import java.net.URL
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 
-/** One execution-layer Engine API endpoint. The [EngineApiClient] of every fork shares its JSON-RPC transport. */
+/**
+ * One execution-layer Engine API endpoint. The [EngineApiClient] of every fork shares its JSON-RPC transport, which
+ * [close] closes, failing in-flight requests.
+ */
 class EngineApiEndpoint(
   private val endpoint: URL,
   private val rpcClient: JsonRpcV2Client,
   private val metricsFacade: MetricsFacade,
-) {
+) : AutoCloseable {
   private val clients = ConcurrentHashMap<ElFork, EngineApiClient>()
 
   fun clientFor(fork: ElFork): EngineApiClient =
     clients.computeIfAbsent(fork) { JsonRpcEngineApiClient(rpcClient, it, endpoint, metricsFacade) }
 
+  override fun close() {
+    rpcClient.close().get(CLOSE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+  }
+
   companion object {
-    /** Creates the endpoint; its HTTP client is released when [vertx] is closed. */
+    private const val CLOSE_TIMEOUT_SECONDS = 5L
+
     fun create(
       vertx: Vertx,
       metricsFacade: MetricsFacade,

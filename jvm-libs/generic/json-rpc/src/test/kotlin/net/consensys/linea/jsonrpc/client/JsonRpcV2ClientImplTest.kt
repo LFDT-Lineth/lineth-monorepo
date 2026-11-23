@@ -33,6 +33,7 @@ import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,6 +48,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class JsonRpcV2ClientImplTest {
   private lateinit var vertx: Vertx
@@ -657,6 +659,41 @@ class JsonRpcV2ClientImplTest {
       .cause()
       .isInstanceOf(TimeoutException::class.java)
       .hasMessageContaining("method=slowMethod")
+  }
+
+  @Test
+  fun `close fails in-flight requests of a single endpoint client`() {
+    assertCloseFailsInFlightRequests(serverCount = 1)
+  }
+
+  @Test
+  fun `close fails in-flight requests of a load-balanced client`() {
+    assertCloseFailsInFlightRequests(serverCount = 2)
+  }
+
+  private fun assertCloseFailsInFlightRequests(serverCount: Int) {
+    val servers = List(serverCount) {
+      TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true).apply {
+        handle("slowMethod") { "OK" }
+        delayResponses("slowMethod", 10.seconds)
+      }
+    }
+    val client = factory.createJsonRpcV2Client(
+      endpoints = servers.map { it.httpEndpoint.toURI() },
+      maxInflightRequestsPerClient = if (serverCount > 1) 1u else null,
+      retryConfig = defaultRetryConfig,
+      shallRetryRequestsClientBasePredicate = Predicate { false },
+    )
+
+    val inFlightRequests = List(serverCount) {
+      client.makeRequest(method = "slowMethod", params = emptyList<Any>(), resultMapper = { it })
+    }
+    await().atMost(5.seconds.toJavaDuration()).until { servers.all { it.recordedRequests().isNotEmpty() } }
+    client.close().get()
+
+    inFlightRequests.forEach { request ->
+      assertThatThrownBy { request.get() }.isInstanceOf(ExecutionException::class.java)
+    }
   }
 
   private fun replyRequestWith(statusCode: Int, body: String?) {

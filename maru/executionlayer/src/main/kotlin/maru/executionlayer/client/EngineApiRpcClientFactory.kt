@@ -22,8 +22,8 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * Builds the JSON-RPC transport for one execution-layer Engine API endpoint, to be shared by the [JsonRpcEngineApiClient]
- * of every fork. Requests are not retried, so callers keep control of retry policy. The underlying HTTP client is
- * released when [vertx] is closed.
+ * of every fork. Requests are not retried, so callers keep control of retry policy. The caller closes the returned
+ * client to release its HTTP connections.
  */
 object EngineApiRpcClientFactory {
   fun create(

@@ -66,6 +66,9 @@ class VertxHttpJsonRpcClient(
     defaultRequestTimeout?.let { setTimeout(it.inWholeMilliseconds) }
   }
 
+  /** Closes the underlying HTTP client immediately: in-flight requests fail and later requests are rejected. */
+  fun close(): Future<Void> = httpClient.close()
+
   private fun buildRequestOptions(timeoutOverride: Duration?): RequestOptions {
     val headers = requestHeadersProvider()
     val clearDefaultTimeout = timeoutOverride != null && defaultRequestTimeout != null

@@ -3,10 +3,12 @@ package net.consensys.linea.jsonrpc.client
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
+import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Level
@@ -219,24 +221,11 @@ class VertxHttpJsonRpcClientFactory(
       "endpoints set contains duplicates: $endpoints"
     }
 
-    // create base client
-    return if (maxInflightRequestsPerClient != null || endpoints.size > 1) {
-      createWithLoadBalancing(
-        endpoints = endpoints.map { it.toURL() }.toSet(),
-        maxInflightRequestsPerClient = maxInflightRequestsPerClient!!,
-        httpVersion = httpVersion,
-        requestObjectMapper = requestObjectMapper,
-        responseObjectMapper = responseObjectMapper,
-        defaultRequestTimeout = defaultRequestTimeout,
-        log = log,
-        requestResponseLogLevel = requestResponseLogLevel,
-        failuresLogLevel = failuresLogLevel,
-        requestHeadersProvider = requestHeadersProvider,
-        methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
-      )
-    } else {
+    // create the HTTP clients, owned and closed by the returned client
+    val httpClients = endpoints.map { endpoint ->
       create(
-        endpoint = endpoints.first().toURL(),
+        endpoint = endpoint.toURL(),
+        maxPoolSize = maxInflightRequestsPerClient?.toInt(),
         httpVersion = httpVersion,
         requestObjectMapper = requestObjectMapper,
         responseObjectMapper = responseObjectMapper,
@@ -247,22 +236,35 @@ class VertxHttpJsonRpcClientFactory(
         requestHeadersProvider = requestHeadersProvider,
         methodTimeoutOverrideProvider = methodTimeoutOverrideProvider,
       )
-    }.let {
-      // Wrap the client with a retryer
-      JsonRpcRequestRetryerV2(
-        vertx = vertx,
-        delegate = it,
-        requestRetry = retryConfig,
-        requestObjectMapper = requestObjectMapper,
-        shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate,
-        failuresLogLevel = failuresLogLevel,
-        log = log,
-      )
-    }.let {
+    }
+    val loadBalancingClient =
+      if (maxInflightRequestsPerClient != null || endpoints.size > 1) {
+        LoadBalancingJsonRpcClient.create(
+          rpcClients = httpClients,
+          requestLimitPerEndpoint = maxInflightRequestsPerClient!!,
+        )
+      } else {
+        null
+      }
+
+    // create base client
+    return JsonRpcRequestRetryerV2(
+      vertx = vertx,
+      delegate = (loadBalancingClient ?: httpClients.first()),
+      requestRetry = retryConfig,
+      requestObjectMapper = requestObjectMapper,
+      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate,
+      failuresLogLevel = failuresLogLevel,
+      log = log,
+    ).let {
       // Wrap the client with a v2 client helper
       JsonRpcV2ClientImpl(
         delegate = it,
         idSupplier = requestIdSupplier,
+        closeAction = {
+          loadBalancingClient?.close()
+          Future.all(httpClients.map { it.close() }).toSafeFuture().thenApply { }
+        },
       )
     }
   }
