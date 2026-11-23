@@ -74,6 +74,7 @@ type pipeline struct {
 	nativeRunnerBin string
 	shardSize       uint64
 	shardWorkers    int
+	gogen           bool
 	guestsDir       string
 	priority        int
 }
@@ -96,6 +97,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
 			shardSize:       cfg.Execution.ShardSize,
 			shardWorkers:    cfg.Execution.ShardWorkers,
+			gogen:           cfg.Execution.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
@@ -127,7 +129,7 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
 	core, err := backend.New(backend.Config{
-		Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize, ShardWorkers: p.shardWorkers,
+		Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize, ShardWorkers: p.shardWorkers, GoGen: p.gogen,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)

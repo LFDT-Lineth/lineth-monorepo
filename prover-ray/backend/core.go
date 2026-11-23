@@ -292,7 +292,7 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -326,7 +326,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 
 	// The lazy trace keeps no output, so Execute gives it. It also fails fast
 	// on a rejected block, before the trace.
-	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -431,17 +431,19 @@ func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 	return field.OctupletToBytes(risc5.GetProgramVK(c.sys, pub))
 }
 
-// executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
-// its validated 0x0003 output.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
-	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
+// executeGuest runs the guest under ZkC Execute (the no-trace path), with gogen
+// or the interpreter, and returns its validated 0x0003 output.
+func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool) (bit.Array, error) {
+	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))
 	return classifyGuestOutput(output, errs)
 }
 
 // executeGuestPublicInputs runs the guest under ZkC Execute and returns its
 // 0x0003 output (hash || frame) and the public inputs decoded from it.
-func executeGuestPublicInputs(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) ([]byte, PublicInputs, error) {
-	guestOutput, err := executeGuest(binf, inputs)
+func executeGuestPublicInputs(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool,
+) ([]byte, PublicInputs, error) {
+	guestOutput, err := executeGuest(binf, inputs, gogen)
 	if err != nil {
 		return nil, PublicInputs{}, err
 	}

@@ -61,6 +61,24 @@ shard_workers = 10
 	assert.Equal(t, 10, cfg.Execution.ShardWorkers)
 }
 
+// TestNewConfigFromFile_GoGen checks that gogen is on unless the config turns
+// it off.
+func TestNewConfigFromFile_GoGen(t *testing.T) {
+	const base = `
+version = "0.0.0-riscv"
+
+[execution]
+prover_mode = "dev-zkvm"
+`
+	cfg, err := NewConfigFromFile(writeConfig(t, base))
+	require.NoError(t, err)
+	assert.True(t, cfg.Execution.GoGen, "gogen should be on by default")
+
+	cfg, err = NewConfigFromFile(writeConfig(t, base+"gogen = false\n"))
+	require.NoError(t, err)
+	assert.False(t, cfg.Execution.GoGen)
+}
+
 func TestNewConfigFromFile_NegativeShardWorkers(t *testing.T) {
 	_, err := NewConfigFromFile(writeConfig(t, `
 version = "0.0.0-riscv"

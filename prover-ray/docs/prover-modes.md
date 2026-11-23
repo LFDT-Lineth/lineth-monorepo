@@ -81,4 +81,12 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 - `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size` and `shard_workers`. The prover logs a warning at startup when an ignored setting is set.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
 
+### gogen
+
+- `dev-zkvm` and `dev-partial` run the guest under ZkC Execute. With `gogen` in `[execution]` (on by default), zkc turns the circuit into Go code and builds it with the Go toolchain on `PATH`, instead of interpreting it.
+- Same output, much faster: a 2M-gas block runs in about 1s instead of 78s.
+- The first run in a new container builds the code (a few seconds, more memory); later runs reuse the Go build cache.
+- The prover image includes the Go toolchain. Outside the image, when `gogen` is on, the prover does not start if `go` is not on `PATH`. Set `gogen = false` to use the interpreter.
+- `dev-mock` ignores it. The tracing in `dev-partial` (the shards) still uses the interpreter.
+
 Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.

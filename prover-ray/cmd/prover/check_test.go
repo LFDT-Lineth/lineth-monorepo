@@ -187,6 +187,41 @@ func TestCheckPipeline_Warns(t *testing.T) {
 	}
 }
 
+// TestCheckPipeline_GoGen checks that gogen needs the Go toolchain on PATH in
+// the modes that run the guest under ZkC Execute, and that dev-mock, which runs
+// no guest, does not.
+func TestCheckPipeline_GoGen(t *testing.T) {
+	const needsGo = "execution.gogen needs the Go toolchain"
+	noGo := t.TempDir()
+	withGo := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(withGo, "go"), []byte("#!/bin/sh\n"), 0o700)) //nolint:gosec // G306: test stub
+
+	cases := map[string]struct {
+		path    string
+		p       pipeline
+		wantErr string
+	}{
+		"dev-zkvm without go":    {noGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, needsGo},
+		"dev-partial without go": {noGo, pipeline{mode: backend.ProverModeDevPartial, gogen: true}, needsGo},
+		"full without go":        {noGo, pipeline{mode: backend.ProverModeFull, gogen: true}, needsGo},
+		"dev-zkvm with go":       {withGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: true}, ""},
+		"gogen off without go":   {noGo, pipeline{mode: backend.ProverModeDevZkVM, gogen: false}, ""},
+		"dev-mock without go":    {noGo, pipeline{mode: backend.ProverModeDevMock, gogen: true}, ""},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("PATH", tc.path)
+			warnings, err := checkPipeline(backend.ProofTypeL2Execution, tc.p)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Empty(t, warnings, "gogen is on by default, so a mode that ignores it does not warn")
+		})
+	}
+}
+
 // TestModeTables_CoverEveryMode checks that every valid mode is in both
 // tables, and only valid modes: a mode missing from one is rejected as invalid.
 func TestModeTables_CoverEveryMode(t *testing.T) {

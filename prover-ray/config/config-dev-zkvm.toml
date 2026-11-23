@@ -10,3 +10,6 @@ guests_dir = "/opt/linea/prover-ray/guests"
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/opt/linea/prover-ray/requests"
+# Run the guest with gogen (Go code built with the Go toolchain on PATH) instead
+# of the interpreter: same output, much faster. On by default.
+gogen = true

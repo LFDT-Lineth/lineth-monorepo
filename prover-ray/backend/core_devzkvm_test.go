@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"os/exec"
 	"slices"
 	"testing"
 
@@ -143,5 +144,41 @@ func TestProveDevZkVM(t *testing.T) {
 		result := prove(shortInputs)
 		assert.Equal(t, ResultStatusFailed, result.Status)
 		assert.ErrorContains(t, result.Err, "fixed head")
+	})
+}
+
+// TestProveDevZkVM_GoGen checks that Config.GoGen reaches ZkC Execute: gogen
+// gives the same output as the interpreter, and it builds Go code, so it needs
+// the Go toolchain, which the interpreter does not.
+func TestProveDevZkVM_GoGen(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	core := func(gogen bool) *Core {
+		c, err := New(Config{Mode: ProverModeDevZkVM, GuestsDir: dir, GoGen: gogen})
+		require.NoError(t, err)
+		return c
+	}
+	interpreter, generated := core(false), core(true)
+	prove := func(c *Core) Result {
+		return c.Prove(context.Background(), Job{ID: "gogen", Type: ProofTypeL2Execution, GuestProgramID: id})
+	}
+
+	t.Run("same output as the interpreter", func(t *testing.T) {
+		_, err := exec.LookPath("go")
+		require.NoError(t, err, "the Go toolchain should be on PATH to run gogen")
+		want, got := prove(interpreter), prove(generated)
+		require.Equal(t, ResultStatusOK, want.Status, "interpreter err: %v", want.Err)
+		require.Equal(t, ResultStatusOK, got.Status, "gogen err: %v", got.Err)
+		assert.Equal(t, want.GuestOutput, got.GuestOutput)
+		assert.Equal(t, want.PublicInputs, got.PublicInputs)
+	})
+
+	t.Run("gogen needs the Go toolchain", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		result := prove(generated)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		require.ErrorContains(t, result.Err, "Go toolchain not found")
+		assert.Equal(t, ResultStatusOK, prove(interpreter).Status, "the interpreter needs no Go toolchain")
 	})
 }
