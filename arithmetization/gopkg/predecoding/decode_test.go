@@ -1257,7 +1257,7 @@ func TestDecodeImage(t *testing.T) {
 // EXECUTABLE IMAGE AND EXECUTABLE HELPERS
 // ------------------------------------------------------------
 // TestExecutableBlobs, TestExecutableSpanEnd, TestExecutableImage
-// checks the executable helpers.	
+// checks the executable helpers.
 // ------------------------------------------------------------
 
 // TestExecutableBlobs checks that executableBlobs keeps only executable blobs
@@ -1490,6 +1490,55 @@ func TestExecutableImage(t *testing.T) {
 		if base != tt.wantBase || records != tt.wantRecords || !bytes.Equal(image, tt.wantImage) {
 			t.Fatalf("%s: base=%#x records=%d image=%x, want base=%#x records=%d image=%x",
 				tt.name, base, records, image, tt.wantBase, tt.wantRecords, tt.wantImage)
+		}
+	}
+}
+
+
+// ------------------------------------------------------------
+// predecode
+// ------------------------------------------------------------
+
+// TestPredecode checks that predecode passes the base and the image rows of the
+// executable blobs through, and that an error from executableImage is returned.
+// Sorting, gaps, alignment, and the record cap are tested in executableImage.
+func TestPredecode(t *testing.T) {
+	addi := []byte{0x93, 0x82, 0x10, 0x00} // addi x5, x1, 1
+	add := []byte{0xb3, 0x82, 0x20, 0x00}  // add x5, x1, x2
+	tests := []struct {
+		name       string
+		blobs      []elfmapping.Blob
+		maxRecords uint64
+		wantBase   uint64
+		wantWords  []uint32
+		wantErr    bool
+	}{
+		{name: "error is returned", maxRecords: 1, wantErr: true},
+		{name: "empty", blobs: []elfmapping.Blob{
+			{Address: 0x2000, Executable: true},
+		}, maxRecords: 0, wantBase: 0x2000},
+		{name: "two words", blobs: []elfmapping.Blob{
+			{Address: 0x2000, Data: append(addi, add...), Executable: true},
+		}, maxRecords: 2, wantBase: 0x2000, wantWords: []uint32{0x00108293, 0x002082b3}},
+	}
+	for _, tt := range tests {
+		got, err := predecode(elfmapping.Program{Blobs: tt.blobs}, tt.maxRecords)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("%s: expected an error", tt.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		var want bitWriter
+		for _, word := range tt.wantWords {
+			decodeInstruction(&want, word)
+		}
+		if got.InstructionBase != tt.wantBase || !bytes.Equal(got.Decoded, want.buf) {
+			t.Fatalf("%s: base=%#x decoded=%x, want base=%#x decoded=%x",
+				tt.name, got.InstructionBase, got.Decoded, tt.wantBase, want.buf)
 		}
 	}
 }
