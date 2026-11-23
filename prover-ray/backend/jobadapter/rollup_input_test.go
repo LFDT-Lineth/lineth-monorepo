@@ -40,8 +40,9 @@ func TestBuildRollupInput_MatchesSpec(t *testing.T) {
 			require.NoError(t, err)
 			want, err := os.ReadFile("../../utils/ssz/testdata/" + tc.golden)
 			require.NoError(t, err)
-			assert.Equal(t, want, ssz.EncodeRollupInput(buildRollupInput(req)),
-				"the input should equal the spec's encoding of the request")
+			got, err := ssz.EncodeRollupInput(buildRollupInput(req))
+			require.NoError(t, err)
+			assert.Equal(t, want, got, "the input should equal the spec's encoding of the request")
 		})
 	}
 }

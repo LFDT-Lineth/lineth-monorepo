@@ -1,6 +1,10 @@
 package ssz
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+	"slices"
+)
 
 // This file encodes the rollup guest input (schema 0x0004), mirroring
 // rollup_spec/rollup_ssz.py::encode_rollup_input and the guest's
@@ -75,127 +79,123 @@ type RollupInput struct {
 
 // EncodeRollupInput encodes a RollupInput into framed SSZ bytes (0x0004 schema
 // id) that the rollup guest reads.
-func EncodeRollupInput(in RollupInput) []byte {
-	var w container
-	w.fixed(in.ParentDataRollingHash[:])
-	w.uint64(in.ParentDataTailTakeBytes)
-	w.uint64(in.ChainID)
-	w.variable(variableList(in.Conflations, encodeConflationWitness))
-	w.variable(variableList(in.Chunks, encodeChunkWitness))
-	w.variable(variableList(in.L2ExecutionProofs, encodeL2ExecutionProof))
+func EncodeRollupInput(in RollupInput) ([]byte, error) {
+	conflations, err := encodeList(in.Conflations, encodeConflationWitness)
+	if err != nil {
+		return nil, fmt.Errorf("rollup input conflations: %w", err)
+	}
+	chunks, err := encodeList(in.Chunks, encodeChunkWitness)
+	if err != nil {
+		return nil, fmt.Errorf("rollup input chunks: %w", err)
+	}
+	proofs, err := encodeList(in.L2ExecutionProofs, encodeL2ExecutionProof)
+	if err != nil {
+		return nil, fmt.Errorf("rollup input l2-execution proofs: %w", err)
+	}
 	// An optional hash is a list of at most one hash.
 	var boundary []byte
 	if in.BoundaryPrevDataRollingHash != nil {
 		boundary = in.BoundaryPrevDataRollingHash[:]
 	}
-	w.variable(boundary)
-
-	out := append([]byte(nil), rollupInputSchemaID...)
-	return append(out, w.bytes()...)
-}
-
-func encodeConflationWitness(c ConflationWitness) []byte {
-	var w container
-	w.variable(listWithOffsets(c.BlockRlps))
-	return w.bytes()
-}
-
-func encodeChunkWitness(c ChunkWitness) []byte {
-	var w container
-	w.fixed(c.ChunkHash[:])
-	if c.IsCalldata {
-		w.fixed([]byte{1})
-	} else {
-		w.fixed([]byte{0})
+	body, err := sszContainer(
+		fixed(in.ParentDataRollingHash[:]),
+		fixed(sszUint64(in.ParentDataTailTakeBytes)),
+		fixed(sszUint64(in.ChainID)),
+		variable(conflations),
+		variable(chunks),
+		variable(proofs),
+		variable(boundary),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("rollup input: %w", err)
 	}
-	w.variable(c.BlobBytes)
-	w.variable(c.CalldataBytes)
-	w.variable(c.KZGCommitment)
-	w.variable(c.KZGProof)
-	return w.bytes()
+	return append(slices.Clone(rollupInputSchemaID), body...), nil
+}
+
+// encodeList encodes an SSZ list of variable-size elements.
+func encodeList[T any](elems []T, encode func(T) ([]byte, error)) ([]byte, error) {
+	encoded := make([][]byte, len(elems))
+	for i, e := range elems {
+		var err error
+		if encoded[i], err = encode(e); err != nil {
+			return nil, fmt.Errorf("element %d: %w", i, err)
+		}
+	}
+	return sszListVariable(encoded)
+}
+
+func encodeConflationWitness(c ConflationWitness) ([]byte, error) {
+	blockRlps, err := sszListVariable(c.BlockRlps)
+	if err != nil {
+		return nil, err
+	}
+	return sszContainer(variable(blockRlps))
+}
+
+func encodeChunkWitness(c ChunkWitness) ([]byte, error) {
+	isCalldata := []byte{0}
+	if c.IsCalldata {
+		isCalldata[0] = 1
+	}
+	return sszContainer(
+		fixed(c.ChunkHash[:]),
+		fixed(isCalldata),
+		variable(c.BlobBytes),
+		variable(c.CalldataBytes),
+		variable(c.KZGCommitment),
+		variable(c.KZGProof),
+	)
 }
 
 // encodeL2ExecutionProof encodes the verifiable proof: the proof (public
 // inputs, start block, proof bytes), then the program VK.
-func encodeL2ExecutionProof(p L2ExecutionProof) []byte {
-	var proof container
-	proof.variable(encodeL2ExecutionPublicInputs(p.PublicInputs))
-	proof.uint64(p.StartBlockNumber)
-	proof.variable(p.Proof)
-
-	var w container
-	w.variable(proof.bytes())
-	w.fixed(p.ProgramVk[:])
-	return w.bytes()
+func encodeL2ExecutionProof(p L2ExecutionProof) ([]byte, error) {
+	publicInputs, err := encodeL2ExecutionPublicInputs(p.PublicInputs)
+	if err != nil {
+		return nil, err
+	}
+	proof, err := sszContainer(
+		variable(publicInputs),
+		fixed(sszUint64(p.StartBlockNumber)),
+		variable(p.Proof),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return sszContainer(variable(proof), fixed(p.ProgramVk[:]))
 }
 
 // encodeL2ExecutionPublicInputs encodes the public inputs in the wire order of
 // the l2-execution guest output (0x0003).
-func encodeL2ExecutionPublicInputs(pi L2ExecutionPublicInputs) []byte {
-	var messages, addresses, offsets []byte
-	for _, m := range pi.L2L1Messages {
-		messages = append(messages, m[:]...)
+func encodeL2ExecutionPublicInputs(pi L2ExecutionPublicInputs) ([]byte, error) {
+	messages := make([][]byte, len(pi.L2L1Messages))
+	for i := range pi.L2L1Messages {
+		messages[i] = pi.L2L1Messages[i][:]
 	}
-	for _, a := range pi.FilteredAddresses {
-		addresses = append(addresses, a[:]...)
+	addresses := make([][]byte, len(pi.FilteredAddresses))
+	for i := range pi.FilteredAddresses {
+		addresses[i] = pi.FilteredAddresses[i][:]
 	}
-	for _, o := range pi.L2MessagingBlocksOffsets {
-		offsets = binary.LittleEndian.AppendUint16(offsets, o)
+	offsets := make([][]byte, len(pi.L2MessagingBlocksOffsets))
+	for i, o := range pi.L2MessagingBlocksOffsets {
+		offsets[i] = binary.LittleEndian.AppendUint16(nil, o)
 	}
-
-	var w container
-	w.fixed(pi.ParentBlockHash[:])
-	w.fixed(pi.EndBlockHash[:])
-	w.uint64(pi.EndBlockNumber)
-	w.uint64(pi.EndBlockTimestamp)
-	w.variable(messages)
-	w.fixed(pi.EndL1L2BridgeRollingHash[:])
-	w.uint64(pi.EndL1L2BridgeRollingHashMessageNumber)
-	w.fixed(pi.DynamicChainConfigHash[:])
-	w.fixed(pi.ParentFtxRollingHash[:])
-	w.uint64(pi.ParentFtxNumber)
-	w.fixed(pi.EndFtxRollingHash[:])
-	w.uint64(pi.EndProcessedFtxNumber)
-	w.variable(addresses)
-	w.fixed(pi.TxFromsHash[:])
-	w.uint64(pi.BlockCount)
-	w.variable(offsets)
-	return w.bytes()
-}
-
-// variableList encodes an SSZ list of variable-size elements.
-func variableList[T any](elems []T, encode func(T) []byte) []byte {
-	encoded := make([][]byte, len(elems))
-	for i, e := range elems {
-		encoded[i] = encode(e)
-	}
-	return listWithOffsets(encoded)
-}
-
-// container builds an SSZ container in field order: a fixed-size field goes in
-// the fixed part, a variable-size one leaves a 4-byte offset there and its
-// bytes follow the fixed part.
-type container struct {
-	head  []byte
-	slots []int
-	tails [][]byte
-}
-
-func (c *container) fixed(b []byte) { c.head = append(c.head, b...) }
-
-func (c *container) uint64(v uint64) { c.head = binary.LittleEndian.AppendUint64(c.head, v) }
-
-func (c *container) variable(b []byte) {
-	c.slots = append(c.slots, len(c.head))
-	c.head = append(c.head, 0, 0, 0, 0)
-	c.tails = append(c.tails, b)
-}
-
-func (c *container) bytes() []byte {
-	out := append([]byte(nil), c.head...)
-	for i, slot := range c.slots {
-		binary.LittleEndian.PutUint32(out[slot:], uint32(len(out)))
-		out = append(out, c.tails[i]...)
-	}
-	return out
+	return sszContainer(
+		fixed(pi.ParentBlockHash[:]),
+		fixed(pi.EndBlockHash[:]),
+		fixed(sszUint64(pi.EndBlockNumber)),
+		fixed(sszUint64(pi.EndBlockTimestamp)),
+		variable(sszListFixed(messages)),
+		fixed(pi.EndL1L2BridgeRollingHash[:]),
+		fixed(sszUint64(pi.EndL1L2BridgeRollingHashMessageNumber)),
+		fixed(pi.DynamicChainConfigHash[:]),
+		fixed(pi.ParentFtxRollingHash[:]),
+		fixed(sszUint64(pi.ParentFtxNumber)),
+		fixed(pi.EndFtxRollingHash[:]),
+		fixed(sszUint64(pi.EndProcessedFtxNumber)),
+		variable(sszListFixed(addresses)),
+		fixed(pi.TxFromsHash[:]),
+		fixed(sszUint64(pi.BlockCount)),
+		variable(sszListFixed(offsets)),
+	)
 }
