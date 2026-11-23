@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.RepetitionInfo
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -177,8 +179,16 @@ class LoadBalancingJsonRpcClientTest {
     assertThat(requestsReceivedByClients).isEqualTo(requests.reversed())
   }
 
-  @Test
-  fun close_fails_queued_requests_and_leaves_in_flight_ones_to_their_caller() {
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun close_fails_queued_requests_and_leaves_in_flight_ones_to_their_caller(withPriorityComparator: Boolean) {
+    if (withPriorityComparator) {
+      loadBalancer = LoadBalancingJsonRpcClient.create(
+        rpcClients = listOf(rpcClient1, rpcClient2),
+        requestLimitPerEndpoint = maxInflightRequestsPerClient,
+        requestPriorityComparator = compareBy { it.id.toString().toInt() },
+      )
+    }
     val inflightPromises = List(4) { Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>() }
     whenever(rpcClient1.makeRequest(any(), any()))
       .thenReturn(inflightPromises[0].future())
@@ -187,12 +197,14 @@ class LoadBalancingJsonRpcClientTest {
       .thenReturn(inflightPromises[2].future())
       .thenReturn(inflightPromises[3].future())
     val inflightRequests = List(4) { loadBalancer.makeRequest(rpcRequest()) }
-    val queuedRequest = loadBalancer.makeRequest(rpcRequest())
+    val queuedRequests = List(2) { loadBalancer.makeRequest(rpcRequest()) }
 
     loadBalancer.close()
 
-    assertThat(queuedRequest.failed()).isTrue()
-    assertThat(queuedRequest.cause()).isInstanceOf(IllegalStateException::class.java)
+    assertThat(queuedRequests).allSatisfy { queuedRequest ->
+      assertThat(queuedRequest.failed()).isTrue()
+      assertThat(queuedRequest.cause()).isInstanceOf(IllegalStateException::class.java)
+    }
     assertThat(inflightRequests).allMatch { !it.isComplete }
     inflightPromises[0].complete(result(1, "client-1-result"))
     assertThat(inflightRequests[0].get()).isEqualTo(result(1, "client-1-result"))

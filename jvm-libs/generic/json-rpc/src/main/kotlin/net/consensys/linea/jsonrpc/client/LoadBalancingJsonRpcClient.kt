@@ -164,7 +164,7 @@ private constructor(
   /** Drops the queued requests, failing their futures; requests already dispatched are left to their client. */
   fun close() {
     val droppedRequests = readWriteLock.writeLock().withLock {
-      waitingQueue.toList().also { waitingQueue.clear() }
+      generateSequence { waitingQueue.poll() }.toList()
     }
     droppedRequests.forEach {
       it.promise.tryFail(IllegalStateException("JSON-RPC client closed before request was sent: request=${it.request}"))
