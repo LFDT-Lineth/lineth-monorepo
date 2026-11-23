@@ -4,9 +4,9 @@ const c = @import("lineth_da_h");
 const ef_conflations = @import("ef_conflations");
 const ef_fixtures = @import("ef_fixtures");
 const host = @import("host");
+const host_streams = @import("host_streams");
 const lineth_da = @import("lineth_da");
 
-const blob_kzg = lineth_da.encoding.blob_kzg;
 const c_api = host.c_api;
 const compressor = host.compressor;
 const stream = host.stream;
@@ -105,30 +105,191 @@ fn expectMessage(expected: []const u8) !void {
     try std.testing.expectEqualStrings(expected, std.mem.sliceTo(&message, 0));
 }
 
-test "a failed call returns its status, writes its message and leaves its result empty" {
-    const handle = try newCompressor(1);
+fn selected() !*const ef_conflations.Selection {
+    return ef_conflations.shared(std.testing.io, ef_fixtures.amsterdam_blocks);
+}
+
+fn compress(handle: *const c_api.Compressor, rlps: []const []const u8, out: *c_api.Compressed) !Status {
+    const inputs = try gpa.alloc(c_api.Bytes, rlps.len);
+    defer gpa.free(inputs);
+    for (rlps, inputs) |rlp, *input| input.* = .{ .ptr = rlp.ptr, .len = rlp.len };
+    return c_api.lineth_da_compress(handle, inputs.ptr, inputs.len, out, &message, message.len);
+}
+
+fn frameOf(compressed: c_api.Compressed) []const u8 {
+    return compressed.frame.?[0..compressed.frame_len];
+}
+
+fn openStream(position: *const stream.Position) !*c_api.Stream {
+    var handle: ?*c_api.Stream = null;
+    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_open(position, &handle, &message, message.len));
+    return handle.?;
+}
+
+fn appendFrame(handle: *c_api.Stream, frame: []const u8, end_block: u64, out: *c_api.SealedBlobs) Status {
+    return c_api.lineth_da_stream_append(handle, frame.ptr, frame.len, end_block, out, &message, message.len);
+}
+
+fn expectNoBlobs(sealed: c_api.SealedBlobs) !void {
+    try std.testing.expectEqual(0, sealed.count);
+    try std.testing.expectEqual(null, sealed.blobs);
+}
+
+/// The blobs of a stream opened at `position` through the ABI that appends `conflations` and
+/// flushes, which `host_streams.release` releases.
+fn abiRun(position: *const stream.Position, conflations: []const host_streams.Conflation) !std.ArrayList(stream.SealedBlob) {
+    const handle = try openStream(position);
+    defer c_api.lineth_da_stream_close(handle);
+    var blobs: std.ArrayList(stream.SealedBlob) = .empty;
+    errdefer host_streams.release(&blobs);
+    for (0..conflations.len + 1) |i| {
+        var sealed: c_api.SealedBlobs = undefined;
+        const status = if (i < conflations.len)
+            appendFrame(handle, conflations[i].frame, conflations[i].end_block, &sealed)
+        else
+            c_api.lineth_da_stream_flush(handle, &sealed, &message, message.len);
+        defer c_api.lineth_da_sealed_blobs_free(&sealed);
+        try std.testing.expectEqual(Status.ok, status);
+        for ((sealed.blobs orelse continue)[0..sealed.count]) |blob| {
+            const ends = try gpa.dupe(stream.SegmentEnd, blob.segmentEnds());
+            errdefer gpa.free(ends);
+            var copy = blob;
+            copy.segment_ends = ends.ptr;
+            try blobs.append(gpa, copy);
+        }
+    }
+    return blobs;
+}
+
+fn expectSameBlobs(expected: []const stream.SealedBlob, actual: []const stream.SealedBlob) !void {
+    try std.testing.expectEqual(expected.len, actual.len);
+    for (expected, actual) |*blob, *other| try host_streams.expectSameBlob(blob, other);
+}
+
+test "compress makes the frame of the Zig compressor" {
+    const selection = try selected();
+    const rlps = try selection.conflationRlps(gpa, &.{ .legacy, .fee_market, .access_list });
+    defer gpa.free(rlps);
+    const handle = try newCompressor(selection.chain_id);
     defer c_api.lineth_da_compressor_free(handle);
+    const reference = try compressor.Compressor.init(gpa, dictionary, selection.chain_id);
+    defer reference.deinit();
+
     var out: c_api.Compressed = undefined;
+    try std.testing.expectEqual(Status.ok, try compress(handle, rlps, &out));
+    defer c_api.lineth_da_compressed_free(&out);
 
-    try std.testing.expectEqual(Status.invalid_argument, c_api.lineth_da_compress(handle, null, 0, &out, &message, message.len));
-    try expectMessage("no blocks");
+    const expected = try reference.compress(rlps, null);
+    defer gpa.free(expected);
+    try std.testing.expectEqualSlices(u8, expected, frameOf(out));
+}
 
+test "a stream through the ABI seals and resumes like the Zig stream" {
+    const conflations = try host_streams.syntheticConflations(gpa, &.{ 60_000, 90_000, 40_000 });
+    defer host_streams.freeSynthetic(gpa, conflations);
+    const fresh: stream.Position = .fresh(host_streams.genesis);
+    var expected = try host_streams.run(&fresh, conflations);
+    defer host_streams.release(&expected);
+    var actual = try abiRun(&fresh, conflations);
+    defer host_streams.release(&actual);
+    try std.testing.expectEqual(2, expected.items.len);
+    try expectSameBlobs(expected.items, actual.items);
+
+    const cut = host_streams.locate(expected.items, 2);
+    const position = host_streams.positionAfter(expected.items, cut);
+    var expected_resumed = try host_streams.run(&position, conflations[2..]);
+    defer host_streams.release(&expected_resumed);
+    var actual_resumed = try abiRun(&position, conflations[2..]);
+    defer host_streams.release(&actual_resumed);
+    try expectSameBlobs(expected_resumed.items, actual_resumed.items);
+}
+
+const Rejection = struct {
+    status: Status,
+    message: []const u8,
+    call: union(enum) {
+        compress: struct { chain_id: u64 = 1, blocks: []const []const u8, count: ?usize = null },
+        new_compressor: []const u8,
+        open: stream.Position,
+        append: struct { position: stream.Position, frame: []const u8 },
+    },
+};
+
+/// The call returns the status and the message of `rejection` and leaves its result empty.
+fn expectRejected(rejection: Rejection) !void {
+    switch (rejection.call) {
+        .compress => |call| {
+            const handle = try newCompressor(call.chain_id);
+            defer c_api.lineth_da_compressor_free(handle);
+            const inputs = try gpa.alloc(c_api.Bytes, call.blocks.len);
+            defer gpa.free(inputs);
+            for (call.blocks, inputs) |block, *input| input.* = .{ .ptr = block.ptr, .len = block.len };
+            var out: c_api.Compressed = .{ .frame = @ptrFromInt(8), .frame_len = 99 };
+            try std.testing.expectEqual(rejection.status, c_api.lineth_da_compress(handle, inputs.ptr, call.count orelse inputs.len, &out, &message, message.len));
+            try std.testing.expectEqual(null, out.frame);
+            try std.testing.expectEqual(0, out.frame_len);
+        },
+        .new_compressor => |bytes| {
+            var handle: ?*c_api.Compressor = @ptrFromInt(8);
+            try std.testing.expectEqual(rejection.status, c_api.lineth_da_compressor_new(bytes.ptr, bytes.len, 1, &handle, &message, message.len));
+            try std.testing.expectEqual(null, handle);
+        },
+        .open => |position| {
+            var handle: ?*c_api.Stream = @ptrFromInt(8);
+            try std.testing.expectEqual(rejection.status, c_api.lineth_da_stream_open(&position, &handle, &message, message.len));
+            try std.testing.expectEqual(null, handle);
+        },
+        .append => |call| {
+            const handle = try openStream(&call.position);
+            defer c_api.lineth_da_stream_close(handle);
+            var out: c_api.SealedBlobs = .{ .blobs = @ptrFromInt(@alignOf(stream.SealedBlob)), .count = 99 };
+            try std.testing.expectEqual(rejection.status, appendFrame(handle, call.frame, 2, &out));
+            try expectNoBlobs(out);
+        },
+    }
+    try expectMessage(rejection.message);
+}
+
+test "a failed call returns its status, writes its message and leaves its result empty" {
+    const selection = try selected();
+    const legacy = try selection.conflationRlps(gpa, &.{.legacy});
+    defer gpa.free(legacy);
+    const synthetic = try host_streams.syntheticConflations(gpa, &.{ 2_000, 3_000 });
+    defer host_streams.freeSynthetic(gpa, synthetic);
+    var blobs = try host_streams.run(&.fresh(host_streams.genesis), synthetic);
+    defer host_streams.release(&blobs);
     const garbage = [_]u8{ 0xc0, 0x01 };
-    const inputs = [_]c_api.Bytes{ .{ .ptr = &garbage, .len = garbage.len }, .{ .ptr = &garbage, .len = garbage.len } };
-    out.frame_len = 99;
-    try std.testing.expectEqual(Status.invalid_block_rlp, c_api.lineth_da_compress(handle, &inputs, inputs.len, &out, &message, message.len));
-    try expectMessage("block 0 is malformed");
-    try std.testing.expectEqual(null, out.frame);
-    try std.testing.expectEqual(0, out.frame_len);
+    const not_a_dictionary: [4096]u8 = @splat('x');
+    const unexplained_blob: [stream.blob_len]u8 = @splat(0xff);
 
-    var not_a_dictionary: [4096]u8 = @splat('x');
-    var failed: ?*c_api.Compressor = @ptrFromInt(8);
-    try std.testing.expectEqual(Status.invalid_dictionary, c_api.lineth_da_compressor_new(&not_a_dictionary, not_a_dictionary.len, 1, &failed, &message, message.len));
-    try std.testing.expectEqual(null, failed);
-
-    // A count whose entries cannot be held is an allocation that fails before an entry is read.
-    try std.testing.expectEqual(Status.out_of_memory, c_api.lineth_da_compress(handle, &inputs, std.math.maxInt(usize) / 16, &out, &message, message.len));
-    try expectMessage("out of memory");
+    const rejections = [_]Rejection{
+        .{ .status = .invalid_argument, .message = "no blocks", .call = .{ .compress = .{ .blocks = &.{} } } },
+        .{ .status = .invalid_argument, .message = "the shared blob is not the canonical packing of a payload", .call = .{ .open = .{
+            .data_rolling_hash = @splat(1),
+            .parent_blob_data_rolling_hash = @splat(2),
+            .shared_blob_carry_over_tail_bytes = 5,
+            .shared_blob = &unexplained_blob,
+        } } },
+        .{ .status = .invalid_dictionary, .message = "not a zstd dictionary that declares an ID", .call = .{ .new_compressor = &not_a_dictionary } },
+        .{ .status = .invalid_block_rlp, .message = "block 1 is malformed", .call = .{ .compress = .{
+            .chain_id = selection.chain_id,
+            .blocks = &.{ legacy[0], &garbage },
+        } } },
+        .{ .status = .invalid_block_rlp, .message = "a sender of block 0 cannot be recovered", .call = .{ .compress = .{
+            .chain_id = 0,
+            .blocks = legacy,
+        } } },
+        .{ .status = .seeded_blob_mismatch, .message = "the appended bytes differ from the shared blob", .call = .{ .append = .{
+            .position = host_streams.positionAfter(blobs.items, host_streams.locate(blobs.items, 1)),
+            .frame = synthetic[0].frame,
+        } } },
+        // A count whose entries cannot be held is an allocation that fails before an entry is read.
+        .{ .status = .out_of_memory, .message = "out of memory", .call = .{ .compress = .{
+            .blocks = &.{&garbage},
+            .count = std.math.maxInt(usize) / 16,
+        } } },
+    };
+    for (rejections) |rejection| try expectRejected(rejection);
 }
 
 test "a call that lacks a required pointer returns invalid argument" {
@@ -168,7 +329,7 @@ test "a call that lacks a required pointer returns invalid argument" {
     try std.testing.expectEqual(Status.invalid_argument, c_api.lineth_da_stream_flush(opened, null, &message, message.len));
 }
 
-test "a message is cut to the buffer and always ends with a NUL" {
+test "a message is cut to the buffer, ends with a NUL, and is emptied by a success" {
     const handle = try newCompressor(1);
     defer c_api.lineth_da_compressor_free(handle);
     var out: c_api.Compressed = undefined;
@@ -188,9 +349,17 @@ test "a message is cut to the buffer and always ends with a NUL" {
     try std.testing.expectEqualSlices(u8, &@as([4]u8, @splat(0xaa)), &untouched);
 
     try std.testing.expectEqual(Status.invalid_block_rlp, c_api.lineth_da_compress(handle, &inputs, 1, &out, null, 100));
+
+    const opened = try openStream(&.fresh(host_streams.genesis));
+    defer c_api.lineth_da_stream_close(opened);
+    const frame = [_]u8{ 1, 2, 3 };
+    var sealed: c_api.SealedBlobs = undefined;
+    var stale: [16]u8 = @splat('x');
+    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_append(opened, &frame, frame.len, 1, &sealed, &stale, stale.len));
+    try std.testing.expectEqual(0, stale[0]);
 }
 
-test "freeing a NULL or an empty result, and closing a NULL handle, do nothing" {
+test "a free clears its result, and freeing nothing does nothing" {
     c_api.lineth_da_compressor_free(null);
     c_api.lineth_da_stream_close(null);
     c_api.lineth_da_compressed_free(null);
@@ -200,202 +369,26 @@ test "freeing a NULL or an empty result, and closing a NULL handle, do nothing" 
     c_api.lineth_da_compressed_free(&compressed);
     var sealed: c_api.SealedBlobs = .{ .blobs = null, .count = 0 };
     c_api.lineth_da_sealed_blobs_free(&sealed);
-}
 
-test "opening a stream at a position its shared blob does not explain returns invalid argument" {
-    var shared: [stream.blob_len]u8 = @splat(0xff);
-    const position: stream.Position = .{
-        .data_rolling_hash = @splat(1),
-        .parent_blob_data_rolling_hash = @splat(2),
-        .shared_blob_carry_over_tail_bytes = 5,
-        .shared_blob = &shared,
-    };
-    var handle: ?*c_api.Stream = @ptrFromInt(8);
-    try std.testing.expectEqual(Status.invalid_argument, c_api.lineth_da_stream_open(&position, &handle, &message, message.len));
-    try std.testing.expectEqual(null, handle);
-    try expectMessage("the shared blob is not the canonical packing of a payload");
-}
-
-// ---- compress and the streams of the blocks through the ABI ------------------------------------
-
-fn selected() !*const ef_conflations.Selection {
-    return ef_conflations.shared(std.testing.io, ef_fixtures.amsterdam_blocks);
-}
-
-fn compress(handle: *const c_api.Compressor, rlps: []const []const u8, out: *c_api.Compressed) !Status {
-    const inputs = try gpa.alloc(c_api.Bytes, rlps.len);
-    defer gpa.free(inputs);
-    for (rlps, inputs) |rlp, *input| input.* = .{ .ptr = rlp.ptr, .len = rlp.len };
-    return c_api.lineth_da_compress(handle, inputs.ptr, inputs.len, out, &message, message.len);
-}
-
-fn frameOf(compressed: c_api.Compressed) []const u8 {
-    return compressed.frame.?[0..compressed.frame_len];
-}
-
-test "compress makes the frame of the Zig compressor" {
-    const selection = try selected();
-    const rlps = try selection.conflationRlps(gpa, &.{ .legacy, .fee_market, .access_list });
-    defer gpa.free(rlps);
-    const handle = try newCompressor(selection.chain_id);
-    defer c_api.lineth_da_compressor_free(handle);
-    const reference = try compressor.Compressor.init(gpa, dictionary, selection.chain_id);
-    defer reference.deinit();
-
-    var out: c_api.Compressed = undefined;
-    try std.testing.expectEqual(Status.ok, try compress(handle, rlps, &out));
-    defer c_api.lineth_da_compressed_free(&out);
-    try expectMessage("");
-
-    const expected = try reference.compress(rlps, null);
-    defer gpa.free(expected);
-    try std.testing.expectEqualSlices(u8, expected, frameOf(out));
-}
-
-test "a compressor copies its dictionary, so the caller may overwrite it" {
-    const selection = try selected();
-    const rlps = try selection.conflationRlps(gpa, &.{.legacy});
-    defer gpa.free(rlps);
-    const copy = try gpa.dupe(u8, dictionary);
-    var handle: ?*c_api.Compressor = null;
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_compressor_new(copy.ptr, copy.len, selection.chain_id, &handle, &message, message.len));
-    defer c_api.lineth_da_compressor_free(handle);
-    @memset(copy, 0);
-    gpa.free(copy);
-
-    var out: c_api.Compressed = undefined;
-    try std.testing.expectEqual(Status.ok, try compress(handle.?, rlps, &out));
-    defer c_api.lineth_da_compressed_free(&out);
-    try std.testing.expect(out.frame_len > 0);
-}
-
-test "compress names a rejected block in its message and leaves the result empty" {
     const selection = try selected();
     const legacy = try selection.conflationRlps(gpa, &.{.legacy});
     defer gpa.free(legacy);
     const handle = try newCompressor(selection.chain_id);
     defer c_api.lineth_da_compressor_free(handle);
-    var out: c_api.Compressed = undefined;
+    try std.testing.expectEqual(Status.ok, try compress(handle, legacy, &compressed));
+    c_api.lineth_da_compressed_free(&compressed);
+    try std.testing.expectEqual(null, compressed.frame);
+    try std.testing.expectEqual(0, compressed.frame_len);
+    c_api.lineth_da_compressed_free(&compressed);
 
-    out.frame_len = 99;
-    const garbage = [_]u8{ 0xc0, 0x01 };
-    try std.testing.expectEqual(Status.invalid_block_rlp, try compress(handle, &.{ legacy[0], &garbage }, &out));
-    try expectMessage("block 1 is malformed");
-    try std.testing.expectEqual(null, out.frame);
-    try std.testing.expectEqual(0, out.frame_len);
-
-    const no_sender = try newCompressor(0);
-    defer c_api.lineth_da_compressor_free(no_sender);
-    try std.testing.expectEqual(Status.invalid_block_rlp, try compress(no_sender, legacy, &out));
-    try expectMessage("a sender of block 0 cannot be recovered");
-}
-
-test "a successful call clears the message, and freeing a result twice is harmless" {
-    const selection = try selected();
-    const rlps = try selection.conflationRlps(gpa, &.{.legacy});
-    defer gpa.free(rlps);
-    const handle = try newCompressor(selection.chain_id);
-    defer c_api.lineth_da_compressor_free(handle);
-    var out: c_api.Compressed = undefined;
-    const inputs = [_]c_api.Bytes{.{ .ptr = rlps[0].ptr, .len = rlps[0].len }};
-
-    var stale: [16]u8 = @splat('x');
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_compress(handle, &inputs, 1, &out, &stale, stale.len));
-    try std.testing.expectEqual(0, stale[0]);
-
-    c_api.lineth_da_compressed_free(&out);
-    try std.testing.expectEqual(null, out.frame);
-    try std.testing.expectEqual(0, out.frame_len);
-    c_api.lineth_da_compressed_free(&out);
-}
-
-fn openStream(position: *const stream.Position) !*c_api.Stream {
-    var handle: ?*c_api.Stream = null;
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_open(position, &handle, &message, message.len));
-    return handle.?;
-}
-
-fn expectBlobsEqual(expected: []const stream.SealedBlob, actual: c_api.SealedBlobs) !void {
-    try std.testing.expectEqual(expected.len, actual.count);
-    for (expected, 0..) |*blob, i| {
-        const other = &actual.blobs.?[i];
-        try std.testing.expectEqualSlices(u8, &blob.blob, &other.blob);
-        try std.testing.expectEqualSlices(u8, &blob.kzg_commitment, &other.kzg_commitment);
-        try std.testing.expectEqualSlices(u8, &blob.kzg_proof, &other.kzg_proof);
-        try std.testing.expectEqualSlices(u8, &blob.data_rolling_hash, &other.data_rolling_hash);
-        try std.testing.expectEqual(blob.payload_bytes, other.payload_bytes);
-        try std.testing.expectEqualDeep(blob.segmentEnds(), other.segmentEnds());
-    }
-}
-
-test "a stream through the ABI seals what the Zig stream seals, and reopens inside a shared blob" {
-    const selection = try selected();
-    const compressor_handle = try newCompressor(selection.chain_id);
-    defer c_api.lineth_da_compressor_free(compressor_handle);
-    const legacy = try selection.conflationRlps(gpa, &.{.legacy});
-    defer gpa.free(legacy);
-    const fee_market = try selection.conflationRlps(gpa, &.{.fee_market});
-    defer gpa.free(fee_market);
-    var first: c_api.Compressed = undefined;
-    var second: c_api.Compressed = undefined;
-    try std.testing.expectEqual(Status.ok, try compress(compressor_handle, legacy, &first));
-    defer c_api.lineth_da_compressed_free(&first);
-    try std.testing.expectEqual(Status.ok, try compress(compressor_handle, fee_market, &second));
-    defer c_api.lineth_da_compressed_free(&second);
-    const frames = [_][]const u8{ frameOf(first), frameOf(second) };
-
-    // The run through the ABI and the run of the Zig stream seal the same blob.
-    const genesis: stream.Hash = @splat(0x42);
-    var position: stream.Position = .fresh(genesis);
-    const handle = try openStream(&position);
-    defer c_api.lineth_da_stream_close(handle);
-    var sealed: c_api.SealedBlobs = undefined;
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_append(handle, frames[0].ptr, frames[0].len, 1, &sealed, &message, message.len));
-    try std.testing.expectEqual(0, sealed.count);
-    try std.testing.expectEqual(null, sealed.blobs);
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_append(handle, frames[1].ptr, frames[1].len, 2, &sealed, &message, message.len));
-    try std.testing.expectEqual(0, sealed.count);
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_flush(handle, &sealed, &message, message.len));
-    defer c_api.lineth_da_sealed_blobs_free(&sealed);
+    const opened = try openStream(&.fresh(host_streams.genesis));
+    defer c_api.lineth_da_stream_close(opened);
+    try std.testing.expectEqual(Status.ok, appendFrame(opened, &.{ 1, 2, 3 }, 1, &sealed));
+    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_flush(opened, &sealed, &message, message.len));
     try std.testing.expectEqual(1, sealed.count);
-
-    var zig_stream = try stream.Stream.open(gpa, &position);
-    defer zig_stream.deinit();
-    stream.freeSealed(gpa, try zig_stream.append(frames[0], 1));
-    stream.freeSealed(gpa, try zig_stream.append(frames[1], 2));
-    const expected = try zig_stream.flush();
-    defer stream.freeSealed(gpa, expected);
-    try expectBlobsEqual(expected, sealed);
-
-    const blob = &sealed.blobs.?[0];
-    try std.testing.expect(blob_kzg.verifyBatch(&.{blob.blob}, &.{blob.kzg_commitment}, &.{blob.kzg_proof}));
-    try std.testing.expectEqual(2, blob.segment_end_count);
-
-    // The stream copies the shared blob: the caller's bytes may change after the open.
-    const shared = try gpa.create([stream.blob_len]u8);
-    defer gpa.destroy(shared);
-    shared.* = blob.blob;
-    const resume_position: stream.Position = .{
-        .data_rolling_hash = blob.data_rolling_hash,
-        .parent_blob_data_rolling_hash = blob.prev_data_rolling_hash,
-        .shared_blob_carry_over_tail_bytes = blob.segment_ends.?[0].unused_tail_bytes,
-        .shared_blob = shared,
-    };
-    const resumed = try openStream(&resume_position);
-    defer c_api.lineth_da_stream_close(resumed);
-    @memset(shared, 0);
-
-    var again: c_api.SealedBlobs = undefined;
-    try std.testing.expectEqual(Status.invalid_argument, c_api.lineth_da_stream_flush(resumed, &again, &message, message.len));
-    try std.testing.expectEqual(Status.seeded_blob_mismatch, c_api.lineth_da_stream_append(resumed, first.frame.?, first.frame_len, 1, &again, &message, message.len));
-    try std.testing.expectEqual(0, again.count);
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_append(resumed, frames[1].ptr, frames[1].len, 2, &again, &message, message.len));
-    try std.testing.expectEqual(Status.ok, c_api.lineth_da_stream_flush(resumed, &again, &message, message.len));
-    defer c_api.lineth_da_sealed_blobs_free(&again);
-    try std.testing.expectEqual(1, again.count);
-    try std.testing.expectEqualSlices(u8, &blob.blob, &again.blobs.?[0].blob);
-    try std.testing.expectEqualSlices(u8, &blob.kzg_proof, &again.blobs.?[0].kzg_proof);
-    try std.testing.expectEqual(1, again.blobs.?[0].segment_end_count);
+    c_api.lineth_da_sealed_blobs_free(&sealed);
+    try expectNoBlobs(sealed);
+    c_api.lineth_da_sealed_blobs_free(&sealed);
 }
 
 test "compress makes a frame or returns invalid block RLP for every mutated block, and never aborts" {
