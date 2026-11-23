@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
 
 // Field keys for the rollup request. Keys in request.go (guestProgramIDKey,
@@ -42,24 +43,11 @@ const (
 	l2MessagingBlocksOffsetsKey = "l2MessagingBlocksOffsets"
 )
 
-// ConflationWitness is one conflation: the RLP blocks its paired proof attests.
-type ConflationWitness struct {
-	BlockRlps [][]byte
-}
-
-// ChunkWitness is one touched chunk: its L1-anchored binding hash, kind, and
-// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes,
-// KZGCommitment and KZGProof are empty; for a blob chunk BlobBytes is set,
-// CalldataBytes is empty, and KZGCommitment and KZGProof are the 48-byte
-// commitment of BlobBytes and its EIP-4844 blob proof.
-type ChunkWitness struct {
-	ChunkHash     [32]byte
-	IsCalldata    bool
-	BlobBytes     []byte
-	CalldataBytes []byte
-	KZGCommitment []byte
-	KZGProof      []byte
-}
+// The request decodes straight into the guest input types.
+type (
+	ConflationWitness = ssz.ConflationWitness
+	ChunkWitness      = ssz.ChunkWitness
+)
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
@@ -85,8 +73,8 @@ type RollupRequest struct {
 }
 
 // DecodeRollupRequest parses a getZkRollupProofV1 request and validates its
-// shape and the chunk invariants. It does not build guest input bytes: the
-// recursion input format is undecided, so the runner passes a placeholder.
+// shape and the chunk invariants. buildRollupInput turns it into the guest
+// input.
 func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	const op = decodeRollupOp
 
