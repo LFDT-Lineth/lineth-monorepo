@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(prover-ray)* Dev-zkvm returns a devmode proof instead of marker bytes (#4569)
 ## [0.3.0] - 2026-11-23
 
 ### 🚀 Features
