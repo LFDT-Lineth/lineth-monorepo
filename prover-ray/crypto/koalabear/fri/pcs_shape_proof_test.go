@@ -19,20 +19,30 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"open-verify":  newPCSOpenVerifyFixture,
 		"twin-batches": newTwinBatchesFixture,
-		"grouped/1":    func(t *testing.T) pcsOpenVerifyFixture { return newGroupedPCSFixture(t, 1) },
-		"grouped/3":    func(t *testing.T) pcsOpenVerifyFixture { return newGroupedPCSFixture(t, 3) },
+		"grouped/1": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
+			return newGroupedPCSFixture(t, 1)
+		},
+		"grouped/3": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
+			return newGroupedPCSFixture(t, 3)
+		},
 		"pair-leaves/1": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPairLeavesPCSFixture(t, 1)
 		},
 		"pair-leaves/3": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPairLeavesPCSFixture(t, 3)
 		},
 	}
 	for capHeight := uint8(0); capHeight <= 3; capHeight++ {
 		fixtures[fmt.Sprintf("circuit/cap=%d", capHeight)] = func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPCSCircuitFixture(t, capHeight)
 		}
 		fixtures[fmt.Sprintf("circuit/cap=%d/fixed-domain+2", capHeight)] = func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPCSCircuitFixtureAt(t, capHeight, 2)
 		}
 	}
@@ -60,16 +70,22 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 func TestShapeOpeningProofIndependentOfQueryPositions(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"twin-batches": newTwinBatchesFixture,
-		"grouped/3":    func(t *testing.T) pcsOpenVerifyFixture { return newGroupedPCSFixture(t, 3) },
+		"grouped/3": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
+			return newGroupedPCSFixture(t, 3)
+		},
 		"pair-leaves/3": func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPairLeavesPCSFixture(t, 3)
 		},
 	}
 	for capHeight := uint8(0); capHeight <= 3; capHeight++ {
 		fixtures[fmt.Sprintf("circuit/cap=%d", capHeight)] = func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPCSCircuitFixture(t, capHeight)
 		}
 		fixtures[fmt.Sprintf("circuit/cap=%d/fixed-domain+2", capHeight)] = func(t *testing.T) pcsOpenVerifyFixture {
+			t.Helper()
 			return newPCSCircuitFixtureAt(t, capHeight, 2)
 		}
 	}
