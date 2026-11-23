@@ -40,7 +40,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 - The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
 - The proof is a devmode proof of the guest output hash, the same format as in dev-partial:
-  - the next layer can verify it, without the memory of a dev-partial run;
+  - the next layer can verify it;
   - but anyone can make one, so it proves nothing;
   - its program VK is zero.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
