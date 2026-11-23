@@ -17,8 +17,8 @@ import com.networknt.schema.SpecVersion
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Validates Engine API params and results against the execution-apis schemas vendored in
- * `engine-api/execution-apis`.
+ * Validates Engine API params and results against the ethereum/execution-apis schemas, downloaded at the commit pinned
+ * in this module's `build.gradle`.
  *
  * Each method is mapped to its params and result schemas as in `src/engine/openrpc/methods` upstream, with two
  * deliberate differences:
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
  *   properties, so a V2 payload matches both and `oneOf` would always fail.
  */
 object EngineApiSpec {
-  private const val SCHEMAS_PATH = "/engine-api/execution-apis/src"
+  private const val SCHEMAS_PATH = "/engine-api-schemas"
   private val jsonMapper = jacksonObjectMapper()
   private val yamlMapper = ObjectMapper(YAMLFactory())
   private val schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
@@ -35,9 +35,9 @@ object EngineApiSpec {
   private val componentSchemas: ObjectNode =
     jsonMapper.createObjectNode().apply {
       listOf(
-        "schemas/base-types.yaml",
-        "engine/openrpc/schemas/payload.yaml",
-        "engine/openrpc/schemas/forkchoice.yaml",
+        "base-types.yaml",
+        "payload.yaml",
+        "forkchoice.yaml",
       ).forEach { setAll<ObjectNode>(loadYaml("$SCHEMAS_PATH/$it")) }
     }
 
