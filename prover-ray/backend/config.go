@@ -35,6 +35,7 @@ type Config struct {
 	// GoGen runs zkc Execute with gogen: zkc generates Go code for the circuit
 	// and builds it with the Go toolchain on PATH, instead of interpreting it.
 	// It is much faster (a 2M-gas block runs in about 1s instead of 78s) and
-	// gives the same output. dev-zkvm and dev-partial run Execute.
+	// gives the same output. Used by dev-zkvm, dev-partial and full (not
+	// implemented yet); dev-mock runs no guest.
 	GoGen bool
 }
