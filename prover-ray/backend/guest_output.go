@@ -79,10 +79,8 @@ func decodeGuestPublicInputs(framed []byte) (PublicInputs, error) {
 	return pi, nil
 }
 
-// SSZ layout of the rollup public inputs, as the rollup guest encodes them
-// (riscv-guests/guest_common/src/core_serde/rollup_proof.zig): a fixed head
-// with a 4-byte offset in place of each of the four lists, then the lists. The
-// list bounds are those of rollup_spec/rollup_ssz.py.
+// SSZ layout of the rollup public inputs (core_serde/rollup_proof.zig): a fixed
+// head with four list offsets. List bounds from rollup_spec/rollup_ssz.py.
 const (
 	rollupPublicInputsFixedSize = 336
 	maxRollupL2L1Messages       = 1 << 26
@@ -91,9 +89,8 @@ const (
 	maxRollupMessagingBlocks    = 1 << 16
 )
 
-// decodeRollupPublicInputs decodes the guest_log frame of the rollup guest,
-// 0x0005 || SSZ(public inputs), into the rollup public inputs. Like
-// [decodeGuestPublicInputs], it accepts only the canonical encoding.
+// decodeRollupPublicInputs decodes 0x0005 || SSZ(public inputs). It accepts only
+// the canonical encoding.
 func decodeRollupPublicInputs(framed []byte) (RollupPublicInputs, error) {
 	if len(framed) < guestOutputSchemaIDSize {
 		return RollupPublicInputs{}, fmt.Errorf("%d bytes, shorter than the schema id", len(framed))

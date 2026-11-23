@@ -13,19 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// rollupGuestOut holds the rollup guest's build output: its ELF, and the sample
-// request and output `make -C riscv-guests/rollup require-input` writes. The
-// request carries real devmode proofs; the output is the one the rollup
-// statement computes natively for it (hash || frame).
+// rollupGuestOut holds the rollup guest ELF, and the sample request (real devmode
+// proofs) and native output that `make -C riscv-guests/rollup require-input` writes.
 const rollupGuestOut = "../../riscv-guests/rollup/zig-out"
 
-// TestRollup_Integration runs the real rollup guest on its sample request: the
-// guest verifies the request's devmode proofs, and its output must equal the
-// native one. It also logs how long each mode takes.
+// TestRollup_Integration proves the real rollup guest on its sample request.
 //
-// Gated on REAL_GUEST_TESTS=1, like TestDevPartial_Integration. ROLLUP_MODES
-// picks the modes (comma separated, default dev-zkvm,dev-partial) and
-// DEV_PARTIAL_SHARD_SIZE the dev-partial shard size (default 500000):
+// Gated on REAL_GUEST_TESTS=1. ROLLUP_MODES picks the modes (default
+// dev-zkvm,dev-partial), DEV_PARTIAL_SHARD_SIZE the shard size (default 500000):
 //
 //	make -C riscv-guests/rollup compile require-input
 //	REAL_GUEST_TESTS=1 go test ./backend -run TestRollup_Integration -v -timeout 0

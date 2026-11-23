@@ -11,17 +11,14 @@ import (
 )
 
 const (
-	// referenceRollupResponse is the spec's reference rollup response. Its
-	// public inputs are what the rollup guest output frame encodes.
+	// referenceRollupResponse is the spec's reference rollup response.
 	referenceRollupResponse = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
 		"10-14-getZkRollupProofV1.response.json"
-	// referenceRollupOutput is the rollup guest output for those public
-	// inputs, made by the spec encoder (utils/ssz/testdata/generate.py).
+	// referenceRollupOutput encodes its public inputs (utils/ssz/testdata/generate.py).
 	referenceRollupOutput = "../utils/ssz/testdata/rollup_output.ssz"
 )
 
-// specRollupPublicInputs is the publicInputs object of the spec's rollup
-// response.
+// specRollupPublicInputs is the publicInputs object of the spec's rollup response.
 type specRollupPublicInputs struct {
 	EndBlockNumber                        uint64    `json:"endBlockNumber"`
 	EndBlockTimestamp                     uint64    `json:"endBlockTimestamp"`
@@ -45,9 +42,8 @@ type specRollupPublicInputs struct {
 	L2L1Messages                          []specHex `json:"l2L1Messages"`
 }
 
-// referenceRollupPublicInputs reads the public inputs of the spec's reference
-// rollup response. An unknown field fails, so a field added to the spec shows
-// up here.
+// referenceRollupPublicInputs reads them. An unknown field fails, so a new spec
+// field shows up here.
 func referenceRollupPublicInputs(t *testing.T) RollupPublicInputs {
 	t.Helper()
 	data, err := os.ReadFile(referenceRollupResponse)
@@ -101,8 +97,7 @@ func referenceRollupPublicInputs(t *testing.T) RollupPublicInputs {
 	return pi
 }
 
-// referenceRollupFrame returns the hash and the frame (schema id || SSZ public
-// inputs) of the reference rollup guest output.
+// referenceRollupFrame returns the hash and the frame of the reference output.
 func referenceRollupFrame(t *testing.T) (hash, framed []byte) {
 	t.Helper()
 	out, err := os.ReadFile(referenceRollupOutput)
@@ -111,8 +106,7 @@ func referenceRollupFrame(t *testing.T) (hash, framed []byte) {
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
 }
 
-// Positions of the list offsets in the SSZ fixed head of the rollup public
-// inputs.
+// Positions of the list offsets in the fixed head of the rollup public inputs.
 const (
 	rollupMessagesOffsetPos   = 312
 	rollupFilteredOffsetPos   = 316

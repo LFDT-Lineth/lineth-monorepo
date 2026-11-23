@@ -96,11 +96,8 @@ type PublicInputs struct {
 	L2L1Messages                          [][32]byte
 }
 
-// RollupPublicInputs carries the public output fields of the rollup response.
-// dev-zkvm and dev-partial decode them from the rollup guest's 0x0005 output.
-//
-// Field names follow the getZkRollupProofV1 response schema; the field order is
-// the SSZ order of the rollup guest output.
+// RollupPublicInputs are the rollup guest's public inputs (0x0005 output), named
+// as in the getZkRollupProofV1 response, in SSZ order.
 type RollupPublicInputs struct {
 	EndBlockNumber                        uint64
 	EndBlockTimestamp                     uint64
@@ -135,8 +132,7 @@ type Result struct {
 	// is the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
-	// PublicInputs are set for an l2-execution job, RollupPublicInputs for a
-	// rollup job.
+	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job.
 	PublicInputs       PublicInputs
 	RollupPublicInputs RollupPublicInputs
 

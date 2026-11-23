@@ -161,9 +161,7 @@ func TestProveDevZkVM(t *testing.T) {
 	testProveRollup(t, ProverModeDevZkVM)
 }
 
-// testProveRollup runs mode on a guest that writes the reference rollup output:
-// a rollup job decodes it into the rollup public inputs, and the job type picks
-// the output schema.
+// testProveRollup runs mode on a guest that writes the reference rollup output.
 func testProveRollup(t *testing.T, mode ProverMode) {
 	t.Helper()
 	hash, framed := referenceRollupFrame(t)

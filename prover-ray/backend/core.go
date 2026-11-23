@@ -45,8 +45,7 @@ const (
 	guestLogMemory    = "guest_log"
 )
 
-// Spec frame of the guest output: the schema id is 0x0003 for the l2-execution
-// guest and 0x0005 for the rollup guest.
+// Spec frame of the guest output: schema id 0x0003 (l2-execution) or 0x0005 (rollup).
 const (
 	l2ExecutionOutputSchemaID = 0x0003
 	rollupOutputSchemaID      = 0x0005
@@ -453,16 +452,14 @@ func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, schem
 	return classifyGuestOutput(output, errs, schema)
 }
 
-// guestPublicInputs are the public inputs decoded from a guest output: those
-// of the l2-execution guest or of the rollup guest, by proof type.
+// guestPublicInputs holds the l2-execution or the rollup public inputs, by proof type.
 type guestPublicInputs struct {
 	execution PublicInputs
 	rollup    RollupPublicInputs
 }
 
-// executeGuestPublicInputs runs the guest of a job of proof type t under ZkC
-// Execute and returns its output (hash || frame) and the public inputs decoded
-// from it.
+// executeGuestPublicInputs runs the guest under zkc Execute and returns its
+// output (hash || frame) and the public inputs of proof type t.
 func executeGuestPublicInputs(
 	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, t ProofType, gogen bool,
 ) (out []byte, pi guestPublicInputs, err error) {

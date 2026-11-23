@@ -113,8 +113,6 @@ func referenceFrame(t *testing.T) (hash, framed []byte) {
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
 }
 
-// errOffsetsOutOfOrder is the error of a list offset out of order or past the
-// end.
 const errOffsetsOutOfOrder = "offsets out of order"
 
 // Positions of the three list offsets in the SSZ fixed head.
