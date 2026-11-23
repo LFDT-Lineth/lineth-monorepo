@@ -27,7 +27,7 @@ Shared defaults reused by linea and fork-transition; currently provides the L2 e
 | --- | --- | --- | --- | --- | --- |
 | `defaults.l2-eth-endpoint.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | active |
 | `defaults.l2-eth-endpoint.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | active |
-| `defaults.l2-eth-endpoint.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | active |
+| `defaults.l2-eth-endpoint.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | active |
 
 ### `fork-transition`
 
@@ -37,7 +37,7 @@ Protocol fork transition monitoring settings. Has defaults so the section may be
 | --- | --- | --- | --- | --- | --- |
 | `fork-transition.l2-eth-api-endpoint.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | active |
 | `fork-transition.l2-eth-api-endpoint.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | active |
-| `fork-transition.l2-eth-api-endpoint.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | active |
+| `fork-transition.l2-eth-api-endpoint.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | active |
 | `fork-transition.protocol-transition-polling-interval` | Interval between polls for the protocol fork transition. | `Duration` | no | `PT1S` | active |
 
 ### `linea`
@@ -49,15 +49,15 @@ Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea n
 | `linea.contract-address` | Address of the Linea rollup contract on L1 (20-byte hex). Example: `0x0000000000000000000000000000000000000000`. | `ByteArray` | yes | - | active |
 | `linea.l1-eth-api-endpoint.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | active |
 | `linea.l1-eth-api-endpoint.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | active |
-| `linea.l1-eth-api-endpoint.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | active |
+| `linea.l1-eth-api-endpoint.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | active |
 | `linea.l1-eth-api.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | deprecated |
 | `linea.l1-eth-api.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | deprecated |
-| `linea.l1-eth-api.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | deprecated |
+| `linea.l1-eth-api.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | deprecated |
 | `linea.l1-highest-block-tag` | L1 block tag treated as the highest finalized block (e.g. finalized, safe, latest). | `String` | no | `finalized` | active |
 | `linea.l1-polling-interval` | Interval between L1 polls for rollup contract events. | `Duration` | no | `PT6S` | active |
 | `linea.l2-eth-api-endpoint.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | active |
 | `linea.l2-eth-api-endpoint.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | active |
-| `linea.l2-eth-api-endpoint.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | active |
+| `linea.l2-eth-api-endpoint.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | active |
 
 ### `observability`
 
@@ -119,7 +119,7 @@ Validator execution-layer node settings. Required when qbft is set.
 | --- | --- | --- | --- | --- | --- |
 | `payload-validator.engine-api-endpoint.endpoint` | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. | `URL` | yes | - | active |
 | `payload-validator.engine-api-endpoint.jwt-secret-path` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. | `String?` | no | - | active |
-| `payload-validator.engine-api-endpoint.timeout` | Overall timeout for a single request to this endpoint. | `Duration` | no | `PT1M` | active |
+| `payload-validator.engine-api-endpoint.timeout` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. | `Duration?` | no | - | active |
 | `payload-validator.payload-validation-enabled` | Whether to validate execution payloads received via the Engine API. Must stay true when the qbft section is set: a validator fails to start with payload validation disabled. Only followers may set it to false. | `Boolean` | no | `true` | active |
 
 ### `persistence`
@@ -173,5 +173,5 @@ Sync settings used while catching up to the chain head.
 | maru | `linea.l1-eth-api` | `linea.l1-eth-api-endpoint` | Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint. |
 | maru | `linea.l1-eth-api.endpoint` | `linea.l1-eth-api-endpoint` | Engine API endpoint URL of the execution-layer node. |
 | maru | `linea.l1-eth-api.jwt-secret-path` | `linea.l1-eth-api-endpoint` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. |
-| maru | `linea.l1-eth-api.timeout` | `linea.l1-eth-api-endpoint` | Overall timeout for a single request to this endpoint. |
+| maru | `linea.l1-eth-api.timeout` | `linea.l1-eth-api-endpoint` | Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods. |
 

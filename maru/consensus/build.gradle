@@ -46,9 +46,6 @@ dependencies {
   implementation("org.hyperledger.besu:besu-datatypes")
   implementation("org.hyperledger.besu:besu-evm")
 
-  implementation "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
-  implementation "tech.pegasys.teku.internal:spec:${libs.versions.teku.get()}"
-
   implementation project(':jvm-libs:linea:core:long-running-service')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:linea:clients:interfaces')
@@ -60,7 +57,8 @@ dependencies {
   testImplementation(testFixtures(project(':maru:crypto')))
   testImplementation(project(':jvm-libs:linea:testing:besu'))
   testImplementation("org.hyperledger.besu.internal:besu-metrics-core")
-  testImplementation(project(':jvm-libs:linea:teku-web3j'))
+  testImplementation "org.web3j:core:${libs.versions.web3j.get()}"
+  testImplementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
   testImplementation(testFixtures(project(':jvm-libs:linea:core:domain-models')))
   testImplementation(testFixtures(project(':jvm-libs:linea:core:long-running-service')))
   testImplementation project(':jvm-libs:linea:core:metrics')
