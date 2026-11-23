@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(prover-ray)* Encode the rollup guest input (#4571)
 ## [0.4.0] - 2026-11-23
 
 ### 🚀 Features
