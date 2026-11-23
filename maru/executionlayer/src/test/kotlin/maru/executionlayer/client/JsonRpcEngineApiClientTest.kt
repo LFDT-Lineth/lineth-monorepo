@@ -175,6 +175,18 @@ class JsonRpcEngineApiClientTest {
   }
 
   @Test
+  fun `Paris newPayload decodes INVALID_BLOCK_HASH as INVALID`() {
+    val client = client(ElFork.Paris)
+    server.replyResult(
+      EngineApiForkMethods.of(ElFork.Paris).newPayload,
+      mapOf("status" to "INVALID_BLOCK_HASH", "latestValidHash" to null, "validationError" to "bad hash"),
+    )
+
+    assertThat(client.newPayload(executionPayload(ElFork.Paris)).get())
+      .isEqualTo(PayloadStatus(ExecutionPayloadStatus.INVALID, null, "bad hash"))
+  }
+
+  @Test
   fun `forkChoiceUpdate decodes payload id when present and absent`() {
     val client = client(ElFork.Cancun)
     val method = EngineApiForkMethods.of(ElFork.Cancun).forkChoiceUpdated

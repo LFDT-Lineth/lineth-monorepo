@@ -140,10 +140,16 @@ internal class EngineApiCodec(
       return LatestBlockMetadata(blockHash = block.hash, timestamp = block.timestamp)
     }
 
+    private const val INVALID_BLOCK_HASH = "INVALID_BLOCK_HASH"
+
     private fun PayloadStatusJson.toDomain(): PayloadStatus =
       PayloadStatus(
-        status = ExecutionPayloadStatus.entries.firstOrNull { it.name == status }
-          ?: throw IllegalArgumentException("Unknown payload status '$status'"),
+        status = if (status == INVALID_BLOCK_HASH) {
+          ExecutionPayloadStatus.INVALID
+        } else {
+          ExecutionPayloadStatus.entries.firstOrNull { it.name == status }
+            ?: throw IllegalArgumentException("Unknown payload status '$status'")
+        },
         latestValidHash = latestValidHash,
         validationError = validationError,
       )
