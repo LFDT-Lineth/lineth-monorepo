@@ -34,7 +34,6 @@ import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.concurrent.timer
-import kotlin.math.log
 import kotlin.time.Duration.Companion.milliseconds
 
 class LoadBalancingJsonRpcClientTest {
@@ -176,6 +175,29 @@ class LoadBalancingJsonRpcClientTest {
     // assert that queued requests were fired in correct priority
     // Expected order: 1..10
     assertThat(requestsReceivedByClients).isEqualTo(requests.reversed())
+  }
+
+  @Test
+  fun close_fails_queued_requests_and_leaves_in_flight_ones_to_their_caller() {
+    val inflightPromises = List(4) { Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>() }
+    whenever(rpcClient1.makeRequest(any(), any()))
+      .thenReturn(inflightPromises[0].future())
+      .thenReturn(inflightPromises[1].future())
+    whenever(rpcClient2.makeRequest(any(), any()))
+      .thenReturn(inflightPromises[2].future())
+      .thenReturn(inflightPromises[3].future())
+    val inflightRequests = List(4) { loadBalancer.makeRequest(rpcRequest()) }
+    val queuedRequest = loadBalancer.makeRequest(rpcRequest())
+
+    loadBalancer.close()
+
+    assertThat(queuedRequest.failed()).isTrue()
+    assertThat(queuedRequest.cause()).isInstanceOf(IllegalStateException::class.java)
+    assertThat(inflightRequests).allMatch { !it.isComplete }
+    inflightPromises[0].complete(result(1, "client-1-result"))
+    assertThat(inflightRequests[0].get()).isEqualTo(result(1, "client-1-result"))
+    verify(rpcClient1, times(2)).makeRequest(any(), any())
+    verify(rpcClient2, times(2)).makeRequest(any(), any())
   }
 
   @Test
