@@ -104,8 +104,8 @@ func guestOutputs(frame []byte) map[string]bit.Array {
 }
 
 // TestProveDevZkVM runs dev-zkvm on guests that write a given output: it
-// returns the public inputs decoded from the output, the output itself, and the
-// dev-zkvm marker in place of a proof.
+// returns the public inputs decoded from the output, the output itself, and a
+// devmode proof of the output hash.
 func TestProveDevZkVM(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	badHash := slices.Clone(hash)
@@ -129,8 +129,8 @@ func TestProveDevZkVM(t *testing.T) {
 		require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
 		assert.Equal(t, referencePublicInputs(t), result.PublicInputs, "the public inputs should be decoded from the guest output")
 		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput, "the guest output should be returned for the native runner check")
-		assert.Equal(t, DevMarkerProof(ProverModeDevZkVM), result.ProofBytes, "the proof should be the dev-zkvm marker")
-		assert.Equal(t, [32]byte{}, result.ProgramVK, "dev-zkvm has no proof, so its VK should be zero")
+		assert.Equal(t, devmodeImage(t, hash), result.ProofBytes, "the proof should be a devmode proof of the output hash")
+		assert.Equal(t, [32]byte{}, result.ProgramVK, "the VK should be the one in the devmode proof, zero in dev modes")
 	})
 
 	t.Run("hash does not match the frame", func(t *testing.T) {
