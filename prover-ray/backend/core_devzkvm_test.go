@@ -30,41 +30,41 @@ func TestClassifyGuestOutput(t *testing.T) {
 	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
 
 	t.Run("valid output is returned", func(t *testing.T) {
-		got, err := classifyGuestOutput(guestOutputs(valid), nil)
+		got, err := classifyGuestOutput(guestOutputs(valid), nil, guestOutputSchemaID)
 		require.NoError(t, err)
 		assert.Equal(t, bitsFromBytes(valid...), got)
 	})
 
 	t.Run("guest rejection is distinguished from a VM bug", func(t *testing.T) {
 		errs := []error{&vm.Failure{Message: "block 42 invalid: bad state root"}}
-		_, err := classifyGuestOutput(nil, errs)
+		_, err := classifyGuestOutput(nil, errs, guestOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest rejected the block")
 		assert.Contains(t, err.Error(), "bad state root")
 	})
 
 	t.Run("internal VM error is reported as such", func(t *testing.T) {
-		_, err := classifyGuestOutput(nil, []error{fmt.Errorf("interpreter panic")})
+		_, err := classifyGuestOutput(nil, []error{fmt.Errorf("interpreter panic")}, guestOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest VM execution failed")
 	})
 
 	t.Run("missing output means the block was rejected", func(t *testing.T) {
-		_, err := classifyGuestOutput(map[string]bit.Array{"other": bitsFromBytes(1)}, nil)
+		_, err := classifyGuestOutput(map[string]bit.Array{"other": bitsFromBytes(1)}, nil, guestOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
 
 	t.Run("a single blob in guest_output is not the split frame", func(t *testing.T) {
 		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid...)}
-		_, err := classifyGuestOutput(out, nil)
+		_, err := classifyGuestOutput(out, nil, guestOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), fmt.Sprintf("guest wrote %d bytes to guest_output, want the 32-byte hash", len(valid)))
 	})
 
 	t.Run("hash without guest_log is reported", func(t *testing.T) {
 		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid[:guestOutputHashSize]...)}
-		_, err := classifyGuestOutput(out, nil)
+		_, err := classifyGuestOutput(out, nil, guestOutputSchemaID)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "guest wrote the hash but no guest_log")
 	})
@@ -82,12 +82,24 @@ func TestClassifyGuestOutput(t *testing.T) {
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {
-			_, err := classifyGuestOutput(guestOutputs(tc.out), nil)
+			_, err := classifyGuestOutput(guestOutputs(tc.out), nil, guestOutputSchemaID)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
+
+	t.Run("rollup output is accepted for the rollup schema only", func(t *testing.T) {
+		rollup := specFrame(rollupOutputSchemaID, samplePublicInputs)
+		got, err := classifyGuestOutput(guestOutputs(rollup), nil, rollupOutputSchemaID)
+		require.NoError(t, err)
+		assert.Equal(t, rollup, got.Bytes())
+
+		_, err = classifyGuestOutput(guestOutputs(rollup), nil, guestOutputSchemaID)
+		require.ErrorContains(t, err, "schema id is 0x0005, want 0x0003")
+		_, err = classifyGuestOutput(guestOutputs(valid), nil, rollupOutputSchemaID)
+		assert.ErrorContains(t, err, "schema id is 0x0003, want 0x0005")
+	})
 }
 
 func bitsFromBytes(bytes ...byte) bit.Array {
@@ -144,6 +156,45 @@ func TestProveDevZkVM(t *testing.T) {
 		result := prove(shortInputs)
 		assert.Equal(t, ResultStatusFailed, result.Status)
 		assert.ErrorContains(t, result.Err, "fixed head")
+	})
+
+	testProveRollup(t, ProverModeDevZkVM)
+}
+
+// testProveRollup runs mode on a guest that writes the reference rollup output:
+// a rollup job decodes it into the rollup public inputs, and the job type picks
+// the output schema.
+func testProveRollup(t *testing.T, mode ProverMode) {
+	t.Helper()
+	hash, framed := referenceRollupFrame(t)
+	dir := t.TempDir()
+	rollup := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c, err := New(Config{Mode: mode, GuestsDir: dir})
+	require.NoError(t, err)
+	prove := func(proofType ProofType) Result {
+		return c.Prove(context.Background(), Job{ID: string(mode), Type: proofType, GuestProgramID: rollup})
+	}
+
+	t.Run("rollup output", func(t *testing.T) {
+		result := prove(ProofTypeRollup)
+		require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
+		assert.Equal(t, referenceRollupPublicInputs(t), result.RollupPublicInputs,
+			"the rollup public inputs should be decoded from the guest output")
+		assert.Equal(t, PublicInputs{}, result.PublicInputs, "a rollup job has no l2-execution public inputs")
+		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput)
+		assert.Equal(t, devmodeImage(t, hash), result.ProofBytes, "the proof should be a devmode proof of the output hash")
+	})
+
+	t.Run("rollup output on an l2-execution job", func(t *testing.T) {
+		result := prove(ProofTypeL2Execution)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorContains(t, result.Err, "schema id is 0x0005, want 0x0003")
+	})
+
+	t.Run("aggregation has no guest output format yet", func(t *testing.T) {
+		result := prove(ProofTypeRollupAggregation)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorIs(t, result.Err, ErrNotImplemented)
 	})
 }
 

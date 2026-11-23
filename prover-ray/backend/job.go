@@ -96,6 +96,33 @@ type PublicInputs struct {
 	L2L1Messages                          [][32]byte
 }
 
+// RollupPublicInputs carries the public output fields of the rollup response.
+// dev-zkvm and dev-partial decode them from the rollup guest's 0x0005 output.
+//
+// Field names and wire order follow the getZkRollupProofV1 response schema.
+type RollupPublicInputs struct {
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	ParentDataRollingHash                 [32]byte
+	EndDataRollingHash                    [32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	ParentDataTailTakeBytes               uint64
+	FinalDataTailDiscardBytes             uint64
+	L2L1Messages                          [][32]byte
+	FilteredAddresses                     [][20]byte
+	ProgramVks                            [][32]byte
+	BlockCount                            uint64
+	L2MessagingBlocksOffsets              []uint16
+}
+
 // Result is the backend's response for a completed [Job].
 type Result struct {
 	JobID  string
@@ -107,9 +134,12 @@ type Result struct {
 	// is the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
-	PublicInputs PublicInputs
+	// PublicInputs are set for an l2-execution job, RollupPublicInputs for a
+	// rollup job.
+	PublicInputs       PublicInputs
+	RollupPublicInputs RollupPublicInputs
 
-	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-zkvm and
+	// GuestOutput is the guest's output (hash || frame) in dev-zkvm and
 	// dev-partial, for the runner's native runner check. nil in the other modes.
 	GuestOutput []byte
 

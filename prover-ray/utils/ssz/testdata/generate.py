@@ -22,6 +22,9 @@ from rollup_spec import stateless_input as ref
 L2_EXECUTION_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
 # The spec's reference rollup request.
 ROLLUP_REQUEST = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.request.json"
+# The spec's reference rollup response: its public inputs are what the rollup
+# guest output frame encodes.
+ROLLUP_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json"
 
 
 class EmptyExecutionRequests(Container):
@@ -84,6 +87,12 @@ def rollup_inputs():
     return reference, calldata
 
 
+def rollup_output():
+    # keccak256(frame) || frame, frame = 0x0005 || SSZ(public inputs).
+    proof = proof_io_v1._decode_rollup_proof(json.loads(ROLLUP_RESPONSE.read_text()), "").proof
+    return rollup_ssz.encode_rollup_output(proof)
+
+
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     for name in ("payload0", "payload1", "full"):
@@ -96,3 +105,4 @@ if __name__ == "__main__":
     reference, calldata = rollup_inputs()
     (directory / "rollup_input.ssz").write_bytes(reference)
     (directory / "rollup_input_calldata.ssz").write_bytes(calldata)
+    (directory / "rollup_output.ssz").write_bytes(rollup_output())

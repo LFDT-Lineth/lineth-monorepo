@@ -113,6 +113,10 @@ func referenceFrame(t *testing.T) (hash, framed []byte) {
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
 }
 
+// errOffsetsOutOfOrder is the error of a list offset out of order or past the
+// end.
+const errOffsetsOutOfOrder = "offsets out of order"
+
 // Positions of the three list offsets in the SSZ fixed head.
 const (
 	messagesOffsetPos = 80
@@ -135,7 +139,8 @@ func withOffset(framed []byte, pos int, v uint32) []byte {
 
 func TestDecodeGuestPublicInputs(t *testing.T) {
 	hash, framed := referenceFrame(t)
-	require.NoError(t, checkGuestOutputFrame(hash, framed), "the reference output should pass the frame check")
+	require.NoError(t, checkGuestOutputFrame(hash, framed, guestOutputSchemaID),
+		"the reference output should pass the frame check")
 
 	got, err := decodeGuestPublicInputs(framed)
 	require.NoError(t, err)
@@ -179,9 +184,9 @@ func TestDecodeGuestPublicInputs_Rejects(t *testing.T) {
 		"first list not behind the head": {withOffset(framed, messagesOffsetPos, publicInputsFixedSize+1),
 			"l2L1Messages offset is 285, want 284"},
 		"lists out of order": {withOffset(framed, filteredOffsetPos, publicInputsFixedSize-1),
-			"offsets out of order"},
+			errOffsetsOutOfOrder},
 		"list past the end": {withOffset(framed, blocksOffsetPos, body+1),
-			"offsets out of order"},
+			errOffsetsOutOfOrder},
 		"partial message": {withOffset(framed, filteredOffsetPos, messagesStart+31),
 			"l2L1Messages is 31 bytes, not a multiple of 32"},
 		"partial filtered address": {withOffset(oneMoreByte, blocksOffsetPos, filteredStart+21),
