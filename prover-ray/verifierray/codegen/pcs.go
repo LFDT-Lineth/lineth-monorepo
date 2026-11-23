@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"errors"
 	"fmt"
 	"math/bits"
 	"slices"
@@ -184,12 +185,12 @@ func pcsColumnDeclIndex(sys *wiop.System) map[wiop.ObjectID]int {
 //     RAW offset and lets the verifier normalize it mod the RUNTIME size.
 //     omega_N^(offset mod N) == omega_N^offset, so the reconstructed point
 //     matches the prover's at every size.
-func pcsShiftFor(cv *wiop.ColumnView) (isDynamic bool, shift int) {
+func pcsShiftFor(cv *wiop.ColumnView) int {
 	if cv.Column.Module.IsDynamic() {
-		return true, cv.ShiftingOffset
+		return cv.ShiftingOffset
 	}
 	size := cv.Column.Module.Size()
-	return false, ((cv.ShiftingOffset % size) + size) % size
+	return ((cv.ShiftingOffset % size) + size) % size
 }
 
 // pcsShiftClaimCells returns, for each committed column opened by a
@@ -211,7 +212,7 @@ func pcsShiftClaimCells(sys *wiop.System) (map[wiop.ObjectID][]int, map[wiop.Obj
 	for _, le := range sys.LagrangeEvals {
 		for k, cv := range le.Polynomials {
 			id := cv.Column.Context.ID
-			_, shift := pcsShiftFor(cv)
+			shift := pcsShiftFor(cv)
 			if seen[id] == nil {
 				seen[id] = map[int]bool{}
 			}
@@ -302,7 +303,8 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no committed batches; did pcs.Compile run?")
 	}
 	if len(sys.LagrangeEvals) == 0 {
-		return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no LagrangeEval openings; did global.Compile run before pcs.Compile?")
+		return PcsSystem{}, errors.New(
+			"codegen: BuildPcsSystem: no LagrangeEval openings; did global.Compile run before pcs.Compile?")
 	}
 
 	// Each batch's root provenance. An interactive batch's root is the oracle
@@ -361,7 +363,8 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 			if col.Module.IsDynamic() {
 				idx, ok := dynIdx[col.Module]
 				if !ok {
-					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: dynamic module %q of committed column %q has no module_sizes index",
+					return PcsSystem{}, fmt.Errorf(
+						"codegen: BuildPcsSystem: dynamic module %q of committed column %q has no module_sizes index",
 						col.Module.Context.Path(), col.Context.Path())
 				}
 				desc.IsDynamic = true
@@ -376,7 +379,8 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				// this column's bound as long as its shifts are among the module's
 				// Lagrange-evaluation shifts. Fail here if that ever stops holding.
 				if moduleMin := routing.DynamicModuleMinSizes[idx]; 1<<minSizeLog2 > moduleMin {
-					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: column %q needs module size >= %d, above the module minimum %d",
+					return PcsSystem{}, fmt.Errorf(
+						"codegen: BuildPcsSystem: column %q needs module size >= %d, above the module minimum %d",
 						col.Context.Path(), 1<<minSizeLog2, moduleMin)
 				}
 				desc.DynamicMinSizeLog2 = minSizeLog2
@@ -386,7 +390,9 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				// was validated above, before any Module.Size() call.
 				desc.SizeLog2 = bits.Len(uint(col.Module.Size())) - 1
 				if desc.SizeLog2 > maxSizeLog2 {
-					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has size_log2 %d, above the verifier envelope's max %d",
+					return PcsSystem{}, fmt.Errorf(
+						"codegen: BuildPcsSystem: static module %q of committed column %q has size_log2 %d, "+
+							"above the verifier envelope's max %d",
 						col.Module.Context.Path(), col.Context.Path(), desc.SizeLog2, maxSizeLog2)
 				}
 			}
@@ -432,7 +438,9 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 // prover declares them consecutively in the committed round, one per column,
 // which is what lets the verifier address them as a (round, start) pair; a
 // non-contiguous or missing manifest is a prover-ray/codegen mismatch.
-func buildPcsBatchManifests(batches []pcscompiler.BatchRef, colDeclByID map[wiop.ObjectID]int) ([]*PcsBatchManifest, error) {
+func buildPcsBatchManifests(
+	batches []pcscompiler.BatchRef, colDeclByID map[wiop.ObjectID]int,
+) ([]*PcsBatchManifest, error) {
 	out := make([]*PcsBatchManifest, len(batches))
 	for i, b := range batches {
 		if b.IsPrecomp {
@@ -494,14 +502,16 @@ func buildPcsClaimMaps(
 					"the column it opens is not PCS-authenticated", cell.Context.Path())
 		}
 		id := cv.Column.Context.ID
-		_, shift := pcsShiftFor(cv)
+		shift := pcsShiftFor(cv)
 		decl, ok := colDeclByID[id]
 		if !ok {
-			return PcsClaimRef{}, fmt.Errorf("codegen: BuildPcsSystem: opened column %q has no declaration index", cv.Column.Context.Path())
+			return PcsClaimRef{}, fmt.Errorf(
+				"codegen: BuildPcsSystem: opened column %q has no declaration index", cv.Column.Context.Path())
 		}
 		slot := slices.Index(shiftSlots[id], shift)
 		if slot < 0 {
-			return PcsClaimRef{}, fmt.Errorf("codegen: BuildPcsSystem: shift %d not found for column %q", shift, cv.Column.Context.Path())
+			return PcsClaimRef{}, fmt.Errorf(
+				"codegen: BuildPcsSystem: shift %d not found for column %q", shift, cv.Column.Context.Path())
 		}
 		return PcsClaimRef{ColDeclIdx: decl, Shift: slot}, nil
 	}

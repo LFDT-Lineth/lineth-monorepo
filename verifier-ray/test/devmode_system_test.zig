@@ -3,7 +3,7 @@
 //!
 //! Unlike a custom verifier stub, the devmode system is compiled through
 //! `compilers.CompileFull` in `prover-ray/backend/devmode` and emitted by
-//! `codegen/generate-devmode-system` as a standard `verifier-ray` system
+//! `prover verifier-assets --system devmode` as a standard `verifier-ray` system
 //! (`testdata/generated/devmode_system.zig`). These tests verify that
 //! `verifier.verify` accepts honest devmode proofs and rejects mutated
 //! statements/cells using the exact same Zig verifier code as the production

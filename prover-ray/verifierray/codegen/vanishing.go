@@ -132,7 +132,8 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 			if moduleRef.IsDynamic() {
 				idx, ok := dynamicIndices[moduleRef]
 				if !ok {
-					return VanishingSystem{}, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", moduleRef.Context.Path())
+					return VanishingSystem{}, fmt.Errorf(
+						"codegen: dynamic module %q not found in sys.Modules order", moduleRef.Context.Path())
 				}
 				module.Size = ModuleSize{Dynamic: true, DynamicIndex: idx}
 			} else {
@@ -278,7 +279,9 @@ func appendLeaf(module *VanishingModule, nodes *exprNodes, node ExprNode) int {
 // appendExpr returns the index of expr in module.Expressions, emitting it and
 // its operands in post-order on first visit. Operands precede their parent, as
 // vanishing.zig's evalExpressions requires (and checks).
-func appendExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression) (int, error) {
+func appendExpr(
+	module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression,
+) (int, error) {
 	if idx, ok := nodes.memo[expr]; ok {
 		return idx, nil
 	}
@@ -291,14 +294,18 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes
 }
 
 // emitExpr emits expr's node, after appending its operands via appendExpr.
-func emitExpr(module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression) (int, error) {
+func emitExpr(
+	module *VanishingModule, views map[viewKey]int, nodes *exprNodes, routing CoinRouting, expr wiop.Expression,
+) (int, error) {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
 		idx, ok := views[viewKey{id: e.Column.Context.ID, shift: e.ShiftingOffset}]
 		if !ok {
-			return 0, fmt.Errorf("column view %s shift %d was not exported as a witness claim", e.Column.Context.Path(), e.ShiftingOffset)
+			return 0, fmt.Errorf("column view %s shift %d was not exported as a witness claim",
+				e.Column.Context.Path(), e.ShiftingOffset)
 		}
-		return appendLeaf(module, nodes, ExprNode{Kind: ExprColumnClaim, ColumnClaim: idx, ColumnSourceName: e.Column.Context.Label}), nil
+		leaf := ExprNode{Kind: ExprColumnClaim, ColumnClaim: idx, ColumnSourceName: e.Column.Context.Label}
+		return appendLeaf(module, nodes, leaf), nil
 	case *wiop.Constant:
 		return appendLeaf(module, nodes, ExprNode{Kind: ExprConstant, Constant: e.Value}), nil
 	case *wiop.ArithmeticOperation:

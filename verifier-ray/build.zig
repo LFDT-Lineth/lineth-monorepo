@@ -95,7 +95,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // The generated production system for the recursive single-proof
-    // verifier bootstrap (verifier-ray/codegen/generate-riscv-system), smoke-
+    // verifier bootstrap (`prover verifier-assets --system riscv`), smoke-
     // tested by test/riscv_system_test.zig.
     const riscv_system_mod = b.addModule("riscv_system", .{
         .root_source_file = riscv_system_source,

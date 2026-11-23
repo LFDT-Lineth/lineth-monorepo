@@ -922,7 +922,7 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
 /// Largest Merkle cap height a System may bake. `verify` keeps the input-cap
 /// interior nodes in a stack buffer of `2^height` digests, so this bounds the
 /// guest stack use (~37 KiB at 10); prover-ray's optimal height is 8 at the
-/// production 229 queries. codegen/pcs_zig.go enforces the same bound.
+/// production 229 queries. prover-ray/verifierray/codegen/pcs_zig.go enforces the same bound.
 pub const max_merkle_cap_height: u8 = 10;
 
 /// Scratch slots `authenticateInputCap` needs for the interior nodes above a

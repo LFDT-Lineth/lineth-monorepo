@@ -14,7 +14,7 @@ import (
 
 // proofABIPath is verifier-ray's pinned layout, the authority the encoder
 // encodes against.
-const proofABIPath = "../../src/proof_abi.zig"
+const proofABIPath = "../src/proof_abi.zig"
 
 // TestABIAgreement checks the pinned encoder's size and offset constants against
 // the assertions in src/proof_abi.zig.

@@ -78,14 +78,14 @@ fn proverModule(
     };
 }
 
-/// The devmode prover of verifier-ray (`generate-devmode-system`, run with `-prove`) built for the
-/// host: the program the tests and tools hand the proofs they need to. `go` rebuilds it on every run
-/// and caches what did not change.
+/// The prover-ray command (`prover`, run as `prover devmode-prove`) built for the host: the program
+/// the tests and tools hand the devmode proofs they need to. `go` rebuilds it on every run and caches
+/// what did not change.
 fn addDevmodeProver(b: *std.Build) std.Build.LazyPath {
     const go = b.addSystemCommand(&.{ "go", "build", "-o" });
-    const binary = go.addOutputFileArg("generate-devmode-system");
-    go.addArg("./codegen/generate-devmode-system");
-    go.setCwd(b.path("../../verifier-ray"));
+    const binary = go.addOutputFileArg("prover");
+    go.addArg("./cmd/prover");
+    go.setCwd(b.path("../../prover-ray"));
     go.has_side_effects = true;
     return binary;
 }

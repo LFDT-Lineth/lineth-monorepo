@@ -281,7 +281,7 @@ const EvalCtx = struct {
 // order, into input.node_values, and returns the module's prefix of it.
 //
 // The nodes form a DAG: codegen emits one node per distinct subexpression
-// (see codegen/vanishing.go appendExpr) and a node may be the operand of many
+// (see prover-ray/verifierray/codegen/vanishing.go appendExpr) and a node may be the operand of many
 // parents, across vanishings and buckets. Walking it from each vanishing root
 // as a tree would re-evaluate a shared node once per path to it. A single
 // forward pass evaluates each node exactly once instead, and needs no

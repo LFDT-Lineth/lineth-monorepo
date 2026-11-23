@@ -26,13 +26,13 @@ testdata/riscv_proof_image.bin
 testdata/devmode_proof_image.bin
 ```
 
-The generator is in:
+`verify.zig` is written by `cmd/generate-testdata/`. The systems and proof images
+are written by prover-ray's `prover verifier-assets` command, from the code
+generator in `prover-ray/verifierray/codegen`, so a circuit change in prover-ray
+needs no change here.
 
-```text
-testdata/generate/
-```
-
-Regenerate all generated Zig fixtures from local prover-ray references with:
+Regenerate all generated Zig fixtures from the prover-ray checkout next to this
+directory with:
 
 ```bash
 make generate-testdata
@@ -46,11 +46,14 @@ Run the Zig test suite with:
 make test-zig
 ```
 
-Run Go codegen tests with:
+Run the Go tests (the proof ABI agreement check against the prover-ray encoder)
+with:
 
 ```bash
-make test-codegen
+make test-go
 ```
+
+The codegen tests run with prover-ray's tests.
 
 Run both with:
 

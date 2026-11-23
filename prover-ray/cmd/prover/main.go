@@ -3,6 +3,9 @@
 //	prover --config <toml>                                 watch the queues, prove each request
 //	prover prove --config <toml> --in <req> --out <resp>   prove one request, exit with a code
 //	prover program-id --elf <guest ELF>                    print the guest Program ID
+//	prover verifier-assets --system <name> --zig <out> [--image <out>]
+//	                                                       write verifier-ray's generated system
+//	prover devmode-prove                                   serve devmode proofs over stdin/stdout
 //
 // Config is a TOML file (--config or CONFIG_FILE). The queue adapter runs each
 // request in a "prover prove" child. --in and --out also accept "-" for stdin
@@ -42,6 +45,12 @@ func run(args []string) error {
 	}
 	if len(args) > 0 && args[0] == "program-id" {
 		return runProgramID(args[1:], os.Stdout)
+	}
+	if len(args) > 0 && args[0] == "verifier-assets" {
+		return runVerifierAssets(args[1:], os.Stderr)
+	}
+	if len(args) > 0 && args[0] == "devmode-prove" {
+		return runDevmodeProve(args[1:], os.Stdin, os.Stdout)
 	}
 	return runAdapter(args)
 }

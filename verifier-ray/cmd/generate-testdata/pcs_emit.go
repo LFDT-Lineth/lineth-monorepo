@@ -7,7 +7,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
 )
 
 // Emits the runtime PCS opening fixture for verify.zig. The compile-time

@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"io"
-	"text/template"
 )
 
 // SharedRandomnessZigOptions configures generated shared_randomness.System data.
@@ -29,14 +28,11 @@ func WriteSharedRandomnessSystemZig(w io.Writer, index int, system SharedRandomn
 	return WriteSharedRandomnessSystemZigWithOptions(w, index, system, defaultSharedRandomnessZigOptions())
 }
 
-func WriteSharedRandomnessSystemZigWithOptions(w io.Writer, index int, system SharedRandomnessSystem, opts SharedRandomnessZigOptions) error {
-	tmpl, err := template.New("shared_randomness").Funcs(template.FuncMap{
-		"zig": ZigString,
-	}).Parse(sharedRandomnessZigTemplate)
-	if err != nil {
-		return err
-	}
-	return tmpl.Execute(w, sharedRandomnessTemplateData{Options: opts, Index: index, System: system})
+func WriteSharedRandomnessSystemZigWithOptions(
+	w io.Writer, index int, system SharedRandomnessSystem, opts SharedRandomnessZigOptions,
+) error {
+	data := sharedRandomnessTemplateData{Options: opts, Index: index, System: system}
+	return executeZigTemplate(w, "shared_randomness", data)
 }
 
 type sharedRandomnessTemplateData struct {
@@ -44,13 +40,3 @@ type sharedRandomnessTemplateData struct {
 	Index   int
 	System  SharedRandomnessSystem
 }
-
-const sharedRandomnessZigTemplate = `{{if .Options.EmitImport}}const shared_randomness = {{.Options.SharedRandomnessImport}};
-
-{{end}}// shared-randomness system: "{{zig .System.SourceName}}"
-const system_{{.Index}}_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{
-{{range .System.ContributionRefs}}    .{ .round = {{.Round}}, .index = {{.Index}} },
-{{end}}};
-
-const system_{{.Index}}_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = {{.System.CommitmentRound.RoundIndex}}, .has_commitment = {{.System.CommitmentRound.HasCommitment}} }, .contribution_refs = &system_{{.Index}}_shared_randomness_contribution_refs };
-`
