@@ -7,7 +7,7 @@ The RISC-V guest program of the rollup proof (`rollup_spec/Readme.md` §2.2). It
 One rollup proof covers N consecutive whole conflations, each paired with its l2-execution proof, over the chunks (blobs and calldata submissions) of the data-availability stream that carries their compressed payloads. `src/rollup.zig` runs these parts of §2.2 in this order:
 
 - **Canonical payloads** (steps 1 and 3; `src/canonical.zig`). Every conflation's full block RLPs are truncated and encoded into the payload its zstd frame decompresses to (`lineth_da.encoding.truncation`); the block count has to match the paired proof's range, and the senders recovered from the signed transactions have to hash to the proof's `txFromsHash`.
-- **Data availability** (step 2; `lineth_da.decompress`). Every chunk is bound to its `chunkHash`, every blob's EIP-4844 proof opens its commitment to the blob, the stream is parsed under the four layout rules into one segment per conflation, every segment's zstd frame decompresses with the embedded dictionary `v2025-04-21` to its conflation's canonical payload, and the dataRollingHash folds over the chunks. `endDataRollingHash` and `finalDataTailDiscardBytes` come out of it.
+- **Data availability** (step 2; `lineth_da.decompress`). Every chunk is bound to its `chunkHash`, every blob's EIP-4844 proof opens its commitment to the blob, the stream is parsed under the four layout rules into one segment per conflation, every segment's zstd frame decompresses with the embedded dictionary `v2025-04-21` to its conflation's canonical payload, and the dataRollingHash folds over the chunks. `endDataRollingHash` and `finalSharedBlobCarryOverTailBytes` come out of it.
 - **Tiling** (the witness `E₁ … Eₙ`; `src/chain.zig`). Every proof starts right after the end of the proof before it.
 - **Recursion** (step 4; `src/recursion.zig`). Every l2-execution proof is verified under its program VK against the hash of its public input by the devmode system of `verifier-ray`: the proof is the image of one devmode proof, as `devmode.Encode` writes it for `devmode.GuestBase`. The verified statement is 40 cells the guest builds itself, never read from the image: the 32 bytes of the hash of the proof's public input, one cell each, then the 8 limbs of the program VK, each 4 big-endian bytes and a canonical KoalaBear element. A malformed image, a non-canonical limb and a failed verification each exit with code 11.
 - **Chain** (steps 5 and 7; `src/chain.zig`). Every proof's end block hash is the hash of the conflations' block at its boundary; the blocks chain by parent hash from the first proof's parent block hash over the whole range; consecutive proofs agree on block hash, chain configuration and forced-transaction state.
@@ -30,8 +30,8 @@ One rollup proof covers N consecutive whole conflations, each paired with its l2
 | `end_data_rolling_hash` | the dataRollingHash after folding the chunks (step 2) |
 | `parent_block_hash` | first exec proof's `public_inputs.parent_block_hash` |
 | `end_block_hash` | last exec proof's `public_inputs.end_block_hash` |
-| `parent_data_tail_take_bytes` | input's `parent_data_tail_take_bytes` |
-| `final_data_tail_discard_bytes` | the bytes of the stream behind the last segment (step 2) |
+| `parent_shared_blob_carry_over_tail_bytes` | input's `parent_shared_blob_carry_over_tail_bytes` |
+| `final_shared_blob_carry_over_tail_bytes` | the bytes of the stream behind the last segment (step 2) |
 | `l2_l1_messages` | concatenation of every exec proof's `public_inputs.l2_l1_messages`, proof order |
 | `filtered_addresses` | every exec proof's `public_inputs.filtered_addresses`, distinct and sorted ascending bytewise |
 | `program_vks` | every `l2_execution_proofs[i].program_vk`, distinct and sorted ascending bytewise |

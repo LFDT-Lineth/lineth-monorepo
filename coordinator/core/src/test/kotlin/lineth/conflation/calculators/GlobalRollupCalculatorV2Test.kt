@@ -35,20 +35,20 @@ class GlobalRollupCalculatorV2Test {
     assertThat(rollup1.ends()).containsExactly(3UL, 7UL, 9UL)
     assertThat(rollup1.da.blobs).hasSize(2)
     assertThat(rollup1.da.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
-    assertThat(rollup1.da.parentDataTailTakeBytes).isEqualTo(0u)
-    assertThat(rollup1.da.boundaryPrevDataRollingHash).isEqualTo(rollup1.da.parentDataRollingHash)
+    assertThat(rollup1.da.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
+    assertThat(rollup1.da.parentBlobDataRollingHash).isEqualTo(rollup1.da.parentDataRollingHash)
     assertThat(rollup1.da.expectedEndDataRollingHash).isEqualTo(rollup1.da.blobs[1].dataRollingHash)
-    assertThat(rollup1.da.expectedFinalDataTailDiscardBytes).isEqualTo(70_094u)
+    assertThat(rollup1.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(70_094u)
 
     assertThat(rollup2.ends()).containsExactly(14UL, 16UL)
     assertThat(rollup2.da.blobs).hasSize(3)
     assertThat(rollup2.da.blobs.first()).isSameAs(rollup1.da.blobs.last())
     assertThat(rollup2.da.blobs[1].segmentEnds).isEmpty()
-    assertThat(rollup2.da.parentDataTailTakeBytes).isEqualTo(70_094u)
+    assertThat(rollup2.da.parentSharedBlobCarryOverTailBytes).isEqualTo(70_094u)
     assertThat(rollup2.da.parentDataRollingHash).isEqualTo(rollup1.da.expectedEndDataRollingHash)
-    assertThat(rollup2.da.boundaryPrevDataRollingHash).isEqualTo(rollup1.da.blobs[0].dataRollingHash)
+    assertThat(rollup2.da.parentBlobDataRollingHash).isEqualTo(rollup1.da.blobs[0].dataRollingHash)
     // A flushed blob ends the rollup at its last cut, which is the end of its payload.
-    assertThat(rollup2.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(rollup2.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test
@@ -59,7 +59,7 @@ class GlobalRollupCalculatorV2Test {
 
     val rollup = pipeline.rollups.single()
     assertThat(rollup.ends()).containsExactly(3UL)
-    assertThat(rollup.da.expectedFinalDataTailDiscardBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 50_000).toUInt())
+    assertThat(rollup.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 50_000).toUInt())
   }
 
   @Test
@@ -83,7 +83,7 @@ class GlobalRollupCalculatorV2Test {
     val rollup = pipeline.rollups.single()
     assertThat(rollup.ends()).containsExactly(2UL, 4UL)
     assertThat(rollup.da.blobs.single().payloadBytes).isEqualTo(20_000u)
-    assertThat(rollup.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(rollup.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test
@@ -98,7 +98,7 @@ class GlobalRollupCalculatorV2Test {
     assertThat(spanning.ends()).containsExactly(6UL)
     assertThat(spanning.da.blobs).hasSize(4)
     assertThat(spanning.da.blobs.first()).isSameAs(first.da.blobs.single())
-    assertThat(spanning.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
+    assertThat(spanning.da.parentSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
   }
 
   @Test
@@ -119,9 +119,9 @@ class GlobalRollupCalculatorV2Test {
     assertThat(inside.segmentEnds).isEmpty()
     assertThat(inside.payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY.toUInt())
     assertThat(sharedEnd).isSameAs(last.da.blobs.single())
-    assertThat(middle.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
-    assertThat(middle.da.expectedFinalDataTailDiscardBytes).isEqualTo(5_000u)
-    assertThat(last.da.parentDataTailTakeBytes).isEqualTo(5_000u)
+    assertThat(middle.da.parentSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
+    assertThat(middle.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(5_000u)
+    assertThat(last.da.parentSharedBlobCarryOverTailBytes).isEqualTo(5_000u)
   }
 
   @Test
@@ -132,10 +132,10 @@ class GlobalRollupCalculatorV2Test {
 
     val (first, second) = pipeline.rollups
     assertThat(first.da.blobs.single()).isSameAs(second.da.blobs.single())
-    assertThat(first.da.expectedFinalDataTailDiscardBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 40_000).toUInt())
-    assertThat(second.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 40_000).toUInt())
-    assertThat(second.da.expectedFinalDataTailDiscardBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 90_000).toUInt())
-    assertThat(second.da.boundaryPrevDataRollingHash).isEqualTo(genesisDataRollingHash)
+    assertThat(first.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 40_000).toUInt())
+    assertThat(second.da.parentSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 40_000).toUInt())
+    assertThat(second.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 90_000).toUInt())
+    assertThat(second.da.parentBlobDataRollingHash).isEqualTo(genesisDataRollingHash)
   }
 
   @Test
@@ -190,11 +190,13 @@ class GlobalRollupCalculatorV2Test {
       },
     ).containsExactlyElementsOf(rollup2.da.blobs.map { it.blob })
     assertThat(resumedRollup2.da.parentDataRollingHash).isEqualTo(rollup2.da.parentDataRollingHash)
-    assertThat(resumedRollup2.da.parentDataTailTakeBytes).isEqualTo(rollup2.da.parentDataTailTakeBytes)
-    assertThat(resumedRollup2.da.boundaryPrevDataRollingHash).isEqualTo(rollup2.da.boundaryPrevDataRollingHash)
+    assertThat(
+      resumedRollup2.da.parentSharedBlobCarryOverTailBytes,
+    ).isEqualTo(rollup2.da.parentSharedBlobCarryOverTailBytes)
+    assertThat(resumedRollup2.da.parentBlobDataRollingHash).isEqualTo(rollup2.da.parentBlobDataRollingHash)
     assertThat(resumedRollup2.da.expectedEndDataRollingHash).isEqualTo(rollup2.da.expectedEndDataRollingHash)
     assertThat(
-      resumedRollup2.da.expectedFinalDataTailDiscardBytes,
-    ).isEqualTo(rollup2.da.expectedFinalDataTailDiscardBytes)
+      resumedRollup2.da.expectedFinalSharedBlobCarryOverTailBytes,
+    ).isEqualTo(rollup2.da.expectedFinalSharedBlobCarryOverTailBytes)
   }
 }

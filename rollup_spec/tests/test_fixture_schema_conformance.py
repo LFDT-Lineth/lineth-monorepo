@@ -195,23 +195,23 @@ def test_calldata_chunk_kzg_fields_must_be_empty(calldata_chunk_request_and_vali
 
 
 @dataclass(frozen=True)
-class BlobTailCountCase:
+class CarryOverTailBytesCase:
     fixture_name: str
     count_path: tuple[str | int, ...]
 
 
-_BLOB_TAIL_COUNT_CASES = [
-    BlobTailCountCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentDataTailTakeBytes")),
-    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
-    BlobTailCountCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentDataTailTakeBytes")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalDataTailDiscardBytes")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentDataTailTakeBytes")),
-    BlobTailCountCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalDataTailDiscardBytes")),
+_CARRY_OVER_TAIL_BYTES_CASES = [
+    CarryOverTailBytesCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentSharedBlobCarryOverTailBytes")),
+    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalSharedBlobCarryOverTailBytes")),
 ]
 
 
-def _validate_blob_tail_count(case: BlobTailCountCase, value: int) -> None:
+def _validate_carry_over_tail_bytes(case: CarryOverTailBytesCase, value: int) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     fixture_path = _FIXTURE_DIR / case.fixture_name
     schema = json.loads(_schema_path_for(fixture_path).read_text())
@@ -224,13 +224,13 @@ def _validate_blob_tail_count(case: BlobTailCountCase, value: int) -> None:
     validator.validate(fixture)
 
 
-@pytest.mark.parametrize("case", _BLOB_TAIL_COUNT_CASES)
-def test_blob_tail_count_schema_accepts_maximum(case: BlobTailCountCase) -> None:
-    _validate_blob_tail_count(case, 130046)
+@pytest.mark.parametrize("case", _CARRY_OVER_TAIL_BYTES_CASES)
+def test_carry_over_tail_bytes_schema_accepts_maximum(case: CarryOverTailBytesCase) -> None:
+    _validate_carry_over_tail_bytes(case, 130046)
 
 
-@pytest.mark.parametrize("case", _BLOB_TAIL_COUNT_CASES)
-def test_blob_tail_count_schema_rejects_above_maximum(case: BlobTailCountCase) -> None:
+@pytest.mark.parametrize("case", _CARRY_OVER_TAIL_BYTES_CASES)
+def test_carry_over_tail_bytes_schema_rejects_above_maximum(case: CarryOverTailBytesCase) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     with pytest.raises(jsonschema.ValidationError):
-        _validate_blob_tail_count(case, 130047)
+        _validate_carry_over_tail_bytes(case, 130047)

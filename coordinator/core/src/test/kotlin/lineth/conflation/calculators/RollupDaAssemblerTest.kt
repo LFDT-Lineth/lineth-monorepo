@@ -65,12 +65,14 @@ class RollupDaAssemblerTest {
     assertThat(rollups.first().da.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     rollups.zipWithNext().forEach { (previous, next) ->
       assertThat(next.da.parentDataRollingHash).isEqualTo(previous.da.expectedEndDataRollingHash)
-      assertThat(next.da.parentDataTailTakeBytes).isEqualTo(previous.da.expectedFinalDataTailDiscardBytes)
-      if (next.da.parentDataTailTakeBytes > 0u) {
+      assertThat(
+        next.da.parentSharedBlobCarryOverTailBytes,
+      ).isEqualTo(previous.da.expectedFinalSharedBlobCarryOverTailBytes)
+      if (next.da.parentSharedBlobCarryOverTailBytes > 0u) {
         assertThat(next.da.blobs.first()).isSameAs(previous.da.blobs.last())
-        assertThat(next.da.boundaryPrevDataRollingHash).isEqualTo(previous.da.blobs.last().prevDataRollingHash)
+        assertThat(next.da.parentBlobDataRollingHash).isEqualTo(previous.da.blobs.last().prevDataRollingHash)
       } else {
-        assertThat(next.da.boundaryPrevDataRollingHash).isEqualTo(next.da.parentDataRollingHash)
+        assertThat(next.da.parentBlobDataRollingHash).isEqualTo(next.da.parentDataRollingHash)
       }
     }
   }
@@ -92,10 +94,10 @@ class RollupDaAssemblerTest {
     assertThat(spanning.da.blobs).hasSize(5)
     assertThat(spanning.da.blobs.first()).isSameAs(first.da.blobs.single())
     assertThat(spanning.da.blobs.subList(1, 4)).allSatisfy { assertThat(it.segmentEnds).isEmpty() }
-    assertThat(spanning.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
-    assertThat(spanning.da.expectedFinalDataTailDiscardBytes).isEqualTo(10_000u)
+    assertThat(spanning.da.parentSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 10_000).toUInt())
+    assertThat(spanning.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(10_000u)
     assertThat(last.da.blobs).containsExactly(spanning.da.blobs.last())
-    assertThat(last.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(last.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test
@@ -111,7 +113,11 @@ class RollupDaAssemblerTest {
     val blob = rollups.first().da.blobs.single()
     assertThat(blob.segmentEnds).hasSize(10)
     assertThat(rollups).allSatisfy { assertThat(it.da.blobs).containsExactly(blob) }
-    assertThat(rollups.map { it.da.expectedFinalDataTailDiscardBytes }).containsExactly(70_000u, 40_000u, 10_000u, 0u)
+    assertThat(
+      rollups.map {
+        it.da.expectedFinalSharedBlobCarryOverTailBytes
+      },
+    ).containsExactly(70_000u, 40_000u, 10_000u, 0u)
   }
 
   @Test
@@ -133,8 +139,8 @@ class RollupDaAssemblerTest {
     assertThat(blob1.segmentEnds.map { it.conflationEndBlock }).containsExactly(2UL, 4UL, 6UL, 8UL)
     assertThat(blob2.segmentEnds).isEmpty()
     assertThat(blob3.segmentEnds.map { it.conflationEndBlock }).containsExactly(15UL, 17UL, 19UL, 21UL)
-    assertThat(mixed.da.parentDataTailTakeBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 20_000).toUInt())
-    assertThat(mixed.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(mixed.da.parentSharedBlobCarryOverTailBytes).isEqualTo((BLOB_PAYLOAD_CAPACITY - 20_000).toUInt())
+    assertThat(mixed.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test
@@ -153,13 +159,13 @@ class RollupDaAssemblerTest {
 
     assertThat(first.da.blobs).containsExactly(blob1)
     assertThat(first.da.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
-    assertThat(first.da.parentDataTailTakeBytes).isEqualTo(0u)
+    assertThat(first.da.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(second.da.blobs).containsExactly(blob1)
-    assertThat(second.da.parentDataTailTakeBytes).isEqualTo(blob1.payloadBytes - 40_000u)
-    assertThat(second.da.boundaryPrevDataRollingHash).isEqualTo(blob1.prevDataRollingHash)
+    assertThat(second.da.parentSharedBlobCarryOverTailBytes).isEqualTo(blob1.payloadBytes - 40_000u)
+    assertThat(second.da.parentBlobDataRollingHash).isEqualTo(blob1.prevDataRollingHash)
     assertThat(third.da.blobs).containsExactly(blob1, blob2)
     assertThat(third.da.expectedEndDataRollingHash).isEqualTo(blob2.dataRollingHash)
-    assertThat(third.da.expectedFinalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(third.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test

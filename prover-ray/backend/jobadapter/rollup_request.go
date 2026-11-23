@@ -9,18 +9,18 @@ import (
 
 // Field keys for the rollup request. Keys in request.go (guestProgramIDKey,
 // chainIDKey, proofRequestKey, the byte sizes) are reused. parentDataRollingHashKey,
-// parentDataTailTakeBytesKey, filteredAddressesKey, l2L1MessagesKey,
+// parentSharedBlobCarryOverTailBytesKey, filteredAddressesKey, l2L1MessagesKey,
 // endBlockNumberKey, blockCountKey, l2MessagingBlocksOffsetsKey, publicInputsKey,
 // proofKey, and startBlockNumberKey are also used by aggregation_request.go.
 const (
 	decodeRollupOp = "DecodeRollupRequest"
 
-	conflationsKey                 = "conflations"
-	chunksKey                      = "chunks"
-	l2ExecutionProofsKey           = "l2ExecutionProofs"
-	parentDataRollingHashKey       = "parentDataRollingHash"
-	parentDataTailTakeBytesKey     = "parentDataTailTakeBytes"
-	boundaryPrevDataRollingHashKey = "boundaryPrevDataRollingHash"
+	conflationsKey                        = "conflations"
+	chunksKey                             = "chunks"
+	l2ExecutionProofsKey                  = "l2ExecutionProofs"
+	parentDataRollingHashKey              = "parentDataRollingHash"
+	parentSharedBlobCarryOverTailBytesKey = "parentSharedBlobCarryOverTailBytes"
+	parentBlobDataRollingHashKey          = "parentBlobDataRollingHash"
 
 	blockRlpsKey     = "blockRlps"
 	chunkHashKey     = "chunkHash"
@@ -71,17 +71,17 @@ type EmbeddedL2ExecutionProof struct {
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
-// with L2ExecutionProofs. BoundaryPrevDataRollingHash is optional.
+// with L2ExecutionProofs. ParentBlobDataRollingHash is optional.
 type RollupRequest struct {
-	ProgramVk               []byte
-	ChainID                 uint64
-	Conflations             []ConflationWitness
-	Chunks                  []ChunkWitness
-	ParentDataRollingHash   [32]byte
-	ParentDataTailTakeBytes uint64
+	ProgramVk                          []byte
+	ChainID                            uint64
+	Conflations                        []ConflationWitness
+	Chunks                             []ChunkWitness
+	ParentDataRollingHash              [32]byte
+	ParentSharedBlobCarryOverTailBytes uint64
 
-	BoundaryPrevDataRollingHash *[32]byte
-	L2ExecutionProofs           []EmbeddedL2ExecutionProof
+	ParentBlobDataRollingHash *[32]byte
+	L2ExecutionProofs         []EmbeddedL2ExecutionProof
 }
 
 // DecodeRollupRequest parses a getZkRollupProofV1 request and validates its
@@ -144,19 +144,19 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	parentDataTailTakeBytes, err := getU64(proofRequest, parentDataTailTakeBytesKey, op, "proofRequest.")
+	parentSharedBlobCarryOverTailBytes, err := getU64(proofRequest, parentSharedBlobCarryOverTailBytesKey, op, "proofRequest.")
 	if err != nil {
 		return nil, err
 	}
 
-	// boundaryPrevDataRollingHash is optional.
-	var boundaryPrev *[32]byte
-	if raw, ok := proofRequest[boundaryPrevDataRollingHashKey]; ok {
-		h, err := hash32Of(raw, op, "proofRequest."+boundaryPrevDataRollingHashKey)
+	// parentBlobDataRollingHash is optional.
+	var parentBlob *[32]byte
+	if raw, ok := proofRequest[parentBlobDataRollingHashKey]; ok {
+		h, err := hash32Of(raw, op, "proofRequest."+parentBlobDataRollingHashKey)
 		if err != nil {
 			return nil, err
 		}
-		boundaryPrev = &h
+		parentBlob = &h
 	}
 
 	conflations := make([]ConflationWitness, len(conflationsRaw))
@@ -187,14 +187,14 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	}
 
 	return &RollupRequest{
-		ProgramVk:                   guestProgramID,
-		ChainID:                     chainID,
-		Conflations:                 conflations,
-		Chunks:                      chunks,
-		ParentDataRollingHash:       parentDataRollingHash,
-		ParentDataTailTakeBytes:     parentDataTailTakeBytes,
-		BoundaryPrevDataRollingHash: boundaryPrev,
-		L2ExecutionProofs:           proofs,
+		ProgramVk:                          guestProgramID,
+		ChainID:                            chainID,
+		Conflations:                        conflations,
+		Chunks:                             chunks,
+		ParentDataRollingHash:              parentDataRollingHash,
+		ParentSharedBlobCarryOverTailBytes: parentSharedBlobCarryOverTailBytes,
+		ParentBlobDataRollingHash:          parentBlob,
+		L2ExecutionProofs:                  proofs,
 	}, nil
 }
 

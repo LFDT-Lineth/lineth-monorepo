@@ -348,8 +348,8 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
-        parent_data_tail_take_bytes=4,
-        final_data_tail_discard_bytes=0,
+        parent_shared_blob_carry_over_tail_bytes=4,
+        final_shared_blob_carry_over_tail_bytes=0,
         l2_l1_messages=[Hash32(bytes([0x08]) * 32)] * 2,
         filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
         program_vks=[_EXEC_VK],
@@ -372,11 +372,11 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     req = decode_rollup_request(_valid_rollup_request())
 
     assert int(req.chain_id) == 59144
-    # parentDataRollingHash (top-level) -> parent_data_rolling_hash; the outbound endDataRollingHash/finalDataTailDiscardBytes are
+    # parentDataRollingHash (top-level) -> parent_data_rolling_hash; the outbound endDataRollingHash/finalSharedBlobCarryOverTailBytes are
     # recomputed by the guest and not echoed in the request.
     assert bytes(req.parent_data_rolling_hash) == bytes([0x47]) * 32
-    assert req.parent_data_tail_take_bytes == 68
-    assert bytes(req.boundary_prev_data_rolling_hash) == bytes([0x39]) * 32
+    assert req.parent_shared_blob_carry_over_tail_bytes == 68
+    assert bytes(req.parent_blob_data_rolling_hash) == bytes([0x39]) * 32
 
     assert len(req.conflations) == 2
     assert req.conflations[0].block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
@@ -581,8 +581,8 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
-    assert pi["parentDataTailTakeBytes"] == 4
-    assert pi["finalDataTailDiscardBytes"] == 0
+    assert pi["parentSharedBlobCarryOverTailBytes"] == 4
+    assert pi["finalSharedBlobCarryOverTailBytes"] == 0
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # §ProgramVK anchoring: one combined programVks list (exec/rollup not
@@ -594,7 +594,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-            "parentDataTailTakeBytes", "finalDataTailDiscardBytes", "l2L1Messages", "filteredAddresses", "programVks",
+            "parentSharedBlobCarryOverTailBytes", "finalSharedBlobCarryOverTailBytes", "l2L1Messages", "filteredAddresses", "programVks",
             "blockCount", "l2MessagingBlocksOffsets",
     }
 
@@ -624,8 +624,8 @@ def _sample_finalization_submission() -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=FinalizationPublicInput(
             **{name: getattr(rollup_pi, name) for name in FinalizationPublicInput.__dataclass_fields__
-               if name not in ("program_ids", "parent_data_tail_take_bytes", "l2_l1_roots", "l2_l1_tree_depth", "filtered_addresses")},
-            parent_data_tail_take_bytes=0,
+               if name not in ("program_ids", "parent_shared_blob_carry_over_tail_bytes", "l2_l1_roots", "l2_l1_tree_depth", "filtered_addresses")},
+            parent_shared_blob_carry_over_tail_bytes=0,
             l2_l1_tree_depth=5,
             l2_l1_roots=[Hash32(bytes.fromhex(root[2:])) for root in _expected_aggregation_response()["publicInputs"]["l2L1Roots"]],
             filtered_addresses=[Address(bytes([0x01]) * 20)],
@@ -760,7 +760,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "parentDataTailTakeBytes", "finalDataTailDiscardBytes", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programIds",
+        "parentSharedBlobCarryOverTailBytes", "finalSharedBlobCarryOverTailBytes", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programIds",
         "l2MessagingBlocksOffsets",
     }
 

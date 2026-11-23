@@ -68,8 +68,8 @@ data class FinalizationPublicInputs(
   val endDataRollingHash: ByteArray,
   val parentBlockHash: ByteArray,
   val endBlockHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
-  val finalDataTailDiscardBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: Int,
+  val finalSharedBlobCarryOverTailBytes: Int,
   val l2L1Roots: List<ByteArray>,
   val l2L1TreeDepth: ULong,
   val filteredAddresses: List<ByteArray>,
@@ -96,8 +96,8 @@ data class FinalizationPublicInputs(
     if (!endDataRollingHash.contentEquals(other.endDataRollingHash)) return false
     if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
     if (!endBlockHash.contentEquals(other.endBlockHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (finalDataTailDiscardBytes != other.finalDataTailDiscardBytes) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (finalSharedBlobCarryOverTailBytes != other.finalSharedBlobCarryOverTailBytes) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
     if (l2L1TreeDepth != other.l2L1TreeDepth) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
@@ -121,8 +121,8 @@ data class FinalizationPublicInputs(
     result = 31 * result + endDataRollingHash.contentHashCode()
     result = 31 * result + parentBlockHash.contentHashCode()
     result = 31 * result + endBlockHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
-    result = 31 * result + finalDataTailDiscardBytes
+    result = 31 * result + parentSharedBlobCarryOverTailBytes
+    result = 31 * result + finalSharedBlobCarryOverTailBytes
     result = 31 * result + l2L1Roots.byteArrayListHashCode()
     result = 31 * result + l2L1TreeDepth.hashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
