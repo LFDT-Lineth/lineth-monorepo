@@ -1544,6 +1544,30 @@ func TestPredecode(t *testing.T) {
 // APPLY OPTIONS
 // ------------------------------------------------------------
 
+// TestWithMaxDecodedRecords checks that the returned option sets the cap in the
+// config, replacing what was there, and returns no error.
+func TestWithMaxDecodedRecords(t *testing.T) {
+	tests := []struct {
+		name   string
+		option Option
+		want   uint64
+	}{
+		{name: "zero", option: WithMaxDecodedRecords(0), want: 0},
+		{name: "one", option: WithMaxDecodedRecords(1), want: 1},
+		{name: "default", option: WithMaxDecodedRecords(DefaultMaxDecodedRecords), want: DefaultMaxDecodedRecords},
+		{name: "largest", option: WithMaxDecodedRecords(^uint64(0)), want: ^uint64(0)},
+	}
+	for _, tt := range tests {
+		cfg := config{maxDecodedRecords: 7}
+		if err := tt.option(&cfg); err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if cfg.maxDecodedRecords != tt.want {
+			t.Fatalf("%s: maxDecodedRecords = %d, want %d", tt.name, cfg.maxDecodedRecords, tt.want)
+		}
+	}
+}
+
 // commit 88fe45d
 // TestDecodedInputsPreserveExactRowLength
 // TestDecodedProgramEncodeInputsReturnsFreshBytes
