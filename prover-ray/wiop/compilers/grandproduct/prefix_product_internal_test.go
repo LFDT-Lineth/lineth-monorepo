@@ -10,9 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// scanChunk is the smallest chunk of field.VecPrefixProductExt, so that the
-// tests' columns span several chunks.
-const scanChunk = 4096
+// scanChunk is the length from which gnark-crypto's VectorE6.PrefixProduct
+// splits the scan across goroutines, so that the tests' columns run the
+// chunked path.
+const scanChunk = 1 << 14
 
 // The chunked running product must match a row-by-row product of the
 // evaluated factors, for any number of workers, including chunk counts that

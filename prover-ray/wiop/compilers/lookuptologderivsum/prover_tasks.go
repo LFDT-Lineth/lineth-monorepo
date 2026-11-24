@@ -75,7 +75,8 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 	// Hashing scalar — fresh per run, independent of the symbolic α used in
 	// the constraint system. Collisions are tolerable: they would yield a
 	// proof the verifier rejects, never a false acceptance.
-	alpha := field.RandomElementExt()
+	var alpha field.Ext
+	alpha.MustSetRandom()
 
 	// --- Build the B side. Every B row becomes an entry, tagged with its
 	// union index; each fragment's entries sit at a fixed offset.
@@ -285,12 +286,10 @@ func (h *rowHasher) hash(lo, hi int, buf *hashBuffers) []field.Ext {
 	default:
 		clear(out)
 	}
-	if h.hasConstant {
-		for i := range out {
-			out[i].Add(&out[i], &h.constant)
-		}
-	}
 	acc := extensions.VectorE6(out)
+	if h.hasConstant {
+		acc.ScalarAdd(acc, &h.constant)
+	}
 	for k, col := range h.cols {
 		if col.isBase() {
 			acc.ScalarMulAccBase(col.readBase(lo, hi, buf.base), &h.coefs[k])

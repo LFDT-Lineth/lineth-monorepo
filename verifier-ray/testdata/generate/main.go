@@ -565,7 +565,7 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 	}
 	one := elem(1)
 	var flipped field.Ext
-	field.AddByBase(&flipped, cell.extValue, &one)
+	flipped.AddElement(cell.extValue, &one)
 	return extTraceCell(flipped)
 }
 

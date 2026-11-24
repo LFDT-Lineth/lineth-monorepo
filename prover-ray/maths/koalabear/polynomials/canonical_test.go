@@ -26,7 +26,9 @@ func randBase(_ *rand.Rand) field.Element {
 }
 
 func randExt(_ *rand.Rand) field.Ext {
-	return field.RandomElementExt()
+	var r field.Ext
+	r.MustSetRandom()
+	return r
 }
 
 func extEq(a, b field.Ext) bool {

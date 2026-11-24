@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"math/bits"
 	"math/rand/v2"
 	"unsafe"
 
@@ -87,38 +86,6 @@ func NewFromString(s string) (res Element) {
 	return res
 }
 
-// ExpToInt sets z to x**k
-func ExpToInt(z *Element, x Element, k int) *Element {
-	if k == 0 {
-		return z.SetOne()
-	}
-
-	if k < 0 {
-		x.Inverse(&x)
-		k = -k
-	}
-
-	z.Set(&x)
-
-	for i := bits.Len(uint(k)) - 2; i >= 0; i-- {
-		z.Square(z)
-		if (k>>i)&1 == 1 {
-			z.Mul(z, &x)
-		}
-	}
-
-	return z
-}
-
-// RandomElement returns a random element
-func RandomElement() Element {
-	var res Element
-	if _, err := res.SetRandom(); err != nil {
-		panic(err)
-	}
-	return res
-}
-
 // PseudoRand generates a field using a pseudo-random number generator
 func PseudoRand(rng *rand.Rand) Element {
 	const q = 2130706433 // koalabear modulus
@@ -191,7 +158,7 @@ func OctupletToBytes(octuplet [8]Element) [32]byte {
 func RandomOctuplet() Octuplet {
 	var oct Octuplet
 	for i := range oct {
-		oct[i] = RandomElement()
+		oct[i].MustSetRandom()
 	}
 	return oct
 }

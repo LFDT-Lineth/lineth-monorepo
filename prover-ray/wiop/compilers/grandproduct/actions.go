@@ -8,6 +8,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
 // RowLimitAction enforces the per-permutation row bound for a single
@@ -86,7 +87,7 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 // since the β-randomisation is supposed to make every denominator non-zero.
 //
 // The row terms are computed by one [vecprog] program (one batch inversion
-// per block of rows), then [field.VecPrefixProductExt] takes their running
+// per block of rows), then gnark-crypto's VectorE6.PrefixProduct takes their running
 // product. workers bounds the goroutines used.
 func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n, workers int) []field.Ext {
 	l := wiop.NewRowLowering(rt, n)
@@ -102,7 +103,7 @@ func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n, worke
 	b.Store(b.Op(vecprog.Div, l.Lower(zNum), den), z)
 	b.Compile(n, 1, 1).Run(nil, nil, workers)
 
-	field.VecPrefixProductExt(z, workers)
+	extensions.VectorE6(z).PrefixProduct(workers)
 	return z
 }
 

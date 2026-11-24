@@ -763,3 +763,20 @@ func TestVecVectorisedMatchesElementwise(t *testing.T) {
 		require.Equal(t, wantSAE, got, "VecScaleAddExtExt n=%d", n)
 	}
 }
+
+// TestVecPrefixSumExt checks the chunked running sum against a serial one,
+// for worker counts that split the vector into several chunks or none.
+func TestVecPrefixSumExt(t *testing.T) {
+	for _, n := range []int{0, 1, 7, 3*prefixSumMinChunk + 5} {
+		x := randomExts(n)
+		want := slices.Clone(x)
+		for i := 1; i < n; i++ {
+			want[i].Add(&want[i-1], &want[i])
+		}
+		for _, workers := range []int{1, 2, 3, 7, 64} {
+			got := slices.Clone(x)
+			VecPrefixSumExt(got, workers)
+			require.Equal(t, want, got, "n=%d workers=%d", n, workers)
+		}
+	}
+}

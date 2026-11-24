@@ -160,37 +160,6 @@ func TestGetBase(t *testing.T) {
 	}
 }
 
-// TestAddByBase verifies that AddByBase(z, x, y) computes z = x + Lift(y).
-func TestAddByBase(t *testing.T) {
-	rng := newRng()
-	for range testN {
-		x := PseudoRandExt(rng)
-		y := PseudoRand(rng)
-		var z Ext
-		AddByBase(&z, &x, &y)
-		yLift := Lift(y)
-		var want Ext
-		want.Add(&x, &yLift)
-		checkExt(t, want, z)
-	}
-}
-
-// TestDivByBase verifies that DivByBase(z, x, y) computes z = x / Lift(y) via
-// the round-trip property (x/y)*y == x.
-func TestDivByBase(t *testing.T) {
-	rng := newRng()
-	for range testN {
-		x := PseudoRandExt(rng)
-		y := PseudoRand(rng)
-		var z Ext
-		DivByBase(&z, &x, &y)
-		yLift := Lift(y)
-		var product Ext
-		product.Mul(&z, &yLift)
-		checkExt(t, x, product)
-	}
-}
-
 // TestSetInterface verifies SetInterface for all supported input types,
 // including nil and unknown-type error paths.
 func TestSetInterface(t *testing.T) {
@@ -466,49 +435,6 @@ func TestToUint64s(t *testing.T) {
 	}
 }
 
-// TestSetExtFromUInt verifies that SetExtFromUInt sets B0.A0 to the given
-// canonical value and zeroes all remaining coordinates.
-func TestSetExtFromUInt(t *testing.T) {
-	var z Ext
-	SetExtFromUInt(&z, 42)
-	if z.B0.A0.Uint64() != 42 {
-		t.Errorf("B0.A0 = %d, want 42", z.B0.A0.Uint64())
-	}
-	if !extUpperIsZero(z) {
-		t.Error("SetExtFromUInt: extension coordinates should be zero")
-	}
-}
-
-// TestSetExtFromInt verifies SetExtFromInt for a positive and a negative value.
-func TestSetExtFromInt(t *testing.T) {
-	var z Ext
-	SetExtFromInt(&z, 100)
-	if z.B0.A0.Uint64() != 100 {
-		t.Errorf("B0.A0 = %d, want 100", z.B0.A0.Uint64())
-	}
-
-	var neg Ext
-	SetExtFromInt(&neg, -1)
-	var want Element
-	want.SetInt64(-1)
-	checkElem(t, want, neg.B0.A0)
-}
-
-// TestSetExtFromBase verifies that SetExtFromBase sets only B0.A0 and zeroes
-// all other coordinates.
-func TestSetExtFromBase(t *testing.T) {
-	rng := newRng()
-	for range testN {
-		e := PseudoRand(rng)
-		var z Ext
-		SetExtFromBase(&z, &e)
-		checkElem(t, e, z.B0.A0)
-		if !extUpperIsZero(z) {
-			t.Error("SetExtFromBase: extension coordinates should be zero")
-		}
-	}
-}
-
 // TestNewExtFromUint verifies that Uint64ToExt sets B0.A0 to the given
 // value and leaves the remaining coordinates at zero.
 func TestNewExtFromUint(t *testing.T) {
@@ -519,56 +445,6 @@ func TestNewExtFromUint(t *testing.T) {
 	if !extUpperIsZero(e) {
 		t.Error("Uint64ToExt: extension coordinates should be zero")
 	}
-}
-
-// TestExpByIntExt verifies ExpByIntExt for k=0, k=1, a positive exponent,
-// and negative exponents using round-trip and repeated-multiplication checks.
-func TestExpByIntExt(t *testing.T) {
-	rng := newRng()
-	oneExt := OneExt()
-
-	t.Run("k=0", func(t *testing.T) {
-		for range testN {
-			x := PseudoRandExt(rng)
-			var z Ext
-			ExpByIntExt(&z, x, 0)
-			checkExt(t, oneExt, z)
-		}
-	})
-
-	t.Run("k=1", func(t *testing.T) {
-		for range testN {
-			x := PseudoRandExt(rng)
-			var z Ext
-			ExpByIntExt(&z, x, 1)
-			checkExt(t, x, z)
-		}
-	})
-
-	// Verify x^3 against x * x * x.
-	t.Run("k=3", func(t *testing.T) {
-		for range testN {
-			x := PseudoRandExt(rng)
-			var want Ext
-			want.Mul(&x, &x)
-			want.Mul(&want, &x)
-			var z Ext
-			ExpByIntExt(&z, x, 3)
-			checkExt(t, want, z)
-		}
-	})
-
-	// x^(-1) * x == 1.
-	t.Run("k=-1", func(t *testing.T) {
-		for range testN {
-			x := PseudoRandExt(rng)
-			var z Ext
-			ExpByIntExt(&z, x, -1)
-			var product Ext
-			product.Mul(&z, &x)
-			checkExt(t, oneExt, product)
-		}
-	})
 }
 
 // TestBytesToExt verifies BytesToExt for two key properties:
@@ -622,12 +498,6 @@ func TestExtFromBytes(t *testing.T) {
 			}
 		}
 	}
-}
-
-// TestRandomElementExt is a smoke test verifying that RandomElementExt does
-// not panic and returns some value.
-func TestRandomElementExt(_ *testing.T) {
-	_ = RandomElementExt()
 }
 
 // extUpperIsZero reports whether every coordinate except B0.A0 is zero.
