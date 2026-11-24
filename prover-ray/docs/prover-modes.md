@@ -7,7 +7,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | Mode | Runs the guest | Traces the guest | Constraints | Conglomeration | Public inputs | Proof |
 |---|---|---|---|---|---|---|
 | `dev-mock` | no | no | not checked | none | placeholder | marker bytes |
-| `dev-zkvm` | yes | no | not checked | none | real | marker bytes |
+| `dev-zkvm` | yes | no | not checked | none | real | devmode proof |
 | `dev-partial` | yes | yes | checked | mock (checks the shards fit together) | real | devmode proof |
 | `dev-full-dummy-wrap` (aggregation only) | yes | yes | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
 | `full` | yes | yes | proved | real recursion | real | real proof |
@@ -22,7 +22,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
+For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
 
 The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
 
@@ -39,6 +39,10 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 - Runs the guest on the real input, without a trace.
 - The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
+- The proof is a devmode proof of the guest output hash, the same format as in dev-partial:
+  - the next layer can verify it;
+  - but anyone can make one, so it proves nothing;
+  - its program VK is zero.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-partial

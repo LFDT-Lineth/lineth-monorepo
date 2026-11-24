@@ -69,9 +69,9 @@ test "a range starting inside a chunk needs the preimage that opens its parent h
     const chunks = [_]Hash{ filled(0xa1), filled(0xa2) };
     const parent = step(before, chunks[0]);
 
-    try std.testing.expectError(error.BoundaryPreimageMismatch, rolling_hash.fold(parent, &chunks, 7, null));
-    try std.testing.expectError(error.BoundaryPreimageMismatch, rolling_hash.fold(parent, &chunks, 7, filled(0x11)));
+    try std.testing.expectError(error.ParentBlobDataRollingHashMismatch, rolling_hash.fold(parent, &chunks, 7, null));
+    try std.testing.expectError(error.ParentBlobDataRollingHashMismatch, rolling_hash.fold(parent, &chunks, 7, filled(0x11)));
     // The preimage opens the hash of the first chunk, not of another one.
-    try std.testing.expectError(error.BoundaryPreimageMismatch, rolling_hash.fold(parent, chunks[1..], 7, before));
-    try std.testing.expectError(error.BoundaryPreimageMismatch, rolling_hash.fold(parent, &.{}, 7, before));
+    try std.testing.expectError(error.ParentBlobDataRollingHashMismatch, rolling_hash.fold(parent, chunks[1..], 7, before));
+    try std.testing.expectError(error.ParentBlobDataRollingHashMismatch, rolling_hash.fold(parent, &.{}, 7, before));
 }

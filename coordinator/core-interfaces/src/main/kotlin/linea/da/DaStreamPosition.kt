@@ -13,7 +13,7 @@ import linea.kotlin.encodeHex
  * @property parentBlobDataRollingHash rolling hash before the blob the stream opens in: before [sharedBlob] when
  *   [sharedBlobCarryOverTailBytes] > 0, so that `fold(parentBlobDataRollingHash, chunkHash(sharedBlob)) ==
  *   dataRollingHash`; equal to [dataRollingHash] when [sharedBlobCarryOverTailBytes] = 0, as the next blob folds onto it
- * @property sharedBlobCarryOverTailBytes the last rollup's `finalDataTailDiscardBytes`; 0 = fresh blob
+ * @property sharedBlobCarryOverTailBytes the last rollup's `finalSharedBlobCarryOverTailBytes`; 0 = fresh blob
  * @property sharedBlob the last rollup's last (packed) blob, required when [sharedBlobCarryOverTailBytes] > 0
  */
 data class DaStreamPosition(

@@ -288,15 +288,15 @@ test "a positive tail count needs a first blob with a longer payload" {
     const a = arena.allocator();
     const own = try segment(a, payload_1);
 
-    try expectRejected(error.InvalidTailTake, &.{calldataChunk(own)}, &.{payload_1}, .{ .take = 3 });
+    try expectRejected(error.InvalidParentCarryOverTail, &.{calldataChunk(own)}, &.{payload_1}, .{ .take = 3 });
     const blob = try blobChunk(a, own);
-    try expectRejected(error.InvalidTailTake, &.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, own.len));
-    try expectRejected(error.InvalidTailTake, &.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, own.len + 1));
+    try expectRejected(error.InvalidParentCarryOverTail, &.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, own.len));
+    try expectRejected(error.InvalidParentCarryOverTail, &.{blob}, &.{payload_1}, insideFirstChunk(&.{blob}, own.len + 1));
 
     const full = try a.alloc(u8, capacity);
     @memset(full, 0);
     const full_blob = try blobChunk(a, full);
-    try expectRejected(error.InvalidTailTake, &.{full_blob}, &.{payload_1}, insideFirstChunk(&.{full_blob}, capacity));
+    try expectRejected(error.InvalidParentCarryOverTail, &.{full_blob}, &.{payload_1}, insideFirstChunk(&.{full_blob}, capacity));
 }
 
 test "a blob has to be the canonical packing of its payload" {
@@ -497,8 +497,8 @@ test "a range starting inside a chunk has to open its parent hash" {
     const blob = try blobChunk(a, try concat(a, &.{ foreign_prefix, own }));
 
     var start = insideFirstChunk(&.{blob}, own.len);
-    start.boundary = null;
-    try expectRejected(error.BoundaryPreimageMismatch, &.{blob}, &.{payload_1}, start);
-    start.boundary = wrong_hash;
-    try expectRejected(error.BoundaryPreimageMismatch, &.{blob}, &.{payload_1}, start);
+    start.parent_blob = null;
+    try expectRejected(error.ParentBlobDataRollingHashMismatch, &.{blob}, &.{payload_1}, start);
+    start.parent_blob = wrong_hash;
+    try expectRejected(error.ParentBlobDataRollingHashMismatch, &.{blob}, &.{payload_1}, start);
 }

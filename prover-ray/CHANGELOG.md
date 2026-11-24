@@ -2,6 +2,24 @@
 
 ### 🚀 Features
 
+- *(prover-ray)* Encode the rollup guest input (#4571)
+
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Make the NonNative query sound (#4494)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+## [0.4.0] - 2026-11-23
+
+### 🚀 Features
+
+- *(prover-ray)* Dev-zkvm returns a devmode proof instead of marker bytes (#4569)
+## [0.3.0] - 2026-11-23
+
+### 🚀 Features
+
 - *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(prover-ray)* FRI over a fixed maximum domain (#4322)
@@ -46,6 +64,7 @@
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(prover-ray)* Ship guest programs separately from the prover-ray image (#4515)
+- *(prover-ray)* Remove nonnative zkcdriver tests (#4555)
 ## [0.2.0] - 2026-10-28
 
 ### 🚀 Features

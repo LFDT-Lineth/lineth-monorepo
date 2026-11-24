@@ -156,8 +156,8 @@ data class SealedBlob(
 
 /**
  * A cut point: the segment of the conflation ending at [conflationEndBlock] ends inside this blob, followed by
- * [unusedTailBytes] payload bytes. A rollup ending here leaves them unused (`finalDataTailDiscardBytes`), and the next
- * rollup takes them (`parentDataTailTakeBytes`).
+ * [unusedTailBytes] payload bytes. A rollup ending here leaves them unused (`finalSharedBlobCarryOverTailBytes`), and
+ * the next rollup carries them over (`parentSharedBlobCarryOverTailBytes`).
  */
 data class SegmentEnd(
   val conflationEndBlock: ULong,
@@ -197,8 +197,8 @@ object DaConstants {
   const val BLOB_PAYLOAD_CAPACITY = 4096 * 254 / 8 - 1
 
   /**
-   * Upper bound of a blob tail byte count (`tailCount` in the V1 schemas): a tail shared with the next rollup is strictly
-   * shorter than a blob's payload, otherwise the whole blob would belong to the next rollup.
+   * Upper bound of a blob tail byte count (`sharedBlobCarryOverTailBytes` in the V1 schemas): a tail shared with the
+   * next rollup is strictly shorter than a blob's payload, otherwise the whole blob would belong to the next rollup.
    */
   const val MAX_TAIL_BYTES = BLOB_PAYLOAD_CAPACITY - 1
 

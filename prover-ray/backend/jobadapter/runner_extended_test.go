@@ -24,8 +24,8 @@ var guestOutput = []byte("guest output")
 
 // extendedModes maps each mode to the proof bytes its prover returns.
 var extendedModes = map[backend.ProverMode][]byte{
-	backend.ProverModeDevZkVM:    backend.DevMarkerProof(backend.ProverModeDevZkVM),
-	backend.ProverModeDevPartial: []byte("devmode proof"),
+	backend.ProverModeDevZkVM:    []byte("dev-zkvm devmode proof"),
+	backend.ProverModeDevPartial: []byte("dev-partial devmode proof"),
 }
 
 // resultProgramVK stands in for the VK of the prover's proof.

@@ -9,6 +9,7 @@ import java.util.function.Supplier
 internal class JsonRpcV2ClientImpl(
   private val delegate: JsonRpcRequestRetryerV2,
   private val idSupplier: Supplier<Any>,
+  private val closeAction: () -> SafeFuture<Unit> = { SafeFuture.completedFuture(Unit) },
 ) : JsonRpcV2Client {
 
   override fun <T> makeRequest(
@@ -25,4 +26,6 @@ internal class JsonRpcV2ClientImpl(
       resultMapper = resultMapper,
     )
   }
+
+  override fun close(): SafeFuture<Unit> = closeAction()
 }
