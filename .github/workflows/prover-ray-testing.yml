@@ -28,15 +28,7 @@ jobs:
         go-version: 1.27.1
         cache-dependency-path: |
               prover-ray/go.sum
-    - uses: ./.github/actions/cache
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache-go-build: 'true'
     - name: gofmt
       working-directory: prover-ray
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
@@ -108,15 +100,7 @@ jobs:
         go-version: ${{ matrix.go-version }}
         cache-dependency-path: |
               prover-ray/go.sum
-    - uses: ./.github/actions/cache
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache-go-build: 'true'
     - name: Checkout ZKC testdata
       working-directory: prover-ray
       run: |
