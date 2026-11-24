@@ -51,7 +51,7 @@ RUN mkdir -p /opt/linea/prover/config
 # Run as a dedicated non-root user (uid 1000). The config dir is typically
 # volume-mounted at runtime — make sure it is readable by uid 1000.
 RUN adduser -D -u 1000 prover && \
-    chown -R prover:prover /opt/lineth/prover /app/logs
+    chown -R prover:prover /opt/linea/prover /app/logs
 
 # Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
 USER 1000:1000
