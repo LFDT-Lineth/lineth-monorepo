@@ -25,9 +25,12 @@ class BlobSubmittersV2Test {
   private val blobs = List(4) { createBlobData(prevDataRollingHash = hashes[it], dataRollingHash = hashes[it + 1]) }
 
   // rollup1 = [b0, b1, b2] ending inside b2; rollup2 = [b2 (shared), b3] ending inside b3; rollup3 lies inside b3.
-  private val rollup1 = record(1UL, 10UL, hashes[0], hashes[3], blobs.subList(0, 3), take = 0u, discard = 100u)
-  private val rollup2 = record(11UL, 20UL, hashes[3], hashes[4], blobs.subList(2, 4), take = 100u, discard = 50u)
-  private val rollup3 = record(21UL, 30UL, hashes[4], hashes[4], blobs.subList(3, 4), take = 50u, discard = 10u)
+  private val rollup1 =
+    record(1UL, 10UL, hashes[0], hashes[3], blobs.subList(0, 3), parentCarryOver = 0u, finalCarryOver = 100u)
+  private val rollup2 =
+    record(11UL, 20UL, hashes[3], hashes[4], blobs.subList(2, 4), parentCarryOver = 100u, finalCarryOver = 50u)
+  private val rollup3 =
+    record(21UL, 30UL, hashes[4], hashes[4], blobs.subList(3, 4), parentCarryOver = 50u, finalCarryOver = 10u)
 
   private fun record(
     startBlockNumber: ULong,
@@ -35,17 +38,17 @@ class BlobSubmittersV2Test {
     parentDataRollingHash: ByteArray,
     dataRollingHash: ByteArray,
     blobsData: List<BlobData>,
-    take: UInt,
-    discard: UInt,
+    parentCarryOver: UInt,
+    finalCarryOver: UInt,
   ): BlobRecordV2 =
     createBlobRecordV2(
       startBlockNumber = startBlockNumber,
       endBlockNumber = endBlockNumber,
       parentDataRollingHash = parentDataRollingHash,
       dataRollingHash = dataRollingHash,
-      parentDataTailTakeBytes = take,
-      boundaryPrevDataRollingHash = if (take > 0u) blobsData.first().prevDataRollingHash else null,
-      finalDataTailDiscardBytes = discard,
+      parentSharedBlobCarryOverTailBytes = parentCarryOver,
+      parentBlobDataRollingHash = if (parentCarryOver > 0u) blobsData.first().prevDataRollingHash else null,
+      finalSharedBlobCarryOverTailBytes = finalCarryOver,
       blobsData = blobsData,
     )
 

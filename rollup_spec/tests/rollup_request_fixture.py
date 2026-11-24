@@ -6,7 +6,7 @@ conflations' canonical payloads are placeholders, as the fixture's block RLPs ar
 test-side compressor and blob builder as every other DA witness, so its frames are in the one form a DA frame takes.
 
 From `rollup_spec/`, `PYTHONPATH=src python -m tests.rollup_request_fixture` rewrites the chunk's `chunkHash`,
-`blobBytes`, `kzgCommitment` and `kzgProof`, and the request's `parentDataTailTakeBytes`, in the fixture.
+`blobBytes`, `kzgCommitment` and `kzgProof`, and the request's `parentSharedBlobCarryOverTailBytes`, in the fixture.
 """
 
 import json
@@ -28,7 +28,7 @@ def regenerated(request: dict) -> dict:
     segments = b"".join(segment(payload) for payload in CANONICAL_PAYLOADS)
     chunk = blob_chunk(FOREIGN_PREFIX + segments)
     proof_request = request["proofRequest"]
-    proof_request["parentDataTailTakeBytes"] = len(segments)
+    proof_request["parentSharedBlobCarryOverTailBytes"] = len(segments)
     proof_request["chunks"][0].update(
         chunkHash="0x" + chunk.chunk_hash.hex(),
         blobBytes="0x" + chunk.blob_bytes.hex(),

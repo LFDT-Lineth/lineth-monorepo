@@ -39,7 +39,7 @@ object DaPipelineTestSupport {
   /** The stream position at the end of [rollup], as restart would rebuild it from the rollup's persisted row. */
   fun positionAfter(rollup: Rollup): DaStreamPosition {
     val last = rollup.da.blobs.last()
-    val tail = rollup.da.expectedFinalDataTailDiscardBytes
+    val tail = rollup.da.expectedFinalSharedBlobCarryOverTailBytes
     if (tail == 0u) return DaStreamPosition.fresh(rollup.da.expectedEndDataRollingHash)
     return DaStreamPosition(
       dataRollingHash = rollup.da.expectedEndDataRollingHash,

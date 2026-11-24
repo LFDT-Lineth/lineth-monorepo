@@ -328,20 +328,20 @@ class RollupProofGeneratingCoordinator(
         )
       },
       parentDataRollingHash = da.parentDataRollingHash,
-      parentDataTailTakeBytes = da.parentDataTailTakeBytes.toInt(),
-      boundaryPrevDataRollingHash = da.midBlobStartBoundaryPrevDataRollingHash(),
+      parentSharedBlobCarryOverTailBytes = da.parentSharedBlobCarryOverTailBytes.toInt(),
+      parentBlobDataRollingHash = da.midBlobStartParentBlobDataRollingHash(),
     )
   }
 
   private fun trackProofInProgress(proofIndex: BlockIntervalProofIndex, rollup: Rollup) {
     val da = rollup.da
     log.info(
-      "rollup proof request created: rollup={}..{} blobs={} tailTake={} tailDiscard={}",
+      "rollup proof request created: rollup={}..{} blobs={} parentCarryOver={} finalCarryOver={}",
       rollup.startBlockNumber,
       rollup.endBlockNumber,
       da.blobs.size,
-      da.parentDataTailTakeBytes,
-      da.expectedFinalDataTailDiscardBytes,
+      da.parentSharedBlobCarryOverTailBytes,
+      da.expectedFinalSharedBlobCarryOverTailBytes,
     )
     rollupProofPoller.addProofInProgress(
       proofIndex = proofIndex,
@@ -356,9 +356,9 @@ class RollupProofGeneratingCoordinator(
       },
       parentDataRollingHash = da.parentDataRollingHash,
       dataRollingHash = da.expectedEndDataRollingHash,
-      parentDataTailTakeBytes = da.parentDataTailTakeBytes,
-      boundaryPrevDataRollingHash = da.midBlobStartBoundaryPrevDataRollingHash(),
-      finalDataTailDiscardBytes = da.expectedFinalDataTailDiscardBytes,
+      parentSharedBlobCarryOverTailBytes = da.parentSharedBlobCarryOverTailBytes,
+      parentBlobDataRollingHash = da.midBlobStartParentBlobDataRollingHash(),
+      finalSharedBlobCarryOverTailBytes = da.expectedFinalSharedBlobCarryOverTailBytes,
       startBlockTimestamp = rollup.conflations.first().blocks.first().timestamp.toInstantFromEpochSeconds(),
       endBlockTimestamp = rollup.conflations.last().blocks.last().timestamp.toInstantFromEpochSeconds(),
       totalBatchesCount = rollup.conflations.size,
@@ -367,8 +367,8 @@ class RollupProofGeneratingCoordinator(
 }
 
 /**
- * [RollupDaWitness.boundaryPrevDataRollingHash] for a rollup that starts inside a shared blob, null otherwise: the
+ * [RollupDaWitness.parentBlobDataRollingHash] for a rollup that starts inside a shared blob, null otherwise: the
  * request and the persisted rollup carry it only for a mid-blob start, as the spec requires it exactly then.
  */
-private fun RollupDaWitness.midBlobStartBoundaryPrevDataRollingHash(): ByteArray? =
-  boundaryPrevDataRollingHash.takeIf { parentDataTailTakeBytes > 0u }
+private fun RollupDaWitness.midBlobStartParentBlobDataRollingHash(): ByteArray? =
+  parentBlobDataRollingHash.takeIf { parentSharedBlobCarryOverTailBytes > 0u }

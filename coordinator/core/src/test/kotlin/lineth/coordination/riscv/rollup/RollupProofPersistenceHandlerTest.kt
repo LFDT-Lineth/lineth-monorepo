@@ -25,8 +25,8 @@ class RollupProofPersistenceHandlerTest {
   private val record = createBlobRecordV2(
     startBlockNumber = 1UL,
     endBlockNumber = 10UL,
-    parentDataTailTakeBytes = 100u,
-    finalDataTailDiscardBytes = 200u,
+    parentSharedBlobCarryOverTailBytes = 100u,
+    finalSharedBlobCarryOverTailBytes = 200u,
   )
   private val proofIndex = BlockIntervalProofIndex(
     startBlockNumber = record.startBlockNumber,
@@ -39,9 +39,9 @@ class RollupProofPersistenceHandlerTest {
     blobsData = record.blobsData,
     parentDataRollingHash = record.parentDataRollingHash,
     dataRollingHash = record.dataRollingHash,
-    parentDataTailTakeBytes = record.parentDataTailTakeBytes,
-    boundaryPrevDataRollingHash = record.boundaryPrevDataRollingHash,
-    finalDataTailDiscardBytes = record.finalDataTailDiscardBytes,
+    parentSharedBlobCarryOverTailBytes = record.parentSharedBlobCarryOverTailBytes,
+    parentBlobDataRollingHash = record.parentBlobDataRollingHash,
+    finalSharedBlobCarryOverTailBytes = record.finalSharedBlobCarryOverTailBytes,
     startBlockTimestamp = record.startBlockTimestamp,
     endBlockTimestamp = record.endBlockTimestamp,
     totalBatchesCount = record.totalBatchesCount.toInt(),
@@ -49,14 +49,14 @@ class RollupProofPersistenceHandlerTest {
 
   private fun proof(
     endDataRollingHash: ByteArray = record.dataRollingHash,
-    finalDataTailDiscardBytes: Int = record.finalDataTailDiscardBytes.toInt(),
+    finalSharedBlobCarryOverTailBytes: Int = record.finalSharedBlobCarryOverTailBytes.toInt(),
   ) = dummyRollupProofResponse(proofIndex).let {
     it.copy(
       publicInputs = it.publicInputs.copy(
         parentDataRollingHash = record.parentDataRollingHash,
         endDataRollingHash = endDataRollingHash,
-        parentDataTailTakeBytes = record.parentDataTailTakeBytes.toInt(),
-        finalDataTailDiscardBytes = finalDataTailDiscardBytes,
+        parentSharedBlobCarryOverTailBytes = record.parentSharedBlobCarryOverTailBytes.toInt(),
+        finalSharedBlobCarryOverTailBytes = finalSharedBlobCarryOverTailBytes,
       ),
     )
   }
@@ -74,8 +74,8 @@ class RollupProofPersistenceHandlerTest {
   fun `a proof whose DA outputs differ from the request is not persisted`() {
     assertThatThrownBy { handler.acceptNewRollupProof(proof(endDataRollingHash = Random.nextBytes(32)), context).get() }
       .hasMessageContaining("rollup proof DA outputs differ from the request")
-    assertThatThrownBy { handler.acceptNewRollupProof(proof(finalDataTailDiscardBytes = 0), context).get() }
-      .hasMessageContaining("finalDataTailDiscardBytes=0 expected=200")
+    assertThatThrownBy { handler.acceptNewRollupProof(proof(finalSharedBlobCarryOverTailBytes = 0), context).get() }
+      .hasMessageContaining("finalSharedBlobCarryOverTailBytes=0 expected=200")
 
     verify(blobsRepository, never()).saveNewBlob(any())
   }

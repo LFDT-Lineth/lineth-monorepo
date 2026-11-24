@@ -24,31 +24,31 @@ class BlobRecordV2Test {
   }
 
   @Test
-  fun `a record starting inside a shared blob puts that blob between boundaryPrev and parent`() {
+  fun `a record starting inside a shared blob puts that blob between the parent blob and parent hashes`() {
     val record = createBlobRecordV2(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
       dataRollingHash = end,
-      parentDataTailTakeBytes = 100u,
+      parentSharedBlobCarryOverTailBytes = 100u,
     )
 
     assertThat(record.blobsData.first().dataRollingHash).isEqualTo(parent)
-    assertThat(record.blobsData.first().prevDataRollingHash).isEqualTo(record.boundaryPrevDataRollingHash)
+    assertThat(record.blobsData.first().prevDataRollingHash).isEqualTo(record.parentBlobDataRollingHash)
   }
 
   @Test
   fun `a record that lies inside the shared blob has the parent as its end hash`() {
-    val boundary = Random.nextBytes(32)
+    val parentBlob = Random.nextBytes(32)
     val record = createBlobRecordV2(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
       dataRollingHash = parent,
-      parentDataTailTakeBytes = 100u,
-      boundaryPrevDataRollingHash = boundary,
-      finalDataTailDiscardBytes = 50u,
-      blobsData = listOf(createBlobData(boundary, parent)),
+      parentSharedBlobCarryOverTailBytes = 100u,
+      parentBlobDataRollingHash = parentBlob,
+      finalSharedBlobCarryOverTailBytes = 50u,
+      blobsData = listOf(createBlobData(parentBlob, parent)),
     )
 
     assertThat(record.blobsData).hasSize(1)
@@ -86,25 +86,25 @@ class BlobRecordV2Test {
   }
 
   @Test
-  fun `tails and the boundary hash are validated`() {
+  fun `tails and the parent blob hash are validated`() {
     assertThatThrownBy {
       createBlobRecordV2(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
-        parentDataTailTakeBytes = 100u,
-        boundaryPrevDataRollingHash = null,
+        parentSharedBlobCarryOverTailBytes = 100u,
+        parentBlobDataRollingHash = null,
       )
-    }.hasMessageContaining("boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
     assertThatThrownBy {
       createBlobRecordV2(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
-        boundaryPrevDataRollingHash = Random.nextBytes(32),
+        parentBlobDataRollingHash = Random.nextBytes(32),
       )
-    }.hasMessageContaining("boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
     assertThatThrownBy {
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalDataTailDiscardBytes = 130_047u)
-    }.hasMessageContaining("finalDataTailDiscardBytes=130047 must be in 0..130046")
+      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalSharedBlobCarryOverTailBytes = 130_047u)
+    }.hasMessageContaining("finalSharedBlobCarryOverTailBytes=130047 must be in 0..130046")
     assertThatThrownBy {
       createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, blobsData = emptyList())
     }.hasMessageContaining("blobsData must not be empty")
@@ -112,14 +112,15 @@ class BlobRecordV2Test {
 
   @Test
   fun `equality includes the tail fields and per-blob hashes`() {
-    val record = createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, parentDataTailTakeBytes = 100u)
+    val record =
+      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, parentSharedBlobCarryOverTailBytes = 100u)
     val equalRecord = record.copy(
-      boundaryPrevDataRollingHash = record.boundaryPrevDataRollingHash!!.copyOf(),
+      parentBlobDataRollingHash = record.parentBlobDataRollingHash!!.copyOf(),
       blobsData = record.blobsData.map { it.copy(dataRollingHash = it.dataRollingHash.copyOf()) },
     )
 
     assertThat(record).isEqualTo(equalRecord)
     assertThat(record.hashCode()).isEqualTo(equalRecord.hashCode())
-    assertThat(record).isNotEqualTo(record.copy(finalDataTailDiscardBytes = 1u))
+    assertThat(record).isNotEqualTo(record.copy(finalSharedBlobCarryOverTailBytes = 1u))
   }
 }

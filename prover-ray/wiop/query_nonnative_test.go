@@ -41,7 +41,7 @@ func TestNonNative_Round(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 
-	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	assert.Equal(t, r0, q.Round())
 }
 
@@ -70,13 +70,10 @@ func TestNonNative_Check_BoundaryValues(t *testing.T) {
 			wantErr: true, wantErrSubstring: "not reduced",
 		},
 		{
-			// modulus=0 makes quotient*modulus always zero regardless of
-			// quotient, so the relation degenerates to left*right=result.
-			name: "modulus zero: honest", left: 3, right: 4, modulus: 0, quo: 999, result: 12,
-		},
-		{
-			name: "modulus zero: invalid", left: 3, right: 4, modulus: 0, quo: 0, result: 13,
-			wantErr: true, wantErrSubstring: "left*right",
+			// left*right = quotient*modulus + result holds, but no result is
+			// below a zero modulus.
+			name: "invalid: modulus zero", left: 3, right: 4, modulus: 0, quo: 999, result: 12,
+			wantErr: true, wantErrSubstring: "not reduced",
 		},
 		{
 			name: "zero operands", left: 0, right: 0, modulus: 5, quo: 0, result: 0,
@@ -98,7 +95,7 @@ func TestNonNative_Check_BoundaryValues(t *testing.T) {
 			modulus := singleLimb(sys, mod, r0, "modulus")
 			result := singleLimb(sys, mod, r0, "result")
 			quotient := singleLimb(sys, mod, r0, "quotient")
-			q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+			q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 
 			rt := wiop.NewRuntime(sys)
 			rt.AssignColumn(left[0], makeVecU64(tc.left))
@@ -141,7 +138,7 @@ func TestNonNative_Check_MultiLimb(t *testing.T) {
 		modulus := newLimbs("modulus")
 		result := newLimbs("result")
 		quotient := newLimbs("quotient")
-		q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 
 		rt := wiop.NewRuntime(sys)
 		rt.AssignColumn(left[0], makeVecU64(34455))
@@ -176,7 +173,7 @@ func TestNonNative_Check_UnassignedColumnsReturnsNil(t *testing.T) {
 	modulus := singleLimb(sys, mod, r0, "modulus")
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
-	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(left[0], wioptest.ConstVec(4, 3))
@@ -197,7 +194,7 @@ func TestNonNative_IsReduced(t *testing.T) {
 	modulus := singleLimb(sys, mod, r0, "modulus")
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
-	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 
 	assert.False(t, q.IsReduced())
 	q.MarkAsReduced()
@@ -216,7 +213,7 @@ func TestNonNative_NewNonNative_NilModulePanic(t *testing.T) {
 
 	var nilMod *wiop.Module
 	assert.Panics(t, func() {
-		nilMod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		nilMod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -228,7 +225,7 @@ func TestNonNative_NewNonNative_NilCtxPanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(nil, 16, left, right, modulus, result, quotient)
+		mod.NewNonNative(nil, 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -240,7 +237,7 @@ func TestNonNative_NewNonNative_ZeroBitsPerLimbPanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 0, left, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 0, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -251,7 +248,7 @@ func TestNonNative_NewNonNative_EmptyLimbSlicePanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 16, nil, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 16, nil, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -266,7 +263,7 @@ func TestNonNative_NewNonNative_MismatchedLimbCountPanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -278,7 +275,7 @@ func TestNonNative_NewNonNative_NilColumnPanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -291,7 +288,7 @@ func TestNonNative_NewNonNative_ColumnFromDifferentModulePanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
@@ -303,7 +300,7 @@ func TestNonNative_NewNonNative_ColumnFromDifferentRoundPanic(t *testing.T) {
 	result := singleLimb(sys, mod, r0, "result")
 	quotient := singleLimb(sys, mod, r0, "quotient")
 	assert.Panics(t, func() {
-		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
+		mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient, nil)
 	})
 }
 
