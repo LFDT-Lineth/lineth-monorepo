@@ -116,7 +116,6 @@ test "hashAddressList / hashDigestList match the Python reference implementation
 fn makeReceiptWithLogs(alloc: std.mem.Allocator, logs: []const types.Log) !types.Receipt {
     return .{
         .type = 0,
-        .tx_hash = repeat(32, 0),
         .tx_index = 0,
         .block_hash = repeat(32, 0),
         .block_number = 1,
