@@ -1,6 +1,6 @@
 environment = "integration-development"
 version = "3.0.0"
-assets_dir = "/opt/lineth/prover/prover-assets"
+assets_dir = "/opt/linea/prover/prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
 [controller]
@@ -16,7 +16,7 @@ serialization = false
 [data_availability]
 prover_mode = "dev"
 requests_root_dir = "/data/prover/v3/compression"
-dict_paths = ["/opt/lineth/prover/lib/compressor/compressor_dict.bin", "/opt/lineth/prover/lib/compressor/dict/25-04-21.bin"]
+dict_paths = ["/opt/linea/prover/lib/compressor/compressor_dict.bin", "/opt/linea/prover/lib/compressor/dict/25-04-21.bin"]
 
 [invalidity]
 prover_mode = "partial"

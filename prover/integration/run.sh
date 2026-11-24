@@ -82,7 +82,7 @@ echo "starting the environment"
 docker compose -f compose-integration.yml kill -s SIGINT &>/dev/null
 docker compose -f compose-integration.yml down &>/dev/null
 docker compose -f compose-integration.yml build
-docker compose -f compose-integration.yml run --rm -v ${LOCAL_DIR}:/shared/ -e CONFIG_FILE="/opt/lineth/prover/${CONFIG_FILE}" prover &>${LOCAL_DIR}/prover.log &
+docker compose -f compose-integration.yml run --rm -v ${LOCAL_DIR}:/shared/ -e CONFIG_FILE="/opt/linea/prover/${CONFIG_FILE}" prover &>${LOCAL_DIR}/prover.log &
 
 echo "waiting for the prover to process the requests..."
 

@@ -195,7 +195,7 @@ func TestNewConfigFromFile_MissingFile(t *testing.T) {
 }
 
 // guestsMount is where every deployment mounts the guests folder, like
-// /opt/lineth/prover/prover-assets for the legacy prover.
+// /opt/linea/prover/prover-assets for the legacy prover.
 const guestsMount = "/opt/lineth/prover-ray/guests"
 
 // shippedConfigs lists every prover-ray config shipped in the repository.
