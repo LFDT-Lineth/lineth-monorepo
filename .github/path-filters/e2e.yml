@@ -15,6 +15,8 @@ shared: &shared
   - 'e2e/jest*.config.ts'
   - 'Makefile'
   - '.github/actions/run-e2e-tests/**'
+  - '.github/actions/dockerhub-login/**'
+  - '.github/actions/dump-docker-logs/**'
   - 'linea-besu/plugins/linea-sequencer/**'
   - 'linea-besu/plugins/sequencer-interfaces/**'
   - 'ts-libs/**/src/**'
