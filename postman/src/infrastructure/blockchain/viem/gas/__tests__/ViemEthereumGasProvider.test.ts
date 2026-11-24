@@ -65,32 +65,39 @@ describe("ViemEthereumGasProvider", () => {
       });
     });
 
-    it("caps maxFeePerGas at maxFeePerGasCap when it would exceed it", async () => {
-      publicClient.getBlockNumber.mockResolvedValue(100n);
-      publicClient.getFeeHistory.mockResolvedValue({
-        baseFeePerGas: [60_000_000_000n, 60_000_000_000n],
-        reward: [[1_000_000_000n], [1_000_000_000n], [1_000_000_000n], [1_000_000_000n]],
-        gasUsedRatio: [],
-        oldestBlock: 99n,
-      } as never);
-
-      const provider = new ViemEthereumGasProvider(publicClient, baseConfig, logger);
-      const fees = await provider.getGasFees();
-
+    it.each([
       // maxFee = 60gwei * 2 + 1gwei = 121gwei > cap(100gwei)
-      expect(fees.maxFeePerGas).toBe(100_000_000_000n);
-      expect(fees.maxPriorityFeePerGas).toBe(1_000_000_000n);
-    });
+      { enforceMaxGasFee: true, expectedMaxFee: 100_000_000_000n },
+      { enforceMaxGasFee: false, expectedMaxFee: 121_000_000_000n },
+    ])(
+      "caps maxFeePerGas only when enforceMaxGasFee=$enforceMaxGasFee",
+      async ({ enforceMaxGasFee, expectedMaxFee }) => {
+        publicClient.getBlockNumber.mockResolvedValue(100n);
+        publicClient.getFeeHistory.mockResolvedValue({
+          baseFeePerGas: [60_000_000_000n, 60_000_000_000n],
+          reward: [[1_000_000_000n], [1_000_000_000n], [1_000_000_000n], [1_000_000_000n]],
+          gasUsedRatio: [],
+          oldestBlock: 99n,
+        } as never);
 
-    it("returns maxFeePerGasCap for both fees when enforceMaxGasFee is true", async () => {
+        const provider = new ViemEthereumGasProvider(publicClient, { ...baseConfig, enforceMaxGasFee }, logger);
+        const fees = await provider.getGasFees();
+
+        expect(fees.maxFeePerGas).toBe(expectedMaxFee);
+        expect(fees.maxPriorityFeePerGas).toBe(1_000_000_000n);
+      },
+    );
+
+    it("still estimates the tip when enforceMaxGasFee is true", async () => {
+      publicClient.getBlockNumber.mockResolvedValue(100n);
+      publicClient.getFeeHistory.mockResolvedValue(defaultFeeHistory as never);
+
       const capConfig: DefaultGasProviderConfig = { ...baseConfig, enforceMaxGasFee: true };
       const provider = new ViemEthereumGasProvider(publicClient, capConfig, logger);
       const fees = await provider.getGasFees();
 
-      expect(fees.maxFeePerGas).toBe(100_000_000_000n);
-      expect(fees.maxPriorityFeePerGas).toBe(100_000_000_000n);
-      expect(publicClient.getBlockNumber).not.toHaveBeenCalled();
-      expect(publicClient.getFeeHistory).not.toHaveBeenCalled();
+      expect(fees.maxPriorityFeePerGas).toBe(1_500_000_000n);
+      expect(fees.maxFeePerGas).toBe(21_500_000_000n);
     });
 
     it("throws when estimated priority fee exceeds maxFeePerGasCap", async () => {
@@ -141,10 +148,10 @@ describe("ViemEthereumGasProvider", () => {
       await expect(provider.getGasFees()).rejects.toThrow();
     });
 
-    it("falls back to maxFeePerGasCap for both fees when computed fees are zero", async () => {
+    it("keeps a zero tip instead of paying the cap as tip", async () => {
       publicClient.getBlockNumber.mockResolvedValue(100n);
       publicClient.getFeeHistory.mockResolvedValue({
-        baseFeePerGas: [0n, 0n],
+        baseFeePerGas: [10_000_000_000n, 10_000_000_000n],
         reward: [[0n], [0n], [0n], [0n]],
         gasUsedRatio: [],
         oldestBlock: 99n,
@@ -153,8 +160,8 @@ describe("ViemEthereumGasProvider", () => {
       const provider = new ViemEthereumGasProvider(publicClient, baseConfig, logger);
       const fees = await provider.getGasFees();
 
-      expect(fees.maxFeePerGas).toBe(100_000_000_000n);
-      expect(fees.maxPriorityFeePerGas).toBe(100_000_000_000n);
+      expect(fees.maxFeePerGas).toBe(20_000_000_000n);
+      expect(fees.maxPriorityFeePerGas).toBe(0n);
     });
   });
 

@@ -6,7 +6,7 @@ import { IMessageRepository } from "../../../core/persistence/IMessageRepository
 import { IMessageStatusReader } from "../../../core/services/contracts/IMessageServiceContract";
 import { IMessageAnchoringProcessor } from "../../../core/services/processors/IMessageAnchoringProcessor";
 import { testL1NetworkConfig, testL2NetworkConfig, testMessage } from "../../../utils/testing/constants";
-import { TestLogger } from "../../../utils/testing/helpers";
+import { generateMessage, TestLogger } from "../../../utils/testing/helpers";
 import { MessageAnchoringProcessor } from "../MessageAnchoringProcessor";
 
 describe("TestMessageAnchoringProcessor", () => {
@@ -92,6 +92,25 @@ describe("TestMessageAnchoringProcessor", () => {
       expect(testMessageEditSpy).toHaveBeenCalledWith({ status: MessageStatus.CLAIMED_SUCCESS });
       expect(messageRepositoryMockSaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryMockSaveSpy).toHaveBeenCalledWith([testMessage]);
+    });
+
+    it("Should save the rest of the batch when one status lookup throws", async () => {
+      const messages = [1, 2, 3].map((id) => generateMessage({ id, status: MessageStatus.SENT }));
+      jest.spyOn(messageRepository, "getNFirstMessagesByStatus").mockResolvedValue(messages);
+      jest
+        .spyOn(l2ContractClientMock, "getMessageStatus")
+        .mockResolvedValueOnce(OnChainMessageStatus.CLAIMABLE)
+        .mockRejectedValueOnce(new Error("rpc down"))
+        .mockResolvedValueOnce(OnChainMessageStatus.CLAIMED);
+
+      await anchoringProcessor.process();
+
+      expect(messageRepository.saveMessages).toHaveBeenCalledTimes(1);
+      expect(messages.map((m) => m.status)).toEqual([
+        MessageStatus.ANCHORED,
+        MessageStatus.SENT,
+        MessageStatus.CLAIMED_SUCCESS,
+      ]);
     });
   });
 });

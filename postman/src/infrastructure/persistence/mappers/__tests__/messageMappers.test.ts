@@ -116,5 +116,25 @@ describe("Message Mappers", () => {
       const message = mapMessageEntityToMessage(entity);
       expect(message.claimCycleCount).toBe(5);
     });
+
+    it("should parse claim fees that pg returns as strings into bigint", () => {
+      const entity = generateMessageEntity({
+        claimTxMaxFeePerGas: "30000000000" as unknown as bigint,
+        claimTxMaxPriorityFeePerGas: "2000000000" as unknown as bigint,
+      });
+      const message = mapMessageEntityToMessage(entity);
+      expect(message.claimTxMaxFeePerGas).toBe(30_000_000_000n);
+      expect(message.claimTxMaxPriorityFeePerGas).toBe(2_000_000_000n);
+    });
+
+    it("should map null claim fees to undefined", () => {
+      const entity = generateMessageEntity({
+        claimTxMaxFeePerGas: null as unknown as bigint,
+        claimTxMaxPriorityFeePerGas: null as unknown as bigint,
+      });
+      const message = mapMessageEntityToMessage(entity);
+      expect(message.claimTxMaxFeePerGas).toBeUndefined();
+      expect(message.claimTxMaxPriorityFeePerGas).toBeUndefined();
+    });
   });
 });

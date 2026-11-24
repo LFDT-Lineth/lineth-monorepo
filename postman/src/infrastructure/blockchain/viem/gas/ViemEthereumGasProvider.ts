@@ -26,13 +26,6 @@ export class ViemEthereumGasProvider implements IEthereumGasProvider {
   }
 
   public async getGasFees(): Promise<GasFees> {
-    if (this.config.enforceMaxGasFee) {
-      return {
-        maxPriorityFeePerGas: this.config.maxFeePerGasCap,
-        maxFeePerGas: this.config.maxFeePerGasCap,
-      };
-    }
-
     const currentBlockNumber = await this.client.getBlockNumber();
     if (this.isCacheValid(currentBlockNumber)) {
       return this.gasFeesCache;
@@ -79,17 +72,12 @@ export class ViemEthereumGasProvider implements IEthereumGasProvider {
   private updateCache(currentBlockNumber: bigint, baseFeePerGas: bigint[], maxPriorityFeePerGas: bigint) {
     this.cacheIsValidForBlockNumber = currentBlockNumber;
     const maxFeePerGas = baseFeePerGas[baseFeePerGas.length - 1] * 2n + maxPriorityFeePerGas;
-    if (maxFeePerGas > 0n && maxPriorityFeePerGas > 0n) {
-      this.gasFeesCache = {
-        maxPriorityFeePerGas,
-        maxFeePerGas: maxFeePerGas > this.config.maxFeePerGasCap ? this.config.maxFeePerGasCap : maxFeePerGas,
-      };
-    } else {
-      this.gasFeesCache = {
-        maxPriorityFeePerGas: this.config.maxFeePerGasCap,
-        maxFeePerGas: this.config.maxFeePerGasCap,
-      };
-    }
+    // Same rule as ViemLineaGasProvider.applyFeeCap. Only maxFeePerGas is capped: a capped tip would be paid in full.
+    const capped = this.config.enforceMaxGasFee && maxFeePerGas > this.config.maxFeePerGasCap;
+    this.gasFeesCache = {
+      maxPriorityFeePerGas,
+      maxFeePerGas: capped ? this.config.maxFeePerGasCap : maxFeePerGas,
+    };
   }
 
   public getMaxFeePerGas(): bigint {
