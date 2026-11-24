@@ -45,7 +45,8 @@ type Verifier struct {
 	sizes      map[int]*dynSize // module index → the dynamic module's size
 	sizeOrder  []int            // the dynamic modules' indices, in module order
 	sizeTables map[sizeTableKey]Table
-	powTables  map[int]Table // x's cell → the table of x^(2^i)
+	sizeCells  map[sizeCellKey]int // the size constants looked up, per module
+	powTables  map[int]Table       // x's cell → the table of x^(2^i)
 
 	// skipPCS skips the PCS opening (tests only): the verifier then checks a
 	// proof's values and transcript, not that they are bound to the committed
@@ -99,6 +100,7 @@ func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) 
 		public:      make([]int, len(sys.PublicInputs)),
 		sizes:       map[int]*dynSize{},
 		sizeTables:  map[sizeTableKey]Table{},
+		sizeCells:   map[sizeCellKey]int{},
 		powTables:   map[int]Table{},
 	}
 	if err := v.replay(); err != nil {

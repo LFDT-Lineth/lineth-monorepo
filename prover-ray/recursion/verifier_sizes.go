@@ -61,16 +61,12 @@ func (v *Verifier) dyn(mod *wiop.Module) *dynSize {
 	panic(fmt.Sprintf("recursion: dynamic module %q has no size input", mod.Context.Path()))
 }
 
-// sizeConst returns the cell of f(n), n the module's size: a constant for a
-// sized module; for a dynamic one, the entry ℓ of a table of f(2^i). key names
-// f, for the tables to be built once per module.
-func (v *Verifier) sizeConst(mod *wiop.Module, key string, f func(n int) field.Element) int {
-	return v.sizeConstAtLeast(mod, 0, key, f)
-}
-
-// sizeConstAtLeast is sizeConst for a function defined for the sizes 2^i,
-// i ≥ lo, only: a dynamic module's smaller size makes the lookup, and so the
-// machine's execution, fail.
+// sizeConstAtLeast returns the cell of f(n), n the module's size, for a
+// function f defined for the sizes 2^i, i ≥ lo, only: a constant for a sized
+// module; for a dynamic one, the entry ℓ − lo of a table of f(2^i), which a
+// smaller size makes fail, and the machine's execution with it. key names f:
+// the tables are shared by the modules, and the entry is looked up once per
+// module.
 func (v *Verifier) sizeConstAtLeast(mod *wiop.Module, lo int, key string, f func(n int) field.Element) int {
 	d := v.dyn(mod)
 	if d == nil {
@@ -80,16 +76,22 @@ func (v *Verifier) sizeConstAtLeast(mod *wiop.Module, lo int, key string, f func
 		}
 		return v.scalar(f(n))
 	}
-	return v.sizeConstFrom(d, max(lo, d.minLog), key, f)
+	return v.sizeConstFrom(d, lo, key, f)
 }
 
 // sizeConstFrom reads f(n) from the table of f(2^i), i in [lo, maxLogSize],
-// at ℓ − lo.
+// at ℓ − lo. The table depends on (lo, key) only, and is shared by the
+// modules; the cell is memoized per module. The size's own table bounds ℓ
+// from below, so a table from lo below the module's minimum is only larger.
 func (v *Verifier) sizeConstFrom(d *dynSize, lo int, key string, f func(n int) field.Element) int {
 	if lo > maxLogSize {
 		panic(fmt.Sprintf("recursion: module %q: no size from 2^%d", d.mod.Context.Path(), lo))
 	}
-	tk := sizeTableKey{d.mod, lo, key}
+	tk := sizeTableKey{lo, key}
+	ck := sizeCellKey{d.mod, tk}
+	if c, ok := v.sizeCells[ck]; ok {
+		return c
+	}
 	t, ok := v.sizeTables[tk]
 	if !ok {
 		cells := make([]int, 0, maxLogSize+1-lo)
@@ -103,13 +105,21 @@ func (v *Verifier) sizeConstFrom(d *dynSize, lo int, key string, f func(n int) f
 	if lo > 0 {
 		idx = v.m.Sub(idx, v.scalarInt(lo))
 	}
-	return v.m.Lookup(t, idx)
+	c := v.m.Lookup(t, idx)
+	v.sizeCells[ck] = c
+	return c
 }
 
+// sizeTableKey names a table of f(2^i), i from lo: f is named by key.
 type sizeTableKey struct {
-	mod *wiop.Module
 	lo  int
 	key string
+}
+
+// sizeCellKey names the entry of a module's size in a table.
+type sizeCellKey struct {
+	mod   *wiop.Module
+	table sizeTableKey
 }
 
 // powSize returns the cell of x^n, n the module's size: x^(2^ℓ) for a dynamic
@@ -166,38 +176,44 @@ func (v *Verifier) sizeInputs(sizes map[int]int, res []Cell) error {
 
 // checkRowLimit checks that the modules' sizes sum below limit, as the row
 // limits of lookups and permutations do (a module listed twice counts twice).
-// With dynamic modules, it checks that limit − 1 − Σ n is below 2^b, b the
-// bit length of limit − 1: a sum at or above the limit wraps around the
-// modulus, above 2^b, as long as the sum cannot exceed the modulus, which it
-// checks from the largest sizes.
+// It rejects a limit that even the smallest sizes reach. With dynamic
+// modules, it checks that rem − Σ n is below 2^b, rem = limit − 1 − static
+// (the sized modules' rows) and b its bit length: a sum above rem wraps
+// around the modulus, above 2^b, as long as the sum cannot exceed the
+// modulus, which it checks from the largest sizes.
 func (v *Verifier) checkRowLimit(what string, mods []*wiop.Module, limit uint64) error {
-	var static, maxSum uint64
+	var static, minSum, maxSum uint64
 	var dyn []int
 	for _, mod := range mods {
 		if d := v.dyn(mod); d != nil {
 			dyn = append(dyn, d.n)
+			minSum += 1 << d.minLog
 			maxSum += wiop.ColumnSizeMaxSupported
 			continue
 		}
 		static += uint64(mod.Size())
 	}
+	minSum += static
 	maxSum += static
-	if static >= limit {
-		return fmt.Errorf("%s: %d rows, at or above the limit %d", what, static, limit)
+	if minSum >= limit {
+		return fmt.Errorf("%s: at least %d rows, at or above the limit %d", what, minSum, limit)
 	}
 	if len(dyn) == 0 || maxSum < limit {
 		return nil
 	}
-	b := bits.Len64(limit - 1)
+	// The dynamic sizes sum to at most rem = limit − 1 − static, which is at
+	// least the smallest sizes' sum, 1 or more: b ≥ 1.
+	rem := limit - 1 - static
+	b := bits.Len64(rem)
 	p := field.Modulus().Uint64()
 	if b >= BitsWidth || maxSum >= p || maxSum-(limit-1) >= p-(1<<b) {
 		return fmt.Errorf("%s: up to %d rows against the limit %d, which the machine cannot compare", what, maxSum, limit)
 	}
-	sum := v.m.Add(v.scalar(field.NewElement(static)), dyn[0])
+	sum := dyn[0]
 	for _, n := range dyn[1:] {
 		sum = v.m.Add(sum, n)
 	}
-	d := v.m.Sub(v.scalar(field.NewElement(limit-1)), sum)
+	d := v.m.Sub(v.scalar(field.NewElement(rem)), sum)
 	v.assertEq(d, v.m.Bits(d, b).Shr[0])
 	return nil
 }

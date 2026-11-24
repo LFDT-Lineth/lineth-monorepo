@@ -25,16 +25,20 @@ const dynLimit = 9
 //     dynLimit on both sides;
 //   - small (column s, 4 rows): s ⊆ t, a lookup from a sized module into a
 //     dynamic one.
+//
+// The sizes are absorbed from round sizeRound on.
 type dynamicSystem struct {
 	sys                *wiop.System
+	q                  *wiop.TableRelationQuery
 	dyn, perm          *wiop.Module
 	a, b, t, pa, pb, s *wiop.Column
 	c, last            *wiop.Cell
 }
 
-func newDynamicSystem(t *testing.T) dynamicSystem {
+func newDynamicSystem(t *testing.T, sizeRound int) dynamicSystem {
 	t.Helper()
 	sys := wiop.NewSystemf("dynamic")
+	sys.DynamicSizeRound = sizeRound
 	r0, r1 := sys.NewRound(), sys.NewRound()
 	ctx := sys.Context
 	d := dynamicSystem{sys: sys}
@@ -56,8 +60,8 @@ func newDynamicSystem(t *testing.T) dynamicSystem {
 	d.dyn.NewVanishing(ctx.Childf("end"), wiop.Mul(wiop.NewLagrangeSelector(d.dyn, -1), wiop.Sub(d.b.View(), d.last)))
 	sys.NewInclusion(ctx.Childf("lookup"), []wiop.Table{wiop.NewTable(d.a.View())}, []wiop.Table{wiop.NewTable(d.t.View())})
 	sys.NewInclusion(ctx.Childf("small_lookup"), []wiop.Table{wiop.NewTable(d.s.View())}, []wiop.Table{wiop.NewTable(d.t.View())})
-	q := sys.NewPermutation(ctx.Childf("perm"), []wiop.Table{wiop.NewTable(d.pa.View())}, []wiop.Table{wiop.NewTable(d.pb.View())})
-	r0.RegisterVerifierAction(&grandproduct.RowLimitAction{Query: q, Limit: dynLimit})
+	d.q = sys.NewPermutation(ctx.Childf("perm"), []wiop.Table{wiop.NewTable(d.pa.View())}, []wiop.Table{wiop.NewTable(d.pb.View())})
+	r0.RegisterVerifierAction(&grandproduct.RowLimitAction{Query: d.q, Limit: dynLimit})
 
 	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the dynamic system should compile")
 	return d
@@ -88,25 +92,28 @@ func (d dynamicSystem) prove(t *testing.T, n, np int) innerCase {
 }
 
 // TestVerifierDynamic: one machine verifier checks proofs of every size, and
-// its coins are the native verifier's.
+// its coins are the native verifier's, with the sizes absorbed from round 0
+// or from round 1.
 func TestVerifierDynamic(t *testing.T) {
-	d := newDynamicSystem(t)
-	o := newOuter(t, d.sys)
-	for _, sz := range [][2]int{{4, 4}, {8, 4}, {16, 8}, {4, 8}} {
-		c := d.prove(t, sz[0], sz[1])
-		t.Run(c.name, func(t *testing.T) {
-			require.NoError(t, c.sys.Verify(c.proof, c.pub), "the honest %s proof should verify natively", c.name)
-			r, err := o.run(c.proof, c.pub)
-			require.NoError(t, err, "the honest %s proof should verify in the machine", c.name)
-			rt := nativeReplay(c.sys, c.proof, c.pub)
-			for _, rd := range c.sys.Rounds {
-				for _, coin := range rd.Coins {
-					if a, ok := o.v.coins[coin.Context.ID]; ok {
-						require.Equal(t, rt.GetCoinValue(coin).Ext, CellE6(r.Value(a)), "coin %s", coin.Context.Path())
+	for _, sizeRound := range []int{0, 1} {
+		d := newDynamicSystem(t, sizeRound)
+		o := newOuter(t, d.sys)
+		for _, sz := range [][2]int{{4, 4}, {8, 4}, {16, 8}, {4, 8}} {
+			c := d.prove(t, sz[0], sz[1])
+			t.Run(fmt.Sprintf("sizeRound=%d/%s", sizeRound, c.name), func(t *testing.T) {
+				require.NoError(t, c.sys.Verify(c.proof, c.pub), "the honest %s proof should verify natively", c.name)
+				r, err := o.run(c.proof, c.pub)
+				require.NoError(t, err, "the honest %s proof should verify in the machine", c.name)
+				rt := nativeReplay(c.sys, c.proof, c.pub)
+				for _, rd := range c.sys.Rounds {
+					for _, coin := range rd.Coins {
+						if a, ok := o.v.coins[coin.Context.ID]; ok {
+							require.Equal(t, rt.GetCoinValue(coin).Ext, CellE6(r.Value(a)), "coin %s", coin.Context.Path())
+						}
 					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
@@ -114,7 +121,7 @@ func TestVerifierDynamic(t *testing.T) {
 // is rejected iff the native verifier's actions (the PCS opening aside)
 // reject it; sizes out of bounds are rejected.
 func TestVerifierDynamic_Rejects(t *testing.T) {
-	d := newDynamicSystem(t)
+	d := newDynamicSystem(t, 0)
 	o := newOuter(t, d.sys)
 	c := d.prove(t, 8, 4)
 	dyn, perm := moduleIndex(d.sys, d.dyn), moduleIndex(d.sys, d.perm)
@@ -175,14 +182,64 @@ func TestVerifierDynamic_Rejects(t *testing.T) {
 }
 
 // TestVerifierDynamic_RowLimit: a proof whose perm module breaks the extra row
-// limit is rejected, by that action alone.
+// limit is rejected, by that action alone; a limit that the smallest sizes
+// reach is rejected when the verifier is built.
 func TestVerifierDynamic_RowLimit(t *testing.T) {
-	d := newDynamicSystem(t)
+	d := newDynamicSystem(t, 0)
 	o := newOuter(t, d.sys)
 	c := d.prove(t, 4, 16)
 	require.Equal(t, []string{"*grandproduct.RowLimitAction"}, nativeFailures(c.sys, c.proof, c.pub), "only the row limit should reject it natively")
 	_, err := o.run(c.proof, c.pub)
 	require.Error(t, err, "the machine should reject a proof breaking the row limit")
+
+	// perm has no shift: its smallest size is 1 row, which a limit of 1
+	// already rejects.
+	d = newDynamicSystem(t, 0)
+	r0 := d.sys.Rounds[0]
+	r0.VerifierActions = append(r0.VerifierActions, &grandproduct.RowLimitAction{Query: d.q, Limit: 1})
+	_, err = newVerifier(&Machine{}, d.sys, true)
+	require.ErrorContains(t, err, "at or above the limit 1", "a limit of 1 row")
+}
+
+// TestVerifierDynamic_LagrangeBound: a Lagrange selector at row 4 needs 8
+// rows or more, which the shifts do not require (MinRuntimeSize is 1). The
+// machine accepts a proof at 8 and 16 rows, and rejects the size 4, as the
+// native verifier does. The column is constant and equal to c, so that its
+// constraint holds at every size: only the selector's bound rejects 4 rows.
+func TestVerifierDynamic_LagrangeBound(t *testing.T) {
+	sys := wiop.NewSystemf("lagrange-bound")
+	r0, r1 := sys.NewRound(), sys.NewRound()
+	ctx := sys.Context
+	mod := sys.NewDynamicModule(ctx.Childf("mod"), wiop.PaddingDirectionRight)
+	a := mod.NewColumn(ctx.Childf("a"), r0)
+	c := r0.NewCell(ctx.Childf("c"), false)
+	r1.NewCoinField(ctx.Childf("coin"))
+	mod.NewVanishing(ctx.Childf("row4"), wiop.Mul(wiop.NewLagrangeSelector(mod, 4), wiop.Sub(a.View(), c)))
+	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the system should compile")
+	require.Equal(t, 1, mod.MinRuntimeSize(), "no shift")
+	o := newOuter(t, sys)
+
+	for _, n := range []int{8, 16} {
+		vals := make([]uint64, n)
+		for i := range vals {
+			vals[i] = 4
+		}
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(a, vec(vals...))
+			rt.AssignCell(c, field.ElemFromBase(field.NewElement(4)))
+		})
+		require.NoError(t, sys.Verify(proof, pub), "the honest proof at %d rows should verify natively", n)
+		_, err := o.run(proof, pub)
+		require.NoError(t, err, "the honest proof at %d rows should verify in the machine", n)
+
+		if n == 8 {
+			small := cloneProof(proof)
+			small.DynamicSizes[moduleIndex(sys, mod)] = 4
+			require.Error(t, verifyRecovered(sys, small, pub), "the native verifier should reject 4 rows")
+			_, err = o.run(small, pub)
+			require.Error(t, err, "the machine should reject 4 rows")
+		}
+	}
 }
 
 func moduleIndex(sys *wiop.System, mod *wiop.Module) int {

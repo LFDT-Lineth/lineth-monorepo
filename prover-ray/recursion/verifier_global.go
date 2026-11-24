@@ -133,12 +133,21 @@ func root(n, k int) field.Element {
 // rootKey names the function n ↦ ω_n^k, for the tables of a dynamic module.
 func rootKey(k int) string { return fmt.Sprintf("root %d", k) }
 
+// rootConst returns the cell of ω_n^k, n the module's size, of a size at
+// least 2^lo: the constant 1 for k = 0, whatever n.
+func (ev *evaluator) rootConst(mod *wiop.Module, lo, k int) int {
+	if k == 0 {
+		return ev.v.scalar(field.One())
+	}
+	return ev.v.sizeConstAtLeast(mod, lo, rootKey(k), func(n int) field.Element { return root(n, k) })
+}
+
 // cancellation returns the cell of Π_k (r − ω_n^k) over the cancelled
 // positions, n the module's size, or -1 if there are none.
 func (ev *evaluator) cancellation(cancelled []int, mod *wiop.Module) int {
 	res := -1
 	for _, k := range cancelled {
-		w := ev.v.sizeConst(mod, rootKey(k), func(n int) field.Element { return root(n, k) })
+		w := ev.rootConst(mod, 0, k)
 		f := ev.v.m.Sub(ev.r, w)
 		if res < 0 {
 			res = f
@@ -167,8 +176,8 @@ func (ev *evaluator) lagrange(ls *wiop.LagrangeSelector) int {
 	if pos < 0 {
 		minN = -pos
 	}
-	lo := bits.Len(uint(minN - 1)) // the smallest i with 2^i ≥ minN
-	w := ev.v.sizeConstAtLeast(mod, lo, rootKey(pos), func(n int) field.Element { return root(n, pos) })
+	lo := bits.Len(uint(minN - 1))  // the smallest i with 2^i ≥ minN
+	w := ev.rootConst(mod, lo, pos) // pos = 0 has lo = 0: no bound to check
 	c := ev.v.sizeConstAtLeast(mod, lo, fmt.Sprintf("lagrange %d", pos), func(n int) field.Element {
 		var c, nInv field.Element
 		w := root(n, pos)

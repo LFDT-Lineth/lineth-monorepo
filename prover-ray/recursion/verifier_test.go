@@ -223,13 +223,11 @@ func nativeReplay(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) *wio
 // setDynamicSizes sets the dynamic modules' sizes of a fresh runtime, as
 // System.Verify does from the proof. The runtime has no setter: assigning a
 // column of n zeros in round 0 sizes its module n, which needs every dynamic
-// module to have a column in round 0, and the sizes to be absorbed from it
-// (System.DynamicSizeRound = 0).
+// module to have a column in round 0. Round 0 is at most
+// System.DynamicSizeRound, so the sizes may still change there, and
+// AdvanceRound absorbs them from that round on.
 func setDynamicSizes(rt *wiop.Runtime, sizes map[int]int) {
 	sys := rt.System
-	if sys.DynamicSizeRound != 0 {
-		panic("setDynamicSizes: dynamic sizes after round 0")
-	}
 	for k, n := range sizes {
 		mod := sys.Modules[k]
 		for _, col := range sys.Rounds[0].Columns {
