@@ -38,15 +38,15 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
     try std.testing.expectEqualDeep(original, try rollup_ssz.decodeInput(alloc, encoded));
 }
 
-test "encodeInput/decodeInput: an absent boundary hash round-trips as absent" {
+test "encodeInput/decodeInput: an absent parent blob data rolling hash round-trips as absent" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
     var original = try sample_input.sampleInput(alloc);
-    original.boundary_prev_data_rolling_hash = .{ .items = &.{} };
+    original.parent_blob_data_rolling_hash = .{ .items = &.{} };
     const decoded = try rollup_ssz.decodeInput(alloc, try rollup_ssz.encodeInput(alloc, original));
-    try std.testing.expectEqual(@as(usize, 0), decoded.boundary_prev_data_rolling_hash.items.len);
+    try std.testing.expectEqual(@as(usize, 0), decoded.parent_blob_data_rolling_hash.items.len);
     try std.testing.expectEqualDeep(original, decoded);
 }
 

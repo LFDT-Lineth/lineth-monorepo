@@ -41,7 +41,6 @@ include 'jvm-libs:linea:testing:besu'
 include 'jvm-libs:linea:testing:file-system'
 include 'jvm-libs:linea:testing:l1-blob-and-proof-submission'
 include 'jvm-libs:linea:testing:web3j'
-include 'jvm-libs:linea:teku-web3j'
 include 'jvm-libs:linea:web3j-extensions'
 
 include 'coordinator:app'

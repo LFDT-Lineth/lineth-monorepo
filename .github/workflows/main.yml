@@ -60,7 +60,6 @@ jobs:
       # E2E change detection
       has-changes-requiring-e2e-testing: ${{ steps.e2e.outputs.zkevm }}
       has-changes-requiring-riscv-e2e-testing: ${{ steps.e2e.outputs.riscv }}
-      riscv-prover-mode: ${{ steps.e2e.outputs.riscv-prover-mode }}
       # CodeQL
       codeql-languages: ${{ steps.codeql-languages.outputs.languages }}
     steps:
@@ -265,7 +264,7 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.plan.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
-  # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
+  # Not a required check. Runs dev-zkvm with prover-ray and the guest built from this commit.
   run-riscv-e2e-tests:
     permissions:
       contents: read
@@ -289,7 +288,6 @@ jobs:
     with:
       image_tag: ${{ needs.plan.outputs.commit_tag }}
       stack: riscv
-      riscv_prover_mode: ${{ needs.plan.outputs.riscv-prover-mode }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
     secrets: inherit

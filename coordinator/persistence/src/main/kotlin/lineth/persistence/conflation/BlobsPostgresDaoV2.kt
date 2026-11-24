@@ -65,9 +65,9 @@ class BlobsPostgresDaoV2(
         dataRollingHash = blobsInfo.dataRollingHash,
         blobsData = blobsInfo.blobsData,
         proofHash = row.getString("blob_hash").decodeHex(),
-        parentDataTailTakeBytes = blobsInfo.parentDataTailTakeBytes,
-        boundaryPrevDataRollingHash = blobsInfo.boundaryPrevDataRollingHash,
-        finalDataTailDiscardBytes = blobsInfo.finalDataTailDiscardBytes,
+        parentSharedBlobCarryOverTailBytes = blobsInfo.parentSharedBlobCarryOverTailBytes,
+        parentBlobDataRollingHash = blobsInfo.parentBlobDataRollingHash,
+        finalSharedBlobCarryOverTailBytes = blobsInfo.finalSharedBlobCarryOverTailBytes,
       )
     }
   }

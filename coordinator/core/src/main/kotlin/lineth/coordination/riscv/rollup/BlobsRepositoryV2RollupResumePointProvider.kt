@@ -57,7 +57,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
 
   private fun resumePointAfter(row: BlobRecordV2): RollupResumePoint {
     val lastBlob = row.blobsData.last()
-    val tail = row.finalDataTailDiscardBytes
+    val tail = row.finalSharedBlobCarryOverTailBytes
     return RollupResumePoint(
       lastConflationEndBlock = row.endBlockNumber,
       daPosition = if (tail == 0u) {

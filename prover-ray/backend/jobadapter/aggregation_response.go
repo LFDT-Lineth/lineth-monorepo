@@ -28,8 +28,8 @@ type aggregationResponsePublicInputs struct {
 	EndDataRollingHash                    string   `json:"endDataRollingHash"`
 	ParentBlockHash                       string   `json:"parentBlockHash"`
 	EndBlockHash                          string   `json:"endBlockHash"`
-	ParentDataTailTakeBytes               uint64   `json:"parentDataTailTakeBytes"`
-	FinalDataTailDiscardBytes             uint64   `json:"finalDataTailDiscardBytes"`
+	ParentSharedBlobCarryOverTailBytes    uint64   `json:"parentSharedBlobCarryOverTailBytes"`
+	FinalSharedBlobCarryOverTailBytes     uint64   `json:"finalSharedBlobCarryOverTailBytes"`
 	L2L1TreeDepth                         uint64   `json:"l2L1TreeDepth"`
 	L2L1Roots                             []string `json:"l2L1Roots"`
 	FilteredAddresses                     []string `json:"filteredAddresses"`

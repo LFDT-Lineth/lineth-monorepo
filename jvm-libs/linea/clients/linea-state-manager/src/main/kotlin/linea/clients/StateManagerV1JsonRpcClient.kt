@@ -21,6 +21,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.URI
+import kotlin.time.Duration
 
 class StateManagerV1JsonRpcClient(
   private val rpcClient: JsonRpcV2Client,
@@ -35,7 +36,7 @@ class StateManagerV1JsonRpcClient(
       endpoints: List<URI>,
       maxInflightRequestsPerClient: UInt,
       requestRetry: RequestRetryConfig,
-      requestTimeout: Long? = null,
+      requestTimeout: Duration? = null,
       logger: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
     ): StateManagerV1JsonRpcClient {
       return StateManagerV1JsonRpcClient(
@@ -43,7 +44,7 @@ class StateManagerV1JsonRpcClient(
           endpoints = endpoints,
           maxInflightRequestsPerClient = maxInflightRequestsPerClient,
           retryConfig = requestRetry,
-          requestTimeout = requestTimeout,
+          defaultRequestTimeout = requestTimeout,
           log = logger,
           shallRetryRequestsClientBasePredicate = { it is Err },
         ),

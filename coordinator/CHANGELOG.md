@@ -4,6 +4,10 @@
 
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
 ## [2.4.0] - 2026-11-19
 
 ### 🚀 Features

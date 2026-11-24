@@ -94,7 +94,7 @@ class ConflationAppV1(
     endpoints = configs.stateManager.endpoints.map { it.toURI() },
     maxInflightRequestsPerClient = configs.stateManager.requestLimitPerEndpoint,
     requestRetry = configs.stateManager.requestRetries.toJsonRpcRetry(),
-    requestTimeout = configs.stateManager.requestTimeout?.inWholeMilliseconds,
+    requestTimeout = configs.stateManager.requestTimeout,
     logger = LogManager.getLogger("clients.StateManagerShomeiClient"),
   ),
   val tracesClients: TracesClients =

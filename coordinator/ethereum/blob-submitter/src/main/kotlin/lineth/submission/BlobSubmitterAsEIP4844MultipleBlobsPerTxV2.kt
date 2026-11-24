@@ -40,7 +40,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
   }
 
   private fun blobsToSubmit(blobRecord: BlobRecordV2): List<BlobData> =
-    if (blobRecord.parentDataTailTakeBytes > 0u) blobRecord.blobsData.drop(1) else blobRecord.blobsData
+    if (blobRecord.parentSharedBlobCarryOverTailBytes > 0u) blobRecord.blobsData.drop(1) else blobRecord.blobsData
 
   private fun submitBlobRecordInTxs(blobRecord: BlobRecordV2, isEthCall: Boolean = false): SafeFuture<List<String>> {
     if (blobsToSubmit(blobRecord).isEmpty()) {

@@ -12,8 +12,8 @@ class BlobsInfoTest {
     val record = createBlobRecordV2(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
-      parentDataTailTakeBytes = 100u,
-      finalDataTailDiscardBytes = 200u,
+      parentSharedBlobCarryOverTailBytes = 100u,
+      finalSharedBlobCarryOverTailBytes = 200u,
     )
     val info = BlobsInfo.fromDomainObject(record)
 
@@ -26,7 +26,7 @@ class BlobsInfoTest {
 
     val parsed = BlobsInfo.fromJsonString(info.toJsonString())
     assertThat(parsed).isEqualTo(info)
-    assertThat(parsed.boundaryPrevDataRollingHash).isNull()
+    assertThat(parsed.parentBlobDataRollingHash).isNull()
   }
 
   @Test
@@ -35,8 +35,10 @@ class BlobsInfoTest {
       BlobsInfo.fromDomainObject(createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL)).toJsonString(),
     )
 
-    assertThatThrownBy { BlobsInfo.fromJsonString(json.copy().apply { remove("finalDataTailDiscardBytes") }.encode()) }
-      .hasMessageContaining("missing finalDataTailDiscardBytes")
+    assertThatThrownBy {
+      BlobsInfo.fromJsonString(json.copy().apply { remove("finalSharedBlobCarryOverTailBytes") }.encode())
+    }
+      .hasMessageContaining("missing finalSharedBlobCarryOverTailBytes")
     val withoutBlobPrevHash = json.copy().apply {
       getJsonArray("blobsData").getJsonObject(0).remove("prevDataRollingHash")
     }

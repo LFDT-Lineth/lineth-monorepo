@@ -153,11 +153,12 @@ data class BlobRecord(
  *
  * @property parentDataRollingHash rolling hash at the end of the previous rollup
  * @property dataRollingHash rolling hash after this rollup's last blob
- * @property parentDataTailTakeBytes payload bytes at the end of the first (shared) blob that belong to this rollup;
- *   0 when this rollup starts on a fresh blob
- * @property boundaryPrevDataRollingHash rolling hash before the shared first blob; non-null iff
- *   [parentDataTailTakeBytes] > 0
- * @property finalDataTailDiscardBytes payload bytes at the end of the last blob that belong to the next rollup
+ * @property parentSharedBlobCarryOverTailBytes payload bytes at the end of the first (shared) blob that the previous
+ *   rollup carried over to this one; 0 when this rollup starts on a fresh blob
+ * @property parentBlobDataRollingHash rolling hash before the shared first blob; non-null iff
+ *   [parentSharedBlobCarryOverTailBytes] > 0
+ * @property finalSharedBlobCarryOverTailBytes payload bytes at the end of the last blob that this rollup carries over
+ *   to the next one
  */
 data class BlobRecordV2(
   override val startBlockNumber: ULong,
@@ -169,27 +170,32 @@ data class BlobRecordV2(
   val totalBatchesCount: UInt,
   val blobsData: List<BlobData>,
   val proofHash: ByteArray,
-  val parentDataTailTakeBytes: UInt,
-  val boundaryPrevDataRollingHash: ByteArray?,
-  val finalDataTailDiscardBytes: UInt,
+  val parentSharedBlobCarryOverTailBytes: UInt,
+  val parentBlobDataRollingHash: ByteArray?,
+  val finalSharedBlobCarryOverTailBytes: UInt,
 ) : BlockInterval {
   init {
     require(blobsData.isNotEmpty()) { "blobsData must not be empty: rollup=${intervalString()}" }
-    require(parentDataTailTakeBytes <= MAX_TAIL_BYTES.toUInt()) {
-      "parentDataTailTakeBytes=$parentDataTailTakeBytes must be in 0..$MAX_TAIL_BYTES: rollup=${intervalString()}"
+    require(parentSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES.toUInt()) {
+      "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES: " +
+        "rollup=${intervalString()}"
     }
-    require(finalDataTailDiscardBytes <= MAX_TAIL_BYTES.toUInt()) {
-      "finalDataTailDiscardBytes=$finalDataTailDiscardBytes must be in 0..$MAX_TAIL_BYTES: rollup=${intervalString()}"
+    require(finalSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES.toUInt()) {
+      "finalSharedBlobCarryOverTailBytes=$finalSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES: " +
+        "rollup=${intervalString()}"
     }
-    require((parentDataTailTakeBytes > 0u) == (boundaryPrevDataRollingHash != null)) {
-      "boundaryPrevDataRollingHash must be set iff parentDataTailTakeBytes > 0: rollup=${intervalString()}"
+    require((parentSharedBlobCarryOverTailBytes > 0u) == (parentBlobDataRollingHash != null)) {
+      "parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0: rollup=${intervalString()}"
     }
     val first = blobsData.first()
-    if (boundaryPrevDataRollingHash != null) {
+    if (parentBlobDataRollingHash != null) {
       require(
-        first.prevDataRollingHash.contentEquals(boundaryPrevDataRollingHash) &&
+        first.prevDataRollingHash.contentEquals(parentBlobDataRollingHash) &&
           first.dataRollingHash.contentEquals(parentDataRollingHash),
-      ) { "shared first blob must sit between boundaryPrev and parent rolling hashes: rollup=${intervalString()}" }
+      ) {
+        "shared first blob must sit between parentBlobDataRollingHash and parentDataRollingHash: " +
+          "rollup=${intervalString()}"
+      }
     } else {
       require(first.prevDataRollingHash.contentEquals(parentDataRollingHash)) {
         "first blob must follow parentDataRollingHash: rollup=${intervalString()}"
@@ -220,9 +226,9 @@ data class BlobRecordV2(
     if (totalBatchesCount != other.totalBatchesCount) return false
     if (blobsData != other.blobsData) return false
     if (!proofHash.contentEquals(other.proofHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (!boundaryPrevDataRollingHash.contentEquals(other.boundaryPrevDataRollingHash)) return false
-    if (finalDataTailDiscardBytes != other.finalDataTailDiscardBytes) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (!parentBlobDataRollingHash.contentEquals(other.parentBlobDataRollingHash)) return false
+    if (finalSharedBlobCarryOverTailBytes != other.finalSharedBlobCarryOverTailBytes) return false
 
     return true
   }
@@ -237,9 +243,9 @@ data class BlobRecordV2(
     result = 31 * result + totalBatchesCount.hashCode()
     result = 31 * result + blobsData.hashCode()
     result = 31 * result + proofHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes.hashCode()
-    result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
-    result = 31 * result + finalDataTailDiscardBytes.hashCode()
+    result = 31 * result + parentSharedBlobCarryOverTailBytes.hashCode()
+    result = 31 * result + (parentBlobDataRollingHash?.contentHashCode() ?: 0)
+    result = 31 * result + finalSharedBlobCarryOverTailBytes.hashCode()
     return result
   }
 }

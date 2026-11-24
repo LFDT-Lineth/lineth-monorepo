@@ -225,7 +225,7 @@ class ConflationBacktestingApp(
     endpoints = backtestingCoordinatorConfig.stateManager.endpoints.map { it.toURI() },
     maxInflightRequestsPerClient = backtestingCoordinatorConfig.stateManager.requestLimitPerEndpoint,
     requestRetry = backtestingCoordinatorConfig.stateManager.requestRetries.toJsonRpcRetry(),
-    requestTimeout = backtestingCoordinatorConfig.stateManager.requestTimeout?.inWholeMilliseconds,
+    requestTimeout = backtestingCoordinatorConfig.stateManager.requestTimeout,
     logger = log,
   )
 

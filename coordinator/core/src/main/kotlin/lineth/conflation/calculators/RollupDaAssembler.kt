@@ -10,22 +10,22 @@ import linea.kotlin.encodeHex
  * The DA part of a rollup proof request: the blobs the rollup touches, where it starts in the first one, and the end
  * values the rollup guest is expected to output.
  *
- * - [parentDataTailTakeBytes] = 0: the rollup starts on a fresh blob and [parentDataRollingHash] is the rolling hash
- *   before its first blob. [boundaryPrevDataRollingHash] then equals [parentDataRollingHash]; the guest does not read
- *   it, and the request omits it.
- * - [parentDataTailTakeBytes] > 0: the rollup starts inside its first blob, shared with the previous rollup. Then
- *   [parentDataRollingHash] is the rolling hash after that blob, and [boundaryPrevDataRollingHash] the one before it,
- *   which opens the preimage of [parentDataRollingHash].
+ * - [parentSharedBlobCarryOverTailBytes] = 0: the rollup starts on a fresh blob and [parentDataRollingHash] is the
+ *   rolling hash before its first blob. [parentBlobDataRollingHash] then equals [parentDataRollingHash]; the guest does
+ *   not read it, and the request omits it.
+ * - [parentSharedBlobCarryOverTailBytes] > 0: the rollup starts inside its first blob, shared with the previous
+ *   rollup. Then [parentDataRollingHash] is the rolling hash after that blob, and [parentBlobDataRollingHash] the one
+ *   before it, which opens the preimage of [parentDataRollingHash].
  *
  * Blobs are shared by reference: a shared blob is the same [SealedBlob] object in both witnesses.
  */
 class RollupDaWitness(
   val blobs: List<SealedBlob>,
   val parentDataRollingHash: ByteArray,
-  val parentDataTailTakeBytes: UInt,
-  val boundaryPrevDataRollingHash: ByteArray,
+  val parentSharedBlobCarryOverTailBytes: UInt,
+  val parentBlobDataRollingHash: ByteArray,
   val expectedEndDataRollingHash: ByteArray,
-  val expectedFinalDataTailDiscardBytes: UInt,
+  val expectedFinalSharedBlobCarryOverTailBytes: UInt,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -35,10 +35,10 @@ class RollupDaWitness(
 
     if (blobs != other.blobs) return false
     if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (!boundaryPrevDataRollingHash.contentEquals(other.boundaryPrevDataRollingHash)) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (!parentBlobDataRollingHash.contentEquals(other.parentBlobDataRollingHash)) return false
     if (!expectedEndDataRollingHash.contentEquals(other.expectedEndDataRollingHash)) return false
-    if (expectedFinalDataTailDiscardBytes != other.expectedFinalDataTailDiscardBytes) return false
+    if (expectedFinalSharedBlobCarryOverTailBytes != other.expectedFinalSharedBlobCarryOverTailBytes) return false
 
     return true
   }
@@ -46,19 +46,19 @@ class RollupDaWitness(
   override fun hashCode(): Int {
     var result = blobs.hashCode()
     result = 31 * result + parentDataRollingHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes.hashCode()
-    result = 31 * result + boundaryPrevDataRollingHash.contentHashCode()
+    result = 31 * result + parentSharedBlobCarryOverTailBytes.hashCode()
+    result = 31 * result + parentBlobDataRollingHash.contentHashCode()
     result = 31 * result + expectedEndDataRollingHash.contentHashCode()
-    result = 31 * result + expectedFinalDataTailDiscardBytes.hashCode()
+    result = 31 * result + expectedFinalSharedBlobCarryOverTailBytes.hashCode()
     return result
   }
 
   override fun toString(): String {
     return "RollupDaWitness(blobs=${blobs.size}, parentDataRollingHash=${parentDataRollingHash.encodeHex()}, " +
-      "parentDataTailTakeBytes=$parentDataTailTakeBytes, " +
-      "boundaryPrevDataRollingHash=${boundaryPrevDataRollingHash.encodeHex()}, " +
+      "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes, " +
+      "parentBlobDataRollingHash=${parentBlobDataRollingHash.encodeHex()}, " +
       "expectedEndDataRollingHash=${expectedEndDataRollingHash.encodeHex()}, " +
-      "expectedFinalDataTailDiscardBytes=$expectedFinalDataTailDiscardBytes)"
+      "expectedFinalSharedBlobCarryOverTailBytes=$expectedFinalSharedBlobCarryOverTailBytes)"
   }
 }
 
@@ -87,11 +87,12 @@ class RollupDaAssembler(start: DaStreamPosition) {
   private val blobs = mutableListOf<SealedBlob>()
 
   // Start values of the open rollup.
-  private var take = start.sharedBlobCarryOverTailBytes
+  private var parentCarryOver = start.sharedBlobCarryOverTailBytes
   private var parent = start.dataRollingHash
 
-  // Rolling hash before the open rollup's first blob: opens the preimage of `parent` when take > 0, equals it otherwise.
-  private var boundaryPrev: ByteArray = start.parentBlobDataRollingHash
+  // Rolling hash before the open rollup's first blob: opens the preimage of `parent` when parentCarryOver > 0, equals
+  // it otherwise.
+  private var parentBlobDataRollingHash: ByteArray = start.parentBlobDataRollingHash
 
   /** The open rollup's conflations, oldest first. */
   val openConflations: List<BlocksConflation> get() = conflations
@@ -103,9 +104,11 @@ class RollupDaAssembler(start: DaStreamPosition) {
         "blob does not continue the open rollup: prevDataRollingHash=${blob.prevDataRollingHash.encodeHex()} " +
           "but the previous blob ends at ${previous.dataRollingHash.encodeHex()}"
       }
-    } else if (take > 0u) {
+    } else if (parentCarryOver > 0u) {
       // A rollup starting inside a shared blob: its first blob must be that shared blob.
-      check(blob.dataRollingHash.contentEquals(parent) && blob.prevDataRollingHash.contentEquals(boundaryPrev)) {
+      check(
+        blob.dataRollingHash.contentEquals(parent) && blob.prevDataRollingHash.contentEquals(parentBlobDataRollingHash),
+      ) {
         "first blob of a rollup starting inside a shared blob must be that blob: " +
           "expected dataRollingHash=${parent.encodeHex()}, got ${blob.dataRollingHash.encodeHex()}"
       }
@@ -133,18 +136,18 @@ class RollupDaAssembler(start: DaStreamPosition) {
     val witness = RollupDaWitness(
       blobs = blobs.toList(),
       parentDataRollingHash = parent,
-      parentDataTailTakeBytes = take,
-      boundaryPrevDataRollingHash = boundaryPrev,
+      parentSharedBlobCarryOverTailBytes = parentCarryOver,
+      parentBlobDataRollingHash = parentBlobDataRollingHash,
       expectedEndDataRollingHash = last.dataRollingHash,
-      expectedFinalDataTailDiscardBytes = tail,
+      expectedFinalSharedBlobCarryOverTailBytes = tail,
     )
     blobs.clear()
     // The next rollup starts where this one ends: inside `last` if bytes remain (the same object then sits in both
     // witnesses), else on a fresh blob.
     if (tail > 0u) blobs += last
-    take = tail
+    parentCarryOver = tail
     parent = last.dataRollingHash
-    boundaryPrev = if (tail > 0u) last.prevDataRollingHash else last.dataRollingHash
+    parentBlobDataRollingHash = if (tail > 0u) last.prevDataRollingHash else last.dataRollingHash
     val rollup = Rollup(conflations.toList(), witness)
     conflations.clear()
     return rollup

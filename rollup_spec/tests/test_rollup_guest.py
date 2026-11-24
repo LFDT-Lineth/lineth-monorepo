@@ -117,7 +117,7 @@ def two_conflation_rollup_input(
     calldata = calldata_chunk(segment_2[7:])
     rollup_input = RollupProofPrivateInput(
         parent_data_rolling_hash=PARENT_DATA_ROLLING_HASH,
-        parent_data_tail_take_bytes=0,
+        parent_shared_blob_carry_over_tail_bytes=0,
         chain_id=CHAIN_ID,
         conflations=[ConflationWitness([block_1.block_rlp]), ConflationWitness([block_2.block_rlp])],
         chunks=[blob, calldata],
@@ -144,7 +144,7 @@ def test_rollup_over_two_conflations_split_across_a_short_blob_and_calldata():
     assert public_inputs.parent_block_hash == FIRST_PARENT_HASH
     assert public_inputs.end_block_hash == block_2.hash
     assert public_inputs.end_data_rolling_hash == data_rolling_hash_after(PARENT_DATA_ROLLING_HASH, [blob, calldata])
-    assert public_inputs.final_data_tail_discard_bytes == 0
+    assert public_inputs.final_shared_blob_carry_over_tail_bytes == 0
     assert public_inputs.block_count == 2
 
 

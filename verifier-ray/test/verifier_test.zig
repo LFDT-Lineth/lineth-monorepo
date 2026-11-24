@@ -18,9 +18,6 @@ const field = verifier_ray.field.koalabear;
 //   2. The round-count guard needs no fixture: `verify` must reject a proof
 //      whose round count disagrees with the compiled spec, during transcript
 //      replay (before PCS runs).
-//
-// (The PCS-authenticated challenge derivation `verify` relies on is pinned
-// separately in pcs_test.zig.)
 
 test "all fixture cases: honest proofs verify end-to-end" {
     inline for (0..vf.case_count) |i| {
