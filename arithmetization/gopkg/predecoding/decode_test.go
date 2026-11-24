@@ -2,6 +2,7 @@ package predecoding
 
 import (
 	"bytes"
+	"io"
 	"math"
 	"reflect"
 	"testing"
@@ -1564,6 +1565,54 @@ func TestWithMaxDecodedRecords(t *testing.T) {
 		}
 		if cfg.maxDecodedRecords != tt.want {
 			t.Fatalf("%s: maxDecodedRecords = %d, want %d", tt.name, cfg.maxDecodedRecords, tt.want)
+		}
+	}
+}
+
+// TestWithIncludeExecutable checks that the returned option sets
+// includeExecutable, returns no error, and leaves the other fields alone. The
+// cases cover an unset and an already-set config.
+func TestWithIncludeExecutable(t *testing.T) {
+	tests := []struct {
+		name  string
+		start bool
+	}{
+		{name: "unset", start: false},
+		{name: "already set", start: true},
+	}
+	for _, tt := range tests {
+		cfg := config{maxDecodedRecords: 7, includeExecutable: tt.start}
+		if err := WithIncludeExecutable()(&cfg); err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if !cfg.includeExecutable || cfg.maxDecodedRecords != 7 || cfg.sectionsWriter != nil {
+			t.Fatalf("%s: config = %+v, want includeExecutable=true and other fields unchanged", tt.name, cfg)
+		}
+	}
+}
+
+// TestWithSectionsWriter checks that a non-nil writer is stored in the config
+// and a nil writer is rejected. A rejected option leaves the config unchanged.
+func TestWithSectionsWriter(t *testing.T) {
+	var buf bytes.Buffer
+	tests := []struct {
+		name    string
+		writer  io.Writer
+		want    io.Writer
+		wantErr bool
+	}{
+		{name: "buffer is stored", writer: &buf, want: &buf},
+		{name: "nil is rejected", writer: nil, wantErr: true},
+	}
+	for _, tt := range tests {
+		cfg := config{maxDecodedRecords: 7}
+		err := WithSectionsWriter(tt.writer)(&cfg)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if cfg.sectionsWriter != tt.want || cfg.maxDecodedRecords != 7 || cfg.includeExecutable {
+			t.Fatalf("%s: config = %+v, want sectionsWriter=%v and other fields unchanged",
+				tt.name, cfg, tt.want)
 		}
 	}
 }
