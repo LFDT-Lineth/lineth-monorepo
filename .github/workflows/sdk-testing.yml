@@ -28,8 +28,6 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: SDK Build, Test, Lint
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -101,38 +99,26 @@ jobs:
           path: ci-sdk-coverage/
 
       - name: Upload sdk-core coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-core/coverage/lcov.info
           flags: sdk-core
-          os: linux
           name: codecov-sdk-core
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload sdk-viem coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info
           flags: sdk-viem
-          os: linux
           name: codecov-sdk-viem-sdk-testing
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload sdk-ethers coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-ethers/coverage/lcov.info
           flags: sdk-ethers
-          os: linux
           name: codecov-sdk-ethers
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 

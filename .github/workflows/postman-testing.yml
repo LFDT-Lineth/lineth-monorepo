@@ -26,7 +26,6 @@ jobs:
     name: Postman & SDK tests
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,38 +69,27 @@ jobs:
           path: ci-ts-coverage/
 
       - name: Upload linea-native-libs coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./ts-libs/linea-native-libs/coverage/lcov.info
           flags: linea-native-libs
-          os: linux
           name: codecov-linea-native-libs
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload postman coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./postman/coverage/lcov.info
           flags: postman
-          os: linux
           name: codecov-postman
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload sdk-viem coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' && inputs.run_sdk_viem_tests }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: ${{ inputs.run_sdk_viem_tests }}
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ./ts-libs/sdk/sdk-viem/coverage/lcov.info
           flags: sdk-viem
-          os: linux
           name: codecov-sdk-viem
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 

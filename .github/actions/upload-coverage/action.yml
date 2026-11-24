@@ -1,0 +1,33 @@
+name: 'Upload coverage to Codecov'
+description: >
+  Uploads one coverage report to Codecov with the repository's standard settings
+  (fail on upload error, linux, verbose). Does nothing when no token is given, which is the case
+  for pull requests from forks. Requires the repository to be checked out first.
+inputs:
+  files:
+    description: 'Coverage report file(s) to upload'
+    required: true
+  flags:
+    description: 'Codecov flag(s) to attach to the upload'
+    required: true
+  name:
+    description: 'Upload name shown in Codecov'
+    required: true
+  token:
+    description: 'Codecov token, pass ${{ secrets.CODECOV_TOKEN }}; an empty value skips the upload'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Upload coverage to Codecov
+      if: ${{ inputs.token != '' }}
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      with:
+        fail_ci_if_error: true
+        files: ${{ inputs.files }}
+        flags: ${{ inputs.flags }}
+        os: linux
+        name: ${{ inputs.name }}
+        verbose: true
+        token: ${{ inputs.token }}
