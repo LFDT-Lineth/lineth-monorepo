@@ -144,7 +144,9 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	parentSharedBlobCarryOverTailBytes, err := getU64(proofRequest, parentSharedBlobCarryOverTailBytesKey, op, "proofRequest.")
+	parentSharedBlobCarryOverTailBytes, err := getU64(
+		proofRequest, parentSharedBlobCarryOverTailBytesKey, op, "proofRequest.",
+	)
 	if err != nil {
 		return nil, err
 	}
