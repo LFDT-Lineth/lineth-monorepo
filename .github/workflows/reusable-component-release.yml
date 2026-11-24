@@ -82,6 +82,22 @@ jobs:
           echo "❌ Non-main branch must have non-empty custom tag suffix"
           exit 1
 
+      # Fail before anything is pushed. Both suffixes end up in the release tag and in the docker
+      # image tag, so allow only the characters a docker tag accepts. The values are read from env
+      # (not interpolated into the script) and only the variable name is echoed back.
+      - name: Validate custom tag suffixes
+        env:
+          RELEASE_TAG_SUFFIX: ${{ inputs.release_tag_suffix }}
+          IMAGE_TAG_SUFFIX: ${{ inputs.image_tag_suffix }}
+        run: |
+          for var in RELEASE_TAG_SUFFIX IMAGE_TAG_SUFFIX; do
+            value="${!var}"
+            if [[ ! "${value}" =~ ^[A-Za-z0-9._-]*$ ]]; then
+              echo "❌ ${var} may only contain letters, digits, '.', '_' and '-'"
+              exit 1
+            fi
+          done
+
   compute-commit-tag:
     needs: [check-branch-and-release-tag-suffix]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
