@@ -907,7 +907,7 @@ func writeLargePCSFixture() error {
 
 // ─── Merkle fixtures: prover-ray's exported Tree/Branch surface ────────────
 //
-// fri.NewTree([][]Octuplet{nil, ..., leaves}) (leaves at index log2(n), nil
+// fri.NewTree(MerkleHashKoalaBear, [][]Octuplet{nil, ..., leaves}) (leaves at index log2(n), nil
 // above) is bit-identical to the package's unexported newCompleteBinaryTree:
 // same node count, same hashNode(left, right, nil) internal nodes, since the
 // nil upper levels leave every Aux slot nil.
@@ -938,7 +938,7 @@ func buildMerkleCases() []merkleCase {
 	// Two-leaf tree: both parities in a single level.
 	{
 		leaves := []field.Octuplet{hashOne(1), hashOne(2)}
-		tree := fri.NewTree([][]field.Octuplet{nil, leaves})
+		tree := fri.NewTree(fri.MerkleHashKoalaBear, [][]field.Octuplet{nil, leaves})
 		root := tree.Root()
 		for _, idx := range []int{0, 1} {
 			b := tree.OpenBranch(idx)
@@ -963,7 +963,7 @@ func buildMerkleCases() []merkleCase {
 	// across more than one level.
 	{
 		leaves := []field.Octuplet{hashOne(10), hashOne(20), hashOne(30), hashOne(40)}
-		tree := fri.NewTree([][]field.Octuplet{nil, nil, leaves})
+		tree := fri.NewTree(fri.MerkleHashKoalaBear, [][]field.Octuplet{nil, nil, leaves})
 		root := tree.Root()
 		b := tree.OpenBranch(1)
 		cases = append(cases, merkleCase{

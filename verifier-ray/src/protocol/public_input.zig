@@ -8,6 +8,8 @@ pub const Error = error{
     InvalidRoundCount,
     InvalidPublicInputCount,
     InvalidRoundCellCount,
+    /// A cell's wire tag (base or extension) differs from its declared field.
+    CellFieldMismatch,
 };
 
 /// One registered public input, referenced by both its position in the flat
@@ -27,6 +29,16 @@ pub const Spec = struct {
     /// Total verifier-visible cell count of each replayed round, INCLUDING the
     /// cells that live in the separate public-input statement.
     round_cell_counts: []const usize = &.{},
+    /// One bit per verifier-visible cell of the replayed rounds, in transcript
+    /// order (round, then position): bit `i` of the flat cell index is
+    /// `cell_ext_bits[i / 64] >> (i % 64) & 1`, set when prover-ray declares the
+    /// cell an extension-field value. The declaration is binding in prover-ray
+    /// and the tag fixes how many elements the cell absorbs into the transcript
+    /// (1 or 6), so `bindRoundMessagesInto` rejects a cell whose wire tag
+    /// differs: re-sending a base value in extension form would otherwise give
+    /// the prover a choice of transcripts. Deliberately has no default: a spec
+    /// without it would silently skip the check.
+    cell_ext_bits: []const u64,
     /// Registered public inputs, emitted in transcript order (round/index) so
     /// `bindRoundMessages` can merge them into the proof's round cells in one
     /// pass. `statement_index` still points into the prover-ray registration
@@ -122,24 +134,34 @@ pub fn bindRoundMessagesInto(
 
         var proof_cell_index: usize = 0;
         for (0..total_cells) |cell_index| {
+            const flat_index = cell_cursor + cell_index;
+            var value: Scalar = undefined;
             if (public_input_cursor < spec.refs.len and
                 spec.refs[public_input_cursor].round == round_index and
                 spec.refs[public_input_cursor].index == cell_index)
             {
                 const ref = spec.refs[public_input_cursor];
-                bound.*.cell_storage[cell_cursor + cell_index] = public_inputs[ref.statement_index];
+                value = public_inputs[ref.statement_index];
                 public_input_cursor += 1;
-                continue;
+            } else {
+                if (proof_cell_index >= proof_round.cells.len) return error.InvalidRoundCellCount;
+                value = proof_round.cells[proof_cell_index];
+                proof_cell_index += 1;
             }
 
-            if (proof_cell_index >= proof_round.cells.len) return error.InvalidRoundCellCount;
-            bound.*.cell_storage[cell_cursor + cell_index] = proof_round.cells[proof_cell_index];
-            proof_cell_index += 1;
+            if ((value == .ext) != cellIsExt(spec, flat_index)) return error.CellFieldMismatch;
+            bound.*.cell_storage[flat_index] = value;
         }
 
         if (proof_cell_index != proof_round.cells.len) return error.InvalidRoundCellCount;
         cell_cursor += total_cells;
     }
+}
+
+/// Reports whether the cell at `flat_index` (see `Spec.cell_ext_bits`) is
+/// declared an extension-field value.
+fn cellIsExt(comptime spec: Spec, flat_index: usize) bool {
+    return (spec.cell_ext_bits[flat_index / 64] >> @intCast(flat_index % 64)) & 1 == 1;
 }
 
 fn maxRoundCellCount(comptime spec: Spec) usize {
@@ -155,6 +177,13 @@ fn validateSpec(comptime spec: Spec) void {
     // shared-randomness contribution alone contributes 328 refs, which pushes
     // some cases past the compiler's default 1000-backwards-branch quota.
     @setEvalBranchQuota(1_000_000);
+
+    const total_cells = totalRoundCellCount(spec);
+    if (spec.cell_ext_bits.len != (total_cells + 63) / 64)
+        @compileError("public_input spec: cell_ext_bits must hold one bit per round cell");
+    if (total_cells % 64 != 0 and spec.cell_ext_bits[spec.cell_ext_bits.len - 1] >> (total_cells % 64) != 0)
+        @compileError("public_input spec: cell_ext_bits has bits set past the last round cell");
+
     for (spec.refs, 0..) |ref, i| {
         if (ref.statement_index >= spec.refs.len)
             @compileError("public_input spec: refs statement_index out of range");

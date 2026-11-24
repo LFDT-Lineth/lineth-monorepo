@@ -22,6 +22,7 @@ pub const system_0_spec = protocol.Spec{
 };
 pub const system_0_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
+    .cell_ext_bits = &[_]u64{0xc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -140,6 +141,7 @@ pub const system_1_spec = protocol.Spec{
 };
 pub const system_1_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -264,6 +266,7 @@ pub const system_2_spec = protocol.Spec{
 };
 pub const system_2_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -386,6 +389,7 @@ pub const system_3_spec = protocol.Spec{
 };
 pub const system_3_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x78},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -512,6 +516,7 @@ pub const system_4_spec = protocol.Spec{
 };
 pub const system_4_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0xf0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -644,6 +649,7 @@ pub const system_5_spec = protocol.Spec{
 };
 pub const system_5_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -768,6 +774,7 @@ pub const system_6_spec = protocol.Spec{
 };
 pub const system_6_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
+    .cell_ext_bits = &[_]u64{0xc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -886,6 +893,7 @@ pub const system_7_spec = protocol.Spec{
 };
 pub const system_7_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1006,6 +1014,7 @@ pub const system_8_spec = protocol.Spec{
 };
 pub const system_8_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 2, 3 },
+    .cell_ext_bits = &[_]u64{0x38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1129,6 +1138,7 @@ pub const system_9_spec = protocol.Spec{
 };
 pub const system_9_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0xf0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1261,6 +1271,7 @@ pub const system_10_spec = protocol.Spec{
 };
 pub const system_10_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1385,6 +1396,7 @@ pub const system_11_spec = protocol.Spec{
 };
 pub const system_11_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1510,6 +1522,7 @@ pub const system_12_spec = protocol.Spec{
 };
 pub const system_12_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1633,6 +1646,7 @@ pub const system_13_spec = protocol.Spec{
 };
 pub const system_13_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 2, 4 },
+    .cell_ext_bits = &[_]u64{0xf0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1777,6 +1791,7 @@ pub const system_14_spec = protocol.Spec{
 };
 pub const system_14_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -1899,6 +1914,7 @@ pub const system_15_spec = protocol.Spec{
 };
 pub const system_15_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2021,6 +2037,7 @@ pub const system_16_spec = protocol.Spec{
 };
 pub const system_16_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 2 },
+    .cell_ext_bits = &[_]u64{0x18},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2141,6 +2158,7 @@ pub const system_17_spec = protocol.Spec{
 };
 pub const system_17_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 0, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2269,6 +2287,7 @@ pub const system_18_spec = protocol.Spec{
 };
 pub const system_18_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2393,6 +2412,7 @@ pub const system_19_spec = protocol.Spec{
 };
 pub const system_19_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 4, 5 },
+    .cell_ext_bits = &[_]u64{0x3e0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2525,6 +2545,7 @@ pub const system_20_spec = protocol.Spec{
 };
 pub const system_20_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2645,6 +2666,7 @@ pub const system_21_spec = protocol.Spec{
 };
 pub const system_21_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 2, 4 },
+    .cell_ext_bits = &[_]u64{0x78},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2771,6 +2793,7 @@ pub const system_22_spec = protocol.Spec{
 };
 pub const system_22_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 6, 7 },
+    .cell_ext_bits = &[_]u64{0x3f80},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -2917,6 +2940,7 @@ pub const system_23_spec = protocol.Spec{
 };
 pub const system_23_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 4, 6 },
+    .cell_ext_bits = &[_]u64{0xfc0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3071,6 +3095,7 @@ pub const system_24_spec = protocol.Spec{
 };
 pub const system_24_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 2, 3 },
+    .cell_ext_bits = &[_]u64{0x38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3194,6 +3219,7 @@ pub const system_25_spec = protocol.Spec{
 };
 pub const system_25_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 3 },
+    .cell_ext_bits = &[_]u64{0x1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3314,6 +3340,7 @@ pub const system_26_spec = protocol.Spec{
 };
 pub const system_26_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3441,6 +3468,7 @@ pub const system_27_spec = protocol.Spec{
 };
 pub const system_27_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
+    .cell_ext_bits = &[_]u64{0xc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3559,6 +3587,7 @@ pub const system_28_spec = protocol.Spec{
 };
 pub const system_28_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 4, 6 },
+    .cell_ext_bits = &[_]u64{0x7e0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3695,6 +3724,7 @@ pub const system_29_spec = protocol.Spec{
 };
 pub const system_29_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3792,6 +3822,7 @@ pub const system_30_spec = protocol.Spec{
 };
 pub const system_30_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 2, 8 },
+    .cell_ext_bits = &[_]u64{0xff0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -3914,6 +3945,7 @@ pub const system_31_spec = protocol.Spec{
 };
 pub const system_31_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x1e6},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4028,6 +4060,7 @@ pub const system_32_spec = protocol.Spec{
 };
 pub const system_32_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
+    .cell_ext_bits = &[_]u64{0x7cc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4146,6 +4179,7 @@ pub const system_33_spec = protocol.Spec{
 };
 pub const system_33_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
+    .cell_ext_bits = &[_]u64{0x7cc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4264,6 +4298,7 @@ pub const system_34_spec = protocol.Spec{
 };
 pub const system_34_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 3, 1, 6 },
+    .cell_ext_bits = &[_]u64{0x1f98},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4384,6 +4419,7 @@ pub const system_35_spec = protocol.Spec{
 };
 pub const system_35_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 3, 4, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff830},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4531,6 +4567,7 @@ pub const system_36_spec = protocol.Spec{
 };
 pub const system_36_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4682,6 +4719,7 @@ pub const system_37_spec = protocol.Spec{
 };
 pub const system_37_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x1e6},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4796,6 +4834,7 @@ pub const system_38_spec = protocol.Spec{
 };
 pub const system_38_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -4954,6 +4993,7 @@ pub const system_39_spec = protocol.Spec{
 };
 pub const system_39_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 7, 5, 4, 15 },
+    .cell_ext_bits = &[_]u64{0x7fff0380},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5131,6 +5171,7 @@ pub const system_40_spec = protocol.Spec{
 };
 pub const system_40_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x1e6},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5245,6 +5286,7 @@ pub const system_41_spec = protocol.Spec{
 };
 pub const system_41_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 6, 1, 7 },
+    .cell_ext_bits = &[_]u64{0xfe3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5380,6 +5422,7 @@ pub const system_42_spec = protocol.Spec{
 };
 pub const system_42_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 3, 1, 5 },
+    .cell_ext_bits = &[_]u64{0x7cc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5496,6 +5539,7 @@ pub const system_43_spec = protocol.Spec{
 };
 pub const system_43_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 3, 4, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff830},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5638,6 +5682,7 @@ pub const system_44_spec = protocol.Spec{
 };
 pub const system_44_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5805,6 +5850,7 @@ pub const system_45_spec = protocol.Spec{
 };
 pub const system_45_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -5976,6 +6022,7 @@ pub const system_46_spec = protocol.Spec{
 };
 pub const system_46_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -6152,6 +6199,7 @@ pub const system_47_spec = protocol.Spec{
 };
 pub const system_47_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 5, 0, 5, 2, 11 },
+    .cell_ext_bits = &[_]u64{0x7ff0e0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -6332,6 +6380,7 @@ pub const system_48_spec = protocol.Spec{
 };
 pub const system_48_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 5, 0, 5, 2, 11 },
+    .cell_ext_bits = &[_]u64{0x7ff0e0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -6511,6 +6560,7 @@ pub const system_49_spec = protocol.Spec{
 };
 pub const system_49_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 7, 3, 13 },
+    .cell_ext_bits = &[_]u64{0x7ffc0f0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -6714,6 +6764,7 @@ pub const system_50_spec = protocol.Spec{
 };
 pub const system_50_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 6, 0, 9, 4, 18 },
+    .cell_ext_bits = &[_]u64{0x1ffff807c0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -6963,6 +7014,7 @@ pub const system_51_spec = protocol.Spec{
 };
 pub const system_51_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 6, 0, 5, 2, 12 },
+    .cell_ext_bits = &[_]u64{0x1ffe1c0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -7149,6 +7201,7 @@ pub const system_52_spec = protocol.Spec{
 };
 pub const system_52_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -7316,6 +7369,7 @@ pub const system_53_spec = protocol.Spec{
 };
 pub const system_53_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -7483,6 +7537,7 @@ pub const system_54_spec = protocol.Spec{
 };
 pub const system_54_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -7650,6 +7705,7 @@ pub const system_55_spec = protocol.Spec{
 };
 pub const system_55_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 7, 3, 13 },
+    .cell_ext_bits = &[_]u64{0x7ffc0f0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -7853,6 +7909,7 @@ pub const system_56_spec = protocol.Spec{
 };
 pub const system_56_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 7, 0, 5, 2, 13 },
+    .cell_ext_bits = &[_]u64{0x7ffc380},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8042,6 +8099,7 @@ pub const system_57_spec = protocol.Spec{
 };
 pub const system_57_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8209,6 +8267,7 @@ pub const system_58_spec = protocol.Spec{
 };
 pub const system_58_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x3fe1c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8375,6 +8434,7 @@ pub const system_59_spec = protocol.Spec{
 };
 pub const system_59_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8542,6 +8602,7 @@ pub const system_60_spec = protocol.Spec{
 };
 pub const system_60_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8713,6 +8774,7 @@ pub const system_61_spec = protocol.Spec{
 };
 pub const system_61_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -8890,6 +8952,7 @@ pub const system_62_spec = protocol.Spec{
 };
 pub const system_62_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -9067,6 +9130,7 @@ pub const system_63_spec = protocol.Spec{
 };
 pub const system_63_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 5, 2, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff870},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -9254,6 +9318,7 @@ pub const system_64_spec = protocol.Spec{
 };
 pub const system_64_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 7, 0, 7, 3, 16 },
+    .cell_ext_bits = &[_]u64{0x1fffe0780},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -9476,6 +9541,7 @@ pub const system_65_spec = protocol.Spec{
 };
 pub const system_65_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 0, 5, 2, 9 },
+    .cell_ext_bits = &[_]u64{0x7fc38},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -9645,6 +9711,7 @@ pub const system_66_spec = protocol.Spec{
 };
 pub const system_66_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 5, 0, 5, 2, 11 },
+    .cell_ext_bits = &[_]u64{0x7ff0e0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -9825,6 +9892,7 @@ pub const system_67_spec = protocol.Spec{
 };
 pub const system_67_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 4, 0, 7, 4, 16 },
+    .cell_ext_bits = &[_]u64{0x7fff80f0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -10048,6 +10116,7 @@ pub const system_68_spec = protocol.Spec{
 };
 pub const system_68_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 2 },
+    .cell_ext_bits = &[_]u64{0x18},
     .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
 };
 
@@ -10173,6 +10242,7 @@ pub const system_69_spec = protocol.Spec{
 };
 pub const system_69_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 1, 2 },
+    .cell_ext_bits = &[_]u64{0x18},
     .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
 };
 
@@ -10297,6 +10367,7 @@ pub const system_70_spec = protocol.Spec{
 };
 pub const system_70_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
+    .cell_ext_bits = &[_]u64{0xc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -10418,6 +10489,7 @@ pub const system_71_spec = protocol.Spec{
 };
 pub const system_71_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 2 },
+    .cell_ext_bits = &[_]u64{0xc},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -10538,6 +10610,7 @@ pub const system_72_spec = protocol.Spec{
 };
 pub const system_72_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 11, 0, 5, 2, 17 },
+    .cell_ext_bits = &[_]u64{0x7fffc3800},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -10747,6 +10820,7 @@ pub const system_73_spec = protocol.Spec{
 };
 pub const system_73_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 2, 0, 5, 4, 10 },
+    .cell_ext_bits = &[_]u64{0x1ff81c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -10983,6 +11057,7 @@ pub const system_74_spec = protocol.Spec{
 };
 pub const system_74_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 8, 330, 5, 4, 10 },
+    .cell_ext_bits = &[_]u64{ 0x0, 0x0, 0x0, 0x0, 0x0, 0x1ff81c0000 },
     .refs = &[_]protocol.public_input.CellRef{ .{ .statement_index = 0, .round = 0, .index = 0 }, .{ .statement_index = 1, .round = 0, .index = 1 }, .{ .statement_index = 2, .round = 0, .index = 2 }, .{ .statement_index = 3, .round = 0, .index = 3 }, .{ .statement_index = 4, .round = 0, .index = 4 }, .{ .statement_index = 5, .round = 0, .index = 5 }, .{ .statement_index = 6, .round = 0, .index = 6 }, .{ .statement_index = 7, .round = 0, .index = 7 }, .{ .statement_index = 8, .round = 1, .index = 0 }, .{ .statement_index = 9, .round = 1, .index = 1 }, .{ .statement_index = 10, .round = 1, .index = 2 }, .{ .statement_index = 11, .round = 1, .index = 3 }, .{ .statement_index = 12, .round = 1, .index = 4 }, .{ .statement_index = 13, .round = 1, .index = 5 }, .{ .statement_index = 14, .round = 1, .index = 6 }, .{ .statement_index = 15, .round = 1, .index = 7 }, .{ .statement_index = 16, .round = 1, .index = 8 }, .{ .statement_index = 17, .round = 1, .index = 9 }, .{ .statement_index = 18, .round = 1, .index = 10 }, .{ .statement_index = 19, .round = 1, .index = 11 }, .{ .statement_index = 20, .round = 1, .index = 12 }, .{ .statement_index = 21, .round = 1, .index = 13 }, .{ .statement_index = 22, .round = 1, .index = 14 }, .{ .statement_index = 23, .round = 1, .index = 15 }, .{ .statement_index = 24, .round = 1, .index = 16 }, .{ .statement_index = 25, .round = 1, .index = 17 }, .{ .statement_index = 26, .round = 1, .index = 18 }, .{ .statement_index = 27, .round = 1, .index = 19 }, .{ .statement_index = 28, .round = 1, .index = 20 }, .{ .statement_index = 29, .round = 1, .index = 21 }, .{ .statement_index = 30, .round = 1, .index = 22 }, .{ .statement_index = 31, .round = 1, .index = 23 }, .{ .statement_index = 32, .round = 1, .index = 24 }, .{ .statement_index = 33, .round = 1, .index = 25 }, .{ .statement_index = 34, .round = 1, .index = 26 }, .{ .statement_index = 35, .round = 1, .index = 27 }, .{ .statement_index = 36, .round = 1, .index = 28 }, .{ .statement_index = 37, .round = 1, .index = 29 }, .{ .statement_index = 38, .round = 1, .index = 30 }, .{ .statement_index = 39, .round = 1, .index = 31 }, .{ .statement_index = 40, .round = 1, .index = 32 }, .{ .statement_index = 41, .round = 1, .index = 33 }, .{ .statement_index = 42, .round = 1, .index = 34 }, .{ .statement_index = 43, .round = 1, .index = 35 }, .{ .statement_index = 44, .round = 1, .index = 36 }, .{ .statement_index = 45, .round = 1, .index = 37 }, .{ .statement_index = 46, .round = 1, .index = 38 }, .{ .statement_index = 47, .round = 1, .index = 39 }, .{ .statement_index = 48, .round = 1, .index = 40 }, .{ .statement_index = 49, .round = 1, .index = 41 }, .{ .statement_index = 50, .round = 1, .index = 42 }, .{ .statement_index = 51, .round = 1, .index = 43 }, .{ .statement_index = 52, .round = 1, .index = 44 }, .{ .statement_index = 53, .round = 1, .index = 45 }, .{ .statement_index = 54, .round = 1, .index = 46 }, .{ .statement_index = 55, .round = 1, .index = 47 }, .{ .statement_index = 56, .round = 1, .index = 48 }, .{ .statement_index = 57, .round = 1, .index = 49 }, .{ .statement_index = 58, .round = 1, .index = 50 }, .{ .statement_index = 59, .round = 1, .index = 51 }, .{ .statement_index = 60, .round = 1, .index = 52 }, .{ .statement_index = 61, .round = 1, .index = 53 }, .{ .statement_index = 62, .round = 1, .index = 54 }, .{ .statement_index = 63, .round = 1, .index = 55 }, .{ .statement_index = 64, .round = 1, .index = 56 }, .{ .statement_index = 65, .round = 1, .index = 57 }, .{ .statement_index = 66, .round = 1, .index = 58 }, .{ .statement_index = 67, .round = 1, .index = 59 }, .{ .statement_index = 68, .round = 1, .index = 60 }, .{ .statement_index = 69, .round = 1, .index = 61 }, .{ .statement_index = 70, .round = 1, .index = 62 }, .{ .statement_index = 71, .round = 1, .index = 63 }, .{ .statement_index = 72, .round = 1, .index = 64 }, .{ .statement_index = 73, .round = 1, .index = 65 }, .{ .statement_index = 74, .round = 1, .index = 66 }, .{ .statement_index = 75, .round = 1, .index = 67 }, .{ .statement_index = 76, .round = 1, .index = 68 }, .{ .statement_index = 77, .round = 1, .index = 69 }, .{ .statement_index = 78, .round = 1, .index = 70 }, .{ .statement_index = 79, .round = 1, .index = 71 }, .{ .statement_index = 80, .round = 1, .index = 72 }, .{ .statement_index = 81, .round = 1, .index = 73 }, .{ .statement_index = 82, .round = 1, .index = 74 }, .{ .statement_index = 83, .round = 1, .index = 75 }, .{ .statement_index = 84, .round = 1, .index = 76 }, .{ .statement_index = 85, .round = 1, .index = 77 }, .{ .statement_index = 86, .round = 1, .index = 78 }, .{ .statement_index = 87, .round = 1, .index = 79 }, .{ .statement_index = 88, .round = 1, .index = 80 }, .{ .statement_index = 89, .round = 1, .index = 81 }, .{ .statement_index = 90, .round = 1, .index = 82 }, .{ .statement_index = 91, .round = 1, .index = 83 }, .{ .statement_index = 92, .round = 1, .index = 84 }, .{ .statement_index = 93, .round = 1, .index = 85 }, .{ .statement_index = 94, .round = 1, .index = 86 }, .{ .statement_index = 95, .round = 1, .index = 87 }, .{ .statement_index = 96, .round = 1, .index = 88 }, .{ .statement_index = 97, .round = 1, .index = 89 }, .{ .statement_index = 98, .round = 1, .index = 90 }, .{ .statement_index = 99, .round = 1, .index = 91 }, .{ .statement_index = 100, .round = 1, .index = 92 }, .{ .statement_index = 101, .round = 1, .index = 93 }, .{ .statement_index = 102, .round = 1, .index = 94 }, .{ .statement_index = 103, .round = 1, .index = 95 }, .{ .statement_index = 104, .round = 1, .index = 96 }, .{ .statement_index = 105, .round = 1, .index = 97 }, .{ .statement_index = 106, .round = 1, .index = 98 }, .{ .statement_index = 107, .round = 1, .index = 99 }, .{ .statement_index = 108, .round = 1, .index = 100 }, .{ .statement_index = 109, .round = 1, .index = 101 }, .{ .statement_index = 110, .round = 1, .index = 102 }, .{ .statement_index = 111, .round = 1, .index = 103 }, .{ .statement_index = 112, .round = 1, .index = 104 }, .{ .statement_index = 113, .round = 1, .index = 105 }, .{ .statement_index = 114, .round = 1, .index = 106 }, .{ .statement_index = 115, .round = 1, .index = 107 }, .{ .statement_index = 116, .round = 1, .index = 108 }, .{ .statement_index = 117, .round = 1, .index = 109 }, .{ .statement_index = 118, .round = 1, .index = 110 }, .{ .statement_index = 119, .round = 1, .index = 111 }, .{ .statement_index = 120, .round = 1, .index = 112 }, .{ .statement_index = 121, .round = 1, .index = 113 }, .{ .statement_index = 122, .round = 1, .index = 114 }, .{ .statement_index = 123, .round = 1, .index = 115 }, .{ .statement_index = 124, .round = 1, .index = 116 }, .{ .statement_index = 125, .round = 1, .index = 117 }, .{ .statement_index = 126, .round = 1, .index = 118 }, .{ .statement_index = 127, .round = 1, .index = 119 }, .{ .statement_index = 128, .round = 1, .index = 120 }, .{ .statement_index = 129, .round = 1, .index = 121 }, .{ .statement_index = 130, .round = 1, .index = 122 }, .{ .statement_index = 131, .round = 1, .index = 123 }, .{ .statement_index = 132, .round = 1, .index = 124 }, .{ .statement_index = 133, .round = 1, .index = 125 }, .{ .statement_index = 134, .round = 1, .index = 126 }, .{ .statement_index = 135, .round = 1, .index = 127 }, .{ .statement_index = 136, .round = 1, .index = 128 }, .{ .statement_index = 137, .round = 1, .index = 129 }, .{ .statement_index = 138, .round = 1, .index = 130 }, .{ .statement_index = 139, .round = 1, .index = 131 }, .{ .statement_index = 140, .round = 1, .index = 132 }, .{ .statement_index = 141, .round = 1, .index = 133 }, .{ .statement_index = 142, .round = 1, .index = 134 }, .{ .statement_index = 143, .round = 1, .index = 135 }, .{ .statement_index = 144, .round = 1, .index = 136 }, .{ .statement_index = 145, .round = 1, .index = 137 }, .{ .statement_index = 146, .round = 1, .index = 138 }, .{ .statement_index = 147, .round = 1, .index = 139 }, .{ .statement_index = 148, .round = 1, .index = 140 }, .{ .statement_index = 149, .round = 1, .index = 141 }, .{ .statement_index = 150, .round = 1, .index = 142 }, .{ .statement_index = 151, .round = 1, .index = 143 }, .{ .statement_index = 152, .round = 1, .index = 144 }, .{ .statement_index = 153, .round = 1, .index = 145 }, .{ .statement_index = 154, .round = 1, .index = 146 }, .{ .statement_index = 155, .round = 1, .index = 147 }, .{ .statement_index = 156, .round = 1, .index = 148 }, .{ .statement_index = 157, .round = 1, .index = 149 }, .{ .statement_index = 158, .round = 1, .index = 150 }, .{ .statement_index = 159, .round = 1, .index = 151 }, .{ .statement_index = 160, .round = 1, .index = 152 }, .{ .statement_index = 161, .round = 1, .index = 153 }, .{ .statement_index = 162, .round = 1, .index = 154 }, .{ .statement_index = 163, .round = 1, .index = 155 }, .{ .statement_index = 164, .round = 1, .index = 156 }, .{ .statement_index = 165, .round = 1, .index = 157 }, .{ .statement_index = 166, .round = 1, .index = 158 }, .{ .statement_index = 167, .round = 1, .index = 159 }, .{ .statement_index = 168, .round = 1, .index = 160 }, .{ .statement_index = 169, .round = 1, .index = 161 }, .{ .statement_index = 170, .round = 1, .index = 162 }, .{ .statement_index = 171, .round = 1, .index = 163 }, .{ .statement_index = 172, .round = 1, .index = 164 }, .{ .statement_index = 173, .round = 1, .index = 165 }, .{ .statement_index = 174, .round = 1, .index = 166 }, .{ .statement_index = 175, .round = 1, .index = 167 }, .{ .statement_index = 176, .round = 1, .index = 168 }, .{ .statement_index = 177, .round = 1, .index = 169 }, .{ .statement_index = 178, .round = 1, .index = 170 }, .{ .statement_index = 179, .round = 1, .index = 171 }, .{ .statement_index = 180, .round = 1, .index = 172 }, .{ .statement_index = 181, .round = 1, .index = 173 }, .{ .statement_index = 182, .round = 1, .index = 174 }, .{ .statement_index = 183, .round = 1, .index = 175 }, .{ .statement_index = 184, .round = 1, .index = 176 }, .{ .statement_index = 185, .round = 1, .index = 177 }, .{ .statement_index = 186, .round = 1, .index = 178 }, .{ .statement_index = 187, .round = 1, .index = 179 }, .{ .statement_index = 188, .round = 1, .index = 180 }, .{ .statement_index = 189, .round = 1, .index = 181 }, .{ .statement_index = 190, .round = 1, .index = 182 }, .{ .statement_index = 191, .round = 1, .index = 183 }, .{ .statement_index = 192, .round = 1, .index = 184 }, .{ .statement_index = 193, .round = 1, .index = 185 }, .{ .statement_index = 194, .round = 1, .index = 186 }, .{ .statement_index = 195, .round = 1, .index = 187 }, .{ .statement_index = 196, .round = 1, .index = 188 }, .{ .statement_index = 197, .round = 1, .index = 189 }, .{ .statement_index = 198, .round = 1, .index = 190 }, .{ .statement_index = 199, .round = 1, .index = 191 }, .{ .statement_index = 200, .round = 1, .index = 192 }, .{ .statement_index = 201, .round = 1, .index = 193 }, .{ .statement_index = 202, .round = 1, .index = 194 }, .{ .statement_index = 203, .round = 1, .index = 195 }, .{ .statement_index = 204, .round = 1, .index = 196 }, .{ .statement_index = 205, .round = 1, .index = 197 }, .{ .statement_index = 206, .round = 1, .index = 198 }, .{ .statement_index = 207, .round = 1, .index = 199 }, .{ .statement_index = 208, .round = 1, .index = 200 }, .{ .statement_index = 209, .round = 1, .index = 201 }, .{ .statement_index = 210, .round = 1, .index = 202 }, .{ .statement_index = 211, .round = 1, .index = 203 }, .{ .statement_index = 212, .round = 1, .index = 204 }, .{ .statement_index = 213, .round = 1, .index = 205 }, .{ .statement_index = 214, .round = 1, .index = 206 }, .{ .statement_index = 215, .round = 1, .index = 207 }, .{ .statement_index = 216, .round = 1, .index = 208 }, .{ .statement_index = 217, .round = 1, .index = 209 }, .{ .statement_index = 218, .round = 1, .index = 210 }, .{ .statement_index = 219, .round = 1, .index = 211 }, .{ .statement_index = 220, .round = 1, .index = 212 }, .{ .statement_index = 221, .round = 1, .index = 213 }, .{ .statement_index = 222, .round = 1, .index = 214 }, .{ .statement_index = 223, .round = 1, .index = 215 }, .{ .statement_index = 224, .round = 1, .index = 216 }, .{ .statement_index = 225, .round = 1, .index = 217 }, .{ .statement_index = 226, .round = 1, .index = 218 }, .{ .statement_index = 227, .round = 1, .index = 219 }, .{ .statement_index = 228, .round = 1, .index = 220 }, .{ .statement_index = 229, .round = 1, .index = 221 }, .{ .statement_index = 230, .round = 1, .index = 222 }, .{ .statement_index = 231, .round = 1, .index = 223 }, .{ .statement_index = 232, .round = 1, .index = 224 }, .{ .statement_index = 233, .round = 1, .index = 225 }, .{ .statement_index = 234, .round = 1, .index = 226 }, .{ .statement_index = 235, .round = 1, .index = 227 }, .{ .statement_index = 236, .round = 1, .index = 228 }, .{ .statement_index = 237, .round = 1, .index = 229 }, .{ .statement_index = 238, .round = 1, .index = 230 }, .{ .statement_index = 239, .round = 1, .index = 231 }, .{ .statement_index = 240, .round = 1, .index = 232 }, .{ .statement_index = 241, .round = 1, .index = 233 }, .{ .statement_index = 242, .round = 1, .index = 234 }, .{ .statement_index = 243, .round = 1, .index = 235 }, .{ .statement_index = 244, .round = 1, .index = 236 }, .{ .statement_index = 245, .round = 1, .index = 237 }, .{ .statement_index = 246, .round = 1, .index = 238 }, .{ .statement_index = 247, .round = 1, .index = 239 }, .{ .statement_index = 248, .round = 1, .index = 240 }, .{ .statement_index = 249, .round = 1, .index = 241 }, .{ .statement_index = 250, .round = 1, .index = 242 }, .{ .statement_index = 251, .round = 1, .index = 243 }, .{ .statement_index = 252, .round = 1, .index = 244 }, .{ .statement_index = 253, .round = 1, .index = 245 }, .{ .statement_index = 254, .round = 1, .index = 246 }, .{ .statement_index = 255, .round = 1, .index = 247 }, .{ .statement_index = 256, .round = 1, .index = 248 }, .{ .statement_index = 257, .round = 1, .index = 249 }, .{ .statement_index = 258, .round = 1, .index = 250 }, .{ .statement_index = 259, .round = 1, .index = 251 }, .{ .statement_index = 260, .round = 1, .index = 252 }, .{ .statement_index = 261, .round = 1, .index = 253 }, .{ .statement_index = 262, .round = 1, .index = 254 }, .{ .statement_index = 263, .round = 1, .index = 255 }, .{ .statement_index = 264, .round = 1, .index = 256 }, .{ .statement_index = 265, .round = 1, .index = 257 }, .{ .statement_index = 266, .round = 1, .index = 258 }, .{ .statement_index = 267, .round = 1, .index = 259 }, .{ .statement_index = 268, .round = 1, .index = 260 }, .{ .statement_index = 269, .round = 1, .index = 261 }, .{ .statement_index = 270, .round = 1, .index = 262 }, .{ .statement_index = 271, .round = 1, .index = 263 }, .{ .statement_index = 272, .round = 1, .index = 264 }, .{ .statement_index = 273, .round = 1, .index = 265 }, .{ .statement_index = 274, .round = 1, .index = 266 }, .{ .statement_index = 275, .round = 1, .index = 267 }, .{ .statement_index = 276, .round = 1, .index = 268 }, .{ .statement_index = 277, .round = 1, .index = 269 }, .{ .statement_index = 278, .round = 1, .index = 270 }, .{ .statement_index = 279, .round = 1, .index = 271 }, .{ .statement_index = 280, .round = 1, .index = 272 }, .{ .statement_index = 281, .round = 1, .index = 273 }, .{ .statement_index = 282, .round = 1, .index = 274 }, .{ .statement_index = 283, .round = 1, .index = 275 }, .{ .statement_index = 284, .round = 1, .index = 276 }, .{ .statement_index = 285, .round = 1, .index = 277 }, .{ .statement_index = 286, .round = 1, .index = 278 }, .{ .statement_index = 287, .round = 1, .index = 279 }, .{ .statement_index = 288, .round = 1, .index = 280 }, .{ .statement_index = 289, .round = 1, .index = 281 }, .{ .statement_index = 290, .round = 1, .index = 282 }, .{ .statement_index = 291, .round = 1, .index = 283 }, .{ .statement_index = 292, .round = 1, .index = 284 }, .{ .statement_index = 293, .round = 1, .index = 285 }, .{ .statement_index = 294, .round = 1, .index = 286 }, .{ .statement_index = 295, .round = 1, .index = 287 }, .{ .statement_index = 296, .round = 1, .index = 288 }, .{ .statement_index = 297, .round = 1, .index = 289 }, .{ .statement_index = 298, .round = 1, .index = 290 }, .{ .statement_index = 299, .round = 1, .index = 291 }, .{ .statement_index = 300, .round = 1, .index = 292 }, .{ .statement_index = 301, .round = 1, .index = 293 }, .{ .statement_index = 302, .round = 1, .index = 294 }, .{ .statement_index = 303, .round = 1, .index = 295 }, .{ .statement_index = 304, .round = 1, .index = 296 }, .{ .statement_index = 305, .round = 1, .index = 297 }, .{ .statement_index = 306, .round = 1, .index = 298 }, .{ .statement_index = 307, .round = 1, .index = 299 }, .{ .statement_index = 308, .round = 1, .index = 300 }, .{ .statement_index = 309, .round = 1, .index = 301 }, .{ .statement_index = 310, .round = 1, .index = 302 }, .{ .statement_index = 311, .round = 1, .index = 303 }, .{ .statement_index = 312, .round = 1, .index = 304 }, .{ .statement_index = 313, .round = 1, .index = 305 }, .{ .statement_index = 314, .round = 1, .index = 306 }, .{ .statement_index = 315, .round = 1, .index = 307 }, .{ .statement_index = 316, .round = 1, .index = 308 }, .{ .statement_index = 317, .round = 1, .index = 309 }, .{ .statement_index = 318, .round = 1, .index = 310 }, .{ .statement_index = 319, .round = 1, .index = 311 }, .{ .statement_index = 320, .round = 1, .index = 312 }, .{ .statement_index = 321, .round = 1, .index = 313 }, .{ .statement_index = 322, .round = 1, .index = 314 }, .{ .statement_index = 323, .round = 1, .index = 315 }, .{ .statement_index = 324, .round = 1, .index = 316 }, .{ .statement_index = 325, .round = 1, .index = 317 }, .{ .statement_index = 326, .round = 1, .index = 318 }, .{ .statement_index = 327, .round = 1, .index = 319 }, .{ .statement_index = 328, .round = 1, .index = 320 }, .{ .statement_index = 329, .round = 1, .index = 321 }, .{ .statement_index = 330, .round = 1, .index = 322 }, .{ .statement_index = 331, .round = 1, .index = 323 }, .{ .statement_index = 332, .round = 1, .index = 324 }, .{ .statement_index = 333, .round = 1, .index = 325 }, .{ .statement_index = 334, .round = 1, .index = 326 }, .{ .statement_index = 335, .round = 1, .index = 327 }, .{ .statement_index = 336, .round = 2, .index = 0 } },
 };
 
@@ -12217,6 +12292,7 @@ pub const system_75_spec = protocol.Spec{
 };
 pub const system_75_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -12314,6 +12390,7 @@ pub const system_76_spec = protocol.Spec{
 };
 pub const system_76_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -12411,6 +12488,7 @@ pub const system_77_spec = protocol.Spec{
 };
 pub const system_77_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 1, 1, 4 },
+    .cell_ext_bits = &[_]u64{0x3c},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 
@@ -12507,6 +12585,7 @@ pub const system_78_spec = protocol.Spec{
 };
 pub const system_78_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 3, 1, 4 },
+    .cell_ext_bits = &[_]u64{0xf0},
     .refs = &[_]protocol.public_input.CellRef{},
 };
 

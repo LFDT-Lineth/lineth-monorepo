@@ -93,7 +93,7 @@ pub fn encodePairStatement(statement: PublicInput, out: []u8) !void {
 /// Compiled verifier metadata for the protocol: the public-input transcript
 /// layout plus one field per sub-verifier.
 pub const Systems = struct {
-    public_input: public_input_mod.Spec = .{},
+    public_input: public_input_mod.Spec = .{ .cell_ext_bits = &.{} },
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
     /// Grand-product boundary checks: permutation arguments (Result == 1) and
