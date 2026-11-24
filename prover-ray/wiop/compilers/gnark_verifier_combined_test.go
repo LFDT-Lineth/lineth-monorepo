@@ -97,8 +97,8 @@ func TestGnarkVerifier_Combined(t *testing.T) {
 			badSys, badAssign := newCombinedSystem(w)
 			compileGnarkPipeline(t, badSys)
 			badProof, badPub := badSys.Prove(badAssign)
-			require.Error(t, badSys.Verify(badProof, badPub), "invalid witness must fail natively")
-			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+			require.ErrorContains(t, badSys.Verify(badProof, badPub), "wiop/compilers: global quotient check failed for module", "invalid witness must fail natively")
+			gv.requireRejectedBy(t, badProof, badPub, "global.(*Verifier).CheckGnark")
 		})
 	}
 }

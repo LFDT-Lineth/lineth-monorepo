@@ -15,6 +15,7 @@ import (
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,6 +49,23 @@ func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicIn
 	require.NoError(t, err, "assignment must produce a witness")
 	_, err = gv.ccs.Solve(w)
 	return err
+}
+
+// requireRejectedBy checks that proof does not satisfy the compiled circuit,
+// and that the failing assertion is raised inside check, a function name as it
+// appears in a stack trace (e.g. "logderivativesum.(*VerifierAction).CheckGnark").
+// The compiled solver only reports a constraint index, so the failing check is
+// located by re-running the circuit in gnark's test engine, whose error carries
+// the stack of the failing assertion.
+func (gv *gnarkVerifier) requireRejectedBy(t *testing.T, proof wiop.Proof, pub wiop.PublicInput, check string) {
+	t.Helper()
+	require.Error(t, gv.solve(t, proof, pub), "proof must not satisfy the compiled circuit")
+	circuit := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub)
+	assignment := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub).
+		AssignVerifierCircuit(proof, pub)
+	err := test.IsSolved(circuit, assignment, ecc.BN254.ScalarField())
+	require.Error(t, err, "proof must not satisfy the circuit in the test engine")
+	require.Contains(t, err.Error(), check, "proof must be rejected by %s", check)
 }
 
 // compileGnarkPipeline runs [compilers.CompileFull] with the testing options.
@@ -100,8 +118,8 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 			}))
 			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
-			require.Error(t, invalid.Sys.Verify(badProof, badPub), "wrong Result must fail natively")
-			require.Error(t, gv.solve(t, badProof, badPub), "wrong Result must not satisfy the circuit")
+			require.ErrorContains(t, invalid.Sys.Verify(badProof, badPub), "wiop/compilers/logderivativesum: final-sum check failed for query", "wrong Result must fail natively")
+			gv.requireRejectedBy(t, badProof, badPub, "logderivativesum.(*VerifierAction).CheckGnark")
 		})
 	}
 }
@@ -136,7 +154,8 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 				// tampered M is still a valid multiplicity assignment.
 				t.Skip("tampered M row does not contribute to the lookup sum")
 			}
-			require.Error(t, gv.solve(t, badProof, badPub), "wrong multiplicity must not satisfy the circuit")
+			require.ErrorContains(t, invalid.Sys.Verify(badProof, badPub), "wiop/compilers/lookuptologderivsum: aggregated lookup result for query", "wrong multiplicity must fail natively")
+			gv.requireRejectedBy(t, badProof, badPub, "lookuptologderivsum.(*ResultIsZeroVerifierAction).CheckGnark")
 		})
 	}
 }
@@ -197,8 +216,8 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 			invalid := build()
 			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
-			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
-			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+			require.ErrorContains(t, invalid.Sys.Verify(badProof, badPub), "wiop/compilers: global quotient check failed for module", "invalid witness must fail natively")
+			gv.requireRejectedBy(t, badProof, badPub, "global.(*Verifier).CheckGnark")
 
 			if withTampering {
 				requireTamperingRejected(t, gv, proof, pub)
@@ -224,8 +243,8 @@ func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
 			invalid := build()
 			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
-			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
-			require.Error(t, gv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+			require.ErrorContains(t, invalid.Sys.Verify(badProof, badPub), "wiop/compilers: global quotient check failed for module", "invalid witness must fail natively")
+			gv.requireRejectedBy(t, badProof, badPub, "global.(*Verifier).CheckGnark")
 
 			if i == 0 {
 				requireTamperingRejected(t, gv, proof, pub)
