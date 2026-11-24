@@ -795,7 +795,7 @@ services:
       # KZG SRS assets (required even in dev mode — the binary checks for
       # the directory at startup). Sourced from the monorepo's prover/
       # tree, same path the upstream compose-spec-l2-services.yml uses.
-      - ../../../prover/prover-assets:/opt/lineth/prover/prover-assets:ro
+      - ../../../prover/prover-assets:/opt/linea/prover/prover-assets:ro
       - lineth-local-dev:/data
       - lineth-logs:/logs
     networks: [lineth]
