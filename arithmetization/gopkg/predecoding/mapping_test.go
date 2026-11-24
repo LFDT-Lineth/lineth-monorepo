@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -62,10 +63,6 @@ func TestLoadableSegments(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// segmentEnd
-// ------------------------------------------------------------
-
 // TestSegmentEnd checks the end of a segment's memory range, and rejects a file
 // size larger than the memory size and a range that wraps the address space.
 func TestSegmentEnd(t *testing.T) {
@@ -97,10 +94,6 @@ func TestSegmentEnd(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// isLoadableSection
-// ------------------------------------------------------------
 
 // TestIsLoadableSection checks that a section is loadable only when it is
 // non-empty, is not SHT_NOBITS, and has SHF_ALLOC. The executable flag does not
@@ -135,10 +128,6 @@ func TestIsLoadableSection(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// sectionEnd
-// ------------------------------------------------------------
-
 // TestSectionEnd checks the end of a section's address range, and rejects a
 // range that wraps the address space.
 func TestSectionEnd(t *testing.T) {
@@ -167,10 +156,6 @@ func TestSectionEnd(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// isWithin
-// ------------------------------------------------------------
-
 // TestIsWithin checks that the range [start, end) lies fully inside
 // [outerStart, outerEnd). Equal bounds count as inside.
 func TestIsWithin(t *testing.T) {
@@ -194,10 +179,6 @@ func TestIsWithin(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// readSection
-// ------------------------------------------------------------
 
 // truncatingReaderAt serves an ELF file. The file can be parsed in full, then
 // limited to fewer bytes or made to fail, to exercise section reads.
@@ -265,10 +246,6 @@ func TestReadSection(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// buildBlob
-// ------------------------------------------------------------
-
 // TestBuildBlob checks that a blob takes the address, name and data of its
 // section, and is executable only when the section has SHF_EXECINSTR.
 func TestBuildBlob(t *testing.T) {
@@ -293,10 +270,6 @@ func TestBuildBlob(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// sortBlobsByAddress
-// ------------------------------------------------------------
 
 // TestSortBlobsByAddress checks that blobs are ordered by ascending address, in
 // place. Blobs are identified by name so that each one moves with its address.
@@ -326,10 +299,6 @@ func TestSortBlobsByAddress(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// extractBlobs: paths and errors
-// ------------------------------------------------------------
 
 // TestExtractBlobs checks the paths and errors of extractBlobs.
 // The ELF is the makeELF fixture (one PT_LOAD at 0x800000 holding one
@@ -508,6 +477,236 @@ func TestLoadPaths(t *testing.T) {
 			!bytes.Equal(program.Blobs[0].Data, testText) {
 			t.Fatalf("%s: Blobs = %+v, want one blob at %#x with %x",
 				tt.name, program.Blobs, testTextAddress, testText)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// NewData
+// ------------------------------------------------------------
+
+// TestApplyDataOptions checks that the options set the data config, and that a
+// nil option or an option that fails is an error.
+func TestApplyDataOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		options []DataOption
+		want    dataConfig
+		wantErr bool
+	}{
+		{name: "no options", want: dataConfig{}},
+		{name: "name only", options: []DataOption{WithName("input")}, want: dataConfig{name: "input"}},
+		{name: "length prefix only", options: []DataOption{WithLengthPrefix()}, want: dataConfig{lengthPrefix: true}},
+		{name: "name and length prefix", options: []DataOption{
+			WithName("input"), WithLengthPrefix(),
+		}, want: dataConfig{name: "input", lengthPrefix: true}},
+		{name: "nil option", options: []DataOption{nil}, wantErr: true},
+		{name: "failing option", options: []DataOption{WithName("")}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := applyDataOptions(tt.options)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && got != tt.want {
+			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// rawBlobs
+// ------------------------------------------------------------
+
+// TestRawBlobs checks that data becomes one blob at the address, named as given,
+// and that empty data gives no blob.
+func TestRawBlobs(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  uint64
+		data     []byte
+		blobName string
+		want     []Blob
+	}{
+		{name: "empty data", address: 0x1000, data: nil, blobName: "input", want: nil},
+		{name: "unnamed blob", address: 0x1000, data: testText, want: []Blob{
+			{Address: 0x1000, Data: testText},
+		}},
+		{name: "named blob", address: 0x1000, data: testText, blobName: "input", want: []Blob{
+			{Address: 0x1000, Data: testText, Name: "input"},
+		}},
+	}
+	for _, tt := range tests {
+		got := rawBlobs(tt.address, tt.data, tt.blobName)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: blobs = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// payloadAddress
+// ------------------------------------------------------------
+
+// TestPayloadAddress checks that the payload sits eight bytes after the length
+// prefix, and that an address whose payload wraps the address space is an error.
+func TestPayloadAddress(t *testing.T) {
+	tests := []struct {
+		name    string
+		address uint64
+		want    uint64
+		wantErr bool
+	}{
+		{name: "zero", address: 0, want: 0x08},
+		{name: "typical", address: 0x1000, want: 0x1008},
+		{name: "highest without wrap", address: ^uint64(0) - 8, want: ^uint64(0)},
+		{name: "payload wraps", address: ^uint64(0) - 7, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := payloadAddress(tt.address)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && got != tt.want {
+			t.Fatalf("%s: payload address = %#x, want %#x", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// newBlob
+// ------------------------------------------------------------
+
+// TestNewBlob checks that a blob keeps its address and data, and that its name
+// is the name with the suffix. An empty name stays empty.
+func TestNewBlob(t *testing.T) {
+	tests := []struct {
+		name     string
+		blobName string
+		suffix   string
+		want     Blob
+	}{
+		{name: "unnamed", blobName: "", suffix: "_length", want: Blob{Address: 0x1000, Data: testText}},
+		{name: "length suffix", blobName: "input", suffix: "_length", want: Blob{
+			Address: 0x1000, Data: testText, Name: "input_length",
+		}},
+		{name: "payload suffix", blobName: "input", suffix: "_payload", want: Blob{
+			Address: 0x1000, Data: testText, Name: "input_payload",
+		}},
+		{name: "empty suffix", blobName: "input", suffix: "", want: Blob{
+			Address: 0x1000, Data: testText, Name: "input",
+		}},
+	}
+	for _, tt := range tests {
+		got := newBlob(0x1000, testText, tt.blobName, tt.suffix)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: blob = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// lengthPrefix
+// ------------------------------------------------------------
+
+// TestLengthPrefix checks that the length is encoded as eight bytes, least
+// significant byte first.
+func TestLengthPrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		length int
+		want   []byte
+	}{
+		{name: "zero", length: 0, want: []byte{0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "one", length: 1, want: []byte{1, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "two bytes", length: 0x0102, want: []byte{0x02, 0x01, 0, 0, 0, 0, 0, 0}},
+	}
+	for _, tt := range tests {
+		got := lengthPrefix(tt.length)
+		if !bytes.Equal(got, tt.want) {
+			t.Fatalf("%s: prefix = %x, want %x", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// lengthPrefixedBlobs
+// ------------------------------------------------------------
+
+// TestLengthPrefixedBlobs checks the blobs this function assembles: only the
+// length blob when the data is empty, the length blob and the payload blob
+// otherwise, and an error when the payload address overflows.
+func TestLengthPrefixedBlobs(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  uint64
+		data     []byte
+		blobName string
+		want     []Blob
+		wantErr  bool
+	}{
+		{name: "empty data", address: 0x1000, blobName: "input", want: []Blob{
+			{Address: 0x1000, Data: []byte{0, 0, 0, 0, 0, 0, 0, 0}, Name: "input_length"},
+		}},
+		{name: "data", address: 0x1000, data: testText, blobName: "input", want: []Blob{
+			{Address: 0x1000, Data: []byte{4, 0, 0, 0, 0, 0, 0, 0}, Name: "input_length"},
+			{Address: 0x1008, Data: testText, Name: "input_payload"},
+		}},
+		{name: "unnamed", address: 0x1000, data: testText, want: []Blob{
+			{Address: 0x1000, Data: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
+			{Address: 0x1008, Data: testText},
+		}},
+		{name: "payload address overflows", address: ^uint64(0) - 7, data: testText, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := lengthPrefixedBlobs(tt.address, tt.data, tt.blobName)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: blobs = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// NewData
+// ------------------------------------------------------------
+
+// TestNewData checks which path NewData takes: one raw blob, no blob for empty
+// raw data, length-prefixed blobs, an error from an option, and the length
+// prefix overflow.
+func TestNewData(t *testing.T) {
+	tests := []struct {
+		name    string
+		address uint64
+		data    []byte
+		options []DataOption
+		want    []Blob
+		wantErr bool
+	}{
+		{name: "raw", address: 0x1000, data: testText, want: []Blob{
+			{Address: 0x1000, Data: testText},
+		}},
+		{name: "raw empty", address: 0x1000},
+		{name: "length prefix", address: 0x1000, data: testText, options: []DataOption{
+			WithName("input"), WithLengthPrefix(),
+		}, want: []Blob{
+			{Address: 0x1000, Data: []byte{4, 0, 0, 0, 0, 0, 0, 0}, Name: "input_length"},
+			{Address: 0x1008, Data: testText, Name: "input_payload"},
+		}},
+		{name: "nil option", options: []DataOption{nil}, wantErr: true},
+		{name: "length prefix overflows", address: ^uint64(0) - 7, data: testText, options: []DataOption{
+			WithLengthPrefix(),
+		}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := NewData(tt.address, tt.data, tt.options...)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: blobs = %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
 }

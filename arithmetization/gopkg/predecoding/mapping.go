@@ -233,42 +233,88 @@ func NewData(
 	data []byte,
 	options ...DataOption,
 ) ([]Blob, error) {
+	cfg, err := applyDataOptions(options)
+	if err != nil {
+		return nil, err
+	}
+	if !cfg.lengthPrefix {
+		return rawBlobs(address, data, cfg.name), nil
+	}
+	return lengthPrefixedBlobs(address, data, cfg.name)
+}
+
+// applyDataOptions builds the data config from the options. A nil option and a
+// failing option are errors.
+func applyDataOptions(options []DataOption) (dataConfig, error) {
 	cfg := dataConfig{}
 	for _, option := range options {
 		if option == nil {
-			return nil, fmt.Errorf("applying data option: nil option")
+			return dataConfig{}, fmt.Errorf("applying data option: nil option")
 		}
 		if err := option(&cfg); err != nil {
-			return nil, fmt.Errorf("applying data option: %w", err)
+			return dataConfig{}, fmt.Errorf("applying data option: %w", err)
 		}
 	}
-	if !cfg.lengthPrefix {
-		if len(data) == 0 {
-			return nil, nil
-		}
-		return []Blob{{Address: address, Data: data, Name: cfg.name}}, nil
+	return cfg, nil
+}
+
+// rawBlobs maps data as one blob at address, or no blob when data is empty.
+func rawBlobs(address uint64, data []byte, name string) []Blob {
+	if len(data) == 0 {
+		return nil
 	}
-	payloadAddress := address + 8
-	if payloadAddress < address {
-		return nil, fmt.Errorf("data input offset overflow: in_origin=%#x", address)
+	return []Blob{{Address: address, Data: data, Name: name}}
+}
+
+// lengthPrefixedBlobs maps an eight-byte little-endian length at address and
+// the payload eight bytes later. An empty payload gives only the length blob.
+// A name gets the suffixes _length and _payload. It rejects an address whose
+// payload address overflows.
+func lengthPrefixedBlobs(address uint64, data []byte, name string) ([]Blob, error) {
+	payloadAddr, err := payloadAddress(address)
+	if err != nil {
+		return nil, err
 	}
 
-	prefix := make([]byte, 8)
-	binary.LittleEndian.PutUint64(prefix, uint64(len(data)))
-	lengthName, payloadName := "", ""
-	if cfg.name != "" {
-		lengthName = cfg.name + "_length"
-		payloadName = cfg.name + "_payload"
-	}
-	blobs := []Blob{{Address: address, Data: prefix, Name: lengthName}}
+	blobs := []Blob{newBlob(address, lengthPrefix(len(data)), name, "_length")}
 	if len(data) != 0 {
-		blobs = append(blobs, Blob{
-			Address: payloadAddress,
-			Data:    data,
-			Name:    payloadName,
-		})
+		blobs = append(blobs, newBlob(payloadAddr, data, name, "_payload"))
 	}
 	return blobs, nil
+}
+
+// newBlob builds a non-executable blob at address, named after name and suffix.
+// The blob stays unnamed when name is empty.
+func newBlob(address uint64, data []byte, name, suffix string) Blob {
+	return Blob{Address: address, Data: data, Name: suffixedName(name, suffix)}
+}
+
+// lengthPrefixSize is the size in bytes of the length prefix.
+const lengthPrefixSize = 8
+
+// payloadAddress returns the address of the payload, eight bytes after the
+// length prefix at address. It fails when that address overflows.
+func payloadAddress(address uint64) (uint64, error) {
+	payloadAddr := address + lengthPrefixSize
+	if payloadAddr < address {
+		return 0, fmt.Errorf("data input offset overflow: in_origin=%#x", address)
+	}
+	return payloadAddr, nil
+}
+
+// lengthPrefix encodes a payload length as an eight-byte little-endian prefix.
+func lengthPrefix(length int) []byte {
+	prefix := make([]byte, lengthPrefixSize)
+	binary.LittleEndian.PutUint64(prefix, uint64(length))
+	return prefix
+}
+
+// suffixedName appends suffix to name, and keeps an empty name empty.
+func suffixedName(name, suffix string) string {
+	if name == "" {
+		return ""
+	}
+	return name + suffix
 }
 
 // EncodeInputs encodes a program and additional memory blobs into raw R5
