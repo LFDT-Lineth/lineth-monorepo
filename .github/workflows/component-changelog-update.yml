@@ -97,64 +97,17 @@ jobs:
       # Mint the App token only now — after git-cliff, and only when a
       # CHANGELOG.md actually changed on disk — so the generation phase above
       # never runs with credentials that bypass branch protection.
-      - name: Generate release bot App token
+      - name: Start release bot session
         if: steps.changelogs.outputs.updated == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: ./.github/actions/app-bot-session
         with:
           app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-
-      # Look up the App's bot user id so the commit author email follows
-      # GitHub's canonical noreply format and shows up under the App in the UI.
-      - name: Resolve bot user id
-        if: steps.changelogs.outputs.updated == 'true'
-        id: bot-user
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          set -euo pipefail
-          user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
-          echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
-
-      - name: Configure git identity and push auth
-        if: steps.changelogs.outputs.updated == 'true'
-        env:
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-          USER_ID: ${{ steps.bot-user.outputs.user-id }}
-          TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          set -euo pipefail
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git"
-
       - name: Commit and push all CHANGELOG.md
         if: steps.changelogs.outputs.updated == 'true'
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo "No CHANGELOG.md changes to commit."
-            exit 0
-          fi
-          git add 'CHANGELOG.md' '**/CHANGELOG.md'
-          git commit -m "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"
-
-          # Rebase on top of any commits that landed on the branch between
-          # checkout and now (e.g. a concurrent component-changelog-update push),
-          # then push. Retry a few times in case of repeated races.
-          for attempt in 1 2 3; do
-            git fetch origin "${GITHUB_REF_NAME}"
-            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
-              git rebase --abort
-              echo "Rebase conflict on attempt ${attempt}; aborting."
-              exit 1
-            fi
-            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
-              exit 0
-            fi
-            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
-          done
-          echo "Failed to push CHANGELOG.md changes after 3 attempts." >&2
-          exit 1
+        uses: ./.github/actions/commit-and-push
+        with:
+          paths: |
+            CHANGELOG.md
+            **/CHANGELOG.md
+          message: "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"

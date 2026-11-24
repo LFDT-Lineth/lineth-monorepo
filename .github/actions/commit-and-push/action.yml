@@ -1,0 +1,62 @@
+name: 'Commit and push with rebase retry'
+description: >
+  Commits changes to the given paths (if any) and pushes them to the current branch. Before each push
+  it rebases onto the remote branch, which absorbs commits that landed concurrently (for example a
+  component-changelog-update push), and retries a few times if the push is rejected. A rebase conflict
+  fails the action. Requires a checkout whose git identity and push credentials are already configured.
+inputs:
+  paths:
+    description: 'Newline-separated git pathspecs; only changes to these are committed (e.g. CHANGELOG.md)'
+    required: true
+  message:
+    description: 'Commit message'
+    required: true
+  branch:
+    description: 'Branch to rebase onto and push to'
+    required: false
+    default: ${{ github.ref_name }}
+  attempts:
+    description: 'How many rebase-and-push attempts to make'
+    required: false
+    default: '3'
+runs:
+  using: 'composite'
+  steps:
+    - name: Commit and push
+      shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        MESSAGE: ${{ inputs.message }}
+        BRANCH: ${{ inputs.branch }}
+        ATTEMPTS: ${{ inputs.attempts }}
+      run: |
+        set -euo pipefail
+        mapfile -t pathspecs < <(printf '%s\n' "${PATHS}" | sed '/^[[:space:]]*$/d')
+        if [ "${#pathspecs[@]}" -eq 0 ]; then
+          echo "::error::commit-and-push needs at least one path"
+          exit 1
+        fi
+
+        if git diff --quiet -- "${pathspecs[@]}"; then
+          echo "No changes in ${pathspecs[*]}; nothing to commit."
+          exit 0
+        fi
+        git add -- "${pathspecs[@]}"
+        git commit -m "${MESSAGE}"
+
+        # Rebase on top of any commits that landed on the branch between checkout and now,
+        # then push. Retry in case of repeated races.
+        for attempt in $(seq 1 "${ATTEMPTS}"); do
+          git fetch origin "${BRANCH}"
+          if ! git rebase "origin/${BRANCH}"; then
+            git rebase --abort
+            echo "Rebase conflict on attempt ${attempt}; aborting." >&2
+            exit 1
+          fi
+          if git push origin "HEAD:${BRANCH}"; then
+            exit 0
+          fi
+          echo "Push rejected on attempt ${attempt}; refetching and retrying..."
+        done
+        echo "Failed to push to ${BRANCH} after ${ATTEMPTS} attempts." >&2
+        exit 1

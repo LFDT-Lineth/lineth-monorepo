@@ -1,0 +1,57 @@
+name: 'GitHub App bot session'
+description: >
+  Mints a short-lived token for a GitHub App, then configures the checked-out repository to commit and
+  push as that App's bot: author identity (using the canonical noreply email so commits show up under
+  the App) and an origin URL authenticated with the token. Requires the repository to be checked out
+  first, so it cannot serve workflows that need the token for the checkout itself.
+inputs:
+  app-id:
+    description: 'GitHub App id, e.g. ${{ secrets.RELEASE_BOT_APP_ID }}'
+    required: true
+  private-key:
+    description: 'GitHub App private key, e.g. ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}'
+    required: true
+outputs:
+  token:
+    description: 'The installation access token'
+    value: ${{ steps.app-token.outputs.token }}
+  app-slug:
+    description: 'The App slug; the bot user is <slug>[bot]'
+    value: ${{ steps.app-token.outputs.app-slug }}
+  user-id:
+    description: 'Numeric id of the App bot user'
+    value: ${{ steps.bot-user.outputs.user-id }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate App token
+      id: app-token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+
+    # Look up the App's bot user id so the commit author email follows
+    # GitHub's canonical noreply format and shows up under the App in the UI.
+    - name: Resolve bot user id
+      id: bot-user
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+      run: |
+        set -euo pipefail
+        user_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+        echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
+
+    - name: Configure git identity and push auth
+      shell: bash
+      env:
+        APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        USER_ID: ${{ steps.bot-user.outputs.user-id }}
+        TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        set -euo pipefail
+        git config user.name "${APP_SLUG}[bot]"
+        git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"

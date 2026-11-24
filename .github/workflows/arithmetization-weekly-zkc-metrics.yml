@@ -502,45 +502,24 @@ jobs:
 
       # App token so the push is not blocked by branch protection, mirroring
       # component-changelog-commit.yml. [skip ci] keeps it from re-triggering.
-      - name: Generate release bot App token
+      - name: Start release bot session
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
-        id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: ./.github/actions/app-bot-session
         with:
           app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
 
+      - name: Compute ISO week
+        id: week
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
       - name: Commit and push metrics
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- "$METRICS_FILE"; then
-            echo "No change to $METRICS_FILE — nothing to commit."
-            exit 0
-          fi
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
-          git remote set-url origin \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git add "$METRICS_FILE"
-          git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) [skip ci]"
-          for attempt in 1 2 3; do
-            git fetch origin "$GITHUB_REF_NAME"
-            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
-              git rebase --abort
-              echo "Rebase conflict on attempt ${attempt}; aborting." >&2
-              exit 1
-            fi
-            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
-              exit 0
-            fi
-            echo "Push rejected on attempt ${attempt}; retrying..."
-          done
-          echo "Failed to push metrics after 3 attempts." >&2
-          exit 1
+        uses: ./.github/actions/commit-and-push
+        with:
+          paths: ${{ env.METRICS_FILE }}
+          message: "chore(arithmetization): weekly zkc metrics ${{ steps.week.outputs.week }} [skip ci]"
 
   # A lost or failed run would otherwise be silent until someone opened the Actions tab. Same reusable
   # notifier and channel as the tracer nightly/weekly jobs; always() so a cancelled run still reports.
