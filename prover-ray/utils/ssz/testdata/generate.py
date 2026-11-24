@@ -73,12 +73,12 @@ def l2_execution_output():
 
 def rollup_inputs():
     # 0x0004 || SSZ(rollup private input), for the reference request and for a
-    # variant with no boundary hash and a calldata chunk.
+    # variant with no parent blob data rolling hash and a calldata chunk.
     obj = json.loads(ROLLUP_REQUEST.read_text())
     reference = rollup_ssz.encode_rollup_input(proof_io_v1.decode_rollup_request(obj))
     request = obj["proofRequest"]
-    request["parentDataTailTakeBytes"] = 0
-    del request["boundaryPrevDataRollingHash"]
+    request["parentSharedBlobCarryOverTailBytes"] = 0
+    del request["parentBlobDataRollingHash"]
     request["chunks"][0].update(isCalldata=True, blobBytes="0x", calldataBytes="0xdead", kzgCommitment="0x", kzgProof="0x")
     calldata = rollup_ssz.encode_rollup_input(proof_io_v1.decode_rollup_request(obj))
     return reference, calldata

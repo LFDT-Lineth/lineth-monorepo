@@ -41,16 +41,16 @@ pub const Error = error{
     /// The batch verification of the blobs' EIP-4844 proofs fails: some blob's proof does not open
     /// its commitment to the blob.
     BlobKzgMismatch,
-    /// `boundary_prev_data_rolling_hash` is missing or opens a hash other than the parent hash.
-    BoundaryPreimageMismatch,
+    /// `parent_blob_data_rolling_hash` is missing or opens a hash other than the parent hash.
+    ParentBlobDataRollingHashMismatch,
 
     // Layout of the stream across the chunks.
 
     /// A blob followed by another blob holds less than a full payload.
     PartialBlobBeforeBlob,
-    /// A positive tail count with a calldata first chunk, or at least as long as the first blob's
-    /// payload.
-    InvalidTailTake,
+    /// A positive `parent_shared_blob_carry_over_tail_bytes` with a calldata first chunk, or at least
+    /// as long as the first blob's payload.
+    InvalidParentCarryOverTail,
     /// Fewer than four bytes remain for a segment's length prefix.
     MissingSegmentLength,
     /// A segment's length is zero or reaches past the end of the stream.
@@ -92,7 +92,7 @@ pub const Chunk = struct {
 pub const Verified = struct {
     end_data_rolling_hash: Hash,
     /// The bytes left in the stream after the last segment.
-    final_data_tail_discard_bytes: u64,
+    final_shared_blob_carry_over_tail_bytes: u64,
 };
 
 /// Verifies the DA stream carried by `chunks`: one segment per entry of `canonical_payloads`.
@@ -103,14 +103,14 @@ pub const Verified = struct {
 ///   `chunk_hash`. Once every chunk is bound, the blobs' EIP-4844 proofs verify as one batch, each
 ///   opening its commitment to its blob.
 /// - Layout: a blob followed by another blob holds a full payload; a positive
-///   `parent_data_tail_take_bytes` requires a first blob with a longer payload, and the stream
-///   starts at the last `parent_data_tail_take_bytes` bytes of it; every chunk owns at least one
+///   `parent_shared_blob_carry_over_tail_bytes` requires a first blob with a longer payload, and the stream
+///   starts at the last `parent_shared_blob_carry_over_tail_bytes` bytes of it; every chunk owns at least one
 ///   byte inside the parsed segments; every calldata chunk ends at a segment boundary.
 /// - Every segment is one frame in the form the decoder accepts, declaring the length of its
 ///   conflation's canonical payload as its content size, and decompresses exactly to that payload.
 /// - The dataRollingHash folds the chunks onto `parent_data_rolling_hash`; a positive tail count
 ///   starts the range inside the first chunk, which the parent hash includes, so
-///   `boundary_prev_data_rolling_hash` has to open it.
+///   `parent_blob_data_rolling_hash` has to open it.
 ///
 /// `allocator` serves the working buffers, released before returning.
 pub fn verifyDaChunks(
@@ -119,8 +119,8 @@ pub fn verifyDaChunks(
     chunks: []const Chunk,
     canonical_payloads: []const []const u8,
     parent_data_rolling_hash: Hash,
-    parent_data_tail_take_bytes: u64,
-    boundary_prev_data_rolling_hash: ?Hash,
+    parent_shared_blob_carry_over_tail_bytes: u64,
+    parent_blob_data_rolling_hash: ?Hash,
 ) Error!Verified {
     if (chunks.len == 0) return error.NoChunks;
 
@@ -173,9 +173,9 @@ pub fn verifyDaChunks(
 
     var stream: []const u8 = joined[0..joined_len];
     var take: usize = 0;
-    if (parent_data_tail_take_bytes > 0) {
-        if (chunks[0].is_calldata.value or parent_data_tail_take_bytes >= payload_lens[0]) return error.InvalidTailTake;
-        take = @intCast(parent_data_tail_take_bytes);
+    if (parent_shared_blob_carry_over_tail_bytes > 0) {
+        if (chunks[0].is_calldata.value or parent_shared_blob_carry_over_tail_bytes >= payload_lens[0]) return error.InvalidParentCarryOverTail;
+        take = @intCast(parent_shared_blob_carry_over_tail_bytes);
         stream = stream[payload_lens[0] - take ..];
         payload_lens[0] = take;
     }
@@ -198,8 +198,8 @@ pub fn verifyDaChunks(
     defer allocator.free(chunk_hashes);
     for (chunks, chunk_hashes) |chunk, *chunk_hash| chunk_hash.* = chunk.chunk_hash;
     return .{
-        .end_data_rolling_hash = try rolling_hash.fold(parent_data_rolling_hash, chunk_hashes, take, boundary_prev_data_rolling_hash),
-        .final_data_tail_discard_bytes = stream.len - consumed,
+        .end_data_rolling_hash = try rolling_hash.fold(parent_data_rolling_hash, chunk_hashes, take, parent_blob_data_rolling_hash),
+        .final_shared_blob_carry_over_tail_bytes = stream.len - consumed,
     };
 }
 

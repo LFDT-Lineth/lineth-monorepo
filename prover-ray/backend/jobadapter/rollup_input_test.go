@@ -13,11 +13,11 @@ import (
 func TestBuildRollupInput_MatchesSpec(t *testing.T) {
 	reference := readSpecFixture(t, referenceRollupRequest)
 
-	// No boundary hash (the spec needs no tail bytes then) and a calldata chunk.
+	// No parent blob data rolling hash (the spec needs no carry-over tail then) and a calldata chunk.
 	obj := unmarshalObject(t, reference)
 	pr := obj[proofRequestKey].(map[string]any)
-	pr[parentDataTailTakeBytesKey] = 0
-	delete(pr, boundaryPrevDataRollingHashKey)
+	pr[parentSharedBlobCarryOverTailBytesKey] = 0
+	delete(pr, parentBlobDataRollingHashKey)
 	chunk := pr[chunksKey].([]any)[0].(map[string]any)
 	chunk[isCalldataKey] = true
 	chunk[blobBytesKey] = "0x"

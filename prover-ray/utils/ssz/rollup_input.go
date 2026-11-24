@@ -60,15 +60,15 @@ type L2ExecutionProof struct {
 	ProgramVk        [32]byte
 }
 
-// RollupInput is the rollup guest input. BoundaryPrevDataRollingHash is optional.
+// RollupInput is the rollup guest input. ParentBlobDataRollingHash is optional.
 type RollupInput struct {
-	ParentDataRollingHash       [32]byte
-	ParentDataTailTakeBytes     uint64
-	ChainID                     uint64
-	Conflations                 []ConflationWitness
-	Chunks                      []ChunkWitness
-	L2ExecutionProofs           []L2ExecutionProof
-	BoundaryPrevDataRollingHash *[32]byte
+	ParentDataRollingHash              [32]byte
+	ParentSharedBlobCarryOverTailBytes uint64
+	ChainID                            uint64
+	Conflations                        []ConflationWitness
+	Chunks                             []ChunkWitness
+	L2ExecutionProofs                  []L2ExecutionProof
+	ParentBlobDataRollingHash          *[32]byte
 }
 
 // EncodeRollupInput encodes in as 0x0004 || SSZ(RollupProofPrivateInput).
@@ -86,18 +86,18 @@ func EncodeRollupInput(in RollupInput) ([]byte, error) {
 		return nil, fmt.Errorf("rollup input l2-execution proofs: %w", err)
 	}
 	// An optional hash is a list of at most one hash.
-	var boundary []byte
-	if in.BoundaryPrevDataRollingHash != nil {
-		boundary = in.BoundaryPrevDataRollingHash[:]
+	var parentBlob []byte
+	if in.ParentBlobDataRollingHash != nil {
+		parentBlob = in.ParentBlobDataRollingHash[:]
 	}
 	body, err := sszContainer(
 		fixed(in.ParentDataRollingHash[:]),
-		fixed(sszUint64(in.ParentDataTailTakeBytes)),
+		fixed(sszUint64(in.ParentSharedBlobCarryOverTailBytes)),
 		fixed(sszUint64(in.ChainID)),
 		variable(conflations),
 		variable(chunks),
 		variable(proofs),
-		variable(boundary),
+		variable(parentBlob),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("rollup input: %w", err)
