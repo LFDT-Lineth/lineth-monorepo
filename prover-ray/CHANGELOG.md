@@ -3,6 +3,10 @@
 ### 🚀 Features
 
 - *(prover-ray)* Encode the rollup guest input (#4571)
+
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Make the NonNative query sound (#4494)
 ## [0.4.0] - 2026-11-23
 
 ### 🚀 Features
