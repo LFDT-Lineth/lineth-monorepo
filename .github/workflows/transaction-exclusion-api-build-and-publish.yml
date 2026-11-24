@@ -52,13 +52,8 @@ jobs:
         with:
           connection-id: ${{ inputs.push_image && vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_TRANSACTION_EXCLUSION_API || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
 
-      - name: Set up Java and Gradle
-        uses: ./.github/actions/setup-java-and-gradle
-
-      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
-      # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
-      - name: Setup Besu in maven local
-        uses: ./.github/actions/setup-besu-maven-local
+      - name: Setup Java, Gradle and Besu
+        uses: ./.github/actions/setup-jvm-with-besu
 
       - name: Build dist
         run: ./gradlew transaction-exclusion-api:app:installDist
