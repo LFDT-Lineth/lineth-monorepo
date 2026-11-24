@@ -12,6 +12,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -981,17 +982,18 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 			hugepage.Advise(shares[m])
 		}
 	}, ratio)
+	// share_m = Σ_k coefs[m][k]·β_k, one ScalarMulByElement + Add pass per k.
 	parallel.Execute(n, func(start, end int) {
+		tmp := extensions.VectorE6(field.ExtPool.Get(end - start))
 		for m, share := range shares {
-			for p := start; p < end; p++ {
-				var acc, term field.Ext
-				for k := range ratio {
-					term.MulByElement(&agg[k*n+p], &coefs[m][k])
-					acc.Add(&acc, &term)
-				}
-				share[p] = acc
+			s := extensions.VectorE6(share[start:end])
+			s.ScalarMulByElement(agg[start:end], &coefs[m][0])
+			for k := 1; k < ratio; k++ {
+				tmp.ScalarMulByElement(agg[k*n+start:k*n+end], &coefs[m][k])
+				s.Add(s, tmp)
 			}
 		}
+		field.ExtPool.Put(tmp)
 	})
 
 	parallel.Execute(ratio, func(start, end int) {
