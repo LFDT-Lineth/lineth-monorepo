@@ -3,11 +3,19 @@ package predecoding
 import (
 	"bytes"
 	"debug/elf"
+	"encoding/binary"
 	"errors"
 	"io"
 	"slices"
 	"testing"
 )
+
+const (
+	testEntryPoint  = 0x00800000
+	testTextAddress = 0x00800000
+)
+
+var testText = []byte{0x97, 0x02, 0x00, 0x00}
 
 // ------------------------------------------------------------
 // extractBlobs
@@ -403,6 +411,103 @@ func TestExtractBlobs(t *testing.T) {
 		}
 		if !slices.Equal(got, tt.want) {
 			t.Fatalf("%s: blobs = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// Load
+// ------------------------------------------------------------
+
+// makeELF mirrors the legacy backend fixture: one PT_LOAD containing one
+// allocated executable .text section and a section-name string table.
+func makeELF(entryPoint, sectionAddress uint64, sectionData []byte) []byte {
+	const (
+		elfHeaderSize     = 64
+		programHeaderSize = 56
+		sectionHeaderSize = 64
+	)
+	stringTable := []byte("\x00.text\x00.shstrtab\x00")
+	textOffset := uint64(elfHeaderSize + programHeaderSize)
+	stringTableOffset := textOffset + uint64(len(sectionData))
+	sectionHeaderOffset := (stringTableOffset + uint64(len(stringTable)) + 7) &^ 7
+	result := make([]byte, sectionHeaderOffset+3*sectionHeaderSize)
+	le := binary.LittleEndian
+
+	copy(result, []byte{0x7f, 'E', 'L', 'F', 2, 1, 1})
+	le.PutUint16(result[16:18], 2)
+	le.PutUint16(result[18:20], 243)
+	le.PutUint32(result[20:24], 1)
+	le.PutUint64(result[24:32], entryPoint)
+	le.PutUint64(result[32:40], elfHeaderSize)
+	le.PutUint64(result[40:48], sectionHeaderOffset)
+	le.PutUint16(result[52:54], elfHeaderSize)
+	le.PutUint16(result[54:56], programHeaderSize)
+	le.PutUint16(result[56:58], 1)
+	le.PutUint16(result[58:60], sectionHeaderSize)
+	le.PutUint16(result[60:62], 3)
+	le.PutUint16(result[62:64], 2)
+
+	programHeader := result[elfHeaderSize : elfHeaderSize+programHeaderSize]
+	le.PutUint32(programHeader[0:4], 1)
+	le.PutUint32(programHeader[4:8], 5)
+	le.PutUint64(programHeader[8:16], textOffset)
+	le.PutUint64(programHeader[16:24], sectionAddress)
+	le.PutUint64(programHeader[24:32], sectionAddress)
+	le.PutUint64(programHeader[32:40], uint64(len(sectionData)))
+	le.PutUint64(programHeader[40:48], uint64(len(sectionData)))
+	le.PutUint64(programHeader[48:56], 0x1000)
+	copy(result[textOffset:], sectionData)
+	copy(result[stringTableOffset:], stringTable)
+
+	textHeader := result[sectionHeaderOffset+sectionHeaderSize:]
+	le.PutUint32(textHeader[0:4], 1)
+	le.PutUint32(textHeader[4:8], 1)
+	le.PutUint64(textHeader[8:16], 6)
+	le.PutUint64(textHeader[16:24], sectionAddress)
+	le.PutUint64(textHeader[24:32], textOffset)
+	le.PutUint64(textHeader[32:40], uint64(len(sectionData)))
+	le.PutUint64(textHeader[48:56], 4)
+
+	stringHeader := result[sectionHeaderOffset+2*sectionHeaderSize:]
+	le.PutUint32(stringHeader[0:4], 7)
+	le.PutUint32(stringHeader[4:8], 3)
+	le.PutUint64(stringHeader[24:32], stringTableOffset)
+	le.PutUint64(stringHeader[32:40], uint64(len(stringTable)))
+	le.PutUint64(stringHeader[48:56], 1)
+	return result
+}
+
+// TestLoadPaths checks that Load returns the entry point and blobs of a valid
+// ELF, and fails when the input is not an ELF or extractBlobs fails.
+func TestLoadPaths(t *testing.T) {
+	noLoadable := makeELF(testEntryPoint, testTextAddress, testText)
+	// Set p_type of the only program header to PT_NOTE, so no segment is loadable.
+	binary.LittleEndian.PutUint32(noLoadable[64:68], uint32(elf.PT_NOTE))
+	tests := []struct {
+		name    string
+		input   []byte
+		wantErr bool
+	}{
+		{name: "valid ELF", input: makeELF(testEntryPoint, testTextAddress, testText)},
+		{name: "not an ELF", input: []byte("not an ELF"), wantErr: true},
+		{name: "no loadable segment", input: noLoadable, wantErr: true},
+	}
+	for _, tt := range tests {
+		program, err := Load(bytes.NewReader(tt.input))
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr {
+			continue
+		}
+		if program.EntryPoint != testEntryPoint {
+			t.Fatalf("%s: EntryPoint = %#x, want %#x", tt.name, program.EntryPoint, testEntryPoint)
+		}
+		if len(program.Blobs) != 1 || program.Blobs[0].Address != testTextAddress ||
+			!bytes.Equal(program.Blobs[0].Data, testText) {
+			t.Fatalf("%s: Blobs = %+v, want one blob at %#x with %x",
+				tt.name, program.Blobs, testTextAddress, testText)
 		}
 	}
 }
