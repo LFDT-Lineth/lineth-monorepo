@@ -32,6 +32,7 @@ import (
 // [AllocateVerifierCircuit] failing closed:
 //   - no dynamic-size modules (their sizes change the circuit shape);
 //   - no pre-sampling hooks;
+//   - every query must have been reduced by a compiler pass;
 //   - every verifier action must implement [GnarkVerifierAction].
 type VerifierCircuit struct {
 	// CellsBase holds every base-field proof cell, in round then declaration
@@ -110,6 +111,15 @@ func checkCircuitSupport(sys *System) {
 		if m.IsDynamic() {
 			panic(fmt.Sprintf("wiop: VerifierCircuit: dynamic module %q is not supported", m.Context.Path()))
 		}
+	}
+	// The circuit only runs verifier actions: a query no pass reduced would be
+	// a predicate nothing checks.
+	if unreduced := sys.UnreducedQueries(); len(unreduced) > 0 {
+		panic(fmt.Sprintf(
+			"wiop: VerifierCircuit: query %q (and %d more) was not reduced by any compiler pass; "+
+				"the predicate it states would be silently dropped",
+			unreduced[0].Context().Path(), len(unreduced)-1,
+		))
 	}
 	for _, r := range sys.Rounds {
 		for _, va := range r.VerifierActions {

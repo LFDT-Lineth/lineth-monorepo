@@ -93,9 +93,15 @@ func (v *Vanishing) Check(rt *Runtime) error {
 	return nil
 }
 
-// CheckGnark implements [GnarkCheckableQuery].
+// CheckGnark implements [GnarkCheckableQuery]. A Vanishing is never checked
+// in-circuit: the verifier circuit only exists for a fully compiled system, in
+// which localvanishing and global have reduced every Vanishing into a quotient
+// identity, checked by the global compiler's verifier action. Always panics,
+// pointing at that reduction.
 func (v *Vanishing) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
-	panic("wiop: Vanishing.CheckGnark not yet implemented")
+	panic(fmt.Sprintf(
+		"wiop: Vanishing(%s).CheckGnark: vanishings are not checkable in-circuit; "+
+			"compile the query away with the global compiler first", v.context.Path()))
 }
 
 // NewVanishing registers a new [Vanishing] constraint on the module. The
