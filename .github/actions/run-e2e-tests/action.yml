@@ -170,24 +170,28 @@ runs:
 
     - name: Dump logs
       if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
+      uses: ./.github/actions/dump-docker-logs
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        services: |
+          coordinator
+          prover-v3
+          shomei
+          shomei-frontend
+          postman
+          l2-node-besu
+          transaction-exclusion-api
+          sequencer
+          l1-el-node
+          l1-cl-node
+          maru
+          prover-ray
+
+    - name: Dump prover-ray proofs and database
+      if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        mkdir -p docker_logs
-        find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
-        docker ps -a >> docker_logs/docker_ps.txt || true
-        docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
-        docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
-        docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
-        docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
-        docker logs postman --since 1h &>> docker_logs/postman.txt || true
-        docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
-        docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
-        docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
-        docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
-        docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
-        docker logs maru --since 1h &>> docker_logs/maru.txt || true
-        docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
         # prover-ray writes these as root with owner-only modes; copy through the daemon instead.
         docker cp prover-ray:/data/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
