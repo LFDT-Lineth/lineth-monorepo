@@ -1497,10 +1497,10 @@ func TestExecutableImage(t *testing.T) {
 // predecode
 // ------------------------------------------------------------
 
-// TestPredecode checks that predecode passes the base and the image rows of the
+// TestPredecodeInternal checks that predecode passes the base and the image rows of the
 // executable blobs through, and that an error from executableImage is returned.
 // Sorting, gaps, alignment, and the record cap are tested in executableImage.
-func TestPredecode(t *testing.T) {
+func TestPredecodeInternal(t *testing.T) {
 	addi := []byte{0x93, 0x82, 0x10, 0x00} // addi x5, x1, 1
 	add := []byte{0xb3, 0x82, 0x20, 0x00}  // add x5, x1, x2
 	tests := []struct {
@@ -1643,6 +1643,38 @@ func TestApplyOptions(t *testing.T) {
 		}
 		if got != tt.want {
 			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestPredecode checks that Predecode applies its options to the cap
+// before predecoding: the default cap decodes the program, and a cap of zero
+// rejects it.
+func TestPredecode(t *testing.T) {
+	addi := []byte{0x93, 0x82, 0x10, 0x00} // addi x5, x1, 1
+	program := Program{Blobs: []Blob{{Address: 0x2000, Data: addi, Executable: true}}}
+	tests := []struct {
+		name    string
+		options []Option
+		wantErr bool
+	}{
+		{name: "default cap"},
+		{name: "cap of zero", options: []Option{WithMaxDecodedRecords(0)}, wantErr: true},
+		{name: "nil option", options: []Option{nil}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := Predecode(program, tt.options...)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr {
+			continue
+		}
+		var want bitWriter
+		decodeInstruction(&want, 0x00108293)
+		if got.InstructionBase != 0x2000 || !bytes.Equal(got.Decoded, want.buf) {
+			t.Fatalf("%s: base=%#x decoded=%x, want base=0x2000 decoded=%x",
+				tt.name, got.InstructionBase, got.Decoded, want.buf)
 		}
 	}
 }
