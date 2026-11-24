@@ -5,7 +5,7 @@
 # the guests build for their target; `test` runs its native unit and reference tests and builds and
 # checks the shared library of its host layer.
 
-.PHONY: fetch fetch-host test clean compile host-lib host-lib-check
+.PHONY: fetch fetch-host test clean compile host-lib host-lib-check host-lib-asset host-lib-bundle
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -62,3 +62,56 @@ host-lib-check: $(HOST_LIB_CHECK_DEPS)
 		echo "host-lib-check: the library needs GLIBC_$$newest, newer than GLIBC_$(HOST_LIB_GLIBC_MAX)" >&2; exit 1; \
 	fi; \
 	echo "host-lib-check: lineth_da_* exports only, newest glibc symbol $${newest:-none}"
+
+# The library of this machine, named for the release in RELEASE_DIR:
+# lineth_da_v<RELEASE_VERSION>_<os>_<arch>.<so|dylib>.
+RELEASE_VERSION ?=
+RELEASE_DIR ?=
+
+ifneq ($(filter host-lib-asset host-lib-bundle,$(MAKECMDGOALS)),)
+ifeq ($(RELEASE_VERSION),)
+$(error RELEASE_VERSION is required)
+endif
+ifeq ($(RELEASE_DIR),)
+$(error RELEASE_DIR is required)
+endif
+endif
+
+host-lib-asset: host-lib
+	@set -eu; \
+	printf '%s\n' "$(RELEASE_VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$$' || \
+		{ echo "host-lib-asset: RELEASE_VERSION must be a semver without a leading v, got $(RELEASE_VERSION)" >&2; exit 1; }; \
+	case "$$(uname -s)-$$(uname -m)" in \
+		Linux-x86_64) platform=linux_x86_64; extension=so ;; \
+		Linux-aarch64|Linux-arm64) platform=linux_arm64; extension=so ;; \
+		Darwin-arm64) platform=darwin_arm64; extension=dylib ;; \
+		*) echo "host-lib-asset: unsupported platform $$(uname -s)-$$(uname -m)" >&2; exit 1 ;; \
+	esac; \
+	mkdir -p "$(RELEASE_DIR)"; \
+	library="lineth_da_v$(RELEASE_VERSION)_$$platform.$$extension"; \
+	cp "$(MAKEFILE_DIR)zig-out/lib/liblineth_da.$$extension" "$(RELEASE_DIR)/$$library"; \
+	echo "host-lib-asset: $(RELEASE_DIR)/$$library"
+
+# The release archive of RELEASE_DIR, which holds the library of every platform:
+# lineth-da-libs-v<RELEASE_VERSION>.zip in RELEASE_DIR, with the three libraries and the licenses of
+# LICENSE_DIR at its top level.
+LICENSE_DIR ?= $(MAKEFILE_DIR)../..
+HOST_LIB_PLATFORMS := linux_x86_64.so linux_arm64.so darwin_arm64.dylib
+
+host-lib-bundle:
+	@set -eu; \
+	dir="$(abspath $(RELEASE_DIR))"; license_dir="$(abspath $(LICENSE_DIR))"; \
+	files=""; \
+	for entry in $(HOST_LIB_PLATFORMS); do \
+		library="lineth_da_v$(RELEASE_VERSION)_$$entry"; \
+		[ -f "$$dir/$$library" ] || { echo "host-lib-bundle: $$dir/$$library is missing" >&2; exit 1; }; \
+		files="$$files $$dir/$$library"; \
+	done; \
+	for license in LICENSE-APACHE LICENSE-MIT; do \
+		[ -f "$$license_dir/$$license" ] || { echo "host-lib-bundle: $$license_dir/$$license is missing" >&2; exit 1; }; \
+	done; \
+	filename="lineth-da-libs-v$(RELEASE_VERSION).zip"; \
+	rm -f "$$dir/$$filename"; \
+	zip -q -X -j "$$dir/$$filename" $$files "$$license_dir/LICENSE-APACHE" "$$license_dir/LICENSE-MIT"; \
+	echo "host-lib-bundle: $$dir/$$filename"; \
+	if [ -n "$${GITHUB_OUTPUT:-}" ]; then printf 'asset=%s\nfilename=%s\n' "$$dir/$$filename" "$$filename" >> "$$GITHUB_OUTPUT"; fi
