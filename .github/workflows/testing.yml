@@ -187,35 +187,13 @@ jobs:
       - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
 
-      - name: Download Jacoco execution data from coordinator
-        if: needs.coordinator.result != 'skipped'
+      # Every JVM suite uploads `jacoco-<suite>-exec` (upload-jacoco-exec); suites that were skipped
+      # upload nothing, so no per-suite condition is needed.
+      - name: Download Jacoco execution data from all JVM test jobs
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: jacoco-coordinator-exec
-          path: .
-      - name: Download Jacoco execution data from linea-sequencer tests
-        if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-linea-sequencer-exec
-          path: .
-      - name: Download Jacoco execution data from maru
-        if: needs.maru.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-maru-exec
-          path: .
-      - name: Download Jacoco execution data from staterecovery
-        if: needs.staterecovery.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-staterecovery-exec
-          path: .
-      - name: Download Jacoco execution data from transaction-exclusion-api
-        if: needs.transaction-exclusion-api.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-transaction-exclusion-api-exec
+          pattern: jacoco-*-exec
+          merge-multiple: true
           path: .
 
       - name: Run Jacoco Root Report
