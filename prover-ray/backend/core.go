@@ -447,7 +447,9 @@ func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 
 // executeGuest runs the guest under zkc Execute (the no-trace path), with gogen
 // or the interpreter, and returns its validated output, framed with schema.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, schema uint16, gogen bool) (bit.Array, error) {
+func executeGuest(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, schema uint16, gogen bool,
+) (bit.Array, error) {
 	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))
 	return classifyGuestOutput(output, errs, schema)
 }

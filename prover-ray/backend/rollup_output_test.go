@@ -33,8 +33,8 @@ type specRollupPublicInputs struct {
 	EndDataRollingHash                    specHex   `json:"endDataRollingHash"`
 	ParentBlockHash                       specHex   `json:"parentBlockHash"`
 	EndBlockHash                          specHex   `json:"endBlockHash"`
-	ParentDataTailTakeBytes               uint64    `json:"parentDataTailTakeBytes"`
-	FinalDataTailDiscardBytes             uint64    `json:"finalDataTailDiscardBytes"`
+	ParentSharedBlobCarryOverTailBytes    uint64    `json:"parentSharedBlobCarryOverTailBytes"`
+	FinalSharedBlobCarryOverTailBytes     uint64    `json:"finalSharedBlobCarryOverTailBytes"`
 	FilteredAddresses                     []specHex `json:"filteredAddresses"`
 	ProgramVks                            []specHex `json:"programVks"`
 	BlockCount                            uint64    `json:"blockCount"`
@@ -82,8 +82,8 @@ func referenceRollupPublicInputs(t *testing.T) RollupPublicInputs {
 		EndDataRollingHash:                    hash(spec.EndDataRollingHash),
 		ParentBlockHash:                       hash(spec.ParentBlockHash),
 		EndBlockHash:                          hash(spec.EndBlockHash),
-		ParentDataTailTakeBytes:               spec.ParentDataTailTakeBytes,
-		FinalDataTailDiscardBytes:             spec.FinalDataTailDiscardBytes,
+		ParentSharedBlobCarryOverTailBytes:    spec.ParentSharedBlobCarryOverTailBytes,
+		FinalSharedBlobCarryOverTailBytes:     spec.FinalSharedBlobCarryOverTailBytes,
 		L2L1Messages:                          hashes(spec.L2L1Messages),
 		FilteredAddresses:                     make([][20]byte, len(spec.FilteredAddresses)),
 		ProgramVks:                            hashes(spec.ProgramVks),

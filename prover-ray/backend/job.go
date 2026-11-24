@@ -112,8 +112,8 @@ type RollupPublicInputs struct {
 	EndDataRollingHash                    [32]byte
 	ParentBlockHash                       [32]byte
 	EndBlockHash                          [32]byte
-	ParentDataTailTakeBytes               uint64
-	FinalDataTailDiscardBytes             uint64
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
 	L2L1Messages                          [][32]byte
 	FilteredAddresses                     [][20]byte
 	ProgramVks                            [][32]byte
