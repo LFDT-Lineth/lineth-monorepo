@@ -112,7 +112,11 @@ class ConflationTargetCheckpointPauseController(
    * @return true if the API resume signal was applied: API gate is enabled, and a checkpoint pause
    *   is active (required L1-finalized L2 block to resume is set). Gates are re-evaluated on the next poll tick via
    *   [shouldPauseConflation].
+   *
+   * Called from the API thread, so it is synchronized with [importBlock] and [shouldPauseConflation]: the pause state
+   * spans two atomics that must be read and updated together.
    */
+  @Synchronized
   override fun signalResumeFromApi(): Boolean {
     if (!config.waitApiResumeAfterTargetBlock) {
       return false
@@ -128,6 +132,7 @@ class ConflationTargetCheckpointPauseController(
    * Called after a block has been successfully delivered to conflation (listener completed).
    * May record a checkpoint pause; [BlockCreationMonitor] drives release through [shouldPauseConflation].
    */
+  @Synchronized
   override fun importBlock(block: Block) {
     if (!pauseFeatureEnabled) {
       return
@@ -197,6 +202,7 @@ class ConflationTargetCheckpointPauseController(
    * @return `true` if the monitor must skip this tick (checkpoint pause still active);
    *   `false` if the monitor may run (no checkpoint pause, or pause was released).
    */
+  @Synchronized
   override fun shouldPauseConflation(): Boolean {
     if (!pauseFeatureEnabled) {
       return false

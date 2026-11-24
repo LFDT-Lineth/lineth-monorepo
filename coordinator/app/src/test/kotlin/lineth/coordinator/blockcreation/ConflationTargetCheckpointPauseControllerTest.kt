@@ -4,6 +4,8 @@ import linea.domain.createBlock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.time.Instant
 
 class ConflationTargetCheckpointPauseControllerTest {
@@ -198,6 +200,38 @@ class ConflationTargetCheckpointPauseControllerTest {
         l1,
       )
     assertThat(c.signalResumeFromApi()).isFalse()
+  }
+
+  @Test
+  fun `signalResumeFromApi does not acknowledge a pause while it is being released`() {
+    val apiSignalResult = AtomicReference<Boolean?>(null)
+    var apiThread: Thread? = null
+    lateinit var c: ConflationTargetCheckpointPauseController
+    var latestL1Finalized = 0L
+    val l1 = object : LatestL1FinalizedBlockProviderSync {
+      override fun getLatestL1FinalizedBlock(): Long {
+        if (latestL1Finalized >= 9L && apiThread == null) {
+          // The API signal arrives while shouldPauseConflation is releasing the pause.
+          apiThread = thread { apiSignalResult.set(c.signalResumeFromApi()) }
+            .also { it.join(500) }
+        }
+        return latestL1Finalized
+      }
+    }
+    c = ConflationTargetCheckpointPauseController(
+      pauseConfig(targetEndBlocks = setOf(9uL), waitL1 = true, waitApi = true),
+      l1,
+    )
+    c.importBlock(createBlock(number = 10uL))
+    assertThat(c.signalResumeFromApi()).isTrue()
+    assertThat(c.shouldPauseConflation()).isTrue()
+
+    latestL1Finalized = 9L
+    assertThat(c.shouldPauseConflation()).isFalse()
+    apiThread!!.join()
+
+    assertThat(apiSignalResult.get()).isFalse()
+    assertThat(c.shouldPauseConflation()).isFalse()
   }
 
   @Test
