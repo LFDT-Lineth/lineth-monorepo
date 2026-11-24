@@ -30,8 +30,8 @@ services:
       VERSION: "0.2.0" # TODO @gbotrel hunt all the hard coded version strings
       WORKER_ID: local
     volumes:
-      - ./prover-assets:/opt/linea/prover/prover-assets/:ro
-      - ./config:/opt/linea/prover/config/:ro
+      - ./prover-assets:/opt/lineth/prover/prover-assets/:ro
+      - ./config:/opt/lineth/prover/config/:ro
     networks:
       linea:
         ipv4_address: 11.11.11.108

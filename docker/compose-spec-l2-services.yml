@@ -206,14 +206,14 @@ services:
     profiles: [ "l2" ]
     environment:
       GOMAXPROCS: 16
-      CONFIG_FILE: "/opt/linea/prover/config.toml"
+      CONFIG_FILE: "/opt/lineth/prover/config.toml"
       GOMEMLIMIT: "10GiB"
       WORKER_ID: prover-i1 # keep this prover- to mimic prod env prover-aggregation-91
     volumes:
       - ../tmp/local/:/data/
       - logs:/logs
-      - ./config/prover/v3/prover-config.toml:/opt/linea/prover/config.toml:ro
-      - ../prover/prover-assets:/opt/linea/prover/prover-assets:ro
+      - ./config/prover/v3/prover-config.toml:/opt/lineth/prover/config.toml:ro
+      - ../prover/prover-assets:/opt/lineth/prover/prover-assets:ro
     networks:
       linea:
         ipv4_address: 11.11.11.109

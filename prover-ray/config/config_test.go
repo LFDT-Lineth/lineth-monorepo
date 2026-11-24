@@ -24,15 +24,15 @@ guests_dir = "/data/guests"
 
 [execution]
 prover_mode = "dev-zkvm"
-requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
+requests_root_dir = "/opt/lineth/prover-ray/requests"
+native_runner_bin = "/opt/lineth/prover-ray/l2_execution_runner"
 `))
 	require.NoError(t, err)
 	assert.Equal(t, "0.0.0-riscv", cfg.Version)
 	assert.Equal(t, 4, cfg.LogLevel)
 	assert.Equal(t, "dev-zkvm", cfg.Execution.ProverMode)
-	assert.Equal(t, "/opt/linea/prover-ray/requests", cfg.Execution.RequestsRootDir)
-	assert.Equal(t, "/opt/linea/prover-ray/l2_execution_runner", cfg.Execution.NativeRunnerBin)
+	assert.Equal(t, "/opt/lineth/prover-ray/requests", cfg.Execution.RequestsRootDir)
+	assert.Equal(t, "/opt/lineth/prover-ray/l2_execution_runner", cfg.Execution.NativeRunnerBin)
 	assert.Equal(t, "/data/guests", cfg.GuestsDir)
 }
 
@@ -96,7 +96,7 @@ version = "t"
 
 [execution]
 prover_mode = "dev-zkvm"
-guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
+guest_elf = "/opt/lineth/prover-ray/evm_execution_guest"
 `))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "guest_elf", "guest_elf is replaced by guests_dir and must not be silently ignored")
@@ -195,8 +195,8 @@ func TestNewConfigFromFile_MissingFile(t *testing.T) {
 }
 
 // guestsMount is where every deployment mounts the guests folder, like
-// /opt/linea/prover/prover-assets for the legacy prover.
-const guestsMount = "/opt/linea/prover-ray/guests"
+// /opt/lineth/prover/prover-assets for the legacy prover.
+const guestsMount = "/opt/lineth/prover-ray/guests"
 
 // shippedConfigs lists every prover-ray config shipped in the repository.
 func shippedConfigs(t *testing.T) []string {

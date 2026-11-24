@@ -33,36 +33,36 @@ RUN make bin/controller
 FROM alpine:3@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 
 RUN apk add --no-cache bash musl-dev libgcc
-RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
+RUN mkdir -p /opt/lineth/prover/lib/compressor /app/logs
 
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Copy the blob compressor dictionaries
-COPY --from=go-builder /usr/src/prover/lib/compressor/compressor_dict.bin /opt/linea/prover/lib/compressor/
-COPY --from=go-builder /usr/src/prover/lib/compressor/dict/25-04-21.bin /opt/linea/prover/lib/compressor/dict/
+COPY --from=go-builder /usr/src/prover/lib/compressor/compressor_dict.bin /opt/lineth/prover/lib/compressor/
+COPY --from=go-builder /usr/src/prover/lib/compressor/dict/25-04-21.bin /opt/lineth/prover/lib/compressor/dict/
 
 # Import the prover
-COPY --from=go-builder /usr/src/prover/bin/prover /opt/linea/prover/prover
-COPY --from=go-builder /usr/src/prover/bin/controller /opt/linea/prover/controller
+COPY --from=go-builder /usr/src/prover/bin/prover /opt/lineth/prover/prover
+COPY --from=go-builder /usr/src/prover/bin/controller /opt/lineth/prover/controller
 
 # Initilize the dirs that will contain the configuration files and the setup
-RUN mkdir -p /opt/linea/prover/config
+RUN mkdir -p /opt/lineth/prover/config
 
 # Run as a dedicated non-root user (uid 1000). The config dir is typically
 # volume-mounted at runtime — make sure it is readable by uid 1000.
 RUN adduser -D -u 1000 prover && \
-    chown -R prover:prover /opt/linea/prover /app/logs
+    chown -R prover:prover /opt/lineth/prover /app/logs
 
 # Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
 USER 1000:1000
 
 # Useful ENV variables that you may want to pass at runtime
 ENV GOMEMLIMIT=340GiB
-ENV CONFIG_FILE="/opt/linea/prover/config/config.toml"
+ENV CONFIG_FILE="/opt/lineth/prover/config/config.toml"
 
-ENV PATH="${PATH}:/opt/linea/prover/"
+ENV PATH="${PATH}:/opt/lineth/prover/"
 
-CMD ["sh", "-c", "/opt/linea/prover/controller --config $CONFIG_FILE --local-id $WORKER_ID"]
+CMD ["sh", "-c", "/opt/lineth/prover/controller --config $CONFIG_FILE --local-id $WORKER_ID"]
 
 # Build-time metadata as defined at http://label-schema.org
 # Values are injected by scripts/docker/build-image.sh.
