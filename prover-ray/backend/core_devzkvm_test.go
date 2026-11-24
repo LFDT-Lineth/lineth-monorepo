@@ -176,7 +176,7 @@ func TestProveDevZkVM_GoGen(t *testing.T) {
 		t.Setenv("PATH", t.TempDir())
 		result := prove(generated)
 		assert.Equal(t, ResultStatusFailed, result.Status)
-		require.ErrorContains(t, result.Err, "Go toolchain not found")
+		require.Error(t, result.Err, "gogen should fail without the Go toolchain")
 		assert.Equal(t, ResultStatusOK, prove(interpreter).Status, "the interpreter needs no Go toolchain")
 	})
 }

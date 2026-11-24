@@ -36,10 +36,11 @@ LABEL org.label-schema.version=$VERSION \
       org.label-schema.build-date=$BUILD_DATE \
       org.opencontainers.image.licenses="MIT OR Apache-2.0"
 
+# Go toolchain for gogen: zkc builds the circuit as Go code at run time. It goes
+# before the prover binary so this large, stable layer is not rebuilt on every release.
+COPY --from=go-builder /usr/local/go /usr/local/go
 COPY --from=go-builder /out/prover /opt/linea/prover-ray/prover
 COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
-# Go toolchain for gogen: zkc builds the circuit as Go code at run time.
-COPY --from=go-builder /usr/local/go /usr/local/go
 
 # GOTOOLCHAIN=local: no download. CGO off: no C compiler. GOCACHE in /tmp: any user can write it.
 ENV PATH="/opt/linea/prover-ray:/usr/local/go/bin:${PATH}" \
