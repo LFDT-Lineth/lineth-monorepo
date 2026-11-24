@@ -13,13 +13,13 @@ import linea.kotlin.encodeHex
  * @property parentBlobDataRollingHash rolling hash before the blob the stream opens in: before [sharedBlob] when
  *   [sharedBlobCarryOverTailBytes] > 0, so that `fold(parentBlobDataRollingHash, chunkHash(sharedBlob)) ==
  *   dataRollingHash`; equal to [dataRollingHash] when [sharedBlobCarryOverTailBytes] = 0, as the next blob folds onto it
- * @property sharedBlobCarryOverTailBytes the last rollup's `finalDataTailDiscardBytes`; 0 = fresh blob
+ * @property sharedBlobCarryOverTailBytes the last rollup's `finalSharedBlobCarryOverTailBytes`; 0 = fresh blob
  * @property sharedBlob the last rollup's last (packed) blob, required when [sharedBlobCarryOverTailBytes] > 0
  */
 data class DaStreamPosition(
   val dataRollingHash: ByteArray,
   val parentBlobDataRollingHash: ByteArray,
-  val sharedBlobCarryOverTailBytes: Int = 0,
+  val sharedBlobCarryOverTailBytes: UInt = 0u,
   val sharedBlob: ByteArray? = null,
 ) {
   init {
@@ -27,10 +27,10 @@ data class DaStreamPosition(
     require(parentBlobDataRollingHash.size == 32) {
       "parentBlobDataRollingHash must be 32 bytes, got ${parentBlobDataRollingHash.size}"
     }
-    require(sharedBlobCarryOverTailBytes in 0..DaConstants.MAX_TAIL_BYTES) {
+    require(sharedBlobCarryOverTailBytes <= DaConstants.MAX_TAIL_BYTES.toUInt()) {
       "sharedBlobCarryOverTailBytes=$sharedBlobCarryOverTailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
-    if (sharedBlobCarryOverTailBytes > 0) {
+    if (sharedBlobCarryOverTailBytes > 0u) {
       require(sharedBlob?.size == DaConstants.BLOB_BYTES) {
         "sharedBlob must be ${DaConstants.BLOB_BYTES} bytes when sharedBlobCarryOverTailBytes > 0, " +
           "got ${sharedBlob?.size}"
@@ -60,7 +60,7 @@ data class DaStreamPosition(
   override fun hashCode(): Int {
     var result = dataRollingHash.contentHashCode()
     result = 31 * result + parentBlobDataRollingHash.contentHashCode()
-    result = 31 * result + sharedBlobCarryOverTailBytes
+    result = 31 * result + sharedBlobCarryOverTailBytes.hashCode()
     result = 31 * result + (sharedBlob?.contentHashCode() ?: 0)
     return result
   }

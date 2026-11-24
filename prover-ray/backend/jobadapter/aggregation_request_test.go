@@ -25,8 +25,8 @@ func TestDecodeAggregationRequest_Golden(t *testing.T) {
 	assert.Equal(t, mustHex(t, "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"), p0.ProgramVk)
 	assert.Equal(t, uint64(11), p0.PublicInputs.EndBlockNumber)
 	assert.Equal(t, filledHash(0x8d), p0.PublicInputs.EndDataRollingHash)
-	assert.Equal(t, uint64(0), p0.PublicInputs.ParentDataTailTakeBytes)
-	assert.Equal(t, uint64(0), p0.PublicInputs.FinalDataTailDiscardBytes)
+	assert.Equal(t, uint64(0), p0.PublicInputs.ParentSharedBlobCarryOverTailBytes)
+	assert.Equal(t, uint64(0), p0.PublicInputs.FinalSharedBlobCarryOverTailBytes)
 	assert.Equal(t, uint64(2), p0.PublicInputs.BlockCount)
 	require.Len(t, p0.PublicInputs.ProgramVks, 1)
 	assert.Equal(t, filledHash(0xaa), p0.PublicInputs.ProgramVks[0])
@@ -68,8 +68,8 @@ func TestDecodeAggregationRequest_InvalidShape(t *testing.T) {
 		{"ProofMissingPublicInputs", func(o map[string]any) { delete(proof0(o), publicInputsKey) }, publicInputsKey},
 		{"PublicInputsMissingProgramVks", func(o map[string]any) { delete(pi0(o), programVksKey) }, programVksKey},
 		{"PublicInputsMissingHashField", func(o map[string]any) { delete(pi0(o), "endDataRollingHash") }, "endDataRollingHash"},
-		{"PublicInputsMissingParentDataTailTakeBytes",
-			func(o map[string]any) { delete(pi0(o), parentDataTailTakeBytesKey) }, parentDataTailTakeBytesKey},
+		{"PublicInputsMissingParentSharedBlobCarryOverTailBytes",
+			func(o map[string]any) { delete(pi0(o), parentSharedBlobCarryOverTailBytesKey) }, parentSharedBlobCarryOverTailBytesKey},
 		{"PublicInputsMissingL2L1Messages",
 			func(o map[string]any) { delete(pi0(o), l2L1MessagesKey) }, l2L1MessagesKey},
 		{"PublicInputsMissingFilteredAddresses",

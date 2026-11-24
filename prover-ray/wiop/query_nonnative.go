@@ -11,19 +11,25 @@ import (
 var _ Query = (*NonNative)(nil)
 
 // NonNative is a [Query] asserting that a set of limb-decomposed columns
-// satisfy the non-native modular multiplication relation
+// satisfy, on every active row, the non-native modular multiplication relation
 //
-//	Left * Right = Quotient * Modulus + Result
+//	Left * Right = Quotient * Modulus + Result,   0 <= Result < Modulus
 //
 // where each of Left, Right, Modulus, Result and Quotient is represented as a
-// little-endian sequence of limb columns of NbBitsPerLimb bits each.
+// little-endian sequence of limb columns of NbBitsPerLimb bits each. Result
+// is reduced, so an active row with a zero Modulus has no valid witness.
+//
+// A row is active when Selector is 1 on it, or always when Selector is nil.
+// Inactive rows are unconstrained.
 //
 // The query is only declarative, the user must run the compiler pass in package
-// wiop/compilers/nonnative to reduce it to a Schwartz-Zippel polynomial
-// identity checked at a shared random point.
+// wiop/compilers/nonnative to reduce it to per-coefficient polynomial
+// identities over limb digits.
 //
-// The compiler pass allocates the carry columns and samples the coin itself so that
-// multiple [NonNative] queries can share the same coin.
+// The compiler pass allocates the digit and carry columns. It also
+// range-checks every limb of an active row into [0, 2^NbBitsPerLimb): an
+// assignment with a wider limb is rejected even if the integer relation
+// holds. It constrains Selector to be boolean.
 //
 // The query is checkable via limb composition, but it doesn't enforce the
 // soundness of the proof against a malicious prover. The compiler pass reduces
@@ -46,19 +52,24 @@ type NonNative struct {
 	Result []*Column
 	// Quotient is the caller-provided (Left*Right) / Modulus.
 	Quotient []*Column
+	// Selector is the caller-provided boolean column marking the active rows,
+	// or nil if every row is active.
+	Selector *Column
 }
 
 // Round returns InputRound. We assume that the caller has provided all inputs
 // columns in the same round.
 func (q *NonNative) Round() *Round { return q.InputRound }
 
-// Check verifies row by row that the limb-composed operands satisfy
+// Check verifies, on every active row, that the limb-composed operands satisfy
 //
-//	Left*Right = Quotient*Modulus + Result.
+//	Left*Right = Quotient*Modulus + Result,   0 <= Result < Modulus,
 //
-// It does not rely on the vanishing relation the compiler produces (no coin
-// exists yet at this stage); it recomposes each operand from its limbs and
-// checks the relation directly over big.Int arithmetic.
+// and that Selector, if any, is boolean.
+//
+// It does not rely on the identities the compiler produces; it recomposes each
+// operand from its limbs and checks the relation directly over big.Int
+// arithmetic.
 //
 // It is a convenience runtime check only; soundness against a malicious prover is
 // established by compiling the system using nonnative and global compilers.
@@ -93,14 +104,30 @@ func (q *NonNative) Check(rt *Runtime) error {
 	if !ok {
 		return nil
 	}
+	var selector *ConcreteVector
+	if q.Selector != nil {
+		if !rt.HasColumnAssignment(q.Selector) {
+			return nil
+		}
+		selector = rt.GetColumnAssignment(q.Selector)
+	}
 
 	product := new(big.Int)
 	expected := new(big.Int)
 
-	// we iterate over nbRows which is the runtime size of the module. But as
-	// 0*0 = 0 + 0*0 holds, we can skip the rows that are not assigned in the
-	// input round.
 	for row := range nbRows {
+		if selector != nil {
+			s := selector.ElementAtN(m.Padding, nbRows, row).AsBase()
+			if s.IsZero() {
+				continue
+			}
+			if !s.IsOne() {
+				return fmt.Errorf(
+					"wiop: NonNative(%s).Check: row %d: selector (%s) is not boolean",
+					q.context.Path(), row, s.String(),
+				)
+			}
+		}
 		left := composeLimbsRow(leftCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
 		right := composeLimbsRow(rightCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
 		mod := composeLimbsRow(modCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
@@ -117,7 +144,7 @@ func (q *NonNative) Check(rt *Runtime) error {
 				q.context.Path(), row, product.String(), expected.String(),
 			)
 		}
-		if mod.Sign() != 0 && res.Cmp(mod) >= 0 {
+		if res.Cmp(mod) >= 0 {
 			return fmt.Errorf(
 				"wiop: NonNative(%s).Check: row %d: result (%s) is not reduced modulo modulus (%s)",
 				q.context.Path(), row, res.String(), mod.String(),
@@ -157,19 +184,23 @@ func composeLimbsRow(cols []*ConcreteVector, nbBitsPerLimb, nbRows, row int, pd 
 
 // NewNonNative constructs and registers a [NonNative] query on module, asserting
 //
-//	Left*Right = Quotient*Modulus + Result
+//	Left*Right = Quotient*Modulus + Result,   0 <= Result < Modulus
 //
-// over limb-decomposed columns, each limb with nbBitsPerLimb bits, in little-endian ordering.
+// over limb-decomposed columns, each limb with nbBitsPerLimb bits, in
+// little-endian ordering, on every row where selector is 1. A nil selector
+// makes every row active.
 //
 // Panics if ctx or module is nil, if nbBitsPerLimb is not positive, if any of
 // the five limb slices is empty, if limb slices are of different length, if any
-// column does not belong to m or is not committed in inputRound.
+// column (selector included) does not belong to m or is not committed in the
+// round of the limbs.
 //
 // See [NonNative] for more details.
 func (m *Module) NewNonNative(
 	ctx *ContextFrame,
 	nbBitsPerLimb int,
 	left, right, modulus, result, quotient []*Column,
+	selector *Column,
 ) *NonNative {
 	if m == nil {
 		panic("wiop: Module.NewNonNative requires a non-nil Module")
@@ -227,6 +258,20 @@ func (m *Module) NewNonNative(
 			}
 		}
 	}
+	if selector != nil {
+		if selector.Module != m {
+			panic(fmt.Sprintf(
+				"wiop: Module.NewNonNative: selector belongs to module %q, expected %q",
+				selector.Module.Context.Path(), m.Context.Path(),
+			))
+		}
+		if selector.Round() != inputRound {
+			panic(fmt.Sprintf(
+				"wiop: Module.NewNonNative: selector is committed in round %d, expected round %d",
+				selector.Round().ID, inputRound.ID,
+			))
+		}
+	}
 
 	q := &NonNative{
 		baseQuery: baseQuery{
@@ -241,6 +286,7 @@ func (m *Module) NewNonNative(
 		Modulus:       modulus,
 		Result:        result,
 		Quotient:      quotient,
+		Selector:      selector,
 	}
 	m.NonNatives = append(m.NonNatives, q)
 	return q

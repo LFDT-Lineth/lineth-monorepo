@@ -29,7 +29,7 @@ object TracesClientFactory {
       rpcClientFactory.createWithLoadBalancing(
         endpoints = apiConfig.endpoints.toSet(),
         maxInflightRequestsPerClient = apiConfig.requestLimitPerEndpoint,
-        requestTimeout = apiConfig.requestTimeout?.inWholeMilliseconds,
+        defaultRequestTimeout = apiConfig.requestTimeout,
         log = logger,
         requestPriorityComparator = TracesGeneratorJsonRpcClientV2.requestPriorityComparator,
       ),

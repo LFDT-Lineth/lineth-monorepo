@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: detect-changes.sh <zkevm-files-json> <riscv-files-json>
-# Prints zkevm=, riscv= and riscv_prover_mode= lines for $GITHUB_OUTPUT.
+# Prints zkevm= and riscv= lines for $GITHUB_OUTPUT.
 
 set -euo pipefail
 
@@ -19,10 +19,6 @@ is_riscv_only() {
 is_zkevm_only() {
   [[ "$1" =~ ^e2e/src/.*\.spec\.ts$ || "$1" =~ [-.]zkevm[-.] || "$1" =~ ^docker/config/prover/v3/ ]]
 }
-# The RISC-V suite proves for real when the prover, the guests or their config changed.
-is_riscv_proving() {
-  [[ "$1" =~ ^(prover-ray|riscv-guests|docker/config/prover/riscv)/ ]]
-}
 
 # Usage: has_match <files-json> <keep-fn>; prints the first non-test file accepted by keep-fn.
 has_match() {
@@ -39,11 +35,9 @@ has_match() {
 not_riscv_only() { ! is_riscv_only "$1"; }
 not_zkevm_only() { ! is_zkevm_only "$1"; }
 
-zkevm=false riscv=false mode=dev-mock
+zkevm=false riscv=false
 file="$(has_match "${1:-[]}" not_riscv_only)" && zkevm=true && echo "zkEVM e2e-relevant file: $file" >&2
 file="$(has_match "${2:-[]}" not_zkevm_only)" && riscv=true && echo "RISC-V e2e-relevant file: $file" >&2
-file="$(has_match "${2:-[]}" is_riscv_proving)" && mode=dev-zkvm && echo "RISC-V proving change: $file" >&2
 
 echo "zkevm=$zkevm"
 echo "riscv=$riscv"
-echo "riscv_prover_mode=$mode"

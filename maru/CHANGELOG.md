@@ -2,7 +2,17 @@
 
 ### 🚀 Features
 
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
+- *(maru)* Add and use native Engine API JSON-RPC client (#4397)
+## [1.6.0] - 2026-11-19
+
+### 🚀 Features
+
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 ## [1.5.0] - 2026-11-03
 
 ### 🚀 Features

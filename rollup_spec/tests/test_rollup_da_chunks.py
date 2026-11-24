@@ -432,10 +432,10 @@ def test_one_wrong_proof_among_valid_blob_proofs_is_rejected(index):
         verify_da_chunks(blobs, [LARGE_PAYLOAD], PARENT)
 
 
-@pytest.mark.parametrize("boundary", [None, WRONG_HASH], ids=["missing", "wrong"])
-def test_mid_blob_start_rejects_boundary_hash_that_does_not_open_the_parent_hash(boundary):
+@pytest.mark.parametrize("parent_blob", [None, WRONG_HASH], ids=["missing", "wrong"])
+def test_mid_blob_start_rejects_parent_blob_hash_that_does_not_open_the_parent_hash(parent_blob):
     blob = blob_chunk(FOREIGN_PREFIX + SEGMENT_1)
     parent = data_rolling_hash_after(BEFORE_FIRST_CHUNK, [blob])
 
-    with pytest.raises(Exception, match="boundaryPrevDataRollingHash"):
-        verify_da_chunks([blob], [PAYLOAD_1], parent, len(SEGMENT_1), boundary)
+    with pytest.raises(Exception, match="parentBlobDataRollingHash"):
+        verify_da_chunks([blob], [PAYLOAD_1], parent, len(SEGMENT_1), parent_blob)

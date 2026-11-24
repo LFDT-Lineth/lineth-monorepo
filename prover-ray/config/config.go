@@ -25,6 +25,9 @@ type Config struct {
 	// GuestsDir holds the guest ELFs, found by the guestProgramId of each
 	// request. Required by every mode that runs a guest.
 	GuestsDir string `mapstructure:"guests_dir"`
+	// GoGen runs the guests of every pipeline with gogen instead of the
+	// interpreter. On by default.
+	GoGen bool `mapstructure:"gogen"`
 }
 
 // Execution holds the L2-execution pipeline settings.
@@ -33,9 +36,9 @@ type Execution struct {
 	ProverMode string `mapstructure:"prover_mode"`
 	// RequestsRootDir contains the requests/, responses/, requests-done/ queue.
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
-	// NativeRunnerBin is the native l2_execution_runner binary, required by
-	// dev-zkvm. Optional in dev-partial, which then checks the guest output against
-	// it. It is a path or a name found on PATH, and must be a program that can
+	// NativeRunnerBin is the native l2_execution_runner binary, optional in
+	// dev-zkvm and dev-partial, which then check the guest output against it.
+	// It is a path or a name found on PATH, and must be a program that can
 	// be run; the other modes ignore it.
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
 	// ShardSize is the number of executed RISC-V instructions per trace shard;
@@ -43,6 +46,12 @@ type Execution struct {
 	// shard does not fit in a column. full does not support sharding yet.
 	// dev-mock and dev-zkvm ignore it.
 	ShardSize uint64 `mapstructure:"shard_size"`
+	// ShardWorkers is the number of shards traced and proved at the same time;
+	// zero or one is one at a time. Each shard in progress needs about 30 to
+	// 35 GiB, on top of the trace checkpoints, measured on the blocks listed in
+	// docs/prover-modes.md. It needs shard_size, and dev-mock and dev-zkvm
+	// ignore it.
+	ShardWorkers int `mapstructure:"shard_workers"`
 }
 
 // Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
@@ -63,6 +72,7 @@ func (p Pipeline) Configured() bool {
 func NewConfigFromFile(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
+	v.SetDefault("gogen", true)
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("reading config %q: %w", path, err)
 	}
@@ -82,6 +92,9 @@ func (c *Config) validate() error {
 	}
 	if c.Execution.ProverMode == "" {
 		return fmt.Errorf("execution.prover_mode must be set")
+	}
+	if c.Execution.ShardWorkers < 0 {
+		return fmt.Errorf("execution.shard_workers must not be negative")
 	}
 	for name, p := range map[string]Pipeline{"rollup": c.Rollup, "aggregation": c.Aggregation} {
 		if p.Configured() && p.ProverMode == "" {

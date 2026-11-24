@@ -18,9 +18,9 @@ fn repeat20(byte: u8) [20]u8 {
 
 // ── Top-level input fields ───────────────────────────────────────────────────────────────────
 pub const PARENT_DATA_ROLLING_HASH = repeat32(0x47);
-pub const PARENT_DATA_TAIL_TAKE_BYTES: u64 = 4;
+pub const PARENT_SHARED_BLOB_CARRY_OVER_TAIL_BYTES: u64 = 4;
 pub const CHAIN_ID: u64 = 59144;
-pub const BOUNDARY_PREV_DATA_ROLLING_HASH = repeat32(0x39);
+pub const PARENT_BLOB_DATA_ROLLING_HASH = repeat32(0x39);
 
 // ── Conflation block RLPs ─────────────────────────────────────────────────────────────────────
 // RLP-shaped filler (a valid "long list" / "32-byte string" prefix), not real RLP: the codec carries
@@ -157,7 +157,7 @@ pub fn conflationOf(alloc: std.mem.Allocator, block_rlps: []const []const u8) !r
     return .{ .block_rlps = .{ .items = lists } };
 }
 
-const sample_boundary = [_][32]u8{BOUNDARY_PREV_DATA_ROLLING_HASH};
+const sample_boundary = [_][32]u8{PARENT_BLOB_DATA_ROLLING_HASH};
 
 /// A readable `RollupProofPrivateInput` built entirely from the named constants above.
 pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput {
@@ -168,7 +168,7 @@ pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput
 
     return .{
         .parent_data_rolling_hash = PARENT_DATA_ROLLING_HASH,
-        .parent_data_tail_take_bytes = PARENT_DATA_TAIL_TAKE_BYTES,
+        .parent_shared_blob_carry_over_tail_bytes = PARENT_SHARED_BLOB_CARRY_OVER_TAIL_BYTES,
         .chain_id = CHAIN_ID,
         .conflations = .{ .items = conflations },
         .chunks = .{ .items = try alloc.dupe(rollup_ssz.ChunkWitness, &[_]rollup_ssz.ChunkWitness{
@@ -185,6 +185,6 @@ pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput
             try sampleProof0(alloc),
             try sampleProof1(alloc),
         }) },
-        .boundary_prev_data_rolling_hash = .{ .items = &sample_boundary },
+        .parent_blob_data_rolling_hash = .{ .items = &sample_boundary },
     };
 }

@@ -6,7 +6,6 @@
  */
 package maru.app
 
-import linea.teku.Web3JClient
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -24,17 +23,16 @@ import maru.consensus.validation.SCEP256SealVerifier
 import maru.core.Protocol
 import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.p2p.P2PNetwork
 import maru.serialization.rlp.ForkAwareBlockHashing
-import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class QbftFollowerFactory(
   private val p2pNetwork: P2PNetwork,
   private val beaconChain: BeaconChain,
-  private val validatorELNodeEngineApiWeb3JClient: Web3JClient?,
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
-  private val metricsFacade: MetricsFacade,
+  private val validatorEngineApiEndpoint: EngineApiEndpoint?,
+  private val followerEngineApiEndpoints: Map<String, EngineApiEndpoint>,
   private val allowEmptyBlocks: Boolean,
   private val finalizationStateProvider: FinalizationProvider,
   private val payloadValidationEnabled: Boolean,
@@ -44,12 +42,8 @@ class QbftFollowerFactory(
     val qbftConsensusConfig = (forkSpec.configuration as QbftConsensusConfig)
 
     val elManager =
-      validatorELNodeEngineApiWeb3JClient?.let {
-        buildExecutionLayerManager(
-          web3JEngineApiClient = it,
-          elFork = qbftConsensusConfig.elFork,
-          metricsFacade = metricsFacade,
-        )
+      validatorEngineApiEndpoint?.let {
+        buildExecutionLayerManager(engineApiEndpoint = it, elFork = qbftConsensusConfig.elFork)
       }
 
     // Import to EL (engine_newPayload / FCU) should happen whenever client exists,
@@ -66,9 +60,8 @@ class QbftFollowerFactory(
     val blockImportHandlers =
       Helpers.createBlockImportHandlers(
         elFork = qbftConsensusConfig.elFork,
-        metricsFacade = metricsFacade,
         finalizationStateProvider = finalizationStateProvider,
-        followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+        followerEngineApiEndpoints = followerEngineApiEndpoints,
       )
 
     val validatorProvider = StaticValidatorProvider(validators = qbftConsensusConfig.validatorSet)
