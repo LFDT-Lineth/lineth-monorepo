@@ -12,7 +12,7 @@ package linea.config.docs
  * - `|` in table cells is backslash-escaped (same as Markdown).
  *
  * The partial is intended to be written to a gitignored build directory and published by CI to
- * `docs/stack/reference/_generated/<component>/reference.mdx` on the docs site; it is not meant
+ * `docs/reference/component-configuration/_generated/<component>/reference.mdx` on the docs site; it is not meant
  * to be edited by hand or committed to the application repository.
  *
  * @param regenerateCommand the command shown in the MDX comment banner.

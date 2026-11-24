@@ -1,7 +1,7 @@
 name: "Besu plugin options docs"
 
 # Extracts Linea-Besu plugin options with Java reflection, renders ephemeral MDX,
-# and publishes only docs/stack/reference/_generated/besu/ to Consensys-Incorporated/doc.linea.
+# and publishes only docs/reference/component-configuration/_generated/besu/ to LFDT-Lineth/lineth-docs.
 
 permissions:
   contents: read
@@ -43,7 +43,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Besu partials to doc.linea"
+        description: "Publish generated Besu partials to lineth-docs"
         required: false
         type: boolean
         default: false
@@ -163,29 +163,29 @@ jobs:
           } > "$OUT"
           echo "Wrote $OUT"
 
-      - name: Generate App token for Consensys-Incorporated/doc.linea
+      - name: Generate App token for LFDT-Lineth/lineth-docs
         id: app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ secrets.DOC_LINEA_PR_APP_ID }}
-          private-key: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}
-          owner: Consensys-Incorporated
+          app-id: ${{ secrets.LINETH_DOCS_PR_APP_ID }}
+          private-key: ${{ secrets.LINETH_DOCS_PR_PRIVATE_KEY }}
+          owner: LFDT-Lineth
           repositories: |
-            doc.linea
+            lineth-docs
 
-      - name: Checkout doc.linea
+      - name: Checkout lineth-docs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: Consensys-Incorporated/doc.linea
+          repository: LFDT-Lineth/lineth-docs
           token: ${{ steps.app-token.outputs.token }}
-          path: doc.linea
+          path: lineth-docs
 
       - name: Copy only the Besu generated namespace
         shell: bash
         run: |
           set -euo pipefail
           SRC="scripts/besu-plugin-options/output/_generated/besu"
-          DEST="doc.linea/docs/stack/reference/_generated/besu"
+          DEST="lineth-docs/docs/reference/component-configuration/_generated/besu"
           if ! compgen -G "$SRC/*.mdx" >/dev/null; then
             echo "Refusing to publish: no MDX partials under $SRC" >&2
             exit 1
@@ -197,22 +197,23 @@ jobs:
           invalid=0
           while IFS= read -r -d '' entry; do
             changed_path="${entry:3}"
-            if [[ "$changed_path" != docs/stack/reference/_generated/besu/* ]]; then
+            if [[ "$changed_path" != docs/reference/component-configuration/_generated/besu/* ]]; then
               echo "::error::Refusing to publish changed path outside the Besu namespace: $changed_path"
               invalid=1
             fi
-          done < <(git -C doc.linea status --porcelain=v1 -z --untracked-files=all)
+          done < <(git -C lineth-docs status --porcelain=v1 -z --untracked-files=all)
           if [[ "$invalid" -ne 0 ]]; then
             exit 1
           fi
-          git -C doc.linea status --short
+          git -C lineth-docs status --short
 
-      - name: Create pull request on doc.linea
+      - name: Create pull request on lineth-docs
         uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
         with:
           token: ${{ steps.app-token.outputs.token }}
-          path: doc.linea
+          path: lineth-docs
           commit-message: "docs: update Linea-Besu plugin options partials"
+          signoff: true
           branch: ci/besu-plugin-options-docs
           delete-branch: true
           base: main
@@ -220,7 +221,7 @@ jobs:
           body: |
             Auto-generated Linea-Besu plugin option MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/besu/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/besu/`.
             The shared `_generated/` root and human-owned wrapper are intentionally untouched.
           add-paths: |
-            docs/stack/reference/_generated/besu/**
+            docs/reference/component-configuration/_generated/besu/**

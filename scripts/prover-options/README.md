@@ -1,7 +1,7 @@
 # Prover config docs generator
 
 Standalone Node tool that statically parses `prover/config/*.go` and emits
-public-safe TOML config reference MDX partials for [doc.linea](https://docs.linea.build).
+public-safe TOML config reference MDX partials for [lineth-docs](https://github.com/LFDT-Lineth/lineth-docs).
 
 **Not a monorepo workspace package.** Install and run only inside this directory.
 
@@ -10,7 +10,7 @@ public-safe TOML config reference MDX partials for [doc.linea](https://docs.line
 Generated artifacts are ephemeral and ignored by Git. Automation writes them only under `output/`,
 and publishing copies only `output/_generated/prover/`.
 It never writes the human-owned wrapper (`templates/linea-prover-options.mdx` here;
-`docs/stack/reference/linea-prover-options.mdx` on doc.linea).
+`docs/reference/component-configuration/linea-prover-options.md` on lineth-docs).
 
 ## Partials + wrapper
 
@@ -53,7 +53,7 @@ removes that directory after validation. Run `generate` first when you want loca
 - Unresolvable defaults (e.g. cross-package consts) are left blank and listed in the ephemeral `report.json`.
 - Missing or dev-only descriptions (`TODO`, `not serialized`, …) are blanked and listed in the ephemeral `report.json`.
 
-## Validation and doc.linea publishing
+## Validation and lineth-docs publishing
 
 Workflow: `.github/workflows/prover-config-docs.yml`
 
@@ -61,10 +61,10 @@ Workflow: `.github/workflows/prover-config-docs.yml`
    Validation generates artifacts, checks fresh temporary output and wrapper completeness, runs unit tests and
    Prettier, then uploads `output/` for review.
 2. Relevant pushes to `main` validate and publish automatically. Publishing adds provenance, copies only
-   `output/_generated/prover/` to `docs/stack/reference/_generated/prover/`, enforces that no other doc.linea
+   `output/_generated/prover/` to `docs/reference/component-configuration/_generated/prover/`, enforces that no other lineth-docs
    path changed, and updates the stable `ci/prover-config-docs` pull-request branch.
 3. `workflow_dispatch` is the recovery path. Its `publish` input defaults to `false`; `publish=true` is accepted
    only from `main` or a `prover-*` tag.
 
-Publishing uses the `DOC_LINEA_PR_APP_ID` and `DOC_LINEA_PR_PRIVATE_KEY` repository secrets. Validation never
+Publishing uses the `LINETH_DOCS_PR_APP_ID` and `LINETH_DOCS_PR_PRIVATE_KEY` repository secrets. Validation never
 accesses those credentials.

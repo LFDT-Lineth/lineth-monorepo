@@ -1,7 +1,7 @@
 name: "Prover config docs"
 
 # Generates public-safe Prover configuration partials for review and publishes
-# only docs/stack/reference/_generated/prover/ to Consensys-Incorporated/doc.linea.
+# only docs/reference/component-configuration/_generated/prover/ to LFDT-Lineth/lineth-docs.
 
 permissions:
   contents: read
@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Prover config docs to Consensys-Incorporated/doc.linea"
+        description: "Publish generated Prover config docs to LFDT-Lineth/lineth-docs"
         required: false
         type: boolean
         default: false
@@ -145,28 +145,28 @@ jobs:
             echo ""
           } > "$OUT"
 
-      - name: Generate App token for Consensys-Incorporated/doc.linea
+      - name: Generate App token for LFDT-Lineth/lineth-docs
         id: app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ secrets.DOC_LINEA_PR_APP_ID }}
-          private-key: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}
-          owner: Consensys-Incorporated
+          app-id: ${{ secrets.LINETH_DOCS_PR_APP_ID }}
+          private-key: ${{ secrets.LINETH_DOCS_PR_PRIVATE_KEY }}
+          owner: LFDT-Lineth
           repositories: |
-            doc.linea
+            lineth-docs
 
-      - name: Checkout doc.linea
+      - name: Checkout lineth-docs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: Consensys-Incorporated/doc.linea
+          repository: LFDT-Lineth/lineth-docs
           token: ${{ steps.app-token.outputs.token }}
-          path: doc.linea
+          path: lineth-docs
 
       - name: Copy generated Prover partials
         run: |
           set -euo pipefail
           SRC="scripts/prover-options/output/_generated/prover"
-          DEST="doc.linea/docs/stack/reference/_generated/prover"
+          DEST="lineth-docs/docs/reference/component-configuration/_generated/prover"
           if [[ -z "$(find "$SRC" -type f -name '*.mdx' -print -quit)" ]]; then
             echo "Refusing to publish: no MDX partials under $SRC" >&2
             exit 1
@@ -175,32 +175,33 @@ jobs:
           mkdir -p "$DEST"
           cp -R "$SRC/." "$DEST/"
 
-      - name: Enforce doc.linea change boundary
+      - name: Enforce lineth-docs change boundary
         run: |
           set -euo pipefail
           mapfile -t CHANGED_PATHS < <(
             {
-              git -C doc.linea diff --name-only
-              git -C doc.linea ls-files --others --exclude-standard
+              git -C lineth-docs diff --name-only
+              git -C lineth-docs ls-files --others --exclude-standard
             } | sort -u
           )
           for CHANGED_PATH in "${CHANGED_PATHS[@]}"; do
             case "$CHANGED_PATH" in
-              docs/stack/reference/_generated/prover/*) ;;
+              docs/reference/component-configuration/_generated/prover/*) ;;
               *)
                 echo "::error::Refusing to publish changed path outside generated Prover docs: $CHANGED_PATH"
                 exit 1
                 ;;
             esac
           done
-          git -C doc.linea status --short
+          git -C lineth-docs status --short
 
-      - name: Create pull request on doc.linea
+      - name: Create pull request on lineth-docs
         uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
         with:
           token: ${{ steps.app-token.outputs.token }}
-          path: doc.linea
+          path: lineth-docs
           commit-message: "docs: update Linea prover config partials"
+          signoff: true
           branch: ci/prover-config-docs
           delete-branch: true
           base: main
@@ -208,7 +209,7 @@ jobs:
           body: |
             Auto-generated Linea prover TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/prover/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/prover/`.
             The human-owned wrapper `linea-prover-options.mdx` is intentionally untouched.
           add-paths: |
-            docs/stack/reference/_generated/prover/**
+            docs/reference/component-configuration/_generated/prover/**

@@ -2,10 +2,10 @@ name: "Maru config docs"
 
 # Generates the committed Maru config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/maru/ to Consensys-Incorporated/doc.linea.
+# docs/reference/component-configuration/_generated/maru/ to LFDT-Lineth/lineth-docs.
 #
 # Publishing is release-gated: automatic publishing fires only when a
-# `releases/maru/*` tag is cut, so doc.linea always reflects a released
+# `releases/maru/*` tag is cut, so lineth-docs always reflects a released
 # Maru version (not in-flight main changes). Pushes to main run validation
 # only. Manual dispatch with `publish: true` is available as an explicit override
 # (gated to main or a `releases/maru/*` tag).
@@ -13,7 +13,7 @@ name: "Maru config docs"
 # The reusable step bodies live in two composite actions under .github/actions/:
 #   - validate-config-docs: gradle check + generate, snapshot sync assertion,
 #     MDX partial validation, provenance writer, artifact upload.
-#   - publish-config-docs: artifact download, doc.linea checkout, atomic
+#   - publish-config-docs: artifact download, lineth-docs checkout, atomic
 #     namespace swap, boundary enforcement, PR creation.
 # Both are parameterized by component so Maru can consume them with different inputs.
 
@@ -49,13 +49,13 @@ on:
       - "maru/config/src/main/kotlin/maru/config/**"
       - "jvm-libs/linea/config-docs/**"
     # Automatic publishing fires only when a Maru release tag is cut, so docs on
-    # doc.linea always describe a released version (not in-flight main changes).
+    # lineth-docs always describe a released version (not in-flight main changes).
     tags:
       - "releases/maru/*"
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Maru config docs to Consensys-Incorporated/doc.linea"
+        description: "Publish generated Maru config docs to LFDT-Lineth/lineth-docs"
         required: false
         type: boolean
         default: false
@@ -127,10 +127,10 @@ jobs:
       - name: Checkout monorepo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Publish Maru config docs to doc.linea
+      - name: Publish Maru config docs to lineth-docs
         uses: ./.github/actions/publish-config-docs
         with:
-          docs-namespace: "docs/stack/reference/_generated/maru"
+          docs-namespace: "docs/reference/component-configuration/_generated/maru"
           artifact-name: "maru-config-docs-${{ github.sha }}"
           artifact-namespace: "_generated/maru"
           pr-branch: "ci/maru-config-docs"
@@ -139,8 +139,8 @@ jobs:
           pr-body: |
             Auto-generated Linea Maru TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
 
-            This PR updates **only** `docs/stack/reference/_generated/maru/`.
+            This PR updates **only** `docs/reference/component-configuration/_generated/maru/`.
             The shared `_generated/` root and human-owned wrapper are intentionally untouched.
         env:
-          DOC_LINEA_PR_APP_ID: ${{ secrets.DOC_LINEA_PR_APP_ID }}
-          DOC_LINEA_PR_PRIVATE_KEY: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}
+          LINETH_DOCS_PR_APP_ID: ${{ secrets.LINETH_DOCS_PR_APP_ID }}
+          LINETH_DOCS_PR_PRIVATE_KEY: ${{ secrets.LINETH_DOCS_PR_PRIVATE_KEY }}
