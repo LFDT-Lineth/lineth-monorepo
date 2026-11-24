@@ -3,6 +3,7 @@ package predecoding
 import (
 	"bytes"
 	"io"
+	"maps"
 	"math"
 	"reflect"
 	"testing"
@@ -1647,11 +1648,9 @@ func TestApplyOptions(t *testing.T) {
 	}
 }
 
-
 // ------------------------------------------------------------
 // Predecode
 // ------------------------------------------------------------
-
 
 // TestPredecode checks that Predecode applies its options to the cap
 // before predecoding: the default cap decodes the program, and a cap of zero
@@ -1681,6 +1680,67 @@ func TestPredecode(t *testing.T) {
 		if got.InstructionBase != 0x2000 || !bytes.Equal(got.Decoded, want.buf) {
 			t.Fatalf("%s: base=%#x decoded=%x, want base=0x2000 decoded=%x",
 				tt.name, got.InstructionBase, got.Decoded, want.buf)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// PrepareInputs
+// ------------------------------------------------------------
+
+// TestPrepareInputs checks that PrepareInputs returns the inputs of the explicit
+// pipeline: Load, Predecode, NewData with a length prefix, then EncodeInputs and
+// the decoded program inputs. An invalid ELF, a zero record cap, a nil option and
+// a failing sections writer are errors.
+func TestPrepareInputs(t *testing.T) {
+	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
+	inputData := []byte{0xaa, 0xbb}
+	tests := []struct {
+		name    string
+		elf     []byte
+		input   []byte
+		options []Option
+		wantErr bool
+	}{
+		{name: "default options", elf: elfBytes, input: inputData},
+		{name: "with executable", elf: elfBytes, input: inputData,
+			options: []Option{WithIncludeExecutable()}},
+		{name: "empty input", elf: elfBytes},
+		{name: "invalid ELF", elf: []byte("not an ELF"), input: inputData, wantErr: true},
+		{name: "zero record cap", elf: elfBytes, input: inputData,
+			options: []Option{WithMaxDecodedRecords(0)}, wantErr: true},
+		{name: "nil option", elf: elfBytes, input: inputData,
+			options: []Option{nil}, wantErr: true},
+		{name: "sections writer fails", elf: elfBytes, input: inputData,
+			options: []Option{WithSectionsWriter(errWriter{})}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := PrepareInputs(tt.elf, tt.input, tt.options...)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr {
+			continue
+		}
+		program, err := Load(bytes.NewReader(tt.elf))
+		if err != nil {
+			t.Fatalf("%s: Load() error = %v", tt.name, err)
+		}
+		decoded, err := Predecode(program, tt.options...)
+		if err != nil {
+			t.Fatalf("%s: Predecode() error = %v", tt.name, err)
+		}
+		inputBlobs, err := NewData(DefaultInputOrigin, tt.input, WithLengthPrefix())
+		if err != nil {
+			t.Fatalf("%s: NewData() error = %v", tt.name, err)
+		}
+		want, err := EncodeInputs(program, inputBlobs, tt.options...)
+		if err != nil {
+			t.Fatalf("%s: EncodeInputs() error = %v", tt.name, err)
+		}
+		maps.Copy(want, decoded.EncodeInputs())
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s: inputs differ from the explicit pipeline", tt.name)
 		}
 	}
 }
