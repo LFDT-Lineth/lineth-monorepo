@@ -8,8 +8,8 @@ const accelerators = @import("zkvm_accelerators");
 pub const Hash = [32]u8;
 
 pub const Error = error{
-    /// `boundary_prev` is absent or does not open the parent hash.
-    BoundaryPreimageMismatch,
+    /// `parent_blob` is absent or does not open the parent hash.
+    ParentBlobDataRollingHashMismatch,
 };
 
 /// One fold step.
@@ -22,20 +22,20 @@ pub fn next(parent: Hash, chunk_hash: Hash) Hash {
     return out;
 }
 
-/// The hash after folding `chunk_hashes` onto `parent`. A positive `parent_data_tail_take_bytes`
-/// starts the range inside the first chunk, which `parent` already includes: `boundary_prev` must
+/// The hash after folding `chunk_hashes` onto `parent`. A positive `parent_shared_blob_carry_over_tail_bytes`
+/// starts the range inside the first chunk, which `parent` already includes: `parent_blob` must
 /// then open `parent` as the hash before that chunk, and the fold resumes at the second chunk.
 pub fn fold(
     parent: Hash,
     chunk_hashes: []const Hash,
-    parent_data_tail_take_bytes: usize,
-    boundary_prev: ?Hash,
+    parent_shared_blob_carry_over_tail_bytes: usize,
+    parent_blob: ?Hash,
 ) Error!Hash {
     var unfolded = chunk_hashes;
-    if (parent_data_tail_take_bytes > 0) {
-        const previous = boundary_prev orelse return error.BoundaryPreimageMismatch;
+    if (parent_shared_blob_carry_over_tail_bytes > 0) {
+        const previous = parent_blob orelse return error.ParentBlobDataRollingHashMismatch;
         if (chunk_hashes.len == 0 or !std.mem.eql(u8, &next(previous, chunk_hashes[0]), &parent)) {
-            return error.BoundaryPreimageMismatch;
+            return error.ParentBlobDataRollingHashMismatch;
         }
         unfolded = chunk_hashes[1..];
     }

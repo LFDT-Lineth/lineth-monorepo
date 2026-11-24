@@ -308,6 +308,28 @@ func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
 	}
 }
 
+// buildRollupInput assembles the ssz.RollupInput from a decoded rollup request.
+func buildRollupInput(req *RollupRequest) ssz.RollupInput {
+	proofs := make([]ssz.L2ExecutionProof, len(req.L2ExecutionProofs))
+	for i, p := range req.L2ExecutionProofs {
+		proofs[i] = ssz.L2ExecutionProof{
+			PublicInputs:     ssz.L2ExecutionPublicInputs(p.PublicInputs),
+			StartBlockNumber: p.StartBlockNumber,
+			Proof:            p.Proof,
+			ProgramVk:        [32]byte(p.ProgramVk),
+		}
+	}
+	return ssz.RollupInput{
+		ParentDataRollingHash:              req.ParentDataRollingHash,
+		ParentSharedBlobCarryOverTailBytes: req.ParentSharedBlobCarryOverTailBytes,
+		ChainID:                            req.ChainID,
+		Conflations:                        req.Conflations,
+		Chunks:                             req.Chunks,
+		L2ExecutionProofs:                  proofs,
+		ParentBlobDataRollingHash:          req.ParentBlobDataRollingHash,
+	}
+}
+
 // proverFailure maps a non-OK prover result to a failed run. A guestProgramId
 // with no guest ELF is a bad request; any other failure is internal.
 func proverFailure(id string, result backend.Result) RunResult {

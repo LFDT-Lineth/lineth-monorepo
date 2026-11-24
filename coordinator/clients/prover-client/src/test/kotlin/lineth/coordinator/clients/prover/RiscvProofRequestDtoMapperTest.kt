@@ -148,7 +148,7 @@ class RiscvProofRequestDtoMapperTest {
       l2Executions = l2Executions,
       chunks = chunks,
       parentDataRollingHash = ByteArray(32) { 0x1c },
-      parentDataTailTakeBytes = 0,
+      parentSharedBlobCarryOverTailBytes = 0,
     )
     val l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
 
@@ -190,7 +190,7 @@ class RiscvProofRequestDtoMapperTest {
             )
           },
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-          parentDataTailTakeBytes = 0,
+          parentSharedBlobCarryOverTailBytes = 0,
         ),
         metadata = MetaDataDto(
           startBlockNumber = 1000501,
@@ -209,7 +209,7 @@ class RiscvProofRequestDtoMapperTest {
       l2Executions = listOf(proofIndex),
       chunks = listOf(RiscvProverClientTestFixtures.blobChunkWitness()),
       parentDataRollingHash = ByteArray(32),
-      parentDataTailTakeBytes = 0,
+      parentSharedBlobCarryOverTailBytes = 0,
     )
     val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 

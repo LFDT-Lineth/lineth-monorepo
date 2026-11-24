@@ -250,14 +250,9 @@ test "a Go-encoded honest proof image verifies against the real riscv system" {
 
 // ── Failing fixtures: tampering the real proof's column manifest ─────────────
 //
-// The manifest rejection paths (InvalidAliasTarget, BatchFullyElided,
-// ElidedZeroClaimNonZero, AliasClaimMismatch, AliasShiftNotInTarget) are
-// exercised as unit tests on the hand-built `manifest_system` in
-// pcs_test.zig. Those drive `reconstructWithManifest` / `buildEntryClaims`
-// against a stubbed cell source, so they never touch the real RISC-V system's
-// transcript replay, the codegen-emitted `BatchManifest.cell_start/.col_start`
-// offsets, or a real proof. The honest fixture above covers the accepting path
-// with real elision; the two tests below close the failing side: each loads a
+// The honest fixture above covers the manifest's accepting path with real
+// elision; the two tests below cover the failing side on the real RISC-V
+// system's transcript replay and codegen-emitted manifest offsets: each loads a
 // FRESH private mapping of the honest image (fixture bytes on disk stay
 // pristine), tampers one transcript cell of the real proof, and requires
 // verification to fail.
@@ -347,9 +342,8 @@ test "riscv image: a zero-elided column's claim cell is pinned (ElidedZeroClaimN
     // claim cell that reaches the PCS layer dishonestly — i.e. one that is
     // NOT the value Fiat-Shamir absorbed. Build exactly that: clone the one
     // round carrying the cell, leaving the transcript-replayed original
-    // (rounds passed to `verify` below are the honest image's) untouched. This
-    // is the aliasing gap pcs_test.zig's "equality binding" comment documents:
-    // the deduped/skipped claim slots must be equality-bound to the
+    // (rounds passed to `verify` below are the honest image's) untouched. The
+    // deduped/skipped claim slots must be equality-bound to the
     // authenticated one, or a prover smuggles a different value through them.
     // Clone the one bound round carrying the cell and tamper the clone,
     // leaving the transcript-replayed honest value untouched: this models a

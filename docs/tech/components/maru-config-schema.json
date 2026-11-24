@@ -73,11 +73,11 @@
         "replacement": null
       },
       "defaults.l2-eth-endpoint.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -133,11 +133,11 @@
         "replacement": null
       },
       "fork-transition.l2-eth-api-endpoint.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -213,11 +213,11 @@
         "replacement": null
       },
       "linea.l1-eth-api-endpoint.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -243,11 +243,11 @@
         "replacement": "linea.l1-eth-api-endpoint"
       },
       "linea.l1-eth-api.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": true,
         "replacement": "linea.l1-eth-api-endpoint"
@@ -303,11 +303,11 @@
         "replacement": null
       },
       "linea.l2-eth-api-endpoint.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -793,11 +793,11 @@
         "replacement": null
       },
       "payload-validator.engine-api-endpoint.timeout": {
-        "type": "Duration",
+        "type": "Duration?",
         "section": false,
         "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
+        "default": null,
+        "description": "Overall timeout for every request to this endpoint, whether longer or shorter than the per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and engine_forkchoiceUpdated, 1s for other methods.",
         "example": null,
         "deprecated": false,
         "replacement": null

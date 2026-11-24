@@ -29,8 +29,8 @@ type rollupResponsePublicInputs struct {
 	EndDataRollingHash                    string   `json:"endDataRollingHash"`
 	ParentBlockHash                       string   `json:"parentBlockHash"`
 	EndBlockHash                          string   `json:"endBlockHash"`
-	ParentDataTailTakeBytes               uint64   `json:"parentDataTailTakeBytes"`
-	FinalDataTailDiscardBytes             uint64   `json:"finalDataTailDiscardBytes"`
+	ParentSharedBlobCarryOverTailBytes    uint64   `json:"parentSharedBlobCarryOverTailBytes"`
+	FinalSharedBlobCarryOverTailBytes     uint64   `json:"finalSharedBlobCarryOverTailBytes"`
 	FilteredAddresses                     []string `json:"filteredAddresses"`
 	ProgramVks                            []string `json:"programVks"`
 	BlockCount                            uint64   `json:"blockCount"`

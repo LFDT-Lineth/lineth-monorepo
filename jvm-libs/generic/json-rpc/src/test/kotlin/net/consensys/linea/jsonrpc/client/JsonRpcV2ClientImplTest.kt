@@ -19,6 +19,7 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
+import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.decodeHex
 import linea.s11n.jackson.ByteArrayToHexSerializer
 import linea.s11n.jackson.ULongToHexSerializer
@@ -32,6 +33,7 @@ import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,11 +42,13 @@ import java.net.ConnectException
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class JsonRpcV2ClientImplTest {
   private lateinit var vertx: Vertx
@@ -627,6 +631,68 @@ class JsonRpcV2ClientImplTest {
           "some_result",
         ),
       )
+    }
+  }
+
+  @Test
+  fun `factory applies per-request headers and per-method timeout`() {
+    val server = TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true)
+    server.handle("fastMethod") { "OK" }
+    server.handle("slowMethod") { "OK" }
+    server.delayResponses("slowMethod", 2.seconds)
+    val client = factory.createJsonRpcV2Client(
+      endpoints = listOf(server.httpEndpoint.toURI()),
+      retryConfig = defaultRetryConfig,
+      shallRetryRequestsClientBasePredicate = Predicate { false },
+      requestHeadersProvider = { mapOf("Authorization" to "Bearer abc") },
+      methodTimeoutOverrideProvider = { method -> if (method == "slowMethod") 200.milliseconds else null },
+    )
+
+    assertThat(client.makeRequest(method = "fastMethod", params = emptyList<Any>(), resultMapper = { it }).get())
+      .isEqualTo("OK")
+    assertThat(server.recordedRequestsHeaders().single()["Authorization"]).isEqualTo("Bearer abc")
+
+    assertThatThrownBy {
+      client.makeRequest(method = "slowMethod", params = emptyList<Any>(), resultMapper = { it }).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .cause()
+      .isInstanceOf(TimeoutException::class.java)
+      .hasMessageContaining("method=slowMethod")
+  }
+
+  @Test
+  fun `close fails in-flight requests of a single endpoint client`() {
+    assertCloseFailsInFlightRequests(serverCount = 1)
+  }
+
+  @Test
+  fun `close fails in-flight requests of a load-balanced client`() {
+    assertCloseFailsInFlightRequests(serverCount = 2)
+  }
+
+  private fun assertCloseFailsInFlightRequests(serverCount: Int) {
+    val servers = List(serverCount) {
+      TestingJsonRpcServer(vertx = vertx, recordRequestsResponses = true).apply {
+        handle("slowMethod") { "OK" }
+        delayResponses("slowMethod", 10.seconds)
+      }
+    }
+    val client = factory.createJsonRpcV2Client(
+      endpoints = servers.map { it.httpEndpoint.toURI() },
+      maxInflightRequestsPerClient = if (serverCount > 1) 1u else null,
+      retryConfig = defaultRetryConfig,
+      shallRetryRequestsClientBasePredicate = Predicate { false },
+    )
+
+    val inFlightRequests = List(serverCount) {
+      client.makeRequest(method = "slowMethod", params = emptyList<Any>(), resultMapper = { it })
+    }
+    await().atMost(5.seconds.toJavaDuration()).until { servers.all { it.recordedRequests().isNotEmpty() } }
+    client.close().get()
+
+    inFlightRequests.forEach { request ->
+      assertThatThrownBy { request.get() }.isInstanceOf(ExecutionException::class.java)
     }
   }
 

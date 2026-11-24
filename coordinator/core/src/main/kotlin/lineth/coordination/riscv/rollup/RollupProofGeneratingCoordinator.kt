@@ -313,9 +313,9 @@ class RollupProofGeneratingCoordinator(
       parentDataRollingHash = chunkedData.parentDataRollingHash,
       dataRollingHash = chunkedData.dataRollingHash,
       // Every proof window closes its own last chunk, so no bytes are shared with the next window.
-      parentDataTailTakeBytes = 0u,
-      boundaryPrevDataRollingHash = null,
-      finalDataTailDiscardBytes = 0u,
+      parentSharedBlobCarryOverTailBytes = 0u,
+      parentBlobDataRollingHash = null,
+      finalSharedBlobCarryOverTailBytes = 0u,
       startBlockTimestamp = windowPending.first().startBlockTimestamp,
       endBlockTimestamp = windowPending.last().endBlockTimestamp,
       totalBatchesCount = windowPending.size,
@@ -344,9 +344,9 @@ class RollupProofGeneratingCoordinator(
         )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
-      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
+      // Proof windows always start at a chunk boundary; the guest derives finalSharedBlobCarryOverTailBytes itself.
+      parentSharedBlobCarryOverTailBytes = 0,
+      parentBlobDataRollingHash = null,
     )
   }
 }

@@ -172,8 +172,8 @@ class RollupProofGeneratingCoordinatorTest {
     val request = rollupProverClient.requests.first()
     assertThat(request.startBlockNumber).isEqualTo(1UL)
     assertThat(request.endBlockNumber).isEqualTo(6UL)
-    assertThat(request.parentDataTailTakeBytes).isEqualTo(0)
-    assertThat(request.boundaryPrevDataRollingHash).isNull()
+    assertThat(request.parentSharedBlobCarryOverTailBytes).isEqualTo(0)
+    assertThat(request.parentBlobDataRollingHash).isNull()
     assertThat(request.chunks).hasSize(1)
     val chunk = request.chunks.first()
     assertThat(chunk.chunkHash).isEqualTo(fakeChunkHash)
@@ -215,9 +215,9 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(context.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     // fold(genesisDataRollingHash, fakeChunkHash) = fakeChunkHash.copyOf(32) per our calculator
     assertThat(context.dataRollingHash).isEqualTo(fakeChunkHash.copyOf(32))
-    assertThat(context.finalDataTailDiscardBytes).isEqualTo(0u)
-    assertThat(context.parentDataTailTakeBytes).isEqualTo(0u)
-    assertThat(context.boundaryPrevDataRollingHash).isNull()
+    assertThat(context.finalSharedBlobCarryOverTailBytes).isEqualTo(0u)
+    assertThat(context.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
+    assertThat(context.parentBlobDataRollingHash).isNull()
     assertThat(context.blobsData.single().prevDataRollingHash).isEqualTo(genesisDataRollingHash)
     assertThat(context.blobsData.single().dataRollingHash).isEqualTo(context.dataRollingHash)
     assertThat(context.startBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(12))
@@ -267,7 +267,7 @@ class RollupProofGeneratingCoordinatorTest {
     // One full chunk sealed, no partial
     assertThat(request.chunks).hasSize(1)
     assertThat(handledProofs).hasSize(1)
-    assertThat(handledProofs.first().second.finalDataTailDiscardBytes).isEqualTo(0u)
+    assertThat(handledProofs.first().second.finalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
   @Test

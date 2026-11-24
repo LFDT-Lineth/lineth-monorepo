@@ -23,8 +23,8 @@ fun createBlobData(
 
 /**
  * Creates a record whose blobs chain by rolling hash. By default it has one fresh blob from [parentDataRollingHash] to
- * [dataRollingHash]; with [parentDataTailTakeBytes] > 0 that blob is the shared one, from
- * [boundaryPrevDataRollingHash] to [parentDataRollingHash], and a second blob follows it up to [dataRollingHash].
+ * [dataRollingHash]; with [parentSharedBlobCarryOverTailBytes] > 0 that blob is the shared one, from
+ * [parentBlobDataRollingHash] to [parentDataRollingHash], and a second blob follows it up to [dataRollingHash].
  */
 fun createBlobRecordV2(
   startBlockNumber: ULong,
@@ -34,12 +34,12 @@ fun createBlobRecordV2(
   parentDataRollingHash: ByteArray = Random.nextBytes(32),
   dataRollingHash: ByteArray = Random.nextBytes(32),
   totalBatchesCount: UInt = 1U,
-  parentDataTailTakeBytes: UInt = 0u,
-  boundaryPrevDataRollingHash: ByteArray? = if (parentDataTailTakeBytes > 0u) Random.nextBytes(32) else null,
-  finalDataTailDiscardBytes: UInt = 0u,
-  blobsData: List<BlobData> = if (boundaryPrevDataRollingHash != null) {
+  parentSharedBlobCarryOverTailBytes: UInt = 0u,
+  parentBlobDataRollingHash: ByteArray? = if (parentSharedBlobCarryOverTailBytes > 0u) Random.nextBytes(32) else null,
+  finalSharedBlobCarryOverTailBytes: UInt = 0u,
+  blobsData: List<BlobData> = if (parentBlobDataRollingHash != null) {
     listOf(
-      createBlobData(prevDataRollingHash = boundaryPrevDataRollingHash, dataRollingHash = parentDataRollingHash),
+      createBlobData(prevDataRollingHash = parentBlobDataRollingHash, dataRollingHash = parentDataRollingHash),
       createBlobData(prevDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash),
     )
   } else {
@@ -61,8 +61,8 @@ fun createBlobRecordV2(
     totalBatchesCount = totalBatchesCount,
     blobsData = blobsData,
     proofHash = proofHash,
-    parentDataTailTakeBytes = parentDataTailTakeBytes,
-    boundaryPrevDataRollingHash = boundaryPrevDataRollingHash,
-    finalDataTailDiscardBytes = finalDataTailDiscardBytes,
+    parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
+    parentBlobDataRollingHash = parentBlobDataRollingHash,
+    finalSharedBlobCarryOverTailBytes = finalSharedBlobCarryOverTailBytes,
   )
 }
