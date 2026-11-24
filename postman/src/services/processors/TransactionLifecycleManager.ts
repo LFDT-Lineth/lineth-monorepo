@@ -51,7 +51,12 @@ export class TransactionLifecycleManager implements ITransactionLifecycleManager
       });
 
       const retryCreationDate = new Date();
-      const tx = await this.transactionRetrier.retryWithHigherFee(message.claimTxHash!, attempt);
+      const tx = await this.transactionRetrier.retryWithHigherFee(message.claimTxHash!, attempt).catch(async (e) => {
+        // Bump not submitted (e.g. replacement underpriced at the fee cap): count it so the cancel path is reached.
+        message.edit({ claimNumberOfRetry: attempt });
+        await this.messageRepository.updateMessage(message);
+        throw e;
+      });
 
       message.edit({
         claimTxCreationDate: retryCreationDate,
@@ -123,7 +128,14 @@ export class TransactionLifecycleManager implements ITransactionLifecycleManager
           message.claimTxMaxFeePerGas && message.claimTxMaxPriorityFeePerGas
             ? { maxFeePerGas: message.claimTxMaxFeePerGas, maxPriorityFeePerGas: message.claimTxMaxPriorityFeePerGas }
             : undefined;
-        const cancelTxHash = await this.transactionRetrier.cancelTransaction(message.claimTxNonce, stuckFees);
+        const cancelTxHash = await this.transactionRetrier
+          .cancelTransaction(message.claimTxNonce, stuckFees)
+          .catch(async (e) => {
+            // Cancel not submitted: count the cycle so maxCycles still ends in NEEDS_MANUAL_INTERVENTION.
+            message.edit({ claimCycleCount: message.claimCycleCount + 1 });
+            await this.messageRepository.updateMessage(message);
+            throw e;
+          });
         // Wait for the cancel tx to be mined before resetting, otherwise the anchoring
         // processor can re-queue the message while the cancel is still in flight.
         await this.receiptPoller.poll(

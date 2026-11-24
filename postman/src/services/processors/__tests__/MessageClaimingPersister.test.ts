@@ -239,8 +239,8 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
-      expect(messageRepositoryUpdateSpy).toHaveBeenCalledTimes(1);
-      expect(messageRepositoryUpdateSpy).toHaveBeenCalledWith(expect.objectContaining({ claimNumberOfRetry: 1 }));
+      // Claimed on-chain, receipt not in yet: wait, do not burn a retry.
+      expect(messageRepositoryUpdateSpy).toHaveBeenCalledTimes(0);
     });
 
     it("Should bump fee and update DB when message is claimable and retry tx succeeds", async () => {
@@ -473,10 +473,8 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
-      expect(messageRepositoryUpdateSpy).toHaveBeenCalledTimes(1);
-      expect(messageRepositoryUpdateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ claimCycleCount: 1, status: MessageStatus.PENDING }),
-      );
+      // Claimed on-chain, receipt not in yet: wait, do not burn a cycle.
+      expect(messageRepositoryUpdateSpy).not.toHaveBeenCalled();
     });
 
     it("Should skip cancelTransaction when claimTxNonce is undefined", async () => {
@@ -522,8 +520,8 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
-      expect(databaseService.updateMessage).toHaveBeenCalledTimes(1);
-      expect(databaseService.updateMessage).toHaveBeenCalledWith(expect.objectContaining({ claimCycleCount: 1 }));
+      // RPC error before any cancel was sent: retried next poll, not counted.
+      expect(databaseService.updateMessage).not.toHaveBeenCalled();
     });
 
     it("Should return early when receipt is null and message has not exceeded submission timeout", async () => {

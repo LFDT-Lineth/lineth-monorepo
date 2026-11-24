@@ -65,28 +65,15 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       this.logger.warn("Retrying to claim message.", { messageHash: firstPendingMessage.messageHash });
 
       if (firstPendingMessage.claimNumberOfRetry >= this.config.maxBumpsPerCycle) {
-        const cycleCount = firstPendingMessage.claimCycleCount;
         const cancelReceipt = await this.transactionLifecycleManager.cancelAndResetMessage(firstPendingMessage);
         if (cancelReceipt) {
           await this.receiptStatusResolver.resolveReceiptStatus(firstPendingMessage, cancelReceipt, new Date());
-        } else if (firstPendingMessage.claimCycleCount === cycleCount) {
-          // Cancel failed before reset: count the cycle anyway so maxCycles still ends in NEEDS_MANUAL_INTERVENTION.
-          firstPendingMessage.edit({ claimCycleCount: cycleCount + 1 });
-          await this.messageRepository.updateMessage(firstPendingMessage);
         }
         return;
       }
 
-      const attempt = firstPendingMessage.claimNumberOfRetry;
       const retryReceipt = await this.transactionLifecycleManager.retryWithBump(firstPendingMessage);
-      if (!retryReceipt) {
-        if (firstPendingMessage.claimNumberOfRetry === attempt) {
-          // Bump was never submitted (e.g. fees already at cap): count it so the cancel path is reached.
-          firstPendingMessage.edit({ claimNumberOfRetry: attempt + 1 });
-          await this.messageRepository.updateMessage(firstPendingMessage);
-        }
-        return;
-      }
+      if (!retryReceipt) return;
 
       this.logger.warn("Retried claim message transaction succeed.", {
         messageHash: firstPendingMessage.messageHash,
