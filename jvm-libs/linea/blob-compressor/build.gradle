@@ -17,6 +17,7 @@ dependencies {
   testImplementation project(":jvm-libs:linea:blob-shnarf-calculator")
   testImplementation project(":jvm-libs:generic:extensions:kotlin")
   testImplementation(testFixtures(project(':jvm-libs:linea:core:da-interfaces')))
+  testImplementation platform("io.vertx:vertx-stack-depchain:${libs.versions.vertx.get()}")
   testImplementation "io.vertx:vertx-core"
   testFixturesImplementation project(':jvm-libs:linea:besu-libs')
   testFixturesImplementation project(':jvm-libs:linea:besu-rlp-and-mappers')
