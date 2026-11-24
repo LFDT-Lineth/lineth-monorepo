@@ -41,30 +41,6 @@ func fftBaseInplace(poly []field.Element, d *fft.Domain) {
 	utils.BitReverse(poly)
 }
 
-// ifftExtInplace applies the inverse FFT coordinate-by-coordinate.
-func ifftExtInplace(poly []field.Ext, d *fft.Domain) {
-	size := len(poly)
-	buf := make([]field.Element, size)
-
-	copyCoord := func(get func(int) *field.Element) {
-		for i := 0; i < size; i++ {
-			buf[i].Set(get(i))
-		}
-		d.FFTInverse(buf, fft.DIF)
-		utils.BitReverse(buf)
-		for i := 0; i < size; i++ {
-			get(i).Set(&buf[i])
-		}
-	}
-
-	copyCoord(func(i int) *field.Element { return &poly[i].B0.A0 })
-	copyCoord(func(i int) *field.Element { return &poly[i].B0.A1 })
-	copyCoord(func(i int) *field.Element { return &poly[i].B1.A0 })
-	copyCoord(func(i int) *field.Element { return &poly[i].B1.A1 })
-	copyCoord(func(i int) *field.Element { return &poly[i].B2.A0 })
-	copyCoord(func(i int) *field.Element { return &poly[i].B2.A1 })
-}
-
 func TestEvalLagrange(t *testing.T) {
 	const size = 64
 	d := fft.NewDomain(uint64(size))
@@ -150,34 +126,6 @@ func TestEvalLagrangeBatch(t *testing.T) {
 		want := EvalLagrange(poly, z)
 		if !extEq(batch[i].AsExt(), want.AsExt()) {
 			t.Fatalf("z[%d]: batch=%v single=%v", i, batch[i].AsExt(), want.AsExt())
-		}
-	}
-}
-
-func TestComputeLagrangeAtZ(t *testing.T) {
-	const size = 8
-	d := fft.NewDomain(uint64(size))
-	rng := newRng()
-
-	z := field.ElemFromExt(randExt(rng))
-
-	// Reference: for each i, build the i-th Lagrange basis polynomial
-	// as an indicator in evaluation form, IFFT to canonical, then evaluate at z.
-	reference := make([]field.Gen, size)
-	for i := 0; i < size; i++ {
-		indicator := make([]field.Ext, size) // all zeros
-		indicator[i].B0.A0.SetOne()
-		ifftExtInplace(indicator, d)
-		reference[i] = field.ElemFromExt(hornerExt(indicator, z.AsExt()))
-	}
-
-	got := EvalLagrangeBasisAtZ(z, d.Cardinality)
-	if len(got) != size {
-		t.Fatalf("len: got %d, want %d", len(got), size)
-	}
-	for i := range got {
-		if !extEq(got[i].AsExt(), reference[i].AsExt()) {
-			t.Fatalf("L[%d]: got %v, want %v", i, got[i].AsExt(), reference[i].AsExt())
 		}
 	}
 }

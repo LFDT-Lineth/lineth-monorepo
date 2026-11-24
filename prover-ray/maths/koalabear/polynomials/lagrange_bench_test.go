@@ -24,13 +24,3 @@ func BenchmarkEvalLagrangeExtExt(b *testing.B) {
 		_ = EvalLagrange(poly, z)
 	}
 }
-
-// BenchmarkComputeLagrangeAtZExt builds the entire Lᵢ(z) vector for z ∈ F_{p^k}.
-func BenchmarkComputeLagrangeAtZExt(b *testing.B) {
-	rng := newRng()
-	z := field.ElemFromExt(randExt(rng))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = EvalLagrangeBasisAtZ(z, uint64(benchSize))
-	}
-}

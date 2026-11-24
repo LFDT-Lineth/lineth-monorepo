@@ -7,6 +7,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
 // LagrangeEval is a [Query] that evaluates a batch of polynomials at a single
@@ -223,25 +225,23 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 	}
 	parallel.ExecuteDynamic(len(weightChunks), func(c int) {
 		var (
-			it           = weightChunks[c]
-			d            = domains[it.owner]
-			w            = weights[it.owner][it.start:it.end]
-			gen          = field.RootOfUnityBy(d.n)
-			first, omega field.Element
+			it  = weightChunks[c]
+			d   = domains[it.owner]
+			w   = weights[it.owner][it.start:it.end]
+			gen = field.RootOfUnityBy(d.n)
+			om  = koalabear.Vector(field.BasePool.Get(len(w)))
 		)
-		first.ExpInt64(gen, int64(it.start))
-		omega = first
-		for j := range w {
-			w[j] = d.z
-			w[j].B0.A0.Sub(&w[j].B0.A0, &omega) // z' - ω^j
-			omega.Mul(&omega, &gen)
+		// om[j] = ω^(start+j) is a running product; the rest are kernels:
+		// w[j] = ω^j / (z' - ω^j).
+		om[0].ExpInt64(gen, int64(it.start))
+		for j := 1; j < len(om); j++ {
+			om[j].Mul(&om[j-1], &gen)
 		}
+		wv := extensions.VectorE6(w)
+		wv.ScalarSubFromBase(&d.z, om)
 		field.BatchInvertExtInto(w, w)
-		omega = first
-		for j := range w {
-			w[j].MulByElement(&w[j], &omega)
-			omega.Mul(&omega, &gen)
-		}
+		wv.MulByElement(wv, om)
+		field.BasePool.Put(om)
 	})
 
 	// Inner products, tallest polynomials first, one partial sum per chunk.
@@ -256,20 +256,21 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 	sums := make([]field.Ext, len(parts))
 	parallel.ExecuteDynamic(len(parts), func(p int) {
 		var (
-			it        = parts[p]
-			t         = &terms[it.owner]
-			w         = weights[t.domain]
-			lo, hi    = t.dataStart, t.dataStart + t.data.Len()
-			ds, de    = max(it.start, lo), min(it.end, hi)
-			acc, term field.Ext
+			it     = parts[p]
+			t      = &terms[it.owner]
+			w      = weights[t.domain]
+			lo, hi = t.dataStart, t.dataStart + t.data.Len()
+			ds, de = max(it.start, lo), min(it.end, hi)
+			acc    field.Ext
 		)
 		if !t.pad.IsZero() {
 			var padAcc field.Ext
-			for j := it.start; j < min(it.end, lo); j++ {
-				padAcc.Add(&padAcc, &w[j])
+			if e := min(it.end, lo); it.start < e {
+				padAcc = extensions.VectorE6(w[it.start:e]).Sum()
 			}
-			for j := max(it.start, hi); j < it.end; j++ {
-				padAcc.Add(&padAcc, &w[j])
+			if s := max(it.start, hi); s < it.end {
+				tail := extensions.VectorE6(w[s:it.end]).Sum()
+				padAcc.Add(&padAcc, &tail)
 			}
 			acc.MulByElement(&padAcc, &t.pad)
 		}
@@ -278,11 +279,8 @@ func (le *LagrangeEval) evalPolynomialsShared(rt *Runtime, z field.Ext) []field.
 			return
 		}
 		if t.data.IsBase() {
-			data := t.data.AsBase()
-			for j := ds; j < de; j++ {
-				term.MulByElement(&w[j], &data[j-lo])
-				acc.Add(&acc, &term)
-			}
+			inner := extensions.VectorE6(w[ds:de]).InnerProductByElement(t.data.AsBase()[ds-lo : de-lo])
+			acc.Add(&acc, &inner)
 		} else {
 			data := t.data.AsExt()
 			inner := field.VecInnerProdExtExt(w[ds:de], data[ds-lo:de-lo])
@@ -475,105 +473,57 @@ func evalLagrangePadded(cv *ConcreteVector, m *Module, rt *Runtime, z field.Elem
 		dataStart = n - plainLen
 	}
 
+	// k[i] = ωⁱ/(z - ωⁱ), so that P(z) = (zⁿ - 1)/n · (Σ_data k[i]·p[i] + pad·Σ_padding k[i]).
+	k := lagrangeKernel(n, z, gen)
+	var padSum field.Element
+	if dataStart > 0 {
+		padSum = k[:dataStart].Sum()
+	}
+	if end := dataStart + plainLen; end < n {
+		tail := k[end:].Sum()
+		padSum.Add(&padSum, &tail)
+	}
+	padSum.Mul(&padSum, &cv.Padding)
+	scale := zPowNMinusOneOverN(n, z)
+	dk := k[dataStart : dataStart+plainLen]
+
 	if data.IsBase() {
-		return field.ElemFromBase(
-			evalLagrangePaddedBaseBase(n, data.AsBase(), cv.Padding, z, gen, dataStart, plainLen),
-		)
+		sum := dk.InnerProduct(data.AsBase())
+		sum.Add(&sum, &padSum)
+		sum.Mul(&sum, &scale)
+		return field.ElemFromBase(sum)
 	}
-	return field.ElemFromExt(
-		evalLagrangePaddedExtBase(n, data.AsExt(), cv.Padding, z, gen, dataStart, plainLen),
-	)
+	sum := extensions.VectorE6(data.AsExt()).InnerProductByElement(dk)
+	sum.B0.A0.Add(&sum.B0.A0, &padSum)
+	sum.MulByElement(&sum, &scale)
+	return field.ElemFromExt(sum)
 }
 
-// evalLagrangePaddedBaseBase: data in 𝔽_p (partial), padding in 𝔽_p, z in 𝔽_p → result in 𝔽_p.
-func evalLagrangePaddedBaseBase(n int, data []field.Element, pad field.Element,
-	z, gen field.Element, dataStart, plainLen int) field.Element {
-
-	tb := bits.TrailingZeros(uint(n))
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
+// lagrangeKernel returns k[i] = ωⁱ/(z - ωⁱ) for i < n, ω generating the
+// n-point subgroup. Only the ωⁱ table is a scalar loop (a running product).
+func lagrangeKernel(n int, z, gen field.Element) koalabear.Vector {
+	om := koalabear.Vector(make([]field.Element, n))
+	om[0].SetOne()
+	for i := 1; i < n; i++ {
+		om[i].Mul(&om[i-1], &gen)
 	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	weightedP := make([]field.Element, n)
-	denom := make([]field.Element, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		if j := i - dataStart; j >= 0 && j < plainLen {
-			weightedP[i].Mul(&wi, &data[j])
-		} else {
-			weightedP[i].Mul(&wi, &pad)
-		}
-		denom[i].Sub(&z, &accOmega)
-		accOmega.Mul(&accOmega, &gen)
-	}
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Element
-	for i := 0; i < n; i++ {
-		var term field.Element
-		term.Mul(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-	var result field.Element
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+	k := koalabear.Vector(make([]field.Element, n))
+	k.ScalarSubFrom(&z, om)
+	field.VecBatchInvBase(k, k)
+	k.Mul(k, om)
+	return k
 }
 
-// evalLagrangePaddedExtBase: data in 𝔽_{p^6}, padding in 𝔽_p, z in 𝔽_p → result in 𝔽_{p^6}.
-func evalLagrangePaddedExtBase(n int, data []field.Ext, pad field.Element,
-	z, gen field.Element, dataStart, plainLen int) field.Ext {
-
-	tb := bits.TrailingZeros(uint(n))
-	var invN field.Element
+// zPowNMinusOneOverN returns (zⁿ - 1)/n for n a power of two.
+func zPowNMinusOneOverN(n int, z field.Element) field.Element {
+	for range bits.TrailingZeros(uint(n)) {
+		z.Square(&z)
+	}
+	var one, invN field.Element
+	one.SetOne()
+	z.Sub(&z, &one)
 	invN.SetUint64(uint64(n))
 	invN.Inverse(&invN)
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	weightedP := make([]field.Ext, n)
-	denom := make([]field.Element, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		if j := i - dataStart; j >= 0 && j < plainLen {
-			weightedP[i].MulByElement(&data[j], &wi)
-		} else {
-			// Padding value is base-field; lift to 𝔽_{p^6}.
-			var padWeighted field.Element
-			padWeighted.Mul(&wi, &pad)
-			weightedP[i] = field.Lift(padWeighted)
-		}
-		denom[i].Sub(&z, &accOmega)
-		accOmega.Mul(&accOmega, &gen)
-	}
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-	var result field.Ext
-	result.MulByElement(&sum, &zPowNMinusOne)
-	return result
+	z.Mul(&z, &invN)
+	return z
 }
