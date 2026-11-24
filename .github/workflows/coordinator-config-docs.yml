@@ -105,7 +105,7 @@ jobs:
           artifact-upload-path: "coordinator/config/build/config-docs-mdx/"
           provenance-release-tag-prefix: "releases/coordinator/"
 
-  publish-doc-linea:
+  publish-lineth-docs:
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/coordinator/')) ||
       (github.event_name == 'workflow_dispatch' && inputs.publish)

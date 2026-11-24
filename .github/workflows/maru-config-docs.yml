@@ -104,7 +104,7 @@ jobs:
           artifact-upload-path: "maru/config/build/config-docs-mdx/"
           provenance-release-tag-prefix: "releases/maru/"
 
-  publish-doc-linea:
+  publish-lineth-docs:
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/maru/')) ||
       (github.event_name == 'workflow_dispatch' && inputs.publish)

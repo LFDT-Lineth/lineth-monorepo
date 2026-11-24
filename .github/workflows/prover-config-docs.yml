@@ -93,7 +93,7 @@ jobs:
           path: scripts/prover-options/output/
           if-no-files-found: error
 
-  publish-doc-linea:
+  publish-lineth-docs:
     if: >-
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.publish)

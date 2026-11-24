@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish-doc-linea:
+  publish-lineth-docs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
       contents: read

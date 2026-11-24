@@ -40,7 +40,7 @@ teardown() {
   run bash "$SCRIPT_DIR/enforce-boundary.sh"
   [ "$status" -ne 0 ]
   [[ "$output" == *"outside the component namespace"* ]]
-  [[ "$output" == *"linea-coordinator-options.mdx"* ]]
+  [[ "$output" == *"linea-coordinator-options.md"* ]]
 }
 
 @test "fails when changes span both inside and outside the namespace" {
