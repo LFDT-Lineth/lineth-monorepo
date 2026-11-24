@@ -14,7 +14,6 @@ import linea.kotlin.assertIs20Bytes
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 data class PayloadValidatorDto(
@@ -48,10 +47,11 @@ data class ApiEndpointDto(
   )
   val jwtSecretPath: String? = null,
   @param:ConfigDoc(
-    description = "Overall timeout for a single request to this endpoint.",
-    default = "PT1M",
+    description = "Overall timeout for every request to this endpoint, whether longer or shorter than the " +
+      "per-method defaults. Omit to use the defaults: 2s for engine_getPayload, 8s for engine_newPayload and " +
+      "engine_forkchoiceUpdated, 1s for other methods.",
   )
-  val timeout: Duration = 1.minutes,
+  val timeout: Duration? = null,
 ) {
   fun domainFriendly(endlessRetries: Boolean = false): ApiEndpointConfig {
     val retries =

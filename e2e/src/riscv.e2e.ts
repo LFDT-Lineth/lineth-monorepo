@@ -174,7 +174,8 @@ async function expectProvenBatch(receipt: TransactionReceipt) {
     startBlockNumber,
     publicInputs: { endBlockNumber },
     programVk: zeroHash,
-    proof: stringToHex(`dev-proof:${proverMode}`),
+    // dev-mock sends a marker, dev-zkvm a devmode proof of the guest output hash.
+    proof: proverMode === "dev-mock" ? stringToHex("dev-proof:dev-mock") : expect.stringMatching(/^0x[0-9a-f]+$/),
   });
 
   if (proverMode === "dev-zkvm") {

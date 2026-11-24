@@ -24,8 +24,7 @@ const verifier = verifier_ray.verifier;
 // "SingleFractionAllOnes"), corrupts ONLY the raw average cell, and checks
 // that the full verifier rejects. In practice layer 1 rejects first, so this
 // test does not exercise layer 2: it would pass even if the recurrence did not
-// read C. Layer 2 is checked in isolation, with the honest coins, by
-// vanishing_test.zig ("average cell is bound by the cyclic recurrence").
+// read C. Layer 2 has no isolated test.
 //
 // Resolve the fixture index by NAME so fixture regeneration (which shifts case
 // ordering) never silently points this test at the wrong scenario; a missing

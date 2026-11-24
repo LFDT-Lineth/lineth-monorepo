@@ -171,9 +171,18 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFi
 		lazyTrace = driver.TraceZkcInputs(inputs)
 		proofs    = make([]wiop.Proof, lazyTrace.Len())
 		pubs      = make([]wiop.PublicInput, lazyTrace.Len())
+		proveErrs = make([]error, lazyTrace.Len())
 	)
 	// Lazy proof construction for shards.
 	errs := lazyTrace.Apply(func(i uint, shard zkcdriver.Shard) {
+		// Apply runs each shard on its own goroutine, out of reach of the
+		// recover above: a prover that rejects its witness by panicking must be
+		// turned into an error here.
+		defer func() {
+			if r := recover(); r != nil {
+				proveErrs[i] = fmt.Errorf("panic during proving: %v", r)
+			}
+		}()
 		proofs[i], pubs[i] = sys.Prove(
 			func(rt *wiop.Runtime) {
 				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
@@ -183,6 +192,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *zkcdriver.BinaryFi
 	// Sanity check for tracing failures
 	if len(errs) > 0 {
 		return fmt.Errorf("tracing failed: %w", errors.Join(errs...))
+	}
+	if err := errors.Join(proveErrs...); err != nil {
+		return fmt.Errorf("proving failed: %w", err)
 	}
 	// Verify proofs
 	for i := range proofs {
