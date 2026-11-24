@@ -1,4 +1,4 @@
-package linea.da
+package lineth.da
 
 import linea.kotlin.encodeHex
 

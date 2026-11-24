@@ -1,17 +1,5 @@
 package lineth.conflation.calculators
 
-import linea.da.CompressedConflation
-import linea.da.DaCodecVersion
-import linea.da.DaConstants.BLOB_BYTES
-import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
-import linea.da.DaConstants.KZG_POINT_BYTES
-import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
-import linea.da.DaStream
-import linea.da.DaStreamErrorType
-import linea.da.DaStreamException
-import linea.da.DaStreamPosition
-import linea.da.SealedBlob
-import linea.da.SegmentEnd
 import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.baseTime
 import lineth.conflation.calculators.DaTestConflations.conflation
@@ -19,6 +7,17 @@ import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
+import lineth.da.DaCodecVersion
+import lineth.da.DaConstants.BLOB_BYTES
+import lineth.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import lineth.da.DaConstants.KZG_POINT_BYTES
+import lineth.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
+import lineth.da.DaStream
+import lineth.da.DaStreamErrorType
+import lineth.da.DaStreamException
+import lineth.da.DaStreamPosition
+import lineth.da.SealedBlob
+import lineth.da.SegmentEnd
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -75,7 +74,7 @@ class GlobalBlobCalculatorTest {
       .containsExactly((BLOB_PAYLOAD_CAPACITY - 19_953).toUInt(), (BLOB_PAYLOAD_CAPACITY - 59_953).toUInt())
     assertThat(events[1].next!!.conflation).isEqualTo(d)
     assertThat(
-      SEGMENT_LENGTH_PREFIX_BYTES + events[1].conflations.first().conflation.compressed.compressedData.size,
+      SEGMENT_LENGTH_PREFIX_BYTES + events[1].conflations.first().conflation.frame.size,
     ).isEqualTo(100_000)
   }
 
@@ -395,7 +394,7 @@ class GlobalBlobCalculatorTest {
     private val flushResult: SealedBlob? = null,
   ) : DaStream {
     override val version = DaCodecVersion.FAKE
-    override fun append(conflation: CompressedConflation): List<SealedBlob> = sealOnAppend
+    override fun append(frame: ByteArray, conflationEndBlock: ULong): List<SealedBlob> = sealOnAppend
     override fun flush(): SealedBlob? = flushResult
     override fun close() = Unit
   }

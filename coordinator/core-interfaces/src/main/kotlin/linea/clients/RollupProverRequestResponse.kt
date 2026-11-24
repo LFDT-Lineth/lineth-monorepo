@@ -1,8 +1,5 @@
 package linea.clients
 
-import linea.da.DaConstants.BLOB_BYTES
-import linea.da.DaConstants.KZG_POINT_BYTES
-import linea.da.DaConstants.MAX_TAIL_BYTES
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
@@ -11,6 +8,9 @@ import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
 import linea.kotlin.byteArrayListToHexString
 import linea.kotlin.encodeHex
+import lineth.da.DaConstants.BLOB_BYTES
+import lineth.da.DaConstants.KZG_POINT_BYTES
+import lineth.da.DaConstants.MAX_TAIL_BYTES
 import kotlin.time.Instant
 
 /**

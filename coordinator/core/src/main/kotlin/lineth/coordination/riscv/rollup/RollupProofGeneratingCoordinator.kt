@@ -5,7 +5,6 @@ import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
-import linea.da.DaConstants
 import linea.domain.BlobData
 import linea.domain.Block
 import linea.domain.BlockIntervalProofIndex
@@ -19,6 +18,7 @@ import linea.timer.VertxPeriodicPollingService
 import lineth.conflation.ConflationHandler
 import lineth.conflation.calculators.RollupCalculator
 import lineth.coordination.riscv.conflation.ConflationSegmentBuilder
+import lineth.da.DaConstants
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
 import net.consensys.linea.async.toSafeFuture

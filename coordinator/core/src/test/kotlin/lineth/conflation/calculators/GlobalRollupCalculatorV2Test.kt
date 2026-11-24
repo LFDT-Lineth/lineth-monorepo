@@ -1,11 +1,11 @@
 package lineth.conflation.calculators
 
-import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import lineth.conflation.calculators.DaPipelineTestSupport.Pipeline
 import lineth.conflation.calculators.DaPipelineTestSupport.positionAfter
 import lineth.conflation.calculators.DaTestConflations.baseTime
 import lineth.conflation.calculators.DaTestConflations.conflation
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
+import lineth.da.DaConstants.BLOB_PAYLOAD_CAPACITY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.minutes

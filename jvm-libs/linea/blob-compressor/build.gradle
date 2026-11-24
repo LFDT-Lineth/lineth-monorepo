@@ -1,12 +1,13 @@
 plugins {
   id 'lineth.kotlin-common-minimal-conventions'
-  id 'linea.download-native-libs'
+  id 'lineth.download-native-libs'
   id 'java-test-fixtures'
 }
 
 description = 'Java JNA wrapper for Lineth Blob Compressor Library implemented in GO Lang'
 
 dependencies {
+  api project(':jvm-libs:linea:core:da-interfaces')
   compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   compileOnly project(":jvm-libs:generic:extensions:kotlin")
   compileOnly "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
@@ -15,6 +16,8 @@ dependencies {
   testImplementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   testImplementation project(":jvm-libs:linea:blob-shnarf-calculator")
   testImplementation project(":jvm-libs:generic:extensions:kotlin")
+  testImplementation(testFixtures(project(':jvm-libs:linea:core:da-interfaces')))
+  testImplementation "io.vertx:vertx-core"
   testFixturesImplementation project(':jvm-libs:linea:besu-libs')
   testFixturesImplementation project(':jvm-libs:linea:besu-rlp-and-mappers')
   testFixturesImplementation(project(":jvm-libs:linea:testing:file-system"))
@@ -25,6 +28,20 @@ test {
   // because multiple threads would cause issues with the native library
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
   maxParallelForks = 1
+
+  // the native library the Zig-backed tests run against: the property, else the from-source build
+  // (`make -C riscv-guests/lineth_da host-lib`); they are skipped when neither exists
+  def hostLibExt = System.getProperty("os.name").toLowerCase().contains("mac") ? "dylib" : "so"
+  def daTestLibrary = System.getProperty("lineth.da.testLibrary")
+      ?: project.findProperty("lineth.da.testLibrary")
+      ?: rootProject.file("riscv-guests/lineth_da/zig-out/lib/liblineth_da.${hostLibExt}")
+  systemProperty "lineth.da.testLibrary", daTestLibrary
+  inputs.files(daTestLibrary).withPropertyName("daTestLibrary")
+
+  // the Linea mainnet blocks the Zig-backed tests compress; they are skipped without them
+  def daTestBlocks = rootProject.file("riscv-guests/rollup/test/testdata/linea_mainnet_27434569_27434718.json.gz")
+  systemProperty "lineth.da.testBlocks", daTestBlocks
+  inputs.files(daTestBlocks).withPropertyName("daTestBlocks")
 }
 
 downloadNativeLibs {

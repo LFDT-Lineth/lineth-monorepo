@@ -1,13 +1,13 @@
 package lineth.conflation.calculators
 
-import linea.da.DaCompressor
-import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
-import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
-import linea.da.DaStream
-import linea.da.SealedBlob
 import linea.domain.BlocksConflation
 import linea.kotlin.minusCoercingUnderflow
 import linea.kotlin.toInstantFromEpochSeconds
+import lineth.da.DaCompressor
+import lineth.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import lineth.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
+import lineth.da.DaStream
+import lineth.da.SealedBlob
 import lineth.encoding.BlockEncoder
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -58,21 +58,17 @@ class GlobalBlobCalculator(
   fun newConflation(conflation: BlocksConflation) {
     triggers.firstNotNullOfOrNull { it.checkOverflow(conflation) }?.let { tryFlush(it) }
 
-    val compressed = compressor.compress(conflation.blocks.map(blockEncoder::encode))
-    check(compressed.blockInterval.isSameInterval(conflation)) {
-      "compressed interval=${compressed.blockInterval.intervalString()} differs from " +
-        "conflation=${conflation.intervalString()}"
-    }
-    appended += CompressedBlocksConflation(conflation, compressed)
+    val frame = compressor.compress(conflation.blocks.map(blockEncoder::encode))
+    appended += CompressedBlocksConflation(conflation, frame)
     val sealed = try {
-      daStream.append(compressed)
+      daStream.append(frame, conflation.endBlockNumber)
     } catch (e: Exception) {
       // The stream is unchanged on error, so the conflation is not appended either.
       appended.removeLast()
       throw e
     }
     remainingSharedBlobCarryOverTailBytes = remainingSharedBlobCarryOverTailBytes.minusCoercingUnderflow(
-      (SEGMENT_LENGTH_PREFIX_BYTES + compressed.compressedData.size).toUInt(),
+      (SEGMENT_LENGTH_PREFIX_BYTES + frame.size).toUInt(),
     )
     // append seals only full blobs; a short one can only be a resumed shared blob that was flushed originally.
     sealed.forEach { emit(it, flushed = it.payloadBytes < BLOB_PAYLOAD_CAPACITY.toUInt()) }

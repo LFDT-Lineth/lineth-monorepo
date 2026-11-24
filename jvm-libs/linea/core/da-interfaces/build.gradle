@@ -1,0 +1,14 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+description = "Lineth DA interfaces: the compressor and the stream of the RISC-V DA format"
+
+dependencies {
+  implementation(project(':jvm-libs:generic:extensions:kotlin'))
+
+  testFixturesImplementation platform("org.junit:junit-bom:${libs.versions.junit.get()}")
+  testFixturesImplementation "org.junit.jupiter:junit-jupiter-api"
+  testFixturesImplementation "org.assertj:assertj-core:${libs.versions.assertj.get()}"
+}

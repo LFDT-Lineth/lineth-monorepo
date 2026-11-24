@@ -1,21 +1,20 @@
 package lineth.coordination.riscv.da
 
-import linea.da.CompressedConflation
-import linea.da.DaCodecVersion
-import linea.da.DaConstants.BLOB_BYTES
-import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
-import linea.da.DaConstants.BLOB_PAYLOAD_TERMINAL
-import linea.da.DaConstants.KZG_POINT_BYTES
-import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
-import linea.da.DaStream
-import linea.da.DaStreamErrorType
-import linea.da.DaStreamException
-import linea.da.DaStreamFactory
-import linea.da.DaStreamPosition
-import linea.da.SealedBlob
-import linea.da.SegmentEnd
 import linea.domain.DataRollingHashCalculator
 import lineth.coordination.riscv.rollup.Keccak256DataRollingHashCalculator
+import lineth.da.DaCodecVersion
+import lineth.da.DaConstants.BLOB_BYTES
+import lineth.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import lineth.da.DaConstants.BLOB_PAYLOAD_TERMINAL
+import lineth.da.DaConstants.KZG_POINT_BYTES
+import lineth.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
+import lineth.da.DaStream
+import lineth.da.DaStreamErrorType
+import lineth.da.DaStreamException
+import lineth.da.DaStreamFactory
+import lineth.da.DaStreamPosition
+import lineth.da.SealedBlob
+import lineth.da.SegmentEnd
 import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.datatypes.Hash
 import java.nio.ByteBuffer
@@ -76,13 +75,15 @@ class FakeDaStream(
     }
   }
 
-  override fun append(conflation: CompressedConflation): List<SealedBlob> {
+  override fun append(frame: ByteArray, conflationEndBlock: ULong): List<SealedBlob> {
     checkNotClosed()
-    val data = conflation.compressedData
-    if (data.isEmpty()) {
-      throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "the frame of ${conflation.blockInterval} is empty")
+    if (frame.isEmpty()) {
+      throw DaStreamException(
+        DaStreamErrorType.INVALID_ARGUMENT,
+        "the frame of the conflation ending at block $conflationEndBlock is empty",
+      )
     }
-    val segment = ByteBuffer.allocate(SEGMENT_LENGTH_PREFIX_BYTES + data.size).putInt(data.size).put(data).array()
+    val segment = ByteBuffer.allocate(SEGMENT_LENGTH_PREFIX_BYTES + frame.size).putInt(frame.size).put(frame).array()
     // Validate before mutating, so a failed append leaves the stream unchanged.
     open?.let { checkReproduces(it, segment) }
 
@@ -105,7 +106,7 @@ class FakeDaStream(
       blob.used += count
       written += count
     }
-    open!!.segmentEnds += conflation.blockInterval.endBlockNumber to open!!.used
+    open!!.segmentEnds += conflationEndBlock to open!!.used
     return sealed
   }
 
