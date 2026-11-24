@@ -51,8 +51,8 @@ data class RollupAggregationProofResponseV1JsonResponse(
   @JsonSerialize(using = ByteArraySerializer::class)
   @JsonDeserialize(using = ByteArrayDeserializer::class)
   val endBlockHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
-  val finalDataTailDiscardBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: Int,
+  val finalSharedBlobCarryOverTailBytes: Int,
   @JsonSerialize(contentUsing = ByteArraySerializer::class)
   @JsonDeserialize(contentUsing = ByteArrayDeserializer::class)
   val l2L1Roots: List<ByteArray>,
@@ -85,8 +85,8 @@ data class RollupAggregationProofResponseV1JsonResponse(
         endDataRollingHash = endDataRollingHash,
         parentBlockHash = parentBlockHash,
         endBlockHash = endBlockHash,
-        parentDataTailTakeBytes = parentDataTailTakeBytes,
-        finalDataTailDiscardBytes = finalDataTailDiscardBytes,
+        parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
+        finalSharedBlobCarryOverTailBytes = finalSharedBlobCarryOverTailBytes,
         l2L1Roots = l2L1Roots,
         l2L1TreeDepth = l2L1TreeDepth.toULong(),
         filteredAddresses = filteredAddresses,
@@ -121,8 +121,8 @@ data class RollupAggregationProofResponseV1JsonResponse(
     if (!endDataRollingHash.contentEquals(other.endDataRollingHash)) return false
     if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
     if (!endBlockHash.contentEquals(other.endBlockHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (finalDataTailDiscardBytes != other.finalDataTailDiscardBytes) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (finalSharedBlobCarryOverTailBytes != other.finalSharedBlobCarryOverTailBytes) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
     if (l2L1TreeDepth != other.l2L1TreeDepth) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
@@ -148,8 +148,8 @@ data class RollupAggregationProofResponseV1JsonResponse(
     result = 31 * result + endDataRollingHash.contentHashCode()
     result = 31 * result + parentBlockHash.contentHashCode()
     result = 31 * result + endBlockHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
-    result = 31 * result + finalDataTailDiscardBytes
+    result = 31 * result + parentSharedBlobCarryOverTailBytes
+    result = 31 * result + finalSharedBlobCarryOverTailBytes
     result = 31 * result + l2L1Roots.byteArrayListHashCode()
     result = 31 * result + l2L1TreeDepth.hashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
@@ -184,8 +184,8 @@ data class RollupAggregationProofResponseV1JsonResponse(
         endDataRollingHash = pi.endDataRollingHash,
         parentBlockHash = pi.parentBlockHash,
         endBlockHash = pi.endBlockHash,
-        parentDataTailTakeBytes = pi.parentDataTailTakeBytes,
-        finalDataTailDiscardBytes = pi.finalDataTailDiscardBytes,
+        parentSharedBlobCarryOverTailBytes = pi.parentSharedBlobCarryOverTailBytes,
+        finalSharedBlobCarryOverTailBytes = pi.finalSharedBlobCarryOverTailBytes,
         l2L1Roots = pi.l2L1Roots,
         l2L1TreeDepth = pi.l2L1TreeDepth.toLong(),
         filteredAddresses = pi.filteredAddresses,

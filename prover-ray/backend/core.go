@@ -279,7 +279,8 @@ func (c *Core) proveDevMock(job Job) Result {
 
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
 // decoded from its output, the output itself for the runner's native runner
-// check, and the dev-zkvm marker in place of a proof. Payload is the whole
+// check, and a devmode proof of the output hash, the same proof format as
+// dev-partial but with no trace check. Payload is the whole
 // extended (0x0002) input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
@@ -291,7 +292,11 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs, c.cfg.GoGen)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	proofBytes, err := devmodeProof(executedPublicInputs(out[:guestOutputHashSize]))
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -299,7 +304,7 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	return Result{
 		JobID:        job.ID,
 		Status:       ResultStatusOK,
-		ProofBytes:   DevMarkerProof(ProverModeDevZkVM),
+		ProofBytes:   proofBytes,
 		PublicInputs: pi,
 		GuestOutput:  out,
 	}
@@ -321,7 +326,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 
 	// The lazy trace keeps no output, so Execute gives it. It also fails fast
 	// on a rejected block, before the trace.
-	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -335,17 +340,9 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	devSys, err := devmode.NewSystem()
-	if err != nil {
-		return failResult(job.ID, fmt.Errorf("building the devmode system: %w", err))
-	}
-	proof, pub, err := devmode.Prove(devSys, pub)
+	proofBytes, err := devmodeProof(pub)
 	if err != nil {
 		return failResult(job.ID, err)
-	}
-	proofBytes, err := devmode.Encode(devSys, proof, pub, devmode.GuestBase)
-	if err != nil {
-		return failResult(job.ID, fmt.Errorf("encoding the devmode proof: %w", err))
 	}
 
 	return Result{
@@ -397,23 +394,56 @@ func (c *Core) devmodePublicInputs(pub wiop.PublicInput, hash []byte) (wiop.Publ
 	return out, nil
 }
 
+// executedPublicInputs returns the public inputs of the devmode proof of a run
+// with no trace: the guest output hash, then a zero program VK.
+func executedPublicInputs(hash []byte) wiop.PublicInput {
+	out := make(wiop.PublicInput, devmode.NumPublicInputs)
+	for i := range out {
+		var e field.Element
+		if i < len(hash) {
+			e.SetUint64(uint64(hash[i]))
+		}
+		out[i] = field.ElemFromBase(e)
+	}
+	return out
+}
+
+// devmodeProof returns the image of a devmode proof of pub, for the guest base.
+func devmodeProof(pub wiop.PublicInput) ([]byte, error) {
+	sys, err := devmode.NewSystem()
+	if err != nil {
+		return nil, fmt.Errorf("building the devmode system: %w", err)
+	}
+	proof, pub, err := devmode.Prove(sys, pub)
+	if err != nil {
+		return nil, err
+	}
+	img, err := devmode.Encode(sys, proof, pub, devmode.GuestBase)
+	if err != nil {
+		return nil, fmt.Errorf("encoding the devmode proof: %w", err)
+	}
+	return img, nil
+}
+
 // programVK returns the program VK in the public inputs pub of a proof over the
 // trace system, in the response layout of [Result.ProgramVK].
 func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 	return field.OctupletToBytes(risc5.GetProgramVK(c.sys, pub))
 }
 
-// executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
-// its validated 0x0003 output.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
-	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
+// executeGuest runs the guest under zkc Execute (the no-trace path), with gogen
+// or the interpreter, and returns its validated 0x0003 output.
+func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool) (bit.Array, error) {
+	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))
 	return classifyGuestOutput(output, errs)
 }
 
-// executeGuestPublicInputs runs the guest under ZkC Execute and returns its
+// executeGuestPublicInputs runs the guest under zkc Execute and returns its
 // 0x0003 output (hash || frame) and the public inputs decoded from it.
-func executeGuestPublicInputs(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) ([]byte, PublicInputs, error) {
-	guestOutput, err := executeGuest(binf, inputs)
+func executeGuestPublicInputs(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool,
+) ([]byte, PublicInputs, error) {
+	guestOutput, err := executeGuest(binf, inputs, gogen)
 	if err != nil {
 		return nil, PublicInputs{}, err
 	}

@@ -1,6 +1,5 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
-const fixtures = @import("test_pcs_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
@@ -11,25 +10,10 @@ const pcs = verifier_ray.query.pcs;
 const fri = verifier_ray.query.fri;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 
-// Test vectors generated from prover-ray's real PCS.Commit/AddOpening/
-// NewProverState/Open/Verify pipeline, called through prover-ray's exported
-// surface only (see testdata/generate/main.go's PCS section): the claimed
-// values are computed independently (not via the unexported
-// pcs.shiftedPoint), and every honest case is self-checked against
-// prover-ray's own exported pcs.Verify before being emitted here. Regenerate
-// via `make generate-testdata`.
-
-fn toDigest(o: [8]u32) poseidon2.Digest {
-    var out: poseidon2.Digest = undefined;
-    for (&out, o) |*dst, v| dst.* = field.Element.init(v);
-    return out;
-}
-
-fn toDigests(allocator: std.mem.Allocator, os: []const [8]u32) ![]poseidon2.Digest {
-    const out = try allocator.alloc(poseidon2.Digest, os.len);
-    for (out, os) |*dst, o| dst.* = toDigest(o);
-    return out;
-}
+// Fixture-free PCS tests: hand-built systems, layouts and manifests exercising
+// the reconstruction, challenge-derivation, claim-routing and rejection paths
+// directly. End-to-end PCS verification runs through verify.zig
+// (verifier_test.zig).
 
 fn toExt(e: [6]u32) ext.Ext {
     return .{
@@ -39,216 +23,10 @@ fn toExt(e: [6]u32) ext.Ext {
     };
 }
 
-fn toExts(allocator: std.mem.Allocator, es: []const [6]u32) ![]ext.Ext {
-    const out = try allocator.alloc(ext.Ext, es.len);
-    for (out, es) |*dst, e| dst.* = toExt(e);
-    return out;
-}
-
-fn toExtsJagged(allocator: std.mem.Allocator, rows: []const []const [6]u32) ![]const []const ext.Ext {
-    const out = try allocator.alloc([]const ext.Ext, rows.len);
-    for (out, rows) |*dst, row| dst.* = try toExts(allocator, row);
-    return out;
-}
-
-fn toRowOpening(allocator: std.mem.Allocator, r: fixtures.RowOpeningData) !merkle.RowOpening {
-    const base = try allocator.alloc(field.Element, r.base.len);
-    for (base, r.base) |*dst, v| dst.* = field.Element.init(v);
-    return .{ .base = base, .ext = try toExts(allocator, r.ext) };
-}
-
-fn toRowPair(allocator: std.mem.Allocator, p: fixtures.RowPairData) !merkle.RowPair {
-    return .{ try toRowOpening(allocator, p[0]), try toRowOpening(allocator, p[1]) };
-}
-
-fn toInputTreeOpening(allocator: std.mem.Allocator, o: fixtures.InputTreeOpeningData) !merkle.InputTreeOpening {
-    const leaves = try allocator.alloc(?merkle.RowPair, o.leaves.len);
-    for (leaves, o.leaves) |*dst, l| dst.* = if (l) |v| try toRowPair(allocator, v) else null;
-    return .{ .siblings = try toDigests(allocator, o.siblings), .leaves = leaves };
-}
-
-fn toInputQueries(allocator: std.mem.Allocator, qs: []const []const fixtures.InputTreeOpeningData) ![]const []const merkle.InputTreeOpening {
-    const out = try allocator.alloc([]const merkle.InputTreeOpening, qs.len);
-    for (out, qs) |*dst, q| {
-        const trees = try allocator.alloc(merkle.InputTreeOpening, q.len);
-        for (trees, q) |*t, jo| t.* = try toInputTreeOpening(allocator, jo);
-        dst.* = trees;
-    }
-    return out;
-}
-
-fn toInputCaps(allocator: std.mem.Allocator, caps: []const fixtures.InputCapData) ![]const pcs.InputCap {
-    const out = try allocator.alloc(pcs.InputCap, caps.len);
-    for (out, caps) |*dst, cap| {
-        const tables = try allocator.alloc(pcs.InputCapTable, cap.tables.len);
-        for (tables, cap.tables) |*table_dst, table| {
-            const rows = try allocator.alloc(merkle.RowOpening, table.rows.len);
-            for (rows, table.rows) |*row_dst, row| row_dst.* = try toRowOpening(allocator, row);
-            table_dst.* = .{ .size_log2 = table.size_log2, .rows = rows };
-        }
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
-    }
-    return out;
-}
-
-fn toMerkleCaps(allocator: std.mem.Allocator, caps: []const fixtures.MerkleCapData) ![]const merkle.MerkleCap {
-    const out = try allocator.alloc(merkle.MerkleCap, caps.len);
-    for (out, caps) |*dst, cap| {
-        const aux = try allocator.alloc(?poseidon2.Digest, cap.aux.len);
-        for (aux, cap.aux) |*dst_aux, value| dst_aux.* = if (value) |v| toDigest(v) else null;
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .aux = aux };
-    }
-    return out;
-}
-
-fn toBranch(allocator: std.mem.Allocator, b: fixtures.BranchData) !merkle.Branch {
-    return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
-}
-
-fn toRunningQueries(allocator: std.mem.Allocator, qs: []const []const fixtures.BranchData) ![]const []const merkle.Branch {
-    const out = try allocator.alloc([]const merkle.Branch, qs.len);
-    for (out, qs) |*dst, q| {
-        const branches = try allocator.alloc(merkle.Branch, q.len);
-        for (branches, q) |*b, jb| b.* = try toBranch(allocator, jb);
-        dst.* = branches;
-    }
-    return out;
-}
-
-fn mapPcsError(name: []const u8) pcs.Error {
-    if (std.mem.eql(u8, name, "BoundaryAuxNotConstant")) return error.BoundaryAuxNotConstant;
-    if (std.mem.eql(u8, name, "BoundaryFinalSelfMismatch")) return error.BoundaryFinalSelfMismatch;
-    if (std.mem.eql(u8, name, "BoundaryFinalSiblingMismatch")) return error.BoundaryFinalSiblingMismatch;
-    if (std.mem.eql(u8, name, "ClaimPointOnDomain")) return error.ClaimPointOnDomain;
-    if (std.mem.eql(u8, name, "ClaimPointOnQueryPoint")) return error.ClaimPointOnQueryPoint;
-    if (std.mem.eql(u8, name, "MerkleProofInvalid")) return error.MerkleProofInvalid;
-    if (std.mem.eql(u8, name, "RowShapeMismatch")) return error.RowShapeMismatch;
-    if (std.mem.eql(u8, name, "ConjugateRowShapeMismatch")) return error.ConjugateRowShapeMismatch;
-    if (std.mem.eql(u8, name, "FoldMismatch")) return error.FoldMismatch;
-    if (std.mem.eql(u8, name, "FinalPolyMismatch")) return error.FinalPolyMismatch;
-    std.debug.panic("pcs_test: unrecognized expected error name '{s}'", .{name});
-}
-
-// system is a separate comptime parameter (not read off a plain-parameter
-// `case`) because pcs.verify requires a comptime System: the enclosing
-// `inline for` makes `case.system` comptime-known at the call site, but a
-// regular function parameter would lose that. Mirrors vanishing_test.zig's
-// own pattern of calling verify() directly against a comptime-extracted
-// `system`/`spec` rather than through a plain-parameter helper.
-fn toPCSVerifyInput(allocator: std.mem.Allocator, case: fixtures.PcsCase) !pcs.VerifyInput {
-    return .{
-        .roots = try toDigests(allocator, case.roots),
-        .entry_claims = try toExtsJagged(allocator, case.entry_claims),
-        .zeta = toExt(case.zeta),
-        .fold_alphas = try toExts(allocator, case.fold_alphas),
-        .query_positions = try allocator.dupe(usize, case.query_positions),
-        .proof = .{
-            .input_queries = try toInputQueries(allocator, case.proof.input_queries),
-            .input_caps = try toInputCaps(allocator, case.proof.input_caps),
-            .fri_proof = .{
-                .round_roots = try toDigests(allocator, case.proof.fri_proof.round_roots),
-                .round_caps = try toMerkleCaps(allocator, case.proof.fri_proof.round_caps),
-                .final_poly = try toExts(allocator, case.proof.fri_proof.final_poly),
-                .running_queries = try toRunningQueries(allocator, case.proof.fri_proof.running_queries),
-            },
-        },
-    };
-}
-
-fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
-    const input = try toPCSVerifyInput(allocator, case);
-
-    const result = pcs.verify(system, input);
-    if (case.expect_verify_error.len > 0) {
-        try std.testing.expectError(mapPcsError(case.expect_verify_error), result);
-        return;
-    }
-    try result;
-}
-
-test "pcs verify cases from prover-ray vectors" {
-    try std.testing.expect(fixtures.pcs_cases.len > 0);
-    inline for (fixtures.pcs_cases) |case| {
-        var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-        defer arena.deinit();
-        runPCSCase(arena.allocator(), case.system, case) catch |err| {
-            std.debug.print("pcs case '{s}' failed: {}\n", .{ case.name, err });
-            return err;
-        };
-    }
-}
-
-fn pcsCaseNamed(comptime name: []const u8) fixtures.PcsCase {
-    inline for (fixtures.pcs_cases) |case| {
-        if (comptime std.mem.eql(u8, case.name, name)) return case;
-    }
-    @compileError("no pcs case named " ++ name);
-}
-
 fn withMerkleCapHeight(comptime system: pcs.System, comptime height: u8) pcs.System {
     var s = system;
     s.envelope_params.merkle_cap_height = height;
     return s;
-}
-
-// The cap height is a per-System compile option (prover-ray defaults to none),
-// so the verifier must use the baked height rather than derive it from the
-// query count. normal_flow and normal_flow_no_cap are the same proof at cap
-// height 2 and 0 (4 queries); each must be rejected under the other's height.
-test "pcs uses the baked Merkle cap height" {
-    const capped = comptime pcsCaseNamed("normal_flow");
-    const uncapped = comptime pcsCaseNamed("normal_flow_no_cap");
-    comptime std.debug.assert(capped.system.envelope_params.merkle_cap_height == 2);
-    comptime std.debug.assert(uncapped.system.envelope_params.merkle_cap_height == 0);
-
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    try pcs.verify(capped.system, try toPCSVerifyInput(allocator, capped));
-    try pcs.verify(uncapped.system, try toPCSVerifyInput(allocator, uncapped));
-
-    try std.testing.expectError(error.InvalidCap, pcs.verify(
-        comptime withMerkleCapHeight(capped.system, 0),
-        try toPCSVerifyInput(allocator, capped),
-    ));
-    try std.testing.expectError(error.InvalidCap, pcs.verify(
-        comptime withMerkleCapHeight(uncapped.system, 2),
-        try toPCSVerifyInput(allocator, uncapped),
-    ));
-}
-
-// prover-ray keeps at least one FRI fold (#4322): with every column at size 1
-// under an envelope that can fold, the top size is raised to 2^1, round 0
-// folds the zero codeword and all columns join at the boundary round weighted
-// by the last fold challenge. Without the floor, alpha_DEEP would be zero and
-// only the first column would be checked, so a wrong claim on any later
-// column must still be rejected here.
-test "pcs keeps one fold when every column has size one" {
-    const case = comptime pcsCaseNamed("all_size_one");
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    const recon = try pcs.reconstruct(case.system, &.{});
-    try std.testing.expectEqual(@as(u8, 1), recon.top_size);
-    try std.testing.expectEqual(@as(u8, 1), recon.params.numRoundsRuntime());
-    try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
-
-    try pcs.verify(case.system, try toPCSVerifyInput(allocator, case));
-
-    for (0..recon.num_entries) |e| {
-        var input = try toPCSVerifyInput(allocator, case);
-        const claims = try allocator.dupe([]const ext.Ext, input.entry_claims);
-        const values = try allocator.dupe(ext.Ext, claims[e]);
-        values[0] = values[0].add(ext.Ext.one());
-        claims[e] = values;
-        input.entry_claims = claims;
-        if (pcs.verify(case.system, input)) |_| {
-            std.debug.print("all_size_one: tampered claim of entry {d} accepted\n", .{e});
-            return error.TamperedClaimAccepted;
-        } else |_| {}
-    }
 }
 
 test "minFoldedTopSize raises the top only when the envelope can fold" {
@@ -336,22 +114,6 @@ test "pcs rejects a level beyond the boundary round" {
     try std.testing.expectError(error.LevelBeyondBoundaryRound, pcs.verify(system, input));
 }
 
-test "pcs rejects reordered input cap tables" {
-    const case = fixtures.pcs_cases[0];
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-
-    var input = try toPCSVerifyInput(arena.allocator(), case);
-    var caps = try arena.allocator().dupe(pcs.InputCap, input.proof.input_caps);
-    var tables = try arena.allocator().dupe(pcs.InputCapTable, caps[0].tables);
-    try std.testing.expectEqual(@as(usize, 2), tables.len);
-    std.mem.swap(pcs.InputCapTable, &tables[0], &tables[1]);
-    caps[0].tables = tables;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
-}
-
 fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
     try std.testing.expectEqualSlices(usize, &.{ 3, 2, 1, 0 }, input.query_positions);
 
@@ -368,92 +130,6 @@ fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
     try std.testing.expectEqual(@as(usize, 2), running_cap.nodes.len);
     try std.testing.expectEqual(@as(usize, 1), running_cap.aux.len);
     try std.testing.expect(running_cap.aux[0] == null);
-}
-
-test "pcs rejects tampered unqueried input cap node" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
-    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
-    // The bottom-pair fold maps query positions 0..3 to frontier nodes 0/1,
-    // so node 3 is bound only through reconstruction of the committed root.
-    nodes[3][0] = nodes[3][0].add(field.Element.one());
-    caps[0].nodes = nodes;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered unqueried revealed input cap row" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
-    const tables = try allocator.dupe(pcs.InputCapTable, caps[0].tables);
-    const rows = try allocator.dupe(merkle.RowOpening, tables[1].rows);
-    const values = try allocator.dupe(ext.Ext, rows[2].ext);
-    // The size-one table has four encoded rows. Queries 0..3 consume only row
-    // pair 0/1; row 2 still contributes to the authenticated upper cap.
-    values[0].B0.a0 = values[0].B0.a0.add(field.Element.one());
-    rows[2].ext = values;
-    tables[1].rows = rows;
-    caps[0].tables = tables;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered unqueried running cap node" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
-    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
-    // At running round one, these query positions all authenticate to frontier
-    // node 0, leaving node 1 bound only through the cap-to-root comparison.
-    nodes[1][0] = nodes[1][0].add(field.Element.one());
-    caps[0].nodes = nodes;
-    input.proof.fri_proof.round_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered running cap auxiliary digest" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
-    const aux = try allocator.dupe(?poseidon2.Digest, caps[0].aux);
-    aux[0] = caps[0].nodes[0];
-    caps[0].aux = aux;
-    input.proof.fri_proof.round_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
 }
 
 test "routeInputRoots ignores an unused batch root" {

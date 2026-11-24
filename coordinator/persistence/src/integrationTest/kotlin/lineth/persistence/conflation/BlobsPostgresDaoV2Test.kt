@@ -47,8 +47,8 @@ class BlobsPostgresDaoV2Test : BlobsPostgresDaoTestBase<BlobRecordV2>() {
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       startBlockTimestamp = expectedStartBlockTime,
-      parentDataTailTakeBytes = 100u,
-      finalDataTailDiscardBytes = 200u,
+      parentSharedBlobCarryOverTailBytes = 100u,
+      finalSharedBlobCarryOverTailBytes = 200u,
     )
     daoV2.saveNewBlob(record).get()
 

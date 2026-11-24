@@ -9,10 +9,6 @@ inputs:
     description: 'Local stack and test suite (zkevm or riscv)'
     required: false
     default: 'zkevm'
-  riscv_prover_mode:
-    description: 'prover-ray mode for the RISC-V stack (dev-mock or dev-zkvm)'
-    required: false
-    default: 'dev-mock'
   image_tag:
     description: 'The commit tag to use'
     required: true
@@ -140,7 +136,6 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         E2E_IMAGE_TAG: ${{ inputs.image_tag }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
       run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry
@@ -149,7 +144,6 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         E2E_IMAGE_TAG: ${{ inputs.image_tag }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
       run: make e2e-ci-start-env-with-retry
 
@@ -167,7 +161,6 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         E2E_STACK: ${{ inputs.stack }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
         E2E_JEST_CONFIG: ${{ inputs.jest-config }}
       run: make e2e-ci-test
 

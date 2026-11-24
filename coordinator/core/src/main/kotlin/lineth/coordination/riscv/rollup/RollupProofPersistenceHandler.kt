@@ -23,15 +23,17 @@ class RollupProofPersistenceHandler(
     val inputs = proof.publicInputs
     if (!inputs.parentDataRollingHash.contentEquals(context.parentDataRollingHash) ||
       !inputs.endDataRollingHash.contentEquals(context.dataRollingHash) ||
-      inputs.parentDataTailTakeBytes.toLong() != context.parentDataTailTakeBytes.toLong() ||
-      inputs.finalDataTailDiscardBytes.toLong() != context.finalDataTailDiscardBytes.toLong()
+      inputs.parentSharedBlobCarryOverTailBytes.toLong() != context.parentSharedBlobCarryOverTailBytes.toLong() ||
+      inputs.finalSharedBlobCarryOverTailBytes.toLong() != context.finalSharedBlobCarryOverTailBytes.toLong()
     ) {
       val message = "rollup proof DA outputs differ from the request: rollup=${context.proofIndex.intervalString()} " +
         "parentDataRollingHash=${inputs.parentDataRollingHash.encodeHex()} " +
         "expected=${context.parentDataRollingHash.encodeHex()} " +
         "endDataRollingHash=${inputs.endDataRollingHash.encodeHex()} expected=${context.dataRollingHash.encodeHex()} " +
-        "parentDataTailTakeBytes=${inputs.parentDataTailTakeBytes} expected=${context.parentDataTailTakeBytes} " +
-        "finalDataTailDiscardBytes=${inputs.finalDataTailDiscardBytes} expected=${context.finalDataTailDiscardBytes}"
+        "parentSharedBlobCarryOverTailBytes=${inputs.parentSharedBlobCarryOverTailBytes} " +
+        "expected=${context.parentSharedBlobCarryOverTailBytes} " +
+        "finalSharedBlobCarryOverTailBytes=${inputs.finalSharedBlobCarryOverTailBytes} " +
+        "expected=${context.finalSharedBlobCarryOverTailBytes}"
       log.error(message)
       return SafeFuture.failedFuture<Unit>(IllegalStateException(message))
     }
@@ -45,9 +47,9 @@ class RollupProofPersistenceHandler(
       totalBatchesCount = context.totalBatchesCount.toUInt(),
       blobsData = context.blobsData,
       proofHash = context.proofIndex.hash,
-      parentDataTailTakeBytes = context.parentDataTailTakeBytes,
-      boundaryPrevDataRollingHash = context.boundaryPrevDataRollingHash,
-      finalDataTailDiscardBytes = context.finalDataTailDiscardBytes,
+      parentSharedBlobCarryOverTailBytes = context.parentSharedBlobCarryOverTailBytes,
+      parentBlobDataRollingHash = context.parentBlobDataRollingHash,
+      finalSharedBlobCarryOverTailBytes = context.finalSharedBlobCarryOverTailBytes,
     )
     return blobsRepository.saveNewBlob(record)
   }

@@ -67,9 +67,9 @@ test "one conflation in one blob: the public inputs follow its proof and its str
 
     // The stream: one chunk folded onto the parent dataRollingHash, nothing left behind it.
     try std.testing.expectEqualSlices(u8, &hashOf(0x47), &pi.parent_data_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi.parent_data_tail_take_bytes);
+    try std.testing.expectEqual(@as(u64, 0), pi.parent_shared_blob_carry_over_tail_bytes);
     try std.testing.expectEqualSlices(u8, &scenario.keccak(&(hashOf(0x47) ++ chunk_hash)), &pi.end_data_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi.final_data_tail_discard_bytes);
+    try std.testing.expectEqual(@as(u64, 0), pi.final_shared_blob_carry_over_tail_bytes);
 
     try std.testing.expectEqual(@as(usize, 0), pi.l2_l1_messages.items.len);
     try std.testing.expectEqual(@as(usize, 0), pi.filtered_addresses.items.len);
@@ -291,12 +291,12 @@ fn expectStreamOf(a: Allocator, conflations: []const scenario.Conflation, option
     const pi = try run(a, request);
 
     if (expected.take) |take| {
-        try std.testing.expectEqual(take, pi.parent_data_tail_take_bytes);
+        try std.testing.expectEqual(take, pi.parent_shared_blob_carry_over_tail_bytes);
     } else {
-        try std.testing.expect(pi.parent_data_tail_take_bytes > 0);
+        try std.testing.expect(pi.parent_shared_blob_carry_over_tail_bytes > 0);
     }
-    try std.testing.expectEqual(request.parent_data_tail_take_bytes, pi.parent_data_tail_take_bytes);
-    try std.testing.expectEqual(expected.discard, pi.final_data_tail_discard_bytes);
+    try std.testing.expectEqual(request.parent_shared_blob_carry_over_tail_bytes, pi.parent_shared_blob_carry_over_tail_bytes);
+    try std.testing.expectEqual(expected.discard, pi.final_shared_blob_carry_over_tail_bytes);
     try std.testing.expectEqualSlices(u8, &request.parent_data_rolling_hash, &pi.parent_data_rolling_hash);
     try std.testing.expectEqualSlices(u8, &request.end_data_rolling_hash, &pi.end_data_rolling_hash);
     return .{ .request = request, .pi = pi };

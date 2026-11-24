@@ -51,12 +51,12 @@ class GlobalRollupCalculator(
         val rollup = openRollup.endRollup(sealed.cut)
         triggers.forEach { it.reset() }
         log.debug(
-          "rollup cut: blocks={}..{} blobs={} tailTake={} tailDiscard={}",
+          "rollup cut: blocks={}..{} blobs={} parentCarryOver={} finalCarryOver={}",
           rollup.startBlockNumber,
           rollup.endBlockNumber,
           rollup.da.blobs.size,
-          rollup.da.parentDataTailTakeBytes,
-          rollup.da.expectedFinalDataTailDiscardBytes,
+          rollup.da.parentSharedBlobCarryOverTailBytes,
+          rollup.da.expectedFinalSharedBlobCarryOverTailBytes,
         )
         rollupHandler?.onRollup(rollup)
       }
