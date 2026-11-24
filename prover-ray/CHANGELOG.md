@@ -2,6 +2,16 @@
 
 ### 🚀 Features
 
+- *(prover-ray)* Encode the rollup guest input (#4571)
+## [0.4.0] - 2026-11-23
+
+### 🚀 Features
+
+- *(prover-ray)* Dev-zkvm returns a devmode proof instead of marker bytes (#4569)
+## [0.3.0] - 2026-11-23
+
+### 🚀 Features
+
 - *(prover-ray)* Support constant entries in lookup, permutation and message-bus tables (#4296)
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(prover-ray)* FRI over a fixed maximum domain (#4322)
