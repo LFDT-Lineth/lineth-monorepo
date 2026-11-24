@@ -71,7 +71,7 @@ class FakeDaStream(
   private var closed = false
 
   init {
-    if (initialState.sharedBlobCarryOverTailBytes > 0) {
+    if (initialState.sharedBlobCarryOverTailBytes > 0u) {
       open = openInsideSharedBlob(initialState)
     }
   }
@@ -125,7 +125,10 @@ class FakeDaStream(
     closed = true
   }
 
-  private fun newBlob(): OpenBlob = OpenBlob(capacity = BLOB_PAYLOAD_CAPACITY, prevDataRollingHash = dataRollingHash)
+  private fun newBlob(): OpenBlob = OpenBlob(
+    capacity = BLOB_PAYLOAD_CAPACITY,
+    prevDataRollingHash = dataRollingHash,
+  )
 
   private fun seal(blob: OpenBlob): SealedBlob {
     val blobBytes = ByteArray(BLOB_BYTES)
@@ -149,11 +152,11 @@ class FakeDaStream(
       kzgProof = fakeKzgProof(blobBytes),
       prevDataRollingHash = blob.prevDataRollingHash,
       dataRollingHash = sealedDataRollingHash,
-      payloadBytes = blob.used,
+      payloadBytes = blob.used.toUInt(),
       segmentEnds = blob.segmentEnds.map { (endBlock, segmentEnd) ->
         SegmentEnd(
           endBlock,
-          unusedTailBytes = blob.used - segmentEnd,
+          unusedTailBytes = (blob.used - segmentEnd).toUInt(),
         )
       },
     )
@@ -180,7 +183,8 @@ class FakeDaStream(
     if (payloadBytes < 0 || sharedBlob[payloadBytes] != BLOB_PAYLOAD_TERMINAL) {
       throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "shared blob has no payload terminal")
     }
-    if (position.sharedBlobCarryOverTailBytes >= payloadBytes) {
+    val carryOver = position.sharedBlobCarryOverTailBytes.toInt()
+    if (carryOver >= payloadBytes) {
       throw DaStreamException(
         DaStreamErrorType.INVALID_ARGUMENT,
         "sharedBlobCarryOverTailBytes=${position.sharedBlobCarryOverTailBytes} must be less than the shared " +
@@ -199,7 +203,7 @@ class FakeDaStream(
       prevDataRollingHash = prevDataRollingHash,
       reproduce = Reproduction(sharedBlob = sharedBlob, dataRollingHash = position.dataRollingHash),
     ).also { blob ->
-      blob.used = payloadBytes - position.sharedBlobCarryOverTailBytes
+      blob.used = payloadBytes - carryOver
       sharedBlob.copyInto(blob.payload, endIndex = blob.used)
     }
   }

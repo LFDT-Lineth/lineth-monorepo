@@ -31,4 +31,7 @@ interface JsonRpcV2Client {
     shallRetryRequestPredicate: Predicate<Result<T, Throwable>> = Predicate { false },
     resultMapper: (Any?) -> T,
   ): SafeFuture<T>
+
+  /** Releases the client's resources, e.g. its HTTP connections; in-flight requests fail. */
+  fun close(): SafeFuture<Unit>
 }

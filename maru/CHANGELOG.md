@@ -1,3 +1,9 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
+- *(maru)* Add and use native Engine API JSON-RPC client (#4397)
 ## [1.6.0] - 2026-11-19
 
 ### 🚀 Features

@@ -12,9 +12,6 @@ outputs:
   riscv:
     description: "'true' when the RISC-V e2e stack needs testing"
     value: ${{ steps.evaluate.outputs.riscv }}
-  riscv-prover-mode:
-    description: Prover mode for the RISC-V e2e run
-    value: ${{ steps.evaluate.outputs.riscv_prover_mode }}
 
 runs:
   using: composite

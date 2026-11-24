@@ -84,4 +84,4 @@ make -C prover-ray docker-build IMAGE_TAG=local
 LINEA_PROVER_RAY_TAG=local RISCV_PROVER_MODE=dev-zkvm make start-env-with-riscv
 ```
 
-CI runs this suite on pushes to `main` only.
+CI runs this suite on pushes to `main` only, in dev-zkvm with prover-ray and the guest built from the commit.
