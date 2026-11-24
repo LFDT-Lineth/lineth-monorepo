@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/sirupsen/logrus"
 )
 
@@ -566,11 +567,9 @@ func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, es []TableEntry, n int) []fi
 		for k := next; k >= 0; k-- {
 			switch {
 			case isConst[k]:
-				c := consts[k]
-				for i := start; i < stop; i++ {
-					acc[i].Mul(&acc[i], &alpha)
-					acc[i].B0.A0.Add(&acc[i].B0.A0, &c)
-				}
+				v := extensions.VectorE6(acc[start:stop])
+				v.ScalarMul(v, &alpha)
+				v.ScalarAddElement(v, &consts[k])
 			case plains[k].IsBase():
 				field.VecScaleAddExtBase(acc[start:stop], alpha, plains[k].AsBase()[start:stop])
 			default:
