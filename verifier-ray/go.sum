@@ -8,8 +8,8 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b h1:9tkZUHoSuLqwB+QEGycQ8k3MqOwe8xD54WCB0vA+mXs=
 github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b/go.mod h1:rHLjoSuIcqxkvcZgDyhhsNY60y+4TIzyBPh5ya5SQeA=
-github.com/consensys/gnark-crypto v0.22.1-0.20261103155519-1a9aede5b1c3 h1:XYMiyi5Qn8+4QBQE9UzmFw1hwNPMkJaYtExUexWkDak=
-github.com/consensys/gnark-crypto v0.22.1-0.20261103155519-1a9aede5b1c3/go.mod h1:+GBvEPnGIwDMfw6RJdxtImW8wHcBDaveR3s8URlDAc0=
+github.com/consensys/gnark-crypto v0.22.1-0.20261123170552-3326f85ee9a6 h1:UtPdSFmZUvxNhA0lRHYZeGNuHt+eeVbwkY+N21o6d80=
+github.com/consensys/gnark-crypto v0.22.1-0.20261123170552-3326f85ee9a6/go.mod h1:vYaA9W9JB8IrOql97j92990RA+RE/dA7vB66x2bHKrM=
 github.com/fxamacker/cbor/v2 v2.9.2 h1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=
 github.com/fxamacker/cbor/v2 v2.9.2/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=

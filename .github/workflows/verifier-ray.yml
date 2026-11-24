@@ -38,7 +38,7 @@ permissions:
   actions: read
 
 env:
-  GO_VERSION: '1.27.1'
+  GO_VERSION: '1.27.4'
   ZIG_VERSION: '0.16.0'
 
 concurrency:
