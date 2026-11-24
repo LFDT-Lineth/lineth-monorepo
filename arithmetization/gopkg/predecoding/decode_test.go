@@ -1494,7 +1494,7 @@ func TestExecutableImage(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// predecode
+// predecode (internal)
 // ------------------------------------------------------------
 
 // TestPredecodeInternal checks that predecode passes the base and the image rows of the
@@ -1646,6 +1646,12 @@ func TestApplyOptions(t *testing.T) {
 		}
 	}
 }
+
+
+// ------------------------------------------------------------
+// Predecode
+// ------------------------------------------------------------
+
 
 // TestPredecode checks that Predecode applies its options to the cap
 // before predecoding: the default cap decodes the program, and a cap of zero

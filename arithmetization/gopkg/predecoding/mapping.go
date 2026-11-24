@@ -89,73 +89,139 @@ func Load(r io.ReaderAt) (Program, error) {
 	return Program{EntryPoint: elfFile.Entry, Blobs: blobs}, nil
 }
 
+// loadableSegments returns the PT_LOAD segments with non-zero memory size.
+func loadableSegments(elfFile *elf.File) []*elf.Prog {
+	var segments []*elf.Prog
+	for _, programHeader := range elfFile.Progs {
+		if programHeader.Type == elf.PT_LOAD && programHeader.Memsz != 0 {
+			segments = append(segments, programHeader)
+		}
+	}
+	return segments
+}
+
+// segmentEnd validates a loadable segment and returns the end of its memory
+// range. It rejects a file size larger than the memory size, and a memory range
+// that overflows the address space.
+func segmentEnd(programHeader *elf.Prog) (uint64, error) {
+	if programHeader.Filesz > programHeader.Memsz {
+		return 0, fmt.Errorf(
+			"loadable segment at %#x has file size larger than memory size",
+			programHeader.Vaddr,
+		)
+	}
+	end := programHeader.Vaddr + programHeader.Memsz
+	if end < programHeader.Vaddr {
+		return 0, fmt.Errorf(
+			"loadable segment address overflow at %#x",
+			programHeader.Vaddr,
+		)
+	}
+	return end, nil
+}
+
+// sectionEnd returns the end of the address range of a section. It rejects a
+// range that overflows the address space.
+func sectionEnd(section *elf.Section) (uint64, error) {
+	end := section.Addr + section.Size
+	if end < section.Addr {
+		return 0, fmt.Errorf(
+			"section %s address overflow at %#x",
+			section.Name,
+			section.Addr,
+		)
+	}
+	return end, nil
+}
+
+// isWithin reports whether the range [start, end) lies fully inside the range
+// [outerStart, outerEnd). A section outside the current segment is left to the
+// segment that contains it.
+func isWithin(start, end, outerStart, outerEnd uint64) bool {
+	return start >= outerStart && end <= outerEnd
+}
+
+// isLoadableSection reports whether a section puts bytes into memory. Empty
+// sections are skipped, and so are SHT_NOBITS sections such as .bss (R5 memory
+// starts zeroed) and sections without SHF_ALLOC such as debug info and the
+// symbol table.
+func isLoadableSection(section *elf.Section) bool {
+	return section.Size != 0 &&
+		section.Type != elf.SHT_NOBITS &&
+		section.Flags&elf.SHF_ALLOC != 0
+}
+
 func extractBlobs(elfFile *elf.File) ([]Blob, error) {
 	var blobs []Blob
-	for _, programHeader := range elfFile.Progs {
-		if programHeader.Type != elf.PT_LOAD || programHeader.Memsz == 0 {
-			continue
-		}
-		if programHeader.Filesz > programHeader.Memsz {
-			return nil, fmt.Errorf(
-				"loadable segment at %#x has file size larger than memory size",
-				programHeader.Vaddr,
-			)
-		}
-		programEnd := programHeader.Vaddr + programHeader.Memsz
-		if programEnd < programHeader.Vaddr {
-			return nil, fmt.Errorf(
-				"loadable segment address overflow at %#x",
-				programHeader.Vaddr,
-			)
+	for _, programHeader := range loadableSegments(elfFile) {
+		programEnd, err := segmentEnd(programHeader)
+		if err != nil {
+			return nil, err
 		}
 
 		var programBlobs []Blob
 		for _, section := range elfFile.Sections {
-			if section.Size == 0 || section.Type == elf.SHT_NOBITS ||
-				section.Flags&elf.SHF_ALLOC == 0 {
+			if !isLoadableSection(section) {
 				continue
 			}
-			sectionEnd := section.Addr + section.Size
-			if sectionEnd < section.Addr {
-				return nil, fmt.Errorf(
-					"section %s address overflow at %#x",
-					section.Name,
-					section.Addr,
-				)
+			end, err := sectionEnd(section)
+			if err != nil {
+				return nil, err
 			}
-			if section.Addr < programHeader.Vaddr || sectionEnd > programEnd {
+			if !isWithin(section.Addr, end, programHeader.Vaddr, programEnd) {
 				continue
 			}
 
-			data, err := io.ReadAll(section.Open())
+			data, err := readSection(section)
 			if err != nil {
-				return nil, fmt.Errorf("reading ELF section %s: %w", section.Name, err)
+				return nil, err
 			}
-			if uint64(len(data)) != section.Size {
-				return nil, fmt.Errorf(
-					"short read for section %s: got %d bytes, expected %d",
-					section.Name,
-					len(data),
-					section.Size,
-				)
-			}
-			programBlobs = append(programBlobs, Blob{
-				Address:    section.Addr,
-				Data:       data,
-				Name:       section.Name,
-				Executable: section.Flags&elf.SHF_EXECINSTR != 0,
-			})
+			programBlobs = append(programBlobs, buildBlob(section, data))
 		}
 
-		sort.Slice(programBlobs, func(i, j int) bool {
-			return programBlobs[i].Address < programBlobs[j].Address
-		})
+		sortBlobsByAddress(programBlobs)
 		blobs = append(blobs, programBlobs...)
 	}
 	if len(blobs) == 0 {
 		return nil, fmt.Errorf("guest ELF has no loadable sections")
 	}
 	return blobs, nil
+}
+
+// sortBlobsByAddress orders blobs by ascending address, in place.
+func sortBlobsByAddress(blobs []Blob) {
+	sort.Slice(blobs, func(i, j int) bool {
+		return blobs[i].Address < blobs[j].Address
+	})
+}
+
+// readSection copies the bytes of a section out of the ELF. It fails when the
+// read fails or returns fewer bytes than the section size.
+func readSection(section *elf.Section) ([]byte, error) {
+	data, err := io.ReadAll(section.Open())
+	if err != nil {
+		return nil, fmt.Errorf("reading ELF section %s: %w", section.Name, err)
+	}
+	if uint64(len(data)) != section.Size {
+		return nil, fmt.Errorf(
+			"short read for section %s: got %d bytes, expected %d",
+			section.Name,
+			len(data),
+			section.Size,
+		)
+	}
+	return data, nil
+}
+
+// buildBlob builds the blob of a section from its virtual address, its bytes
+// and its name. The blob is executable when the section has SHF_EXECINSTR.
+func buildBlob(section *elf.Section, data []byte) Blob {
+	return Blob{
+		Address:    section.Addr,
+		Data:       data,
+		Name:       section.Name,
+		Executable: section.Flags&elf.SHF_EXECINSTR != 0,
+	}
 }
 
 // NewData maps data at the given address. WithLengthPrefix stores an eight-byte
