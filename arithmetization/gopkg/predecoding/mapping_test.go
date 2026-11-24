@@ -796,6 +796,20 @@ func (errWriter) Write([]byte) (int, error) {
 	return 0, errWrite
 }
 
+// failAfterWriter is an io.Writer that accepts remaining writes, then fails
+// every write with errWrite.
+type failAfterWriter struct {
+	remaining int
+}
+
+func (w *failAfterWriter) Write(p []byte) (int, error) {
+	if w.remaining == 0 {
+		return 0, errWrite
+	}
+	w.remaining--
+	return len(p), nil
+}
+
 // TestWriteSectionsIfRequested checks that the sections table is written only
 // when a writer is set, and that a failing write is returned wrapped.
 func TestWriteSectionsIfRequested(t *testing.T) {
@@ -811,11 +825,18 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 		{name: "writer receives the table", newWriter: func(buf *bytes.Buffer) io.Writer {
 			return buf
 		}, wantHeader: true},
-		{name: "write error is returned", newWriter: func(*bytes.Buffer) io.Writer {
+		{name: "header write error is returned", newWriter: func(*bytes.Buffer) io.Writer {
 			return errWriter{}
 		}, wantErr: true},
+		// The header is the first write, so one accepted write fails on the row.
+		{name: "row write error is returned", newWriter: func(*bytes.Buffer) io.Writer {
+			return &failAfterWriter{remaining: 1}
+		}, wantErr: true},
 	}
-	blobs := []Blob{{Address: 0x1000, Data: testText, Name: ".text"}}
+	blobs := []Blob{
+		{Address: 0x1000, Data: testText, Name: ".text", Executable: true},
+		{Address: 0x2000, Data: testText, Name: ".data"},
+	}
 	for _, tt := range tests {
 		var buf bytes.Buffer
 		err := writeSectionsIfRequested(tt.newWriter(&buf), blobs)
@@ -828,16 +849,31 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 		if bytes.Contains(buf.Bytes(), []byte("index, offset")) != tt.wantHeader {
 			t.Fatalf("%s: table written = %v, want %v", tt.name, !tt.wantHeader, tt.wantHeader)
 		}
+		if !tt.wantHeader {
+			continue
+		}
+		// One row per blob, with the executable flag.
+		for _, row := range []string{"yes, .text", "no , .data"} {
+			if !bytes.Contains(buf.Bytes(), []byte(row)) {
+				t.Fatalf("%s: table has no row %q:\n%s", tt.name, row, buf.String())
+			}
+		}
 	}
 }
 
 // TestU32Layout checks the u32 entry point, addresses and data size of a valid
 // layout, and that an entry point or blob outside the 32-bit address space is
-// an error. The blob count and data size limit is not tested, because it needs
-// more than 4 GiB of data.
+// an error. The blob count limit is not tested, because it needs more than 4
+// billion blobs. The data size limit uses 4096 blobs sharing one 1 MiB slice,
+// which total 2^32 bytes without allocating them, and assumes a 64-bit int.
 func TestU32Layout(t *testing.T) {
 	blob := func(address uint64, size int) Blob {
 		return Blob{Address: address, Data: make([]byte, size)}
+	}
+	shared := make([]byte, 1<<20)
+	tooMuchData := make([]Blob, 4096)
+	for i := range tooMuchData {
+		tooMuchData[i] = Blob{Data: shared}
 	}
 	tests := []struct {
 		name          string
@@ -853,6 +889,7 @@ func TestU32Layout(t *testing.T) {
 			wantEntry: 0x800000, wantAddresses: []uint32{0x1000, 0x2000}, wantSize: 12},
 		{name: "entry point outside 32 bits", entryPoint: 1 << 32, wantErr: true},
 		{name: "blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 4)}, wantErr: true},
+		{name: "data size exceeds u32", entryPoint: 0x800000, blobs: tooMuchData, wantErr: true},
 	}
 	for _, tt := range tests {
 		entry, addresses, size, err := u32Layout(tt.entryPoint, tt.blobs)
@@ -967,7 +1004,7 @@ func TestBuildInputs(t *testing.T) {
 // blob at 0x1000, which sorts first. The executable input is present only with
 // includeExecutable. Each failing step is an error: the ranges, the sections
 // writer and the 32-bit address space. The blob count and data size limit is
-// not tested, because it needs more than 4 GiB of data.
+// tested in TestU32Layout.
 func TestEncodeInputsInternal(t *testing.T) {
 	programBlobs := []Blob{{Address: 0x00800000, Data: testText, Name: ".text", Executable: true}}
 	program := Program{EntryPoint: 0x00800000, Blobs: programBlobs}
