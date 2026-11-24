@@ -1617,6 +1617,36 @@ func TestWithSectionsWriter(t *testing.T) {
 	}
 }
 
+// TestApplyOptions checks the config built from a list of options. Without
+// options the default cap is kept. With every option, the cap is overwritten and
+// the other fields are set. A nil option and an option that fails are errors, and
+// the config returned with an error is empty.
+func TestApplyOptions(t *testing.T) {
+	var buf bytes.Buffer
+	tests := []struct {
+		name    string
+		options []Option
+		want    config
+		wantErr bool
+	}{
+		{name: "no options", want: config{maxDecodedRecords: DefaultMaxDecodedRecords}},
+		{name: "all options", options: []Option{
+			WithMaxDecodedRecords(5), WithIncludeExecutable(), WithSectionsWriter(&buf),
+		}, want: config{maxDecodedRecords: 5, includeExecutable: true, sectionsWriter: &buf}},
+		{name: "nil option", options: []Option{WithIncludeExecutable(), nil}, wantErr: true},
+		{name: "option error", options: []Option{WithIncludeExecutable(), WithSectionsWriter(nil)}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := applyOptions(tt.options)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if got != tt.want {
+			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
 // commit 88fe45d
 // TestDecodedInputsPreserveExactRowLength
 // TestDecodedProgramEncodeInputsReturnsFreshBytes
