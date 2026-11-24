@@ -12,8 +12,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
+	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Compile adds the global-quotient compilation pass to sys. It groups each
@@ -780,6 +782,24 @@ func cachedDomain(n int, shift *field.Element) *fft.Domain {
 	return d.(*fft.Domain)
 }
 
+// cosetTableCache holds, per cached coset domain, its shift powers
+// s^0, …, s^{n-1} in bit-reversed order: the coset scaling of an FFT(DIT),
+// whose input is bit-reversed.
+var cosetTableCache sync.Map // *fft.Domain -> []field.Element
+
+// bitReversedCosetTable returns d's shift powers in bit-reversed order,
+// building them once per domain.
+func bitReversedCosetTable(d *fft.Domain) []field.Element {
+	if t, ok := cosetTableCache.Load(d); ok {
+		return t.([]field.Element)
+	}
+	t := make([]field.Element, d.Cardinality)
+	fft.BuildExpTable(d.FrMultiplicativeGen, t)
+	gutils.BitReverse(t)
+	got, _ := cosetTableCache.LoadOrStore(d, t)
+	return got.([]field.Element)
+}
+
 // annihilatorInverses returns 1/(x^n − 1) on each small coset of
 // [cosetShifts], where x^n = s_k^n = g^n·ω_ratio^k is constant.
 func annihilatorInverses(n, ratio int) []field.Element {
@@ -839,24 +859,28 @@ func evalColumnsOnCosets(
 		baseEvals[c] = vals
 	})
 
-	// Evaluation: coset k > 0 copies the coefficients from coset 0's slot
+	// Evaluation: coset k > 0 reads the coefficients from coset 0's slot
 	// before coset 0 is evaluated in place, in a second pass. FFT(DIT) takes
-	// the bit-reversed coefficients and returns the natural order.
+	// the bit-reversed coefficients and returns the natural order. The coset
+	// shift is applied while moving the coefficients into the slot
+	// (dst = coefs ⊙ shift-powers, bit-reversed), so the FFT runs without
+	// OnCoset and the coefficients are not first copied.
 	evalOn := func(c, k, tasks int) {
+		shifts := bitReversedCosetTable(cosetDomains[k])
 		if v := extEvals[c]; v != nil {
 			dst := v[k*n : (k+1)*n]
-			if k > 0 {
-				copy(dst, v[:n])
-			}
-			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
+			parallel.Execute(n, func(start, end int) {
+				extensions.VectorE6(dst[start:end]).MulByElement(v[start:end], shifts[start:end])
+			}, tasks)
+			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.WithNbTasks(tasks))
 			return
 		}
 		v := baseEvals[c]
 		dst := v[k*n : (k+1)*n]
-		if k > 0 {
-			copy(dst, v[:n])
-		}
-		cosetDomains[k].FFT(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
+		parallel.Execute(n, func(start, end int) {
+			koalabear.Vector(dst[start:end]).Mul(v[start:end], shifts[start:end])
+		}, tasks)
+		cosetDomains[k].FFT(dst, fft.DIT, fft.WithNbTasks(tasks))
 	}
 	type item struct{ c, k int }
 	items := make([]item, 0, len(cols)*(ratio-1))
