@@ -37,7 +37,7 @@ const Rollup = struct {
             .start = .{
                 .parent = blobs[end.blob].data_rolling_hash,
                 .take = end.tail,
-                .boundary = if (end.tail > 0) blobs[first_blob].prev_data_rolling_hash else null,
+                .parent_blob = if (end.tail > 0) blobs[first_blob].prev_data_rolling_hash else null,
             },
         };
     }
