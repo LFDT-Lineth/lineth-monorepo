@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(prover-ray)* Encode the rollup guest input (#4571)
+- *(prover-ray)* Run zkc Execute with gogen by default (#4573)
 
 ### 🐛 Bug Fixes
 
