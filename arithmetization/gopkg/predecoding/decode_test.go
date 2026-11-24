@@ -1688,34 +1688,68 @@ func TestPredecode(t *testing.T) {
 // PrepareInputs
 // ------------------------------------------------------------
 
-// TestPrepareInputs checks that PrepareInputs returns the inputs of the explicit
-// pipeline: Load, Predecode, NewData with a length prefix, then EncodeInputs and
-// the decoded program inputs. An invalid ELF, a zero record cap, a nil option and
-// a failing sections writer are errors.
+// TestPrepareInputs checks that PrepareInputs is prepareInputs with
+// DefaultInputOrigin: same inputs on success, and an error when prepareInputs
+// fails. The pipeline itself is tested in TestPrepareInputsInternal.
 func TestPrepareInputs(t *testing.T) {
 	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
 	inputData := []byte{0xaa, 0xbb}
 	tests := []struct {
 		name    string
 		elf     []byte
-		input   []byte
 		options []Option
 		wantErr bool
 	}{
-		{name: "default options", elf: elfBytes, input: inputData},
-		{name: "with executable", elf: elfBytes, input: inputData,
-			options: []Option{WithIncludeExecutable()}},
-		{name: "empty input", elf: elfBytes},
-		{name: "invalid ELF", elf: []byte("not an ELF"), input: inputData, wantErr: true},
-		{name: "zero record cap", elf: elfBytes, input: inputData,
-			options: []Option{WithMaxDecodedRecords(0)}, wantErr: true},
-		{name: "nil option", elf: elfBytes, input: inputData,
-			options: []Option{nil}, wantErr: true},
-		{name: "sections writer fails", elf: elfBytes, input: inputData,
-			options: []Option{WithSectionsWriter(errWriter{})}, wantErr: true},
+		{name: "default options", elf: elfBytes},
+		{name: "with executable", elf: elfBytes, options: []Option{WithIncludeExecutable()}},
+		{name: "invalid ELF", elf: []byte("not an ELF"), wantErr: true},
 	}
 	for _, tt := range tests {
-		got, err := PrepareInputs(tt.elf, tt.input, tt.options...)
+		got, err := PrepareInputs(tt.elf, inputData, tt.options...)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		want, _ := prepareInputs(tt.elf, inputData, DefaultInputOrigin, tt.options...)
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("%s: inputs differ from prepareInputs at DefaultInputOrigin", tt.name)
+		}
+	}
+}
+
+// TestPrepareInputsInternal checks that prepareInputs returns the inputs of the
+// explicit pipeline: Load, Predecode, NewData with a length prefix at the given
+// origin, then EncodeInputs and the decoded program inputs. An invalid ELF, a
+// zero record cap, a nil option, a failing sections writer and an origin whose
+// payload address overflows are errors.
+func TestPrepareInputsInternal(t *testing.T) {
+	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
+	inputData := []byte{0xaa, 0xbb}
+	tests := []struct {
+		name    string
+		elf     []byte
+		input   []byte
+		origin  uint64
+		options []Option
+		wantErr bool
+	}{
+		{name: "default options", elf: elfBytes, input: inputData, origin: DefaultInputOrigin},
+		{name: "with executable", elf: elfBytes, input: inputData, origin: DefaultInputOrigin,
+			options: []Option{WithIncludeExecutable()}},
+		{name: "empty input", elf: elfBytes, origin: DefaultInputOrigin},
+		{name: "custom origin", elf: elfBytes, input: inputData, origin: 0x1000},
+		{name: "invalid ELF", elf: []byte("not an ELF"), input: inputData,
+			origin: DefaultInputOrigin, wantErr: true},
+		{name: "zero record cap", elf: elfBytes, input: inputData, origin: DefaultInputOrigin,
+			options: []Option{WithMaxDecodedRecords(0)}, wantErr: true},
+		{name: "nil option", elf: elfBytes, input: inputData, origin: DefaultInputOrigin,
+			options: []Option{nil}, wantErr: true},
+		{name: "sections writer fails", elf: elfBytes, input: inputData, origin: DefaultInputOrigin,
+			options: []Option{WithSectionsWriter(errWriter{})}, wantErr: true},
+		{name: "payload address overflows", elf: elfBytes, input: inputData,
+			origin: ^uint64(0) - 7, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := prepareInputs(tt.elf, tt.input, tt.origin, tt.options...)
 		if (err != nil) != tt.wantErr {
 			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
 		}
@@ -1730,7 +1764,7 @@ func TestPrepareInputs(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: Predecode() error = %v", tt.name, err)
 		}
-		inputBlobs, err := NewData(DefaultInputOrigin, tt.input, WithLengthPrefix())
+		inputBlobs, err := NewData(tt.origin, tt.input, WithLengthPrefix())
 		if err != nil {
 			t.Fatalf("%s: NewData() error = %v", tt.name, err)
 		}

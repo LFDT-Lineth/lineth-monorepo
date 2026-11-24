@@ -670,6 +670,17 @@ func PrepareInputs(
 	inputData []byte,
 	options ...Option,
 ) (map[string]bit.Array, error) {
+	return prepareInputs(elfBytes, inputData, DefaultInputOrigin, options...)
+}
+
+// prepareInputs is PrepareInputs with the address where the length-prefixed
+// input data is mapped.
+func prepareInputs(
+	elfBytes []byte,
+	inputData []byte,
+	inputOrigin uint64,
+	options ...Option,
+) (map[string]bit.Array, error) {
 	cfg, err := applyOptions(options)
 	if err != nil {
 		return nil, err
@@ -683,7 +694,7 @@ func PrepareInputs(
 		return nil, err
 	}
 	inputBlobs, err := NewData(
-		DefaultInputOrigin,
+		inputOrigin,
 		inputData,
 		WithLengthPrefix(),
 	)
