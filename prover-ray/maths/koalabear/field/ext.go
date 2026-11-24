@@ -28,7 +28,7 @@ var RootPowers = []int{1, 1, 0, 3}
 // BatchInvertExt returns the inverses of the elements of a, using the
 // Montgomery trick; zeroes map to zero.
 func BatchInvertExt(a []Ext) []Ext {
-	return extensions.BatchInvertE6(a)
+	return extensions.VectorE6(a).BatchInvert()
 }
 
 // BatchInvertExtInto computes the inverses of all elements in a and writes
@@ -37,14 +37,14 @@ func BatchInvertExt(a []Ext) []Ext {
 // its scratch comes from gnark-crypto's pool; see [BatchInvertExtScratch] to
 // pass it.
 func BatchInvertExtInto(res, a []Ext) {
-	extensions.BatchInvertE6Into(res, a)
+	extensions.VectorE6(res).BatchInvertInto(a)
 }
 
 // BatchInvertExtScratch is [BatchInvertExtInto] with caller-provided scratch:
 // it allocates nothing. scratch must hold at least len(a) elements, is
 // overwritten, and must overlap neither res nor a.
 func BatchInvertExtScratch(res, a, scratch []Ext) {
-	extensions.BatchInvertE6IntoScratch(res, a, scratch)
+	extensions.VectorE6(res).BatchInvertIntoScratch(a, scratch)
 }
 
 // NewExtFromString only sets the first coordinate of the field extension

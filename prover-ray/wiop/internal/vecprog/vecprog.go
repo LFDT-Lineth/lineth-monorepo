@@ -826,7 +826,7 @@ func (w *worker) linear(nd *node, dst []field.Ext) {
 	acc := extensions.VectorE6(dst)
 	for i, a := range nd.atoms {
 		atom := w.operand(a, len(dst))
-		acc.ScalarMulAccByElement(atom.base, &nd.coefs[i])
+		acc.ScalarMulAccBase(atom.base, &nd.coefs[i])
 	}
 }
 
@@ -1043,7 +1043,7 @@ func (w *worker) sink(sk *sink, agg []field.Ext, tablePos, point, L int) {
 			tmp.Mul(vals, cancel)
 			vals = tmp
 		}
-		acc.ScalarMulAccByElement(vals, &sk.coef)
+		acc.ScalarMulAccBase(vals, &sk.coef)
 		return
 	}
 	vals := root.ext

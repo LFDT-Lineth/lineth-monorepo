@@ -3,18 +3,10 @@ package field
 import (
 	"fmt"
 	"math/rand/v2"
-	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
-)
-
-// minusOne and oneExt are the scalars of the vectorised negations and of the
-// base-by-extension accumulation in [VecSubBaseExt].
-var (
-	minusOne = func() (m Element) { m.SetOne(); m.Neg(&m); return m }()
-	oneExt   = func() (o Ext) { o.SetOne(); return o }()
 )
 
 // Vec holds a vector of field elements in either the base field 𝔽_p or
@@ -66,19 +58,6 @@ func (v Vec) AsExt() []Ext {
 	return v.ext
 }
 
-// ExtLimbs views extension elements as their 6·len(v) contiguous base-field
-// coordinates (an Ext is six Elements laid out back to back). Coordinate-wise
-// operations — Add, Sub, scaling by a base scalar — on the view act on the
-// extension elements, so they can run through the koalabear.Vector kernels.
-// The view aliases v.
-func ExtLimbs(v []Ext) Vector {
-	if len(v) == 0 {
-		return nil
-	}
-	// #nosec G103 -- an Ext is six contiguous Elements
-	return unsafe.Slice((*Element)(unsafe.Pointer(unsafe.SliceData(v))), ExtensionDegree*len(v))
-}
-
 // mustEqualLen panics if the three lengths are not all equal. Used to guard
 // all typed vector operations against mismatched slice lengths.
 func mustEqualLen(res, a, b int) {
@@ -102,23 +81,16 @@ func mustEqualLen2(res, a int) {
 // base field. All slices must have equal length.
 func VecAddBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	(*koalabear.Vector)(&res).Add(a, b)
+	koalabear.Vector(res).Add(a, b)
 }
 
 // VecAddExtBase sets res[i] = a[i] + b[i] where a is an extension vector and
-// b is a base vector. Only the first coordinate of each a[i] is updated; the
-// remaining five are copied unchanged. Cost: 1 base addition per element.
-// All slices must have equal length.
-//
-// It stays a loop: no gnark-crypto kernel adds a base vector into the first
-// coordinates only, and copying a then accumulating b with
-// VectorE6.ScalarMulAccByElement measured ~4x slower at 2^16.
+// b is a base vector, using gnark-crypto's VectorE6.AddElement (only the
+// first coordinate of each a[i] changes). All slices must have equal length;
+// res may alias a.
 func VecAddExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i] = a[i]
-		res[i].B0.A0.Add(&res[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(res).AddElement(a, b)
 }
 
 // VecAddBaseExt sets res[i] = a[i] + b[i] where a is a base vector and b is
@@ -162,31 +134,24 @@ func VecAddInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecSubBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	(*koalabear.Vector)(&res).Sub(a, b)
+	koalabear.Vector(res).Sub(a, b)
 }
 
 // VecSubExtBase sets res[i] = a[i] - b[i] where a is an extension vector and
-// b is a base vector. Only the first coordinate of each a[i] is updated.
-// Cost: 1 base subtraction per element. All slices must have equal length.
-// It stays a loop for the reason given on [VecAddExtBase].
+// b is a base vector, using gnark-crypto's VectorE6.SubElement (only the
+// first coordinate of each a[i] changes). All slices must have equal length;
+// res may alias a.
 func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i] = a[i]
-		res[i].B0.A0.Sub(&res[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(res).SubElement(a, b)
 }
 
 // VecSubBaseExt sets res[i] = a[i] - b[i] where a is a base vector and b is
-// an extension vector. Subtraction is not commutative, so this cannot
-// delegate to VecSubExtBase: it negates b through its limb view and adds a
-// into the first coordinates with the vectorised base-by-extension
-// accumulation. All slices must have equal length.
+// an extension vector, using gnark-crypto's VectorE6.SubFromElement. All
+// slices must have equal length; res may alias b.
 func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	limbs := ExtLimbs(res)
-	limbs.ScalarMul(ExtLimbs(b), &minusOne)
-	extensions.VectorE6(res).ScalarMulAccByElement(a, &oneExt)
+	extensions.VectorE6(res).SubFromElement(a, b)
 }
 
 // VecSubExtExt sets res[i] = a[i] - b[i] over the extension field, using
@@ -225,7 +190,7 @@ func VecSubInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecMulBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	(*koalabear.Vector)(&res).Mul(a, b)
+	koalabear.Vector(res).Mul(a, b)
 }
 
 // VecMulExtBase sets res[i] = a[i] * b[i] where a is an extension vector and
@@ -284,24 +249,18 @@ func VecMulInto(res, a, b Vec) {
 // Neg
 // ---------------------------------------------------------------------------
 
-// VecNegBase sets res[i] = -a[i] over the base field.
-// All slices must have equal length.
-//
-// It scales by −1 with the vectorised koalabear.Vector.ScalarMul rather than
-// calling koalabear.Vector.Neg, which is a scalar loop and measured ~5x
-// slower at 2^16.
+// VecNegBase sets res[i] = -a[i] over the base field, using gnark-crypto's
+// vectorised Vector.Neg. All slices must have equal length; res may alias a.
 func VecNegBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
-	(*koalabear.Vector)(&res).ScalarMul(a, &minusOne)
+	koalabear.Vector(res).Neg(a)
 }
 
-// VecNegExt sets res[i] = -a[i] over the extension field.
-// All slices must have equal length. Like [VecNegBase], it scales the limb
-// view by −1 rather than calling VectorE6.Neg (~3x slower at 2^16).
+// VecNegExt sets res[i] = -a[i] over the extension field, using gnark-crypto's
+// vectorised VectorE6.Neg. All slices must have equal length; res may alias a.
 func VecNegExt(res, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	limbs := ExtLimbs(res)
-	limbs.ScalarMul(ExtLimbs(a), &minusOne)
+	extensions.VectorE6(res).Neg(a)
 }
 
 // VecNegInto sets res[i] = -a[i] for all i, dispatching on the field type of

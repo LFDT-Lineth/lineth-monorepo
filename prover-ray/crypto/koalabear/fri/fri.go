@@ -360,7 +360,7 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 			for _, c := range g.columns {
 				column := &l.Columns[c]
 				if column.isBase() {
-					extensions.VectorE6(gbuf).ScalarMulAccByElement(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
+					extensions.VectorE6(gbuf).ScalarMulAccBase(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
 				} else {
 					extensions.VectorE6(gbuf).ScalarMulAcc(extensions.VectorE6(column.EvalsExt[start:end]), &alphaPow[c])
 				}

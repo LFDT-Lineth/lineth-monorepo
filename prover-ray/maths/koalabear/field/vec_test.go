@@ -286,24 +286,6 @@ func TestVecAddSubExtExtLengths(t *testing.T) {
 	}
 }
 
-// TestExtLimbs checks the limb view's length and coordinate order.
-func TestExtLimbs(t *testing.T) {
-	if ExtLimbs(nil) != nil {
-		t.Fatal("ExtLimbs(nil) must be nil")
-	}
-	v := randomExts(3)
-	limbs := ExtLimbs(v)
-	if len(limbs) != 18 {
-		t.Fatalf("len = %d, want 18", len(limbs))
-	}
-	for i := range v {
-		want := [6]Element{v[i].B0.A0, v[i].B0.A1, v[i].B1.A0, v[i].B1.A1, v[i].B2.A0, v[i].B2.A1}
-		if [6]Element(limbs[6*i:6*i+6]) != want {
-			t.Fatalf("element %d: limbs %v, want %v", i, limbs[6*i:6*i+6], want)
-		}
-	}
-}
-
 // TestVecSubIntoDispatch verifies that VecSubInto dispatches correctly.
 func TestVecSubIntoDispatch(t *testing.T) {
 	elems := [2][]Element{randomElems(testN), randomElems(testN)}
@@ -708,14 +690,15 @@ func TestVecKernelsInPlace(t *testing.T) {
 // gnark-crypto kernels against their element-wise definitions at lengths
 // around and across the kernels' 16-lane blocks, out of place and in place.
 func TestVecVectorisedMatchesElementwise(t *testing.T) {
-	lengths := []int{1000}
+	lengths := make([]int, 0, 72)
+	lengths = append(lengths, 1000)
 	for n := range 71 {
 		lengths = append(lengths, n)
 	}
 	for _, n := range lengths {
 		a, x, y := randomElems(n), randomExts(n), randomExts(n)
 		var s Ext
-		s.SetRandom()
+		s.MustSetRandom()
 
 		wantNegBase := make([]Element, n)
 		wantNegExt, wantSub, wantSAB, wantSAE := make([]Ext, n), make([]Ext, n), make([]Ext, n), make([]Ext, n)
@@ -750,6 +733,26 @@ func TestVecVectorisedMatchesElementwise(t *testing.T) {
 		got = slices.Clone(x)
 		VecSubBaseExt(got, a, got)
 		require.Equal(t, wantSub, got, "VecSubBaseExt in place n=%d", n)
+
+		for _, op := range []struct {
+			name string
+			f    func(res, a []Ext, b []Element)
+			g    func(z, x *Element, y *Element) *Element
+		}{
+			{"VecAddExtBase", VecAddExtBase, (*Element).Add},
+			{"VecSubExtBase", VecSubExtBase, (*Element).Sub},
+		} {
+			want := slices.Clone(x)
+			for i := range want {
+				op.g(&want[i].B0.A0, &x[i].B0.A0, &a[i])
+			}
+			got = make([]Ext, n)
+			op.f(got, x, a)
+			require.Equal(t, want, got, "%s n=%d", op.name, n)
+			got = slices.Clone(x)
+			op.f(got, got, a)
+			require.Equal(t, want, got, "%s in place n=%d", op.name, n)
+		}
 
 		got = slices.Clone(y)
 		VecScaleAddExtBase(got, s, a)

@@ -293,7 +293,7 @@ func (h *rowHasher) hash(lo, hi int, buf *hashBuffers) []field.Ext {
 	acc := extensions.VectorE6(out)
 	for k, col := range h.cols {
 		if col.isBase() {
-			acc.ScalarMulAccByElement(col.readBase(lo, hi, buf.base), &h.coefs[k])
+			acc.ScalarMulAccBase(col.readBase(lo, hi, buf.base), &h.coefs[k])
 		} else {
 			acc.ScalarMulAcc(col.readExt(lo, hi, buf.ext), &h.coefs[k])
 		}
