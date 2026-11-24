@@ -6,6 +6,8 @@
 version = "0.0.0-riscv"
 log_level = 4
 guests_dir = "/opt/linea/prover-ray/guests"
+# Run the guests with gogen instead of the interpreter (needs Go on PATH). On by default.
+gogen = true
 
 [execution]
 prover_mode = "dev-partial"

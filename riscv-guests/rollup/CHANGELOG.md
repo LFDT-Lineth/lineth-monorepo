@@ -17,6 +17,10 @@
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
 
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Rollup zstd kzg clarifications (#3854)

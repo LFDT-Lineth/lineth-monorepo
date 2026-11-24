@@ -6,20 +6,24 @@ The Zig library under `src/` is independent from `prover-ray` at runtime. Go tes
 
 ## Documentation
 
-- `docs/system-codegen.md` explains how compiled prover-ray systems are extracted and rendered as comptime Zig verifier data.
 - `docs/global-constraint.md` explains how the vanishing polynomial/global constraint check is asserted.
-- `docs/vanishing-pcs-integration-notes.md` tracks assumptions to revisit when PCS/FRI verification is wired in.
-- `docs/verifier-profiling.md` explains how to profile the R5 verifier path through zkc.
 
 ## Testdata Generation
 
-Generated fixtures are checked into git and live in:
+The end-to-end fixtures are checked into git:
 
 ```text
-testdata/generated/vectors.zig
-testdata/generated/vanishing.zig
 testdata/generated/verify.zig
+```
+
+The RISC-V and devmode systems and their proof images are generated, not
+committed (see `.gitignore`):
+
+```text
 testdata/generated/riscv_system.zig
+testdata/generated/devmode_system.zig
+testdata/riscv_proof_image.bin
+testdata/devmode_proof_image.bin
 ```
 
 The generator is in:
@@ -124,6 +128,5 @@ Or run them by area:
 
 ```bash
 make fmt-zig
-make fmt-codegen
-make fmt-testdata-generate
+make fmt-go
 ```

@@ -114,9 +114,9 @@ fn checkRequest(a: Allocator, scratch: Allocator, index: usize, run: Run, layout
     try std.testing.expectEqual(@as(u64, run.blocks.len), pi.block_count);
     try std.testing.expectEqualSlices(u8, &last.hash, &pi.end_block_hash);
     try std.testing.expectEqualSlices(u8, &run.blocks[0].parent_hash, &pi.parent_block_hash);
-    try std.testing.expectEqual(request.parent_data_tail_take_bytes, pi.parent_data_tail_take_bytes);
+    try std.testing.expectEqual(request.parent_shared_blob_carry_over_tail_bytes, pi.parent_shared_blob_carry_over_tail_bytes);
     try std.testing.expectEqualSlices(u8, &request.end_data_rolling_hash, &pi.end_data_rolling_hash);
-    try std.testing.expectEqual(request.final_data_tail_discard_bytes, pi.final_data_tail_discard_bytes);
+    try std.testing.expectEqual(request.final_shared_blob_carry_over_tail_bytes, pi.final_shared_blob_carry_over_tail_bytes);
 
     // The request survives the wire: the decoded frame gives the same public inputs.
     const frame = try rollup_ssz.encodeInput(a, request.input());
@@ -128,7 +128,7 @@ fn checkRequest(a: Allocator, scratch: Allocator, index: usize, run: Run, layout
     for (request.chunks) |chunk| {
         if (chunk.is_calldata.value) tally.calldata_chunks += 1 else tally.blobs += 1;
     }
-    if (request.parent_data_tail_take_bytes > 0) tally.shared_blobs += 1;
+    if (request.parent_shared_blob_carry_over_tail_bytes > 0) tally.shared_blobs += 1;
 
     for (std.enums.values(Rule)) |rule| {
         try expectRejected(a, &request, rule);

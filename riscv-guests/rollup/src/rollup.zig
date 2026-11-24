@@ -122,8 +122,8 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .end_data_rolling_hash = verified.end_data_rolling_hash,
         .parent_block_hash = first.public_inputs.parent_block_hash,
         .end_block_hash = last.public_inputs.end_block_hash,
-        .parent_data_tail_take_bytes = input.parent_data_tail_take_bytes,
-        .final_data_tail_discard_bytes = verified.final_data_tail_discard_bytes,
+        .parent_shared_blob_carry_over_tail_bytes = input.parent_shared_blob_carry_over_tail_bytes,
+        .final_shared_blob_carry_over_tail_bytes = verified.final_shared_blob_carry_over_tail_bytes,
         .l2_l1_messages = .{ .items = l2_l1_messages },
         .filtered_addresses = .{ .items = guest_common.lists.sortedDistinct(20, all_addresses) },
         .program_vks = .{ .items = guest_common.lists.sortedDistinct(32, program_vks) },
@@ -141,15 +141,15 @@ fn verifyDataAvailability(allocator: Allocator, input: rollup_ssz.RollupProofPri
         error.InvalidDictionary => unreachable,
     };
     defer decoder.deinit();
-    const boundary = input.boundary_prev_data_rolling_hash.items;
+    const parent_blob = input.parent_blob_data_rolling_hash.items;
     return decompress.verifyDaChunks(
         allocator,
         decoder,
         input.chunks.items,
         payloads,
         input.parent_data_rolling_hash,
-        input.parent_data_tail_take_bytes,
-        if (boundary.len == 1) boundary[0] else null,
+        input.parent_shared_blob_carry_over_tail_bytes,
+        if (parent_blob.len == 1) parent_blob[0] else null,
     );
 }
 
