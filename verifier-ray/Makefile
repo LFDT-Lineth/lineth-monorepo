@@ -136,10 +136,10 @@ generate-testdata:
 	$(MAKE) generate-devmode-system
 
 # The image belongs to the committed verify.zig (image_case_index and that case's system), so it is
-# rebuilt whenever verify.zig or its generator changes. `-out ''` writes only the image and leaves
-# the committed verify.zig alone.
+# rebuilt whenever verify.zig or its generator changes. `-image-only` writes only the image, and fails
+# unless the committed verify.zig is exactly what the generator produces now.
 $(FIXTURE_PROOF_IMAGE): testdata/generated/verify.zig $(wildcard cmd/generate-testdata/*.go)
-	go run ./cmd/generate-testdata -out ''
+	go run ./cmd/generate-testdata -image-only
 
 generate-devmode-system:
 	$(VERIFIER_ASSETS) --system devmode \

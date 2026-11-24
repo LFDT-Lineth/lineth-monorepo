@@ -28,10 +28,11 @@ import (
 )
 
 func main() {
-	out := flag.String("out", filepath.Join("testdata", "generated", "verify.zig"),
-		"path of the generated fixtures; empty writes only the proof image")
+	out := flag.String("out", filepath.Join("testdata", "generated", "verify.zig"), "path of the generated fixtures")
 	imageOut := flag.String("image-out", filepath.Join("testdata", "fixture_proof_image.bin"),
 		"path of the proof image of one fixture case (see fixtureProofImage)")
+	imageOnly := flag.Bool("image-only", false,
+		"write only the proof image, and only if -out already holds exactly the fixtures generated now")
 	flag.Parse()
 
 	fixtureCases, compiledSystems, err := buildCompiledFixtureCases()
@@ -42,13 +43,27 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// verify.zig first: the image is written last, so it is never newer than a verify.zig that
-	// failed to be written, and make's timestamp check sees the pair as up to date.
-	if *out != "" {
-		if err := writeVerifyFixtures(*out, fixtureCases, compiledSystems, imageCase); err != nil {
+	fixtures, err := renderVerifyFixtures(fixtureCases, compiledSystems, imageCase)
+	if err != nil {
+		panic(err)
+	}
+	if *imageOnly {
+		// The image is verified against image_case_index and that case's system in the existing
+		// fixtures, so it must come from the same generation: refuse to pair it with a stale file.
+		existing, err := os.ReadFile(*out)
+		if err != nil {
 			panic(err)
 		}
+		if !bytes.Equal(existing, fixtures) {
+			fmt.Fprintf(os.Stderr, "%s is out of date with this generator and prover-ray; "+
+				"run `make generate-testdata` to regenerate it with its proof image\n", *out)
+			os.Exit(1)
+		}
+	} else if err := writeFile(*out, fixtures); err != nil {
+		panic(err)
 	}
+	// The image is written last, so it is never newer than fixtures that failed to be written, and
+	// make's timestamp check sees the pair as up to date.
 	if err := writeFile(*imageOut, image); err != nil {
 		panic(err)
 	}
@@ -1002,13 +1017,15 @@ func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round, publicInp
 	return trace
 }
 
-func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.CompiledSystem, imageCase int) error {
+// renderVerifyFixtures returns the formatted Zig source of verify.zig: every case with its compiled
+// system and proofs, and image_case_index, the case the fixture proof image encodes.
+func renderVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem, imageCase int) ([]byte, error) {
 	// verify.zig drives the mandatory-PCS verifier.verify, the only consumer of
 	// these fixtures: a case without a PCS System could not be verified, so it
 	// is an error rather than silently dropped.
 	for i := range cases {
 		if cases[i].pcs == nil {
-			return fmt.Errorf("fixture case %q has no PCS System", cases[i].name)
+			return nil, fmt.Errorf("fixture case %q has no PCS System", cases[i].name)
 		}
 	}
 
@@ -1026,7 +1043,7 @@ func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.Com
 
 	for i := range cases {
 		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
-			return err
+			return nil, err
 		}
 		writeVerifyCase(&out, i, cases[i])
 	}
@@ -1037,11 +1054,7 @@ func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.Com
 	fmt.Fprintf(&out, "\n/// The case whose honest proof testdata/fixture_proof_image.bin encodes (%s).\n", cases[imageCase].name)
 	fmt.Fprintf(&out, "pub const image_case_index: usize = %d;\n", imageCase)
 
-	data, err := codegen.FormatZig(out.Bytes())
-	if err != nil {
-		return err
-	}
-	return writeFile(path, data)
+	return codegen.FormatZig(out.Bytes())
 }
 
 func writeVerifyHeader(out *bytes.Buffer, count int) {
