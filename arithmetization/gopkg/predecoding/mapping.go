@@ -326,16 +326,26 @@ func EncodeInputs(
 	additional []Blob,
 	options ...Option,
 ) (map[string]bit.Array, error) {
+	cfg, err := applyInputOptions(options)
+	if err != nil {
+		return nil, err
+	}
+	return encodeInputs(program, additional, cfg)
+}
+
+// applyInputOptions builds the encoding config from the options. A nil option
+// and a failing option are errors.
+func applyInputOptions(options []Option) (config, error) {
 	cfg := config{}
 	for _, option := range options {
 		if option == nil {
-			return nil, fmt.Errorf("applying input option: nil option")
+			return config{}, fmt.Errorf("applying input option: nil option")
 		}
 		if err := option(&cfg); err != nil {
-			return nil, fmt.Errorf("applying input option: %w", err)
+			return config{}, fmt.Errorf("applying input option: %w", err)
 		}
 	}
-	return encodeInputs(program, additional, cfg)
+	return cfg, nil
 }
 
 func encodeInputs(program Program, additional []Blob, cfg config) (map[string]bit.Array, error) {

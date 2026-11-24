@@ -1025,3 +1025,70 @@ func TestEncodeInputsInternal(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// applyInputOptions
+// ------------------------------------------------------------
+
+// TestApplyInputOptions checks that the options set the encoding config, and
+// that a nil option or a failing option is an error.
+func TestApplyInputOptions(t *testing.T) {
+	buf := &bytes.Buffer{}
+	tests := []struct {
+		name    string
+		options []Option
+		want    config
+		wantErr bool
+	}{
+		{name: "no options", want: config{}},
+		{name: "include executable", options: []Option{WithIncludeExecutable()},
+			want: config{includeExecutable: true}},
+		{name: "sections writer", options: []Option{WithSectionsWriter(buf)},
+			want: config{sectionsWriter: buf}},
+		{name: "both options", options: []Option{WithIncludeExecutable(), WithSectionsWriter(buf)},
+			want: config{includeExecutable: true, sectionsWriter: buf}},
+		{name: "nil option", options: []Option{nil}, wantErr: true},
+		{name: "failing option", options: []Option{WithSectionsWriter(nil)}, wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := applyInputOptions(tt.options)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// EncodeInputs
+// ------------------------------------------------------------
+
+// TestEncodeInputs checks that the options are applied, with the executable
+// input added by WithIncludeExecutable, and that an error from the options is
+// returned. The option errors themselves are tested in TestApplyInputOptions.
+func TestEncodeInputs(t *testing.T) {
+	program := Program{EntryPoint: 0x00800000, Blobs: []Blob{
+		{Address: 0x00800000, Data: testText, Name: ".text", Executable: true},
+	}}
+	tests := []struct {
+		name       string
+		options    []Option
+		wantInputs int
+		wantErr    bool
+	}{
+		{name: "no options", wantInputs: 3},
+		{name: "with executable", options: []Option{WithIncludeExecutable()}, wantInputs: 4},
+		{name: "option error", options: []Option{nil}, wantErr: true},
+	}
+	for _, tt := range tests {
+		inputs, err := EncodeInputs(program, nil, tt.options...)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if !tt.wantErr && len(inputs) != tt.wantInputs {
+			t.Fatalf("%s: %d inputs, want %d", tt.name, len(inputs), tt.wantInputs)
+		}
+	}
+}
