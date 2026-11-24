@@ -44,13 +44,13 @@ pub const ChunkWitness = lineth_da.decompress.Chunk;
 
 pub const RollupProofPrivateInput = struct {
     parent_data_rolling_hash: [32]u8,
-    parent_data_tail_take_bytes: u64,
+    parent_shared_blob_carry_over_tail_bytes: u64,
     chain_id: u64,
     conflations: ssz.VariableList(ConflationWitness, MAX_CONFLATIONS_PER_ROLLUP),
     chunks: ssz.VariableList(ChunkWitness, MAX_CHUNKS_PER_ROLLUP),
     l2_execution_proofs: ssz.VariableList(l2_execution_proof.VerifiableL2ExecutionProof, MAX_L2_EXECUTION_PROOFS_PER_ROLLUP),
     /// At most one hash: absent is the empty list, present the single hash.
-    boundary_prev_data_rolling_hash: ssz.FixedList([32]u8, 1),
+    parent_blob_data_rolling_hash: ssz.FixedList([32]u8, 1),
 };
 
 /// The input in `data`, the 0x0004 schema id followed by the SSZ container.

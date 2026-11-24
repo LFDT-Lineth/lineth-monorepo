@@ -7,7 +7,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | Mode | Runs the guest | Traces the guest | Constraints | Conglomeration | Public inputs | Proof |
 |---|---|---|---|---|---|---|
 | `dev-mock` | no | no | not checked | none | placeholder | marker bytes |
-| `dev-zkvm` | yes | no | not checked | none | real | marker bytes |
+| `dev-zkvm` | yes | no | not checked | none | real | devmode proof |
 | `dev-partial` | yes | yes | checked | mock (checks the shards fit together) | real | devmode proof |
 | `dev-full-dummy-wrap` (aggregation only) | yes | yes | proved | real recursion | real | real proof, but a dummy BN254 proof for L1 |
 | `full` | yes | yes | proved | real recursion | real | real proof |
@@ -22,7 +22,7 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
+For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
 
 The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
 
@@ -39,11 +39,19 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 - Runs the guest on the real input, without a trace.
 - The public inputs are real: they come from the guest output, as in dev-partial.
 - Nothing is checked against the constraints.
+- The proof is a devmode proof of the guest output hash, the same format as in dev-partial:
+  - the next layer can verify it;
+  - but anyone can make one, so it proves nothing;
+  - its program VK is zero.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
 ### dev-partial
 
 - Runs the guest and traces it, in pieces called shards when `shard_size` is set. A real block needs it.
+- `shard_workers` sets how many shards are traced and checked at the same time (default: one). Memory measured with 500000 instructions per shard:
+  - each shard in progress: about 30 to 35 GiB;
+  - plus the trace checkpoints, shared by all the shards: about 85 MB per shard of the block.
+  - Measured on r8a.24xlarge with the blocks in `riscv-guests/l2_execution/test/testdata/`: `stateless_input.ssz`, `block_amsterdam_175k.ssz`, `block_amsterdam_786k.ssz`, `block_amsterdam_51584_500k.ssz` and `block_amsterdam_52861_2M.ssz`.
 - Checks every shard against every constraint, compiled as in `full` but without the commitment (PCS).
 - With shards, the mock conglomeration checks that:
   - the shards agree on the guest output;
@@ -70,7 +78,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 
 - The native runner runs the same guest code outside the VM.
 - Set it with `native_runner_bin` in `[execution]`, as a path or a name found on `PATH`: optional in `dev-zkvm` and `dev-partial`. When it is set in these two modes, the prover does not start if it cannot be run.
-- `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size`. The prover logs a warning at startup when an ignored setting is set.
+- `dev-mock` and `full` ignore it, and `dev-mock` and `dev-zkvm` ignore `shard_size` and `shard_workers`. The prover logs a warning at startup when an ignored setting is set.
 - The check will be dropped once the VM passes the RISC-V compliance tests, or before a second guest version goes live.
 
 Sample configs: `prover-ray/config/config-dev-mock.toml`, `config-dev-zkvm.toml`, `config-dev-partial.toml`.

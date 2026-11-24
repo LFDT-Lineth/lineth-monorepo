@@ -243,8 +243,8 @@ test "a range inside a blob without the opening of its parent hash is rejected" 
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .prefix = .{ .bytes = 1000 } }} });
-    request.boundary_prev_data_rolling_hash = null;
-    try expectRejected(error.BoundaryPreimageMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
+    request.parent_blob_data_rolling_hash = null;
+    try expectRejected(error.ParentBlobDataRollingHashMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
 test "a range inside a blob with another opening of its parent hash is rejected" {
@@ -253,8 +253,8 @@ test "a range inside a blob with another opening of its parent hash is rejected"
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{ .chunks = &.{.{ .prefix = .{ .bytes = 1000 } }} });
-    request.boundary_prev_data_rolling_hash.?[0] ^= 0x01;
-    try expectRejected(error.BoundaryPreimageMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
+    request.parent_blob_data_rolling_hash.?[0] ^= 0x01;
+    try expectRejected(error.ParentBlobDataRollingHashMismatch, guest_errors.CODE_CHUNK_BINDING, a, request);
 }
 
 test "a blob proof that does not open the commitment is rejected" {
@@ -313,8 +313,8 @@ test "a tail count that reaches the whole payload of the first blob is rejected"
     const a = arena.allocator();
 
     var request = try requestOf(a, &.{1}, .{});
-    request.parent_data_tail_take_bytes = scenario.blob_capacity;
-    try expectRejected(error.InvalidTailTake, guest_errors.CODE_STREAM_LAYOUT, a, request);
+    request.parent_shared_blob_carry_over_tail_bytes = scenario.blob_capacity;
+    try expectRejected(error.InvalidParentCarryOverTail, guest_errors.CODE_STREAM_LAYOUT, a, request);
 }
 
 // ── The decompression of the segments (step 2) ───────────────────────────────────────────────────

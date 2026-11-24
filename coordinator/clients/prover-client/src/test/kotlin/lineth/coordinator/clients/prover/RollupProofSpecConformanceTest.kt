@@ -44,8 +44,12 @@ class RollupProofSpecConformanceTest {
     val domain = RollupProofResponseDtoMapper(dto)
     val pi = json["publicInputs"]
     assertThat(domain.endBlockNumber).isEqualTo(pi["endBlockNumber"].asLong().toULong())
-    assertThat(domain.publicInputs.parentDataTailTakeBytes).isEqualTo(pi["parentDataTailTakeBytes"].asInt())
-    assertThat(domain.publicInputs.finalDataTailDiscardBytes).isEqualTo(pi["finalDataTailDiscardBytes"].asInt())
+    assertThat(
+      domain.publicInputs.parentSharedBlobCarryOverTailBytes,
+    ).isEqualTo(pi["parentSharedBlobCarryOverTailBytes"].asInt())
+    assertThat(
+      domain.publicInputs.finalSharedBlobCarryOverTailBytes,
+    ).isEqualTo(pi["finalSharedBlobCarryOverTailBytes"].asInt())
     assertThat(domain.publicInputs.l2L1Messages).hasSize(pi["l2L1Messages"].size())
     assertThat(domain.publicInputs.programVks).hasSize(pi["programVks"].size())
   }
@@ -54,8 +58,8 @@ class RollupProofSpecConformanceTest {
   fun `rollup request fixture covers a mid-chunk start`() {
     val dto = fixtureAs<FileBasedRollupProofRequestDto>("10-14-getZkRollupProofV1.request.json")
 
-    assertThat(dto.proofRequest.parentDataTailTakeBytes).isPositive()
-    assertThat(dto.proofRequest.boundaryPrevDataRollingHash).isNotNull()
+    assertThat(dto.proofRequest.parentSharedBlobCarryOverTailBytes).isPositive()
+    assertThat(dto.proofRequest.parentBlobDataRollingHash).isNotNull()
   }
 
   @Test
@@ -65,8 +69,9 @@ class RollupProofSpecConformanceTest {
     assertSchemaValid(requestSchema, json)
     val proofRequest = json["proofRequest"]
     assertThat(proofRequest.has("l2ExecutionProofIndexes")).isFalse()
-    // parentDataTailTakeBytes = 0, so the optional boundary hash is omitted rather than written as null.
-    assertThat(proofRequest.has("boundaryPrevDataRollingHash")).isFalse()
+    // parentSharedBlobCarryOverTailBytes = 0, so the optional parentBlobDataRollingHash is omitted rather than written
+    // as null.
+    assertThat(proofRequest.has("parentBlobDataRollingHash")).isFalse()
     assertThat(proofRequest["l2ExecutionProofs"][0].has("proverVersion")).isFalse()
   }
 
@@ -111,7 +116,7 @@ class RollupProofSpecConformanceTest {
         l2ExecutionProofIndexes = indexes,
         chunks = listOf(chunk),
         parentDataRollingHash = "0x" + "19".repeat(32),
-        parentDataTailTakeBytes = 0,
+        parentSharedBlobCarryOverTailBytes = 0,
       )
 
     assertThatThrownBy { params(proofs = null, indexes = null) }
