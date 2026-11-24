@@ -514,10 +514,6 @@ func TestApplyDataOptions(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// rawBlobs
-// ------------------------------------------------------------
-
 // TestRawBlobs checks that data becomes one blob at the address, named as given,
 // and that empty data gives no blob.
 func TestRawBlobs(t *testing.T) {
@@ -544,10 +540,6 @@ func TestRawBlobs(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// payloadAddress
-// ------------------------------------------------------------
-
 // TestPayloadAddress checks that the payload sits eight bytes after the length
 // prefix, and that an address whose payload wraps the address space is an error.
 func TestPayloadAddress(t *testing.T) {
@@ -572,10 +564,6 @@ func TestPayloadAddress(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// newBlob
-// ------------------------------------------------------------
 
 // TestNewBlob checks that a blob keeps its address and data, and that its name
 // is the name with the suffix. An empty name stays empty.
@@ -605,10 +593,6 @@ func TestNewBlob(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// lengthPrefix
-// ------------------------------------------------------------
-
 // TestLengthPrefix checks that the length is encoded as eight bytes, least
 // significant byte first.
 func TestLengthPrefix(t *testing.T) {
@@ -628,10 +612,6 @@ func TestLengthPrefix(t *testing.T) {
 		}
 	}
 }
-
-// ------------------------------------------------------------
-// lengthPrefixedBlobs
-// ------------------------------------------------------------
 
 // TestLengthPrefixedBlobs checks the blobs this function assembles: only the
 // length blob when the data is empty, the length blob and the payload blob
@@ -669,10 +649,6 @@ func TestLengthPrefixedBlobs(t *testing.T) {
 	}
 }
 
-// ------------------------------------------------------------
-// NewData
-// ------------------------------------------------------------
-
 // TestNewData checks which path NewData takes: one raw blob, no blob for empty
 // raw data, length-prefixed blobs, an error from an option, and the length
 // prefix overflow.
@@ -707,6 +683,32 @@ func TestNewData(t *testing.T) {
 		}
 		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
 			t.Fatalf("%s: blobs = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// BitArrayFromBytes
+// ------------------------------------------------------------
+
+// TestBitArrayFromBytes checks that the array holds eight bits per byte, and
+// that its bytes are the input bytes.
+func TestBitArrayFromBytes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "no bytes", input: nil},
+		{name: "one byte", input: []byte{0xa5}},
+		{name: "two bytes", input: []byte{0x12, 0x34}},
+	}
+	for _, tt := range tests {
+		got := BitArrayFromBytes(tt.input...)
+		if want := uint(len(tt.input) * 8); got.Len() != want {
+			t.Fatalf("%s: Len() = %d, want %d", tt.name, got.Len(), want)
+		}
+		if !bytes.Equal(got.Bytes(), tt.input) {
+			t.Fatalf("%s: Bytes() = %x, want %x", tt.name, got.Bytes(), tt.input)
 		}
 	}
 }
