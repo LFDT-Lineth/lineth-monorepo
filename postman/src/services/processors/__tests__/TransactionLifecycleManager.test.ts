@@ -292,6 +292,25 @@ describe("TransactionLifecycleManager", () => {
       expect(message.status).toBe(MessageStatus.PENDING);
     });
 
+    it("should count the cycle and refresh updatedAt when the cancel receipt poll times out", async () => {
+      const message = makePendingMessage();
+      const staleUpdatedAt = new Date(0);
+      message.updatedAt = staleUpdatedAt;
+
+      messageServiceContract.getMessageStatus.mockResolvedValue(OnChainMessageStatus.UNKNOWN);
+      transactionRetrier.cancelTransaction.mockResolvedValue(CANCEL_TX_HASH);
+      receiptPoller.poll.mockRejectedValue(new Error("Transaction receipt not found after polling."));
+      const cyclesBefore = message.claimCycleCount;
+
+      const result = await manager.cancelAndResetMessage(message);
+
+      expect(result).toBeNull();
+      expect(messageRepository.updateMessage).toHaveBeenCalledTimes(1);
+      expect(message.claimCycleCount).toBe(cyclesBefore + 1);
+      expect(message.status).toBe(MessageStatus.PENDING);
+      expect(message.updatedAt!.getTime()).toBeGreaterThan(staleUpdatedAt.getTime());
+    });
+
     it("should return null and not throw when getMessageStatus rejects", async () => {
       const message = makePendingMessage();
 
