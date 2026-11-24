@@ -339,39 +339,39 @@ func EncodeInputs(
 }
 
 func encodeInputs(program Program, additional []Blob, cfg config) (map[string]bit.Array, error) {
-	blobs := make([]Blob, 0, len(program.Blobs)+len(additional))
-	blobs = append(blobs, program.Blobs...)
-	blobs = append(blobs, additional...)
-	sort.SliceStable(blobs, func(i, j int) bool {
-		return blobs[i].Address < blobs[j].Address
-	})
-	if err := validateRanges(blobs); err != nil {
+	blobs := mergeAndSortBlobs(program.Blobs, additional)
+	if err := validateBlobsRanges(blobs); err != nil {
 		return nil, err
 	}
-	if cfg.sectionsWriter != nil {
-		if err := writeSections(cfg.sectionsWriter, blobs); err != nil {
-			return nil, fmt.Errorf("writing sections: %w", err)
-		}
+	if err := writeSectionsIfRequested(cfg.sectionsWriter, blobs); err != nil {
+		return nil, err
 	}
 
-	entryPoint, addresses, err := addressSpace32(program.EntryPoint, blobs)
+	entryPoint, addresses, dataSize, err := u32Layout(program.EntryPoint, blobs)
 	if err != nil {
 		return nil, err
 	}
 
-	// The blob count, blob sizes and blobs_data indexes are u32 in the
-	// arithmetization.
-	dataSize := blobDataSize(blobs)
-	if uint64(len(blobs)) > math.MaxUint32 || uint64(dataSize) > math.MaxUint32 {
-		return nil, fmt.Errorf(
-			"%d memory blobs with %d bytes exceed the u32 input limit",
-			len(blobs),
-			dataSize,
-		)
-	}
+	entryAndCount := encodeEntryAndCount(entryPoint, len(blobs))
+	offsetsAndSizes, data := encodeBlobTables(addresses, blobs, dataSize)
 
+	inputs := buildInputs(entryAndCount, offsetsAndSizes, data)
+	if cfg.includeExecutable {
+		inputs[BlobsExecutableInput] = BitArrayFromBytes(encodeExecutableBits(blobs)...)
+	}
+	return inputs, nil
+}
+
+// encodeEntryAndCount encodes the entry point and the blob count as two
+// big-endian u32 values.
+func encodeEntryAndCount(entryPoint uint32, count int) []byte {
 	entryAndCount := binary.BigEndian.AppendUint32(nil, entryPoint)
-	entryAndCount = binary.BigEndian.AppendUint32(entryAndCount, uint32(len(blobs)))
+	return binary.BigEndian.AppendUint32(entryAndCount, uint32(count))
+}
+
+// encodeBlobTables encodes one big-endian address and size per blob, and the
+// blob bytes concatenated in the same order.
+func encodeBlobTables(addresses []uint32, blobs []Blob, dataSize int) ([]byte, []byte) {
 	offsetsAndSizes := make([]byte, 0, 8*len(blobs))
 	data := make([]byte, 0, dataSize)
 	for i, blob := range blobs {
@@ -382,16 +382,42 @@ func encodeInputs(program Program, additional []Blob, cfg config) (map[string]bi
 		)
 		data = append(data, blob.Data...)
 	}
+	return offsetsAndSizes, data
+}
 
-	inputs := map[string]bit.Array{
+// buildInputs wraps the entry header, the blob offsets and sizes, and the blob
+// data in bit arrays, keyed by their input names.
+func buildInputs(entryAndCount, offsetsAndSizes, data []byte) map[string]bit.Array {
+	return map[string]bit.Array{
 		EntryPointAndBlobsCountInput: BitArrayFromBytes(entryAndCount...),
 		BlobsOffsetAndSizeInput:      BitArrayFromBytes(offsetsAndSizes...),
 		BlobsDataInput:               BitArrayFromBytes(data...),
 	}
-	if cfg.includeExecutable {
-		inputs[BlobsExecutableInput] = BitArrayFromBytes(encodeExecutableBits(blobs)...)
+}
+
+// mergeAndSortBlobs returns a new slice with the blobs of first followed by the
+// blobs of second, ordered by ascending address. The sort is stable, so blobs
+// with the same address keep their order. Neither input is modified.
+func mergeAndSortBlobs(first, second []Blob) []Blob {
+	blobs := make([]Blob, 0, len(first)+len(second))
+	blobs = append(blobs, first...)
+	blobs = append(blobs, second...)
+	sort.SliceStable(blobs, func(i, j int) bool {
+		return blobs[i].Address < blobs[j].Address
+	})
+	return blobs
+}
+
+// writeSectionsIfRequested writes the sections table when a writer is set. A
+// nil writer writes nothing.
+func writeSectionsIfRequested(writer io.Writer, blobs []Blob) error {
+	if writer == nil {
+		return nil
 	}
-	return inputs, nil
+	if err := writeSections(writer, blobs); err != nil {
+		return fmt.Errorf("writing sections: %w", err)
+	}
+	return nil
 }
 
 func writeSections(writer io.Writer, blobs []Blob) error {
@@ -419,6 +445,28 @@ func writeSections(writer io.Writer, blobs []Blob) error {
 		}
 	}
 	return nil
+}
+
+// u32Layout returns the entry point, the blob addresses and the total blob data
+// size as u32 values, which is what the arithmetization reads. It fails when the
+// address space check fails, or when the blob count or the data size does not
+// fit in a u32.
+func u32Layout(entryPoint uint64, blobs []Blob) (uint32, []uint32, int, error) {
+	entry, addresses, err := addressSpace32(entryPoint, blobs)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	// The blob count, blob sizes and blobs_data indexes are u32 in the
+	// arithmetization.
+	dataSize := blobDataSize(blobs)
+	if uint64(len(blobs)) > math.MaxUint32 || uint64(dataSize) > math.MaxUint32 {
+		return 0, nil, 0, fmt.Errorf(
+			"%d memory blobs with %d bytes exceed the u32 input limit",
+			len(blobs),
+			dataSize,
+		)
+	}
+	return entry, addresses, dataSize, nil
 }
 
 // addressSpace32 returns the entry point and blob addresses as u32. It rejects
@@ -460,7 +508,7 @@ func encodeExecutableBits(blobs []Blob) []byte {
 	return bits
 }
 
-func validateRanges(blobs []Blob) error {
+func validateBlobsRanges(blobs []Blob) error {
 	var previousAddress, previousEnd uint64
 	hasPrevious := false
 	for _, blob := range blobs {

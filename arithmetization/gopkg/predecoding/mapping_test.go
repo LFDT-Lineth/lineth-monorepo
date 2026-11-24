@@ -712,3 +712,316 @@ func TestBitArrayFromBytes(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// encodeInputs
+// ------------------------------------------------------------
+
+// TestMergeAndSortBlobs checks that the blobs of both inputs are returned in
+// ascending address order, that blobs with the same address keep the order of
+// the inputs, and that the inputs are not modified.
+func TestMergeAndSortBlobs(t *testing.T) {
+	tests := []struct {
+		name   string
+		first  []Blob
+		second []Blob
+		want   []string
+	}{
+		{name: "both empty"},
+		{name: "first only", first: []Blob{{Address: 0x1000, Name: "a"}}, want: []string{"a"}},
+		{name: "second only", second: []Blob{{Address: 0x1000, Name: "b"}}, want: []string{"b"}},
+		{name: "sorted across inputs", first: []Blob{{Address: 0x3000, Name: "a"}},
+			second: []Blob{{Address: 0x1000, Name: "b"}}, want: []string{"b", "a"}},
+		{name: "same address keeps first before second", first: []Blob{{Address: 0x1000, Name: "a"}},
+			second: []Blob{{Address: 0x1000, Name: "b"}}, want: []string{"a", "b"}},
+	}
+	for _, tt := range tests {
+		first := slices.Clone(tt.first)
+		second := slices.Clone(tt.second)
+		got := mergeAndSortBlobs(tt.first, tt.second)
+		var names []string
+		for _, blob := range got {
+			names = append(names, blob.Name)
+		}
+		if !slices.Equal(names, tt.want) {
+			t.Fatalf("%s: names = %v, want %v", tt.name, names, tt.want)
+		}
+		if !reflect.DeepEqual(tt.first, first) || !reflect.DeepEqual(tt.second, second) {
+			t.Fatalf("%s: an input was modified", tt.name)
+		}
+	}
+}
+
+// TestValidateBlobsRanges checks blobs sorted by address. Touching blobs and gaps
+// are accepted. Empty blobs are ignored. A blob whose end wraps the address
+// space, and a blob that starts before the end of the previous non-empty blob,
+// are rejected.
+func TestValidateBlobsRanges(t *testing.T) {
+	blob := func(address uint64, size int) Blob {
+		return Blob{Address: address, Data: make([]byte, size)}
+	}
+	tests := []struct {
+		name    string
+		blobs   []Blob
+		wantErr bool
+	}{
+		{name: "no blobs"},
+		{name: "one blob", blobs: []Blob{blob(0x1000, 4)}},
+		{name: "touching blobs", blobs: []Blob{blob(0x1000, 4), blob(0x1004, 4)}},
+		{name: "gap between blobs", blobs: []Blob{blob(0x1000, 4), blob(0x2000, 4)}},
+		{name: "empty blob inside another", blobs: []Blob{blob(0x1000, 8), blob(0x1004, 0)}},
+		{name: "empty blob at the top", blobs: []Blob{blob(^uint64(0), 0)}},
+		{name: "ends at the top", blobs: []Blob{blob(^uint64(0)-4, 4)}},
+		{name: "end wraps", blobs: []Blob{blob(^uint64(0)-3, 4)}, wantErr: true},
+		{name: "overlap", blobs: []Blob{blob(0x1000, 8), blob(0x1004, 4)}, wantErr: true},
+		{name: "same address", blobs: []Blob{blob(0x1000, 4), blob(0x1000, 4)}, wantErr: true},
+		{name: "empty blob does not move the previous end", blobs: []Blob{
+			blob(0x1000, 8), blob(0x1004, 0), blob(0x1006, 4),
+		}, wantErr: true},
+	}
+	for _, tt := range tests {
+		err := validateBlobsRanges(tt.blobs)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+	}
+}
+
+var errWrite = errors.New("write failed")
+
+// errWriter is an io.Writer whose every write fails with errWrite.
+type errWriter struct{}
+
+func (errWriter) Write([]byte) (int, error) {
+	return 0, errWrite
+}
+
+// TestWriteSectionsIfRequested checks that the sections table is written only
+// when a writer is set, and that a failing write is returned wrapped.
+func TestWriteSectionsIfRequested(t *testing.T) {
+	tests := []struct {
+		name       string
+		newWriter  func(buf *bytes.Buffer) io.Writer
+		wantHeader bool
+		wantErr    bool
+	}{
+		{name: "nil writer writes nothing", newWriter: func(*bytes.Buffer) io.Writer {
+			return nil
+		}},
+		{name: "writer receives the table", newWriter: func(buf *bytes.Buffer) io.Writer {
+			return buf
+		}, wantHeader: true},
+		{name: "write error is returned", newWriter: func(*bytes.Buffer) io.Writer {
+			return errWriter{}
+		}, wantErr: true},
+	}
+	blobs := []Blob{{Address: 0x1000, Data: testText, Name: ".text"}}
+	for _, tt := range tests {
+		var buf bytes.Buffer
+		err := writeSectionsIfRequested(tt.newWriter(&buf), blobs)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr && !errors.Is(err, errWrite) {
+			t.Fatalf("%s: err = %v, want it to wrap %v", tt.name, err, errWrite)
+		}
+		if bytes.Contains(buf.Bytes(), []byte("index, offset")) != tt.wantHeader {
+			t.Fatalf("%s: table written = %v, want %v", tt.name, !tt.wantHeader, tt.wantHeader)
+		}
+	}
+}
+
+// TestU32Layout checks the u32 entry point, addresses and data size of a valid
+// layout, and that an entry point or blob outside the 32-bit address space is
+// an error. The blob count and data size limit is not tested, because it needs
+// more than 4 GiB of data.
+func TestU32Layout(t *testing.T) {
+	blob := func(address uint64, size int) Blob {
+		return Blob{Address: address, Data: make([]byte, size)}
+	}
+	tests := []struct {
+		name          string
+		entryPoint    uint64
+		blobs         []Blob
+		wantEntry     uint32
+		wantAddresses []uint32
+		wantSize      int
+		wantErr       bool
+	}{
+		{name: "no blobs", entryPoint: 0x800000, wantEntry: 0x800000},
+		{name: "two blobs", entryPoint: 0x800000, blobs: []Blob{blob(0x1000, 4), blob(0x2000, 8)},
+			wantEntry: 0x800000, wantAddresses: []uint32{0x1000, 0x2000}, wantSize: 12},
+		{name: "entry point outside 32 bits", entryPoint: 1 << 32, wantErr: true},
+		{name: "blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 4)}, wantErr: true},
+	}
+	for _, tt := range tests {
+		entry, addresses, size, err := u32Layout(tt.entryPoint, tt.blobs)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr {
+			continue
+		}
+		if entry != tt.wantEntry || !slices.Equal(addresses, tt.wantAddresses) || size != tt.wantSize {
+			t.Fatalf("%s: got (%#x, %v, %d), want (%#x, %v, %d)", tt.name,
+				entry, addresses, size, tt.wantEntry, tt.wantAddresses, tt.wantSize)
+		}
+	}
+}
+
+// TestEncodeEntryAndCount checks that the entry point and the count are two
+// big-endian u32 values, the entry point first.
+func TestEncodeEntryAndCount(t *testing.T) {
+	tests := []struct {
+		name       string
+		entryPoint uint32
+		count      int
+		want       []byte
+	}{
+		{name: "zero", want: []byte{0, 0, 0, 0, 0, 0, 0, 0}},
+		{name: "entry point and count", entryPoint: 0x00800000, count: 3,
+			want: []byte{0x00, 0x80, 0x00, 0x00, 0, 0, 0, 3}},
+		{name: "byte order", entryPoint: 0x01020304, count: 0x05060708,
+			want: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
+	}
+	for _, tt := range tests {
+		got := encodeEntryAndCount(tt.entryPoint, tt.count)
+		if !bytes.Equal(got, tt.want) {
+			t.Fatalf("%s: bytes = %x, want %x", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestEncodeBlobTables checks that each blob gets a big-endian address and size
+// in the first table, and that the second table is the blob bytes in order.
+func TestEncodeBlobTables(t *testing.T) {
+	tests := []struct {
+		name      string
+		addresses []uint32
+		blobs     []Blob
+		wantTable []byte
+		wantData  []byte
+	}{
+		{name: "no blobs"},
+		{name: "one blob", addresses: []uint32{0x1000}, blobs: []Blob{{Data: []byte{1, 2, 3, 4}}},
+			wantTable: []byte{0, 0, 0x10, 0, 0, 0, 0, 4}, wantData: []byte{1, 2, 3, 4}},
+		{name: "two blobs", addresses: []uint32{0x1000, 0x2000}, blobs: []Blob{
+			{Data: []byte{1, 2}}, {Data: []byte{3}},
+		}, wantTable: []byte{0, 0, 0x10, 0, 0, 0, 0, 2, 0, 0, 0x20, 0, 0, 0, 0, 1},
+			wantData: []byte{1, 2, 3}},
+		{name: "empty blob", addresses: []uint32{0x1000}, blobs: []Blob{{}},
+			wantTable: []byte{0, 0, 0x10, 0, 0, 0, 0, 0}},
+	}
+	for _, tt := range tests {
+		dataSize := 0
+		for _, blob := range tt.blobs {
+			dataSize += len(blob.Data)
+		}
+		table, data := encodeBlobTables(tt.addresses, tt.blobs, dataSize)
+		if !bytes.Equal(table, tt.wantTable) {
+			t.Fatalf("%s: table = %x, want %x", tt.name, table, tt.wantTable)
+		}
+		if !bytes.Equal(data, tt.wantData) {
+			t.Fatalf("%s: data = %x, want %x", tt.name, data, tt.wantData)
+		}
+	}
+}
+
+// TestBuildInputs checks that the three inputs are keyed by their names, hold
+// the given bytes as bit arrays, and that no other input is added.
+func TestBuildInputs(t *testing.T) {
+	tests := []struct {
+		name            string
+		entryAndCount   []byte
+		offsetsAndSizes []byte
+		data            []byte
+	}{
+		{name: "empty"},
+		{name: "filled", entryAndCount: []byte{0, 0x80, 0, 0, 0, 0, 0, 1},
+			offsetsAndSizes: []byte{0, 0, 0x10, 0, 0, 0, 0, 4}, data: []byte{1, 2, 3, 4}},
+	}
+	for _, tt := range tests {
+		inputs := buildInputs(tt.entryAndCount, tt.offsetsAndSizes, tt.data)
+		want := map[string][]byte{
+			EntryPointAndBlobsCountInput: tt.entryAndCount,
+			BlobsOffsetAndSizeInput:      tt.offsetsAndSizes,
+			BlobsDataInput:               tt.data,
+		}
+		if len(inputs) != len(want) {
+			t.Fatalf("%s: %d inputs, want %d", tt.name, len(inputs), len(want))
+		}
+		for name, wantBytes := range want {
+			arr, ok := inputs[name]
+			if !ok {
+				t.Fatalf("%s: input %s is missing", tt.name, name)
+			}
+			if !bytes.Equal(arr.Bytes(), wantBytes) || arr.Len() != uint(8*len(wantBytes)) {
+				t.Fatalf("%s: input %s = %x with %d bits, want %x with %d bits", tt.name, name,
+					arr.Bytes(), arr.Len(), wantBytes, 8*len(wantBytes))
+			}
+		}
+	}
+}
+
+// TestEncodeInputsInternal checks the inputs of a program blob at 0x800000 and an extra
+// blob at 0x1000, which sorts first. The executable input is present only with
+// includeExecutable. Each failing step is an error: the ranges, the sections
+// writer and the 32-bit address space. The blob count and data size limit is
+// not tested, because it needs more than 4 GiB of data.
+func TestEncodeInputsInternal(t *testing.T) {
+	programBlobs := []Blob{{Address: 0x00800000, Data: testText, Name: ".text", Executable: true}}
+	program := Program{EntryPoint: 0x00800000, Blobs: programBlobs}
+	additional := []Blob{{Address: 0x1000, Data: []byte{0xaa, 0xbb}}}
+	// wantInputs holds the expected bytes. The extra blob is first, so the
+	// executable bits are 0 then 1, padded with zeros: 0b01000000.
+	wantInputs := func(executable []byte) map[string][]byte {
+		want := map[string][]byte{
+			EntryPointAndBlobsCountInput: {0x00, 0x80, 0, 0, 0, 0, 0, 2},
+			BlobsOffsetAndSizeInput:      {0, 0, 0x10, 0, 0, 0, 0, 2, 0, 0x80, 0, 0, 0, 0, 0, 4},
+			BlobsDataInput:               {0xaa, 0xbb, 0x97, 0x02, 0, 0},
+		}
+		if executable != nil {
+			want[BlobsExecutableInput] = executable
+		}
+		return want
+	}
+	tests := []struct {
+		name       string
+		program    Program
+		additional []Blob
+		cfg        config
+		want       map[string][]byte
+		wantErr    bool
+	}{
+		{name: "without executable", program: program, additional: additional, want: wantInputs(nil)},
+		{name: "with executable", program: program, additional: additional,
+			cfg: config{includeExecutable: true}, want: wantInputs([]byte{0x40})},
+		{name: "ranges overlap", program: program, wantErr: true,
+			additional: []Blob{{Address: 0x00800002, Data: []byte{1, 2}}}},
+		{name: "sections writer fails", program: program, additional: additional,
+			cfg: config{sectionsWriter: errWriter{}}, wantErr: true},
+		{name: "entry point outside 32 bits", additional: additional, wantErr: true,
+			program: Program{EntryPoint: 1 << 32, Blobs: programBlobs}},
+	}
+	for _, tt := range tests {
+		inputs, err := encodeInputs(tt.program, tt.additional, tt.cfg)
+		if (err != nil) != tt.wantErr {
+			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		}
+		if tt.wantErr {
+			continue
+		}
+		if len(inputs) != len(tt.want) {
+			t.Fatalf("%s: %d inputs, want %d", tt.name, len(inputs), len(tt.want))
+		}
+		for name, wantBytes := range tt.want {
+			arr, ok := inputs[name]
+			if !ok {
+				t.Fatalf("%s: input %s is missing", tt.name, name)
+			}
+			if !bytes.Equal(arr.Bytes(), wantBytes) {
+				t.Fatalf("%s: input %s = %x, want %x", tt.name, name, arr.Bytes(), wantBytes)
+			}
+		}
+	}
+}
