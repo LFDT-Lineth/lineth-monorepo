@@ -28,12 +28,12 @@ test "every rejection of the statement exits with the category of its step" {
     // Blocks and senders.
     for ([_]anyerror{ error.MalformedBlock, error.SenderRecoveryFailed, error.BlockCountMismatch, error.SendersHashMismatch }) |err| try expectCode(6, err);
     // Chunk binding.
-    for ([_]anyerror{ error.MalformedChunk, error.NonCanonicalBlob, error.ChunkHashMismatch, error.BoundaryPreimageMismatch }) |err| try expectCode(7, err);
+    for ([_]anyerror{ error.MalformedChunk, error.NonCanonicalBlob, error.ChunkHashMismatch, error.ParentBlobDataRollingHashMismatch }) |err| try expectCode(7, err);
     try expectCode(8, error.BlobKzgMismatch);
     // Stream layout and segments.
     for ([_]anyerror{
         error.PartialBlobBeforeBlob,
-        error.InvalidTailTake,
+        error.InvalidParentCarryOverTail,
         error.MissingSegmentLength,
         error.InvalidSegmentLength,
         error.ChunkOwnsNoBytes,

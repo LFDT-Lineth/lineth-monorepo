@@ -37,27 +37,27 @@ _ROLLUP_ID = Hash32(bytes([0xBB]) * 32)
 
 _PARENT_DATA_ROLLING_HASH = Hash32(bytes([0x47]) * 32)
 _END_DATA_ROLLING_HASH = Hash32(bytes([0x8D]) * 32)
-_FINAL_DATA_TAIL_DISCARD = 500
+_FINAL_SHARED_BLOB_CARRY_OVER_TAIL_BYTES = 500
 _PARENT_BLOCK_HASH = Hash32(bytes([0x46]) * 32)
 _END_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
 _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
 
 
-def _position_commitment(data_rolling_hash: Hash32, tail_count: int) -> Hash32:
+def _position_commitment(data_rolling_hash: Hash32, carry_over_tail_bytes: int) -> Hash32:
     """The `current_finalized_position_commitment` value sealing a given
     (dataRollingHash, tail count) end position (§3.6)."""
-    return keccak256(data_rolling_hash + tail_count.to_bytes(32, "big"))
+    return keccak256(data_rolling_hash + carry_over_tail_bytes.to_bytes(32, "big"))
 
 
-def _base_state(approved_program_ids, parent_data_tail_take_bytes: int = 0) -> LinethRollupState:
+def _base_state(approved_program_ids, parent_shared_blob_carry_over_tail_bytes: int = 0) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all other finalization checks pass. `approved_program_ids` is the
     only knob the tests vary.
     """
     return LinethRollupState(
-        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, parent_data_tail_take_bytes),
+        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, parent_shared_blob_carry_over_tail_bytes),
         current_finalized_last_block_hash=_PARENT_BLOCK_HASH,
         current_l2_block_number=U64(1000500),
         current_l2_block_timestamp=U64(1763000000),
@@ -71,7 +71,7 @@ def _base_state(approved_program_ids, parent_data_tail_take_bytes: int = 0) -> L
     )
 
 
-def _base_submission(program_ids, parent_data_tail_take_bytes: int = 0) -> FinalizationSubmission:
+def _base_submission(program_ids, parent_shared_blob_carry_over_tail_bytes: int = 0) -> FinalizationSubmission:
     """
     A finalization submission carrying the single combined `program_ids` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
@@ -93,8 +93,8 @@ def _base_submission(program_ids, parent_data_tail_take_bytes: int = 0) -> Final
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
-        parent_data_tail_take_bytes=parent_data_tail_take_bytes,
-        final_data_tail_discard_bytes=_FINAL_DATA_TAIL_DISCARD,
+        parent_shared_blob_carry_over_tail_bytes=parent_shared_blob_carry_over_tail_bytes,
+        final_shared_blob_carry_over_tail_bytes=_FINAL_SHARED_BLOB_CARRY_OVER_TAIL_BYTES,
         l2_l1_tree_depth=5,
         l2_l1_roots=[],
         filtered_addresses=[],
@@ -149,7 +149,7 @@ def test_finalize_rollup_accepts_multiple_approved_program_ids() -> None:
     # all advanced to the submission's end-of-range values.
     assert state.current_finalized_last_block_hash == _END_BLOCK_HASH
     assert int(state.current_l2_block_number) == 1000520
-    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_DATA_TAIL_DISCARD)
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_SHARED_BLOB_CARRY_OVER_TAIL_BYTES)
 
 
 def test_finalize_rollup_succeeds_when_all_program_ids_approved() -> None:
@@ -157,17 +157,17 @@ def test_finalize_rollup_succeeds_when_all_program_ids_approved() -> None:
     state = _base_state(approved_program_ids={_EXEC_ID_A, _ROLLUP_ID})
     submission = _base_submission(program_ids=[_EXEC_ID_A, _ROLLUP_ID])
     _finalize(state, submission)  # must not raise
-    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_DATA_TAIL_DISCARD)
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _FINAL_SHARED_BLOB_CARRY_OVER_TAIL_BYTES)
     assert int(state.current_l2_block_number) == 1000520
 
 
 def test_finalize_rollup_rejects_chunk_boundary_start_inside_finalized_blob() -> None:
-    parent_data_tail_take_bytes = 9
-    state = _base_state(approved_program_ids=set(), parent_data_tail_take_bytes=parent_data_tail_take_bytes)
-    submission = _base_submission(program_ids=[], parent_data_tail_take_bytes=0)
+    parent_shared_blob_carry_over_tail_bytes = 9
+    state = _base_state(approved_program_ids=set(), parent_shared_blob_carry_over_tail_bytes=parent_shared_blob_carry_over_tail_bytes)
+    submission = _base_submission(program_ids=[], parent_shared_blob_carry_over_tail_bytes=0)
 
-    with pytest.raises(Exception, match="parentDataTailTakeBytes does not match the finalized position"):
-        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, parent_data_tail_take_bytes)
+    with pytest.raises(Exception, match="parentSharedBlobCarryOverTailBytes does not match the finalized position"):
+        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, parent_shared_blob_carry_over_tail_bytes)
 
 
 _FINALIZED_ROLLING_HASH = Hash32(bytes([0x22]) * 32)

@@ -8,9 +8,9 @@ import (
 const (
 	decodeAggregationOp = "DecodeAggregationRequest"
 
-	rollupProofsKey              = "rollupProofs"
-	programVksKey                = "programVks"
-	finalDataTailDiscardBytesKey = "finalDataTailDiscardBytes"
+	rollupProofsKey                      = "rollupProofs"
+	programVksKey                        = "programVks"
+	finalSharedBlobCarryOverTailBytesKey = "finalSharedBlobCarryOverTailBytes"
 )
 
 // EmbeddedRollupProof is one rollupProof an aggregation request carries for the
@@ -39,8 +39,8 @@ type RollupProofPublicInputs struct {
 	EndDataRollingHash                    [32]byte
 	ParentBlockHash                       [32]byte
 	EndBlockHash                          [32]byte
-	ParentDataTailTakeBytes               uint64
-	FinalDataTailDiscardBytes             uint64
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
 	L2L1Messages                          [][32]byte
 	FilteredAddresses                     [][20]byte
 	ProgramVks                            [][32]byte
@@ -162,8 +162,8 @@ func decodeRollupProofPublicInputs(
 	pi.EndDataRollingHash = h("endDataRollingHash")
 	pi.ParentBlockHash = h("parentBlockHash")
 	pi.EndBlockHash = h("endBlockHash")
-	pi.ParentDataTailTakeBytes = n(parentDataTailTakeBytesKey)
-	pi.FinalDataTailDiscardBytes = n(finalDataTailDiscardBytesKey)
+	pi.ParentSharedBlobCarryOverTailBytes = n(parentSharedBlobCarryOverTailBytesKey)
+	pi.FinalSharedBlobCarryOverTailBytes = n(finalSharedBlobCarryOverTailBytesKey)
 	pi.BlockCount = n(blockCountKey)
 	if err != nil {
 		return pi, err

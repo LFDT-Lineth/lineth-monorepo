@@ -320,13 +320,13 @@ func buildRollupInput(req *RollupRequest) ssz.RollupInput {
 		}
 	}
 	return ssz.RollupInput{
-		ParentDataRollingHash:       req.ParentDataRollingHash,
-		ParentDataTailTakeBytes:     req.ParentDataTailTakeBytes,
-		ChainID:                     req.ChainID,
-		Conflations:                 req.Conflations,
-		Chunks:                      req.Chunks,
-		L2ExecutionProofs:           proofs,
-		BoundaryPrevDataRollingHash: req.BoundaryPrevDataRollingHash,
+		ParentDataRollingHash:              req.ParentDataRollingHash,
+		ParentSharedBlobCarryOverTailBytes: req.ParentSharedBlobCarryOverTailBytes,
+		ChainID:                            req.ChainID,
+		Conflations:                        req.Conflations,
+		Chunks:                             req.Chunks,
+		L2ExecutionProofs:                  proofs,
+		ParentBlobDataRollingHash:          req.ParentBlobDataRollingHash,
 	}
 }
 

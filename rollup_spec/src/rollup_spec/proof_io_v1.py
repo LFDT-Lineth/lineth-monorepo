@@ -497,11 +497,11 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by `conflations` (paired
     1:1 with `l2ExecutionProofs`). `chunks` carry the physical DA bytes and
-    anchored binding hashes. `parentDataRollingHash`/`parentDataTailTakeBytes`
-    are guest inputs; the outbound `endDataRollingHash`/`finalDataTailDiscardBytes` are recomputed by the
+    anchored binding hashes. `parentDataRollingHash`/`parentSharedBlobCarryOverTailBytes`
+    are guest inputs; the outbound `endDataRollingHash`/`finalSharedBlobCarryOverTailBytes` are recomputed by the
     guest and returned in the response PI, so they are not echoed in the
-    request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
-    (`parentDataTailTakeBytes > 0`, §3.4).
+    request. `parentBlobDataRollingHash` is present only for a mid-chunk start
+    (`parentSharedBlobCarryOverTailBytes > 0`, §3.4).
     """
     _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
@@ -518,10 +518,10 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
         raise ProofIoError(
             "'proofRequest.conflations' and 'proofRequest.l2ExecutionProofs' must have the same length"
         )
-    parent_data_tail_take_bytes = int(_u64(_require(proof_request, "parentDataTailTakeBytes", "proofRequest."), "proofRequest.parentDataTailTakeBytes"))
-    boundary_prev_data_rolling_hash_hex = proof_request.get("boundaryPrevDataRollingHash")
-    if parent_data_tail_take_bytes > 0 and boundary_prev_data_rolling_hash_hex is None:
-        raise ProofIoError("'proofRequest.boundaryPrevDataRollingHash' is required when parentDataTailTakeBytes > 0")
+    parent_shared_blob_carry_over_tail_bytes = int(_u64(_require(proof_request, "parentSharedBlobCarryOverTailBytes", "proofRequest."), "proofRequest.parentSharedBlobCarryOverTailBytes"))
+    parent_blob_data_rolling_hash_hex = proof_request.get("parentBlobDataRollingHash")
+    if parent_shared_blob_carry_over_tail_bytes > 0 and parent_blob_data_rolling_hash_hex is None:
+        raise ProofIoError("'proofRequest.parentBlobDataRollingHash' is required when parentSharedBlobCarryOverTailBytes > 0")
     return RollupProofPrivateInput(
         parent_data_rolling_hash=Hash32(
             _bytes_from_hex(
@@ -529,7 +529,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
                 "proofRequest.parentDataRollingHash",
             )
         ),
-        parent_data_tail_take_bytes=parent_data_tail_take_bytes,
+        parent_shared_blob_carry_over_tail_bytes=parent_shared_blob_carry_over_tail_bytes,
         chain_id=_u64(_require(proof_request, "chainId", "proofRequest."), "proofRequest.chainId"),
         conflations=[
             _decode_conflation_witness(c, f"proofRequest.conflations[{i}].")
@@ -542,9 +542,9 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
-        boundary_prev_data_rolling_hash=(
-            Hash32(_bytes_from_hex(boundary_prev_data_rolling_hash_hex, "proofRequest.boundaryPrevDataRollingHash"))
-            if boundary_prev_data_rolling_hash_hex is not None
+        parent_blob_data_rolling_hash=(
+            Hash32(_bytes_from_hex(parent_blob_data_rolling_hash_hex, "proofRequest.parentBlobDataRollingHash"))
+            if parent_blob_data_rolling_hash_hex is not None
             else None
         ),
     )
@@ -575,8 +575,8 @@ def _encode_finalization_shared_inputs(pi) -> dict:
         "endDataRollingHash": _hx(pi.end_data_rolling_hash),
         "parentBlockHash": _hx(pi.parent_block_hash),
         "endBlockHash": _hx(pi.end_block_hash),
-        "parentDataTailTakeBytes": int(pi.parent_data_tail_take_bytes),
-        "finalDataTailDiscardBytes": int(pi.final_data_tail_discard_bytes),
+        "parentSharedBlobCarryOverTailBytes": int(pi.parent_shared_blob_carry_over_tail_bytes),
+        "finalSharedBlobCarryOverTailBytes": int(pi.final_shared_blob_carry_over_tail_bytes),
         "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
         "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
     }
@@ -660,8 +660,8 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_data_rolling_hash=h("endDataRollingHash"),
         parent_block_hash=h("parentBlockHash"),
         end_block_hash=h("endBlockHash"),
-        parent_data_tail_take_bytes=int(n("parentDataTailTakeBytes")),
-        final_data_tail_discard_bytes=int(n("finalDataTailDiscardBytes")),
+        parent_shared_blob_carry_over_tail_bytes=int(n("parentSharedBlobCarryOverTailBytes")),
+        final_shared_blob_carry_over_tail_bytes=int(n("finalSharedBlobCarryOverTailBytes")),
         l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
                         for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
         filtered_addresses=[

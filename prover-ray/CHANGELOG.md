@@ -1,8 +1,17 @@
-## [unreleased]
+## [0.5.0] - 2026-11-24
 
 ### 🚀 Features
 
 - *(prover-ray)* Encode the rollup guest input (#4571)
+- *(prover-ray)* Run zkc Execute with gogen by default (#4573)
+
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Make the NonNative query sound (#4494)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
 ## [0.4.0] - 2026-11-23
 
 ### 🚀 Features
