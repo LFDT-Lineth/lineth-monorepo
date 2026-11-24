@@ -33,9 +33,10 @@ ELF_TO_JSON = go -C ../arithmetization tool elf_to_json
 # The generated systems and proof images come from prover-ray HEAD
 # (`prover verifier-assets`). go -C runs in ../prover-ray, so pass absolute paths.
 VERIFIER_ASSETS = go -C ../prover-ray run ./cmd/prover verifier-assets
-# The prover-ray sources the devmode assets are generated from.
-DEVMODE_SYSTEM_INPUTS := $(wildcard ../prover-ray/verifierray/codegen/*.go ../prover-ray/backend/devmode/*.go) \
-	../prover-ray/cmd/prover/verifier_assets.go ../prover-ray/go.mod ../prover-ray/go.sum
+# The prover-ray sources the devmode assets are generated from: every non-test Go file (the compilers
+# under wiop decide the compiled system too) and the embedded Zig templates of the codegen.
+DEVMODE_SYSTEM_INPUTS := $(shell find ../prover-ray -type f \( -name '*.go' -o -name '*.zig.tmpl' \) \
+	-not -name '*_test.go' -not -path '*/testdata/*') ../prover-ray/go.mod ../prover-ray/go.sum
 
 ci: generate-testdata fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
@@ -97,13 +98,13 @@ build-release: $(DEVMODE_SYSTEM)
 build-r5: $(DEVMODE_SYSTEM)
 	$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
-run: $(PROOF_IMAGE)
+run: $(DEVMODE_SYSTEM) $(PROOF_IMAGE)
 	$(ZIG_BUILD) run -Dinput-path="$(PROOF_IMAGE)"
 
 run-passing:
 	$(MAKE) run
 
-run-failing: $(PROOF_IMAGE)
+run-failing: $(DEVMODE_SYSTEM) $(PROOF_IMAGE)
 	$(ZIG_BUILD) run -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC)
 
 # Generate the input outside the `if`, so a generation failure fails this
@@ -134,8 +135,11 @@ generate-testdata:
 	go run ./cmd/generate-testdata
 	$(MAKE) generate-devmode-system
 
-$(FIXTURE_PROOF_IMAGE):
-	go run ./cmd/generate-testdata
+# The image belongs to the committed verify.zig (image_case_index and that case's system), so it is
+# rebuilt whenever verify.zig or its generator changes. `-out ''` writes only the image and leaves
+# the committed verify.zig alone.
+$(FIXTURE_PROOF_IMAGE): testdata/generated/verify.zig $(wildcard cmd/generate-testdata/*.go)
+	go run ./cmd/generate-testdata -out ''
 
 generate-devmode-system:
 	$(VERIFIER_ASSETS) --system devmode \
@@ -156,7 +160,7 @@ zkc-verify: zkc-build
 zkc-verify-passing:
 	$(MAKE) zkc-verify
 
-zkc-verify-failing: $(PROOF_IMAGE)
+zkc-verify-failing: $(DEVMODE_SYSTEM) $(PROOF_IMAGE)
 	$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true \
 		-Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC) \
 		-Ddisable-accelerators=$(DISABLE_ACCELERATORS)
@@ -174,7 +178,7 @@ zkc-verify-failing-expected: $(PROOF_IMAGE)
 zkc-trace: zkc-build
 	$(ZKC) trace --stats -r -v "$(abspath $(R5_JSON))" "$(abspath $(ZKC_MAIN))"
 
-profile-zkc-case: $(PROOF_IMAGE)
+profile-zkc-case: $(DEVMODE_SYSTEM) $(PROOF_IMAGE)
 	@$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true \
 		-Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) \
 		-Dverifier-profiling=true -Dr5-marks=true

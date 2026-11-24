@@ -3,3 +3,6 @@ zig-out/
 testdata/generated/devmode_system.zig
 testdata/devmode_proof_image.bin
 testdata/fixture_proof_image.bin
+# No longer generated; ignored so the copies left in older checkouts are not committed by accident.
+testdata/generated/riscv_system.zig
+testdata/riscv_proof_image.bin

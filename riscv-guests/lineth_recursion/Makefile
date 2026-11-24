@@ -22,15 +22,15 @@ ZIG_FETCH_FLAGS ?=
 VERIFIER_RAY_DIR := $(MAKEFILE_DIR)../../verifier-ray
 PROVER_RAY_DIR := $(MAKEFILE_DIR)../../prover-ray
 DEVMODE_SYSTEM := $(VERIFIER_RAY_DIR)/testdata/generated/devmode_system.zig
-DEVMODE_SYSTEM_INPUTS := $(filter-out %_test.go,$(wildcard $(PROVER_RAY_DIR)/verifierray/codegen/*.go \
-	$(PROVER_RAY_DIR)/backend/devmode/*.go)) \
-	$(PROVER_RAY_DIR)/cmd/prover/verifier_assets.go $(PROVER_RAY_DIR)/go.mod $(PROVER_RAY_DIR)/go.sum
+# Every non-test Go file of prover-ray (the compilers under wiop decide the compiled system too) and
+# the codegen's embedded Zig templates.
+DEVMODE_SYSTEM_INPUTS := $(shell find $(PROVER_RAY_DIR) -type f \( -name '*.go' -o -name '*.zig.tmpl' \) \
+	-not -name '*_test.go' -not -path '*/testdata/*') $(PROVER_RAY_DIR)/go.mod $(PROVER_RAY_DIR)/go.sum
 
 $(DEVMODE_SYSTEM): $(DEVMODE_SYSTEM_INPUTS)
 	$(MAKE) -C $(VERIFIER_RAY_DIR) generate-devmode-system ZIG="$(ZIG)"
 
-# Generates the devmode system when it is missing or older than `prover verifier-assets`, the codegen
-# package it calls, the `backend/devmode` circuit or prover-ray's `go.mod` and `go.sum`.
+# Generates the devmode system when it is missing or older than any prover-ray source it comes from.
 devmode-system: $(DEVMODE_SYSTEM)
 
 fetch: devmode-system

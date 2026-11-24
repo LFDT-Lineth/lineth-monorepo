@@ -28,22 +28,38 @@ import (
 )
 
 func main() {
-	out := flag.String("out", filepath.Join("testdata", "generated", "verify.zig"), "path of the generated fixtures")
+	out := flag.String("out", filepath.Join("testdata", "generated", "verify.zig"),
+		"path of the generated fixtures; empty writes only the proof image")
 	imageOut := flag.String("image-out", filepath.Join("testdata", "fixture_proof_image.bin"),
-		"path of the proof image of one fixture case (see writeFixtureProofImage)")
+		"path of the proof image of one fixture case (see fixtureProofImage)")
 	flag.Parse()
 
 	fixtureCases, compiledSystems, err := buildCompiledFixtureCases()
 	if err != nil {
 		panic(err)
 	}
-	imageCase, err := writeFixtureProofImage(*imageOut, fixtureCases, compiledSystems)
+	imageCase, image, err := fixtureProofImage(fixtureCases, compiledSystems)
 	if err != nil {
 		panic(err)
 	}
-	if err := writeVerifyFixtures(*out, fixtureCases, compiledSystems, imageCase); err != nil {
+	// verify.zig first: the image is written last, so it is never newer than a verify.zig that
+	// failed to be written, and make's timestamp check sees the pair as up to date.
+	if *out != "" {
+		if err := writeVerifyFixtures(*out, fixtureCases, compiledSystems, imageCase); err != nil {
+			panic(err)
+		}
+	}
+	if err := writeFile(*imageOut, image); err != nil {
 		panic(err)
 	}
+}
+
+// writeFile writes data to path, creating its parent directory.
+func writeFile(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
 }
 
 // runtimeTraceRound is the verifier-visible transcript input for one WIOP
@@ -1025,7 +1041,7 @@ func writeVerifyFixtures(path string, cases []fixtureCase, systems []codegen.Com
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return writeFile(path, data)
 }
 
 func writeVerifyHeader(out *bytes.Buffer, count int) {

@@ -24,10 +24,21 @@ const (
 
 func TestRunVerifierAssets_RequiresFlags(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "system.zig")
-	require.ErrorContains(t, run([]string{cmdVerifierAssets, flagZig, out}), "--system is required")
-	require.ErrorContains(t, run([]string{cmdVerifierAssets, flagSystem, "devmode"}), "--zig is required")
-	require.ErrorContains(t,
-		run([]string{cmdVerifierAssets, flagSystem, "nope", flagZig, out}), `unknown system "nope"`)
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"no system", []string{flagZig, out}, "--system is required"},
+		{"no zig", []string{flagSystem, "devmode"}, "--zig is required"},
+		{"unknown system", []string{flagSystem, "nope", flagZig, out}, `unknown system "nope"`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := run(append([]string{cmdVerifierAssets}, tc.args...))
+			require.ErrorContains(t, err, tc.want, "verifier-assets must reject %v", tc.args)
+		})
+	}
 }
 
 // TestRunVerifierAssets_Devmode writes the devmode assets. It needs `zig` (or ZIG) to format the
@@ -44,18 +55,19 @@ func TestRunVerifierAssets_Devmode(t *testing.T) {
 
 	var log bytes.Buffer
 	args := []string{flagSystem, "devmode", flagZig, zigPath, "--image", imagePath}
-	require.NoError(t, runVerifierAssets(args, &log))
+	require.NoError(t, runVerifierAssets(args, &log), "generating the devmode assets")
 
 	system, err := os.ReadFile(zigPath)
-	require.NoError(t, err)
-	assert.Contains(t, string(system), "pub const system_0_systems = verifier.Systems{")
+	require.NoError(t, err, "reading the generated system")
+	assert.Contains(t, string(system), "pub const system_0_systems = verifier.Systems{",
+		"the generated system must declare its verifier.Systems")
 
 	image, err := os.ReadFile(imagePath)
-	require.NoError(t, err)
+	require.NoError(t, err, "reading the generated proof image")
 	input, err := proofserialization.Decode(image, proofserialization.GuestBase)
-	require.NoError(t, err)
-	assert.Len(t, input.PublicInputs, devmode.NumPublicInputs)
-	assert.Equal(t, 2, strings.Count(log.String(), "wrote "))
+	require.NoError(t, err, "the proof image must decode at GuestBase")
+	assert.Len(t, input.PublicInputs, devmode.NumPublicInputs, "public inputs of the devmode proof")
+	assert.Equal(t, 2, strings.Count(log.String(), "wrote "), "the log must report both written files")
 }
 
 func TestRunDevmodeProve(t *testing.T) {
@@ -63,18 +75,18 @@ func TestRunDevmodeProve(t *testing.T) {
 	vk := strings.Repeat("2a", devmodeVKLen)
 	in := strings.NewReader(hash + " " + vk + "\n" + hash + " " + vk + "\n")
 	var out bytes.Buffer
-	require.NoError(t, runDevmodeProve(nil, in, &out))
+	require.NoError(t, runDevmodeProve(nil, in, &out), "serving two well-formed requests")
 
-	for range 2 {
+	for i := range 2 {
 		var length [4]byte
 		_, err := io.ReadFull(&out, length[:])
-		require.NoError(t, err)
+		require.NoError(t, err, "reading the length prefix of proof %d", i)
 		image := make([]byte, binary.BigEndian.Uint32(length[:]))
 		_, err = io.ReadFull(&out, image)
-		require.NoError(t, err)
+		require.NoError(t, err, "reading the image of proof %d", i)
 		input, err := proofserialization.Decode(image, devmode.GuestBase)
-		require.NoError(t, err)
-		require.Len(t, input.PublicInputs, devmode.NumPublicInputs)
+		require.NoError(t, err, "proof %d must decode at GuestBase", i)
+		require.Len(t, input.PublicInputs, devmode.NumPublicInputs, "public inputs of proof %d", i)
 	}
 	assert.Zero(t, out.Len(), "trailing bytes after the two proofs")
 }
@@ -90,9 +102,9 @@ func TestRunDevmodeProve_RejectsMalformedRequests(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := runDevmodeProve(nil, strings.NewReader(line+"\n"), io.Discard)
-			require.ErrorContains(t, err, "request")
+			require.ErrorContains(t, err, "request", "a malformed request must be rejected")
 		})
 	}
 	require.ErrorContains(t, runDevmodeProve([]string{"extra"}, strings.NewReader(""), io.Discard),
-		"unexpected arguments")
+		"unexpected arguments", "devmode-prove takes no arguments")
 }

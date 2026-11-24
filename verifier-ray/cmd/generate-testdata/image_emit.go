@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
@@ -11,13 +10,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
-// writeFixtureProofImage writes the binary proof image (encoded for proofserialization.GuestBase)
+// fixtureProofImage returns the binary proof image (encoded for proofserialization.GuestBase)
 // of the honest proof of the first fixture case that populates every path test/proof_image_test.zig
-// mutates, and returns that case's index. The Zig test verifies the image against the case's system
+// mutates, with that case's index. The Zig test verifies the image against the case's system
 // in verify.zig (image_case_index), so the image and the system come from the same compilation.
 //
 // The devmode system is too small to stand in: its proof has no FRI folding.
-func writeFixtureProofImage(path string, cases []fixtureCase, systems []codegen.CompiledSystem) (int, error) {
+func fixtureProofImage(cases []fixtureCase, systems []codegen.CompiledSystem) (int, []byte, error) {
 	for i, tc := range cases {
 		if tc.sys == nil {
 			continue
@@ -25,21 +24,18 @@ func writeFixtureProofImage(path string, cases []fixtureCase, systems []codegen.
 		proof, pub := tc.sys.Prove(tc.assign)
 		input, err := proofserialization.Project(tc.sys, proof, pub)
 		if err != nil {
-			return 0, fmt.Errorf("projecting %s: %w", tc.name, err)
+			return 0, nil, fmt.Errorf("projecting %s: %w", tc.name, err)
 		}
 		if !imageCoversTests(input) || !hasPresentBatch0Column(tc, systems[i], proof.Cells) {
 			continue
 		}
 		image, err := proofserialization.Encode(input, proofserialization.GuestBase)
 		if err != nil {
-			return 0, fmt.Errorf("encoding %s: %w", tc.name, err)
+			return 0, nil, fmt.Errorf("encoding %s: %w", tc.name, err)
 		}
-		if err := os.WriteFile(path, image, 0o644); err != nil {
-			return 0, err
-		}
-		return i, nil
+		return i, image, nil
 	}
-	return 0, fmt.Errorf("no fixture case populates every path of test/proof_image_test.zig")
+	return 0, nil, fmt.Errorf("no fixture case populates every path of test/proof_image_test.zig")
 }
 
 // imageCoversTests reports whether every image path the validateImage test mutates is non-empty.
