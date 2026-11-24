@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
@@ -86,13 +85,13 @@ type Core struct {
 
 // guestProgram is a guest ELF mapped and predecoded for ZkC.
 type guestProgram struct {
-	program elfmapping.Program
+	program predecoding.Program
 	decoded predecoding.DecodedProgram
 }
 
 // parseGuest maps and predecodes a guest ELF.
 func parseGuest(elf []byte) (guestProgram, error) {
-	program, err := elfmapping.Load(bytes.NewReader(elf))
+	program, err := predecoding.Load(bytes.NewReader(elf))
 	if err != nil {
 		return guestProgram{}, fmt.Errorf("extracting ELF blobs: %w", err)
 	}
@@ -599,15 +598,15 @@ func (c *Core) buildInputs(job Job, g guestProgram) (map[string]bit.Array, error
 // conflation disagreement surfaces as a native runner check failure, not
 // silent corruption.
 func (c *Core) encodeGuestInputs(job Job, g guestProgram) (map[string]bit.Array, error) {
-	dataBlobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	dataBlobs, err := predecoding.NewData(
+		predecoding.DefaultInputOrigin,
 		decodePayload(job),
-		elfmapping.WithLengthPrefix(),
+		predecoding.WithLengthPrefix(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("building data section: %w", err)
 	}
-	inputs, err := elfmapping.EncodeInputs(g.program, dataBlobs)
+	inputs, err := predecoding.EncodeInputs(g.program, dataBlobs)
 	if err != nil {
 		return nil, err
 	}

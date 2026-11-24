@@ -34,7 +34,7 @@ Environment variables:
   the ELF.
 - `ELF2JSON_MAX_DECODED_RECORDS` overrides the default dense-table safety cap.
 
-ELF mapping is implemented by `gopkg/elfmapping`; instruction decoding and
-packing are implemented by `gopkg/predecoding`.
+ELF parsing, instruction decoding and packing are implemented by
+`gopkg/predecoding`.
 
 See [package documentation](doc.go) for full command documentation.

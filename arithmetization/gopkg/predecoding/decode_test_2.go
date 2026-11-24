@@ -6,12 +6,10 @@ import (
 	"encoding/hex"
 	"math"
 	"testing"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
 func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
-	_, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
+	_, err := Predecode(Program{Blobs: []Blob{{
 		Address: 0x1000,
 		Data:    []byte{1, 2, 3, 4},
 	}}})
@@ -21,7 +19,7 @@ func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
 }
 
 func TestPredecodeHonorsExplicitRecordLimit(t *testing.T) {
-	program := elfmapping.Program{Blobs: []elfmapping.Blob{{
+	program := Program{Blobs: []Blob{{
 		Address:    0x1000,
 		Data:       make([]byte, 8),
 		Executable: true,
@@ -41,7 +39,7 @@ func TestPredecodeDenseExecutableSpan(t *testing.T) {
 	second := make([]byte, 4)
 	binary.LittleEndian.PutUint32(first, encodeIType(opcodeOPIMM, 0, 1, 0, 1))
 	binary.LittleEndian.PutUint32(second, encodeIType(opcodeOPIMM, 0, 2, 0, 2))
-	decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{
+	decoded, err := Predecode(Program{Blobs: []Blob{
 		{Address: 0x1008, Data: second, Executable: true},
 		{Address: 0x1000, Data: first, Executable: true},
 	}})
@@ -63,12 +61,12 @@ func TestPredecodeDenseExecutableSpan(t *testing.T) {
 func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 	tests := []struct {
 		name    string
-		blobs   []elfmapping.Blob
+		blobs   []Blob
 		wantErr string
 	}{
 		{
 			name: "overlap",
-			blobs: []elfmapping.Blob{
+			blobs: []Blob{
 				{Address: 0x1000, Data: make([]byte, 4), Executable: true},
 				{Address: 0x1002, Data: make([]byte, 4), Executable: true},
 			},
@@ -76,14 +74,14 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 		},
 		{
 			name: "blob overflow",
-			blobs: []elfmapping.Blob{{
+			blobs: []Blob{{
 				Address: math.MaxUint64, Data: []byte{1}, Executable: true,
 			}},
 			wantErr: "overflows address space",
 		},
 		{
 			name: "alignment overflow",
-			blobs: []elfmapping.Blob{{
+			blobs: []Blob{{
 				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
 			}},
 			wantErr: "aligning executable span",
@@ -91,7 +89,7 @@ func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := Predecode(elfmapping.Program{Blobs: test.blobs})
+			_, err := Predecode(Program{Blobs: test.blobs})
 			if err == nil || !bytes.Contains([]byte(err.Error()), []byte(test.wantErr)) {
 				t.Fatalf("Predecode() error = %v, want containing %q", err, test.wantErr)
 			}
@@ -121,9 +119,9 @@ type memoryBlob struct {
 }
 
 func buildDecodedProgram(blobs []memoryBlob) (uint64, uint64, string) {
-	program := elfmapping.Program{Blobs: make([]elfmapping.Blob, len(blobs))}
+	program := Program{Blobs: make([]Blob, len(blobs))}
 	for i, blob := range blobs {
-		program.Blobs[i] = elfmapping.Blob{
+		program.Blobs[i] = Blob{
 			Address: blob.offset, Data: blob.data, Name: blob.name,
 			Executable: blob.executable,
 		}
@@ -140,9 +138,9 @@ func buildDecodedProgram(blobs []memoryBlob) (uint64, uint64, string) {
 }
 
 func collectExecutableImage(blobs []memoryBlob) (uint64, []byte, uint64) {
-	program := make([]elfmapping.Blob, len(blobs))
+	program := make([]Blob, len(blobs))
 	for i, blob := range blobs {
-		program[i] = elfmapping.Blob{
+		program[i] = Blob{
 			Address: blob.offset, Data: blob.data, Name: blob.name,
 			Executable: blob.executable,
 		}

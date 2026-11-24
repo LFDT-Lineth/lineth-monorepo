@@ -1,4 +1,4 @@
-package elfmapping_test
+package predecoding
 
 import (
 	"bytes"
@@ -6,8 +6,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
 const (
@@ -17,65 +15,18 @@ const (
 
 var testText = []byte{0x97, 0x02, 0x00, 0x00}
 
-func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
-	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
-	inputData := []byte{0xaa, 0xbb}
-	got, err := elfmapping.PrepareInputs(
-		elfBytes,
-		inputData,
-		elfmapping.WithIncludeExecutable(),
-	)
-	if err != nil {
-		t.Fatalf("PrepareInputs() error = %v", err)
-	}
-
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	inputBlobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
-		inputData,
-		elfmapping.WithLengthPrefix(),
-	)
-	if err != nil {
-		t.Fatalf("NewData() error = %v", err)
-	}
-	want, err := elfmapping.EncodeInputs(
-		program,
-		inputBlobs,
-		elfmapping.WithIncludeExecutable(),
-	)
-	if err != nil {
-		t.Fatalf("EncodeInputs() error = %v", err)
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("PrepareInputs() = %#v, want %#v", got, want)
-	}
-}
-
-func TestPrepareInputsRejectsInvalidELF(t *testing.T) {
-	inputs, err := elfmapping.PrepareInputs([]byte("not an ELF"), nil)
-	if err == nil {
-		t.Fatal("PrepareInputs() error = nil, want malformed ELF error")
-	}
-	if inputs != nil {
-		t.Fatalf("PrepareInputs() inputs = %#v, want nil", inputs)
-	}
-}
-
 func TestPrepareInputsWritesLegacySectionsTable(t *testing.T) {
 	var sections bytes.Buffer
-	inputs, err := elfmapping.PrepareInputs(
+	inputs, err := PrepareInputs(
 		makeELF(testEntryPoint, testTextAddress, testText),
 		[]byte{0xaa, 0xbb},
-		elfmapping.WithIncludeExecutable(),
-		elfmapping.WithSectionsWriter(&sections),
+		WithIncludeExecutable(),
+		WithSectionsWriter(&sections),
 	)
 	if err != nil {
 		t.Fatalf("PrepareInputs() error = %v", err)
 	}
-	if got := inputs[elfmapping.BlobsExecutableInput]; got.String() != "80" {
+	if got := inputs[BlobsExecutableInput]; got.String() != "80" {
 		t.Errorf("blobs_executable = %s, want 80", got.String())
 	}
 	want := "index, offset,             size,               exec, name\n" +
@@ -89,7 +40,7 @@ func TestPrepareInputsWritesLegacySectionsTable(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -123,7 +74,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidELF(t *testing.T) {
-	if _, err := elfmapping.Load(bytes.NewReader([]byte("not an elf"))); err == nil {
+	if _, err := Load(bytes.NewReader([]byte("not an elf"))); err == nil {
 		t.Fatal("Load() error = nil, want malformed ELF error")
 	}
 }
@@ -184,7 +135,7 @@ func TestLoadRejectsInvalidMappings(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
 			test.mutate(elfBytes)
-			_, err := elfmapping.Load(bytes.NewReader(elfBytes))
+			_, err := Load(bytes.NewReader(elfBytes))
 			if err == nil || !bytes.Contains([]byte(err.Error()), []byte(test.wantErr)) {
 				t.Fatalf("Load() error = %v, want containing %q", err, test.wantErr)
 			}
@@ -194,10 +145,10 @@ func TestLoadRejectsInvalidMappings(t *testing.T) {
 
 func TestNewDataWithLengthPrefix(t *testing.T) {
 	payload := []byte{0xaa, 0xbb, 0xcc}
-	blobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	blobs, err := NewData(
+		DefaultInputOrigin,
 		payload,
-		elfmapping.WithLengthPrefix(),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		t.Fatalf("NewData() error = %v", err)
@@ -208,11 +159,11 @@ func TestNewDataWithLengthPrefix(t *testing.T) {
 	if got := binary.LittleEndian.Uint64(blobs[0].Data); got != uint64(len(payload)) {
 		t.Errorf("length prefix = %d, want %d", got, len(payload))
 	}
-	if blobs[0].Address != elfmapping.DefaultInputOrigin {
-		t.Errorf("length address = %#x, want %#x", blobs[0].Address, elfmapping.DefaultInputOrigin)
+	if blobs[0].Address != DefaultInputOrigin {
+		t.Errorf("length address = %#x, want %#x", blobs[0].Address, DefaultInputOrigin)
 	}
-	if blobs[1].Address != elfmapping.DefaultInputOrigin+8 {
-		t.Errorf("payload address = %#x, want %#x", blobs[1].Address, elfmapping.DefaultInputOrigin+8)
+	if blobs[1].Address != DefaultInputOrigin+8 {
+		t.Errorf("payload address = %#x, want %#x", blobs[1].Address, DefaultInputOrigin+8)
 	}
 	if !bytes.Equal(blobs[1].Data, payload) {
 		t.Errorf("payload = %x, want %x", blobs[1].Data, payload)
@@ -223,11 +174,11 @@ func TestNewDataWithLengthPrefix(t *testing.T) {
 }
 
 func TestNewDataWithLengthPrefixAndName(t *testing.T) {
-	blobs, err := elfmapping.NewData(
+	blobs, err := NewData(
 		0x1000,
 		[]byte{1},
-		elfmapping.WithName("guest_input"),
-		elfmapping.WithLengthPrefix(),
+		WithName("guest_input"),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		t.Fatalf("NewData() error = %v", err)
@@ -241,14 +192,14 @@ func TestNewDataWithLengthPrefixAndName(t *testing.T) {
 }
 
 func TestBlobNamesDoNotAffectEncodedInputs(t *testing.T) {
-	unnamed, err := elfmapping.NewData(0x1000, []byte{1})
+	unnamed, err := NewData(0x1000, []byte{1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	named, err := elfmapping.NewData(
+	named, err := NewData(
 		0x1000,
 		[]byte{1},
-		elfmapping.WithName("input"),
+		WithName("input"),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -256,11 +207,11 @@ func TestBlobNamesDoNotAffectEncodedInputs(t *testing.T) {
 	if named[0].Name != "input" {
 		t.Fatalf("named raw blob = %q, want input", named[0].Name)
 	}
-	unnamedInputs, err := elfmapping.EncodeInputs(elfmapping.Program{}, unnamed)
+	unnamedInputs, err := EncodeInputs(Program{}, unnamed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	namedInputs, err := elfmapping.EncodeInputs(elfmapping.Program{}, named)
+	namedInputs, err := EncodeInputs(Program{}, named)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +221,7 @@ func TestBlobNamesDoNotAffectEncodedInputs(t *testing.T) {
 }
 
 func TestNewDataWithLengthPrefixEmpty(t *testing.T) {
-	blobs, err := elfmapping.NewData(0x1000, nil, elfmapping.WithLengthPrefix())
+	blobs, err := NewData(0x1000, nil, WithLengthPrefix())
 	if err != nil {
 		t.Fatalf("NewData() error = %v", err)
 	}
@@ -283,46 +234,46 @@ func TestNewDataWithLengthPrefixEmpty(t *testing.T) {
 }
 
 func TestNewDataWithLengthPrefixRejectsAddressOverflow(t *testing.T) {
-	_, err := elfmapping.NewData(math.MaxUint64-4, []byte{1}, elfmapping.WithLengthPrefix())
+	_, err := NewData(math.MaxUint64-4, []byte{1}, WithLengthPrefix())
 	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("offset overflow")) {
 		t.Fatalf("NewData() error = %v, want offset overflow", err)
 	}
 }
 
 func TestEncodeInputsLegacyGolden(t *testing.T) {
-	program := elfmapping.Program{
+	program := Program{
 		EntryPoint: testEntryPoint,
-		Blobs: []elfmapping.Blob{{
+		Blobs: []Blob{{
 			Address:    testTextAddress,
 			Data:       testText,
 			Name:       ".text",
 			Executable: true,
 		}},
 	}
-	payload, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	payload, err := NewData(
+		DefaultInputOrigin,
 		[]byte{0xaa, 0xbb, 0xcc},
-		elfmapping.WithLengthPrefix(),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		t.Fatalf("NewData() error = %v", err)
 	}
-	inputs, err := elfmapping.EncodeInputs(
+	inputs, err := EncodeInputs(
 		program,
 		payload,
-		elfmapping.WithIncludeExecutable(),
+		WithIncludeExecutable(),
 	)
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
 
 	want := map[string]string{
-		elfmapping.EntryPointAndBlobsCountInput: "0080000000000003",
-		elfmapping.BlobsOffsetAndSizeInput: "0080000000000004" +
+		EntryPointAndBlobsCountInput: "0080000000000003",
+		BlobsOffsetAndSizeInput: "0080000000000004" +
 			"0880000000000008" +
 			"0880000800000003",
-		elfmapping.BlobsDataInput:       "970200000300000000000000aabbcc",
-		elfmapping.BlobsExecutableInput: "80",
+		BlobsDataInput:       "970200000300000000000000aabbcc",
+		BlobsExecutableInput: "80",
 	}
 	if len(inputs) != len(want) {
 		t.Fatalf("len(inputs) = %d, want %d", len(inputs), len(want))
@@ -335,24 +286,24 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 }
 
 func TestEncodeInputsDoesNotMutateOrAliasInputs(t *testing.T) {
-	programBlobs := make([]elfmapping.Blob, 2, 4)
-	programBlobs[0] = elfmapping.Blob{Address: 0x3000, Data: []byte{3}}
-	programBlobs[1] = elfmapping.Blob{Address: 0x1000, Data: []byte{1}}
-	additional := []elfmapping.Blob{
+	programBlobs := make([]Blob, 2, 4)
+	programBlobs[0] = Blob{Address: 0x3000, Data: []byte{3}}
+	programBlobs[1] = Blob{Address: 0x1000, Data: []byte{1}}
+	additional := []Blob{
 		{Address: 0x2000, Data: []byte{2}},
 		{Address: 0x4000, Data: []byte{4}},
 	}
-	inputs, err := elfmapping.EncodeInputs(
-		elfmapping.Program{Blobs: programBlobs},
+	inputs, err := EncodeInputs(
+		Program{Blobs: programBlobs},
 		additional,
 	)
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
-	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "01020304" {
+	if got := inputs[BlobsDataInput]; got.String() != "01020304" {
 		t.Fatalf("blobs_data = %s, want 01020304", got.String())
 	}
-	if _, ok := inputs[elfmapping.BlobsExecutableInput]; ok {
+	if _, ok := inputs[BlobsExecutableInput]; ok {
 		t.Error("default EncodeInputs() unexpectedly included blobs_executable")
 	}
 	if programBlobs[0].Address != 0x3000 || programBlobs[1].Address != 0x1000 {
@@ -364,7 +315,7 @@ func TestEncodeInputsDoesNotMutateOrAliasInputs(t *testing.T) {
 
 	programBlobs[1].Data[0] = 0xff
 	additional[0].Data[0] = 0xff
-	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "01020304" {
+	if got := inputs[BlobsDataInput]; got.String() != "01020304" {
 		t.Errorf("encoded output aliases input data: got %s", got.String())
 	}
 }
@@ -372,12 +323,12 @@ func TestEncodeInputsDoesNotMutateOrAliasInputs(t *testing.T) {
 func TestEncodeInputsRejectsInvalidRanges(t *testing.T) {
 	tests := []struct {
 		name    string
-		blobs   []elfmapping.Blob
+		blobs   []Blob
 		wantErr string
 	}{
 		{
 			name: "overlap",
-			blobs: []elfmapping.Blob{
+			blobs: []Blob{
 				{Address: 0x1000, Data: []byte{1, 2}},
 				{Address: 0x1001, Data: []byte{3}},
 			},
@@ -385,29 +336,29 @@ func TestEncodeInputsRejectsInvalidRanges(t *testing.T) {
 		},
 		{
 			name:    "overflow",
-			blobs:   []elfmapping.Blob{{Address: math.MaxUint64, Data: []byte{1}}},
+			blobs:   []Blob{{Address: math.MaxUint64, Data: []byte{1}}},
 			wantErr: "overflows address space",
 		},
 		{
 			name:    "above 4 GiB",
-			blobs:   []elfmapping.Blob{{Address: 1 << 32, Data: []byte{1}}},
+			blobs:   []Blob{{Address: 1 << 32, Data: []byte{1}}},
 			wantErr: "outside the 32-bit address space",
 		},
 		{
 			name:    "empty above 4 GiB",
-			blobs:   []elfmapping.Blob{{Address: 1 << 32}},
+			blobs:   []Blob{{Address: 1 << 32}},
 			wantErr: "outside the 32-bit address space",
 		},
 		{
 			name:    "crosses 4 GiB",
-			blobs:   []elfmapping.Blob{{Address: math.MaxUint32, Data: []byte{1, 2}}},
+			blobs:   []Blob{{Address: math.MaxUint32, Data: []byte{1, 2}}},
 			wantErr: "outside the 32-bit address space",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			inputs, err := elfmapping.EncodeInputs(
-				elfmapping.Program{},
+			inputs, err := EncodeInputs(
+				Program{},
 				test.blobs,
 			)
 			if inputs != nil {
@@ -421,28 +372,28 @@ func TestEncodeInputsRejectsInvalidRanges(t *testing.T) {
 }
 
 func TestEncodeInputsRejectsEntryPointAbove4GiB(t *testing.T) {
-	_, err := elfmapping.EncodeInputs(elfmapping.Program{EntryPoint: 1 << 32}, nil)
+	_, err := EncodeInputs(Program{EntryPoint: 1 << 32}, nil)
 	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("outside the 32-bit address space")) {
 		t.Fatalf("EncodeInputs() error = %v, want containing %q", err, "outside the 32-bit address space")
 	}
 }
 
 func TestEncodeInputsAllowsAdjacentAndEmptyBlobs(t *testing.T) {
-	inputs, err := elfmapping.EncodeInputs(
-		elfmapping.Program{Blobs: []elfmapping.Blob{
+	inputs, err := EncodeInputs(
+		Program{Blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2}},
 			{Address: 0x1002, Data: nil},
 		}},
-		[]elfmapping.Blob{{Address: 0x1002, Data: []byte{3}}},
+		[]Blob{{Address: 0x1002, Data: []byte{3}}},
 	)
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
-	if got := inputs[elfmapping.BlobsDataInput]; got.String() != "010203" {
+	if got := inputs[BlobsDataInput]; got.String() != "010203" {
 		t.Errorf("blobs_data = %s, want 010203", got.String())
 	}
 	var (
-		epAndBlobs = inputs[elfmapping.EntryPointAndBlobsCountInput]
+		epAndBlobs = inputs[EntryPointAndBlobsCountInput]
 		count      = binary.BigEndian.Uint32(epAndBlobs.Bytes()[4:])
 	)
 	if count != 3 {

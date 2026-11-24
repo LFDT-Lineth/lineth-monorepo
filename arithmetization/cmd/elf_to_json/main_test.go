@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
@@ -107,9 +106,9 @@ func TestParseInput(t *testing.T) {
 func TestInputBlobsUsesOptionalLengthPrefix(t *testing.T) {
 	blobs, err := inputBlobs(0x1000, inputBytes{
 		data: []byte{1, 2},
-		options: []elfmapping.DataOption{
-			elfmapping.WithName("ssz"),
-			elfmapping.WithLengthPrefix(),
+		options: []predecoding.DataOption{
+			predecoding.WithName("ssz"),
+			predecoding.WithLengthPrefix(),
 		},
 	})
 	if err != nil {
@@ -133,8 +132,8 @@ func TestParseInputOffset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseInputOffset(default) error = %v", err)
 	}
-	if got != elfmapping.DefaultInputOrigin {
-		t.Fatalf("parseInputOffset(default) = %#x, want %#x", got, elfmapping.DefaultInputOrigin)
+	if got != predecoding.DefaultInputOrigin {
+		t.Fatalf("parseInputOffset(default) = %#x, want %#x", got, predecoding.DefaultInputOrigin)
 	}
 	got, err = parseInputOffset([]string{"guest.elf", "input", "0x1234"})
 	if err != nil {
@@ -159,11 +158,11 @@ func TestBoolEnv(t *testing.T) {
 
 func TestWriteJSONPreservesPartialByte(t *testing.T) {
 	inputs := map[string]bit.Array{
-		elfmapping.EntryPointAndBlobsCountInput: mustDecodeHex(t, "0080000000000002"),
-		elfmapping.BlobsOffsetAndSizeInput: mustDecodeHex(t, "0080000000000004"+
+		predecoding.EntryPointAndBlobsCountInput: mustDecodeHex(t, "0080000000000002"),
+		predecoding.BlobsOffsetAndSizeInput: mustDecodeHex(t, "0080000000000004"+
 			"0880000000000001"),
-		elfmapping.BlobsExecutableInput:  elfmapping.BitArrayFromBytes(0x80),
-		elfmapping.BlobsDataInput:        elfmapping.BitArrayFromBytes(1, 2, 3, 4, 5),
+		predecoding.BlobsExecutableInput: predecoding.BitArrayFromBytes(0x80),
+		predecoding.BlobsDataInput:       predecoding.BitArrayFromBytes(1, 2, 3, 4, 5),
 		predecoding.InstructionBaseInput: mustDecodeHex(t, "00800000"),
 		predecoding.DecodedInput:         bit.NewArray([]byte{0xaa, 0xba}, 15, bit.BigEndian),
 	}
@@ -190,5 +189,5 @@ func mustDecodeHex(t *testing.T, value string) bit.Array {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return elfmapping.BitArrayFromBytes(decoded...)
+	return predecoding.BitArrayFromBytes(decoded...)
 }

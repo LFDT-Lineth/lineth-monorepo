@@ -5,8 +5,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
 // TestInstructionTypeFromOpcode
@@ -1266,31 +1264,31 @@ func TestDecodeImage(t *testing.T) {
 func TestExecutableBlobs(t *testing.T) {
 	tests := []struct {
 		name    string
-		blobs   []elfmapping.Blob
-		want    []elfmapping.Blob
+		blobs   []Blob
+		want    []Blob
 		wantErr bool
 	}{
 		{name: "none", wantErr: true},
-		{name: "data only", blobs: []elfmapping.Blob{
+		{name: "data only", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1}, Executable: false},
 		}, wantErr: true},
-		{name: "one", blobs: []elfmapping.Blob{
+		{name: "one", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
-		}, want: []elfmapping.Blob{
+		}, want: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
 		}},
-		{name: "drops data and sorts", blobs: []elfmapping.Blob{
+		{name: "drops data and sorts", blobs: []Blob{
 			{Address: 0x3000, Data: []byte{3}, Executable: true},
 			{Address: 0x2000, Data: []byte{9}, Executable: false},
 			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
-		}, want: []elfmapping.Blob{
+		}, want: []Blob{
 			{Address: 0x1000, Data: []byte{1}, Name: ".text", Executable: true},
 			{Address: 0x3000, Data: []byte{3}, Executable: true},
 		}},
-		{name: "stable on equal address", blobs: []elfmapping.Blob{
+		{name: "stable on equal address", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
 			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
-		}, want: []elfmapping.Blob{
+		}, want: []Blob{
 			{Address: 0x1000, Data: []byte{1}, Name: "a", Executable: true},
 			{Address: 0x1000, Data: []byte{2}, Name: "b", Executable: true},
 		}},
@@ -1318,55 +1316,55 @@ func TestExecutableBlobs(t *testing.T) {
 func TestExecutableSpanEnd(t *testing.T) {
 	tests := []struct {
 		name    string
-		blobs   []elfmapping.Blob
+		blobs   []Blob
 		want    uint64
 		wantErr bool
 	}{
-		{name: "one", blobs: []elfmapping.Blob{
+		{name: "one", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 		}, want: 0x1004},
-		{name: "gap", blobs: []elfmapping.Blob{
+		{name: "gap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 			{Address: 0x2000, Data: []byte{5, 6}},
 		}, want: 0x2002},
-		{name: "contiguous", blobs: []elfmapping.Blob{
+		{name: "contiguous", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 			{Address: 0x1004, Data: []byte{5, 6, 7, 8}},
 		}, want: 0x1008},
-		{name: "empty does not move previous end", blobs: []elfmapping.Blob{
+		{name: "empty does not move previous end", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
 			{Address: 0x1004},
 			{Address: 0x1008, Data: []byte{9}},
 		}, want: 0x1009},
-		{name: "empty extends the end", blobs: []elfmapping.Blob{
+		{name: "empty extends the end", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
 			{Address: 0x3000},
 		}, want: 0x3000},
-		{name: "overlap", blobs: []elfmapping.Blob{
+		{name: "overlap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
 			{Address: 0x1004, Data: []byte{9}},
 		}, wantErr: true},
-		{name: "overlap across an empty blob", blobs: []elfmapping.Blob{
+		{name: "overlap across an empty blob", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
 			{Address: 0x1004},
 			{Address: 0x1006, Data: []byte{9}},
 		}, wantErr: true},
-		{name: "wraps", blobs: []elfmapping.Blob{
+		{name: "wraps", blobs: []Blob{
 			{Address: math.MaxUint64, Data: []byte{1}},
 		}, wantErr: true},
-		{name: "wraps before the top", blobs: []elfmapping.Blob{
+		{name: "wraps before the top", blobs: []Blob{
 			{Address: math.MaxUint64 - 1, Data: []byte{1, 2}},
 		}, wantErr: true},
-		{name: "fits 32-bit address", blobs: []elfmapping.Blob{
+		{name: "fits 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 3},
 		}, want: math.MaxUint32 - 3},
-		{name: "past 32-bit address", blobs: []elfmapping.Blob{
+		{name: "past 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 2},
 		}, wantErr: true},
-		{name: "data passes 32-bit address", blobs: []elfmapping.Blob{
+		{name: "data passes 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 4, Data: []byte{1, 2}},
 		}, wantErr: true},
-		{name: "data crosses 32-bit address", blobs: []elfmapping.Blob{
+		{name: "data crosses 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32, Data: []byte{1}},
 		}, wantErr: true},
 	}
@@ -1434,7 +1432,7 @@ func TestExecutableSpan(t *testing.T) {
 func TestExecutableImage(t *testing.T) {
 	tests := []struct {
 		name        string
-		blobs       []elfmapping.Blob
+		blobs       []Blob
 		maxRecords  uint64
 		wantBase    uint64
 		wantImage   []byte
@@ -1442,36 +1440,36 @@ func TestExecutableImage(t *testing.T) {
 		wantErr     bool
 	}{
 		{name: "none", maxRecords: 1, wantErr: true},
-		{name: "one word", blobs: []elfmapping.Blob{
+		{name: "one word", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4}, wantRecords: 1},
-		{name: "empty blob", blobs: []elfmapping.Blob{
+		{name: "empty blob", blobs: []Blob{
 			{Address: 0x1000, Executable: true},
 		}, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
-		{name: "short blob", blobs: []elfmapping.Blob{
+		{name: "short blob", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2}, Executable: true},
 		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 0, 0}, wantRecords: 1},
-		{name: "unaligned", blobs: []elfmapping.Blob{
+		{name: "unaligned", blobs: []Blob{
 			{Address: 0x1002, Data: []byte{1, 2}, Executable: true},
 		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{0, 0, 1, 2}, wantRecords: 1},
-		{name: "gap stays zero", blobs: []elfmapping.Blob{
+		{name: "gap stays zero", blobs: []Blob{
 			{Address: 0x1008, Data: []byte{2}, Executable: true},
 			{Address: 0x1004, Data: []byte{9}, Executable: false},
 			{Address: 0x1000, Data: []byte{1}, Executable: true},
 		}, maxRecords: 3, wantBase: 0x1000, wantImage: []byte{1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}, wantRecords: 3},
-		{name: "contiguous", blobs: []elfmapping.Blob{
+		{name: "contiguous", blobs: []Blob{
 			{Address: 0x1004, Data: []byte{5, 6, 7, 8}, Executable: true},
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 5, 6, 7, 8}, wantRecords: 2},
-		{name: "empty extends the image", blobs: []elfmapping.Blob{
+		{name: "empty extends the image", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 			{Address: 0x1008, Executable: true},
 		}, maxRecords: 2, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4, 0, 0, 0, 0}, wantRecords: 2},
-		{name: "overlap", blobs: []elfmapping.Blob{
+		{name: "overlap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}, Executable: true},
 			{Address: 0x1004, Data: []byte{9}, Executable: true},
 		}, maxRecords: 4, wantErr: true},
-		{name: "records above cap", blobs: []elfmapping.Blob{
+		{name: "records above cap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 			{Address: 0x1008, Data: []byte{5, 6, 7, 8}, Executable: true},
 		}, maxRecords: 2, wantErr: true},
@@ -1494,7 +1492,6 @@ func TestExecutableImage(t *testing.T) {
 	}
 }
 
-
 // ------------------------------------------------------------
 // predecode
 // ------------------------------------------------------------
@@ -1507,22 +1504,22 @@ func TestPredecode(t *testing.T) {
 	add := []byte{0xb3, 0x82, 0x20, 0x00}  // add x5, x1, x2
 	tests := []struct {
 		name       string
-		blobs      []elfmapping.Blob
+		blobs      []Blob
 		maxRecords uint64
 		wantBase   uint64
 		wantWords  []uint32
 		wantErr    bool
 	}{
 		{name: "error is returned", maxRecords: 1, wantErr: true},
-		{name: "empty", blobs: []elfmapping.Blob{
+		{name: "empty", blobs: []Blob{
 			{Address: 0x2000, Executable: true},
 		}, maxRecords: 0, wantBase: 0x2000},
-		{name: "two words", blobs: []elfmapping.Blob{
+		{name: "two words", blobs: []Blob{
 			{Address: 0x2000, Data: append(addi, add...), Executable: true},
 		}, maxRecords: 2, wantBase: 0x2000, wantWords: []uint32{0x00108293, 0x002082b3}},
 	}
 	for _, tt := range tests {
-		got, err := predecode(elfmapping.Program{Blobs: tt.blobs}, tt.maxRecords)
+		got, err := predecode(Program{Blobs: tt.blobs}, tt.maxRecords)
 		if tt.wantErr {
 			if err == nil {
 				t.Fatalf("%s: expected an error", tt.name)
@@ -1542,6 +1539,10 @@ func TestPredecode(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// APPLY OPTIONS
+// ------------------------------------------------------------
 
 // commit 88fe45d
 // TestDecodedInputsPreserveExactRowLength

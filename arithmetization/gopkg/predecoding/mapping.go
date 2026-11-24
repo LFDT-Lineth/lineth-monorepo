@@ -1,7 +1,6 @@
-package elfmapping
+package predecoding
 
 import (
-	"bytes"
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
@@ -44,11 +43,6 @@ type Program struct {
 	Blobs      []Blob
 }
 
-type config struct {
-	includeExecutable bool
-	sectionsWriter    io.Writer
-}
-
 type dataConfig struct {
 	name         string
 	lengthPrefix bool
@@ -77,52 +71,6 @@ func WithLengthPrefix() DataOption {
 		cfg.lengthPrefix = true
 		return nil
 	}
-}
-
-// Option configures optional R5 mapping inputs.
-type Option func(*config) error
-
-// WithIncludeExecutable includes the public input that marks executable blobs.
-func WithIncludeExecutable() Option {
-	return func(cfg *config) error {
-		cfg.includeExecutable = true
-		return nil
-	}
-}
-
-// WithSectionsWriter writes a diagnostic table describing the encoded blobs.
-// The caller owns the writer and is responsible for closing it when needed.
-func WithSectionsWriter(writer io.Writer) Option {
-	return func(cfg *config) error {
-		if writer == nil {
-			return fmt.Errorf("sections writer is nil")
-		}
-		cfg.sectionsWriter = writer
-		return nil
-	}
-}
-
-// PrepareInputs maps a guest ELF and input data using the length-prefixed guest
-// convention. Call [Load] and [EncodeInputs] separately for guests expecting
-// raw input or when the same ELF is reused across many inputs.
-func PrepareInputs(
-	elfBytes []byte,
-	inputData []byte,
-	options ...Option,
-) (map[string]bit.Array, error) {
-	program, err := Load(bytes.NewReader(elfBytes))
-	if err != nil {
-		return nil, err
-	}
-	inputBlobs, err := NewData(
-		DefaultInputOrigin,
-		inputData,
-		WithLengthPrefix(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return EncodeInputs(program, inputBlobs, options...)
 }
 
 // Load parses a guest ELF and copies its allocated, file-backed sections into
@@ -259,7 +207,8 @@ func NewData(
 
 // EncodeInputs encodes a program and additional memory blobs into raw R5
 // public-input bytes. It does not mutate either input and returned byte slices
-// do not alias blob data.
+// do not alias blob data. The options are the mapping options
+// [WithIncludeExecutable] and [WithSectionsWriter].
 func EncodeInputs(
 	program Program,
 	additional []Blob,
@@ -274,7 +223,10 @@ func EncodeInputs(
 			return nil, fmt.Errorf("applying input option: %w", err)
 		}
 	}
+	return encodeInputs(program, additional, cfg)
+}
 
+func encodeInputs(program Program, additional []Blob, cfg config) (map[string]bit.Array, error) {
 	blobs := make([]Blob, 0, len(program.Blobs)+len(additional))
 	blobs = append(blobs, program.Blobs...)
 	blobs = append(blobs, additional...)

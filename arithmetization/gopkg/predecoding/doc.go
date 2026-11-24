@@ -4,8 +4,9 @@
 // # Overview
 //
 // The R5 interpreter dispatches on a predecoded instruction table instead of
-// decoding opcode fields during every execution step. Predecode consumes an
-// elfmapping.Program and returns instruction_base plus the packed decoded table.
+// decoding opcode fields during every execution step. Predecode consumes a
+// Program returned by Load and returns instruction_base plus the packed decoded
+// table.
 //
 // Use PrepareInputs when the ELF is needed only once:
 //
@@ -13,10 +14,38 @@
 //
 // To reuse an ELF, cache the mapping and decoded program:
 //
-//	program, err := elfmapping.Load(elfReader)
+//	program, err := predecoding.Load(elfReader)
 //	decoded, err := predecoding.Predecode(program)
-//	mapped, err := elfmapping.EncodeInputs(program, jobInput)
+//	mapped, err := predecoding.EncodeInputs(program, jobInput)
 //	maps.Copy(mapped, decoded.EncodeInputs())
+//
+// # ELF mapping and R5 inputs
+//
+// Load reads allocated, file-backed sections contained in PT_LOAD segments.
+// Each section becomes a Blob at its ELF virtual address. SHT_NOBITS sections,
+// such as .bss, are omitted because R5 memory is initialized to zero. Blob data
+// is copied, so the returned Program remains valid after the reader is closed.
+//
+// EncodeInputs returns raw bytes for these public inputs:
+//
+//   - entry_point_and_blobs_count: a big-endian u32 entry point and u32 blob count;
+//   - blobs_offset_and_size: one big-endian u32 address and u32 size pair per blob;
+//   - blobs_data: all blob bytes concatenated in address order;
+//   - blobs_executable: an optional, MSB-first bit per blob.
+//
+// The combined blobs are stable-sorted without mutating caller-owned slices.
+// Overlapping and overflowing non-empty ranges are rejected. Returned input
+// bytes do not alias Blob data.
+//
+// NewData with WithLengthPrefix implements the length-prefixed ABI used by some
+// Lineth guests: an eight-byte little-endian payload length followed by the
+// payload. The interpreter itself does not impose this framing. Empty payloads
+// produce only the length blob.
+//
+// WithIncludeExecutable adds the bitmap used by the separate predecoding proof.
+// Executable bytes are always present in blobs_data; the option controls only
+// the bitmap. WithSectionsWriter writes the legacy diagnostic table of indexes,
+// addresses, sizes, executable flags, and section names.
 //
 // # Predecoding semantics
 //
@@ -159,7 +188,7 @@
 // All of this happens in `Predecode`:
 //
 //  1. Find the code region. Scan executable blobs emitted by
-//     `elfmapping.Load` (allocated `SHF_ALLOC` sections inside `PT_LOAD`, with
+//     `Load` (allocated `SHF_ALLOC` sections inside `PT_LOAD`, with
 //     `SHF_EXECINSTR`), and compute the span `[base, end)` with `base` aligned down
 //     and `end` up to a 4-byte boundary. Non-loadable exec sections are excluded so
 //     pre-decoding matches `blobs_data` / `read_instruction_from_blobs`.

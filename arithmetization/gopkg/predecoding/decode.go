@@ -9,7 +9,6 @@ import (
 	"math"
 	"sort"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
@@ -626,7 +625,8 @@ func (w *bitWriter) writeBits(val uint64, width int) {
 
 type config struct {
 	maxDecodedRecords uint64
-	mappingOptions    []elfmapping.Option
+	includeExecutable bool
+	sectionsWriter    io.Writer
 }
 
 // Option configures predecoding.
@@ -645,10 +645,7 @@ func WithMaxDecodedRecords(maximum uint64) Option {
 // standalone predecoding proof in the map returned by [PrepareInputs].
 func WithIncludeExecutable() Option {
 	return func(cfg *config) error {
-		cfg.mappingOptions = append(
-			cfg.mappingOptions,
-			elfmapping.WithIncludeExecutable(),
-		)
+		cfg.includeExecutable = true
 		return nil
 	}
 }
@@ -660,16 +657,13 @@ func WithSectionsWriter(writer io.Writer) Option {
 		if writer == nil {
 			return fmt.Errorf("sections writer is nil")
 		}
-		cfg.mappingOptions = append(
-			cfg.mappingOptions,
-			elfmapping.WithSectionsWriter(writer),
-		)
+		cfg.sectionsWriter = writer
 		return nil
 	}
 }
 
 // PrepareInputs maps and predecodes a guest ELF and adds input data using the
-// length-prefixed guest convention. Call [Predecode] and the elfmapping APIs
+// length-prefixed guest convention. Call [Load], [Predecode] and [EncodeInputs]
 // separately for guests expecting raw input or when reusing the same ELF.
 func PrepareInputs(
 	elfBytes []byte,
@@ -680,7 +674,7 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -688,19 +682,15 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	inputBlobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	inputBlobs, err := NewData(
+		DefaultInputOrigin,
 		inputData,
-		elfmapping.WithLengthPrefix(),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := elfmapping.EncodeInputs(
-		program,
-		inputBlobs,
-		cfg.mappingOptions...,
-	)
+	inputs, err := encodeInputs(program, inputBlobs, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -721,14 +711,14 @@ func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
 	// Each row is a fixed number of bits; discard the final byte's padding bits.
 	nbits := ((uint(len(decoded)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
 	return map[string]bit.Array{
-		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
+		InstructionBaseInput: BitArrayFromBytes(base...),
 		DecodedInput:         bit.NewArray(decoded, nbits, bit.BigEndian),
 	}
 }
 
 // Predecode creates one packed instruction row for every four-byte word in the
 // aligned span containing the program's executable blobs.
-func Predecode(program elfmapping.Program, options ...Option) (DecodedProgram, error) {
+func Predecode(program Program, options ...Option) (DecodedProgram, error) {
 	cfg, err := applyOptions(options)
 	if err != nil {
 		return DecodedProgram{}, err
@@ -749,7 +739,7 @@ func applyOptions(options []Option) (config, error) {
 	return cfg, nil
 }
 
-func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedProgram, error) {
+func predecode(program Program, maxDecodedRecords uint64) (DecodedProgram, error) {
 	base, image, records, err := executableImage(program.Blobs, maxDecodedRecords)
 	if err != nil {
 		return DecodedProgram{}, err
@@ -759,8 +749,8 @@ func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedPro
 }
 
 // executableBlobs keeps the executable blobs and sorts them by address.
-func executableBlobs(blobs []elfmapping.Blob) ([]elfmapping.Blob, error) {
-	executable := make([]elfmapping.Blob, 0, len(blobs))
+func executableBlobs(blobs []Blob) ([]Blob, error) {
+	executable := make([]Blob, 0, len(blobs))
 	for _, blob := range blobs {
 		if blob.Executable {
 			executable = append(executable, blob)
@@ -780,7 +770,7 @@ func executableBlobs(blobs []elfmapping.Blob) ([]elfmapping.Blob, error) {
 // or a non-empty blob that overlaps the previous one, is rejected. An empty
 // blob does not move the previous end. The end must fit in a 32-bit address
 // with room to round it up to a multiple of 4.
-func executableSpanEnd(blobs []elfmapping.Blob) (uint64, error) {
+func executableSpanEnd(blobs []Blob) (uint64, error) {
 	var previousEnd, maxEnd uint64
 	for i, blob := range blobs {
 		end := blob.Address + uint64(len(blob.Data))
@@ -834,7 +824,7 @@ func executableSpan(firstAddress, maxEnd, maxRecords uint64) (base, records uint
 }
 
 func executableImage(
-	blobs []elfmapping.Blob,
+	blobs []Blob,
 	maxRecords uint64,
 ) (uint64, []byte, uint64, error) {
 	executable, err := executableBlobs(blobs)

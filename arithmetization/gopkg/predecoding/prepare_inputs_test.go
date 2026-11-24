@@ -6,8 +6,6 @@ import (
 	"maps"
 	"reflect"
 	"testing"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
 func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
@@ -18,7 +16,7 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 		t.Fatalf("PrepareInputs() error = %v", err)
 	}
 
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -26,15 +24,15 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Predecode() error = %v", err)
 	}
-	inputBlobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	inputBlobs, err := NewData(
+		DefaultInputOrigin,
 		inputData,
-		elfmapping.WithLengthPrefix(),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		t.Fatalf("NewData() error = %v", err)
 	}
-	want, err := elfmapping.EncodeInputs(program, inputBlobs)
+	want, err := EncodeInputs(program, inputBlobs)
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
@@ -43,9 +41,9 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 		t.Fatalf("PrepareInputs() = %#v, want %#v", got, want)
 	}
 	for _, name := range []string{
-		elfmapping.EntryPointAndBlobsCountInput,
-		elfmapping.BlobsOffsetAndSizeInput,
-		elfmapping.BlobsDataInput,
+		EntryPointAndBlobsCountInput,
+		BlobsOffsetAndSizeInput,
+		BlobsDataInput,
 		InstructionBaseInput,
 		DecodedInput,
 	} {
@@ -80,7 +78,7 @@ func TestPrepareInputsForwardsMappingOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PrepareInputs() error = %v", err)
 	}
-	if got := inputs[elfmapping.BlobsExecutableInput]; !bytes.Equal(got.Bytes(), []byte{0x80}) {
+	if got := inputs[BlobsExecutableInput]; !bytes.Equal(got.Bytes(), []byte{0x80}) {
 		t.Errorf("blobs_executable = %x, want 80", got)
 	}
 	if !bytes.Contains(sections.Bytes(), []byte("yes, .text")) {
