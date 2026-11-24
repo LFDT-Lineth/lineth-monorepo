@@ -6,10 +6,10 @@ description: >
   first, so it cannot serve workflows that need the token for the checkout itself.
 inputs:
   app-id:
-    description: 'GitHub App id, e.g. ${{ secrets.RELEASE_BOT_APP_ID }}'
+    description: 'GitHub App id (pass the repository secret, e.g. RELEASE_BOT_APP_ID)'
     required: true
   private-key:
-    description: 'GitHub App private key, e.g. ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}'
+    description: 'GitHub App private key (pass the repository secret, e.g. RELEASE_BOT_PRIVATE_KEY)'
     required: true
 outputs:
   token:

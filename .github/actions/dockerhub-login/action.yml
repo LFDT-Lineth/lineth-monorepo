@@ -5,7 +5,7 @@ description: >
   they need (the shared pull-only connection, or a component's push connection).
 inputs:
   connection-id:
-    description: 'Docker Hub OIDC connection id, e.g. ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}'
+    description: 'Docker Hub OIDC connection id (a repository variable such as DOCKERHUB_OIDC_CONNECTIONID_PULL)'
     required: true
   expire-in:
     description: 'Lifetime of the OIDC token in seconds'

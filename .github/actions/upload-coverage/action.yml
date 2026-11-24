@@ -14,7 +14,7 @@ inputs:
     description: 'Upload name shown in Codecov'
     required: true
   token:
-    description: 'Codecov token, pass ${{ secrets.CODECOV_TOKEN }}; an empty value skips the upload'
+    description: 'Codecov token (the CODECOV_TOKEN secret); an empty value skips the upload'
     required: false
     default: ''
 runs:
