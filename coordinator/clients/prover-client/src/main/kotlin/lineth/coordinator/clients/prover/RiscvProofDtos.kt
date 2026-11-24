@@ -62,8 +62,8 @@ data class RollupProofPublicInputsDto(
   val endDataRollingHash: String,
   val parentBlockHash: String,
   val endBlockHash: String,
-  val parentDataTailTakeBytes: Int,
-  val finalDataTailDiscardBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: Int,
+  val finalSharedBlobCarryOverTailBytes: Int,
   val l2L1Messages: List<String>,
   val filteredAddresses: List<String>,
   /** Distinct, sorted ascending by byte value. */
@@ -261,10 +261,10 @@ data class RollupProofRequestParamsDto(
   val l2ExecutionProofIndexes: List<BlockIntervalDto>? = null,
   val chunks: List<ChunkWitnessDto>,
   val parentDataRollingHash: String,
-  val parentDataTailTakeBytes: Int,
-  /** Required only when [parentDataTailTakeBytes] > 0 (§3.4). */
+  val parentSharedBlobCarryOverTailBytes: Int,
+  /** Required only when [parentSharedBlobCarryOverTailBytes] > 0 (§3.4). */
   @get:JsonInclude(JsonInclude.Include.NON_NULL)
-  val boundaryPrevDataRollingHash: String? = null,
+  val parentBlobDataRollingHash: String? = null,
 ) {
   init {
     require((l2ExecutionProofs == null) != (l2ExecutionProofIndexes == null)) {
@@ -343,8 +343,8 @@ data class FinalizationPublicInputsDto(
   val endDataRollingHash: String,
   val parentBlockHash: String,
   val endBlockHash: String,
-  val parentDataTailTakeBytes: Int,
-  val finalDataTailDiscardBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: Int,
+  val finalSharedBlobCarryOverTailBytes: Int,
   val l2L1Roots: List<String>,
   val l2L1TreeDepth: Long,
   val filteredAddresses: List<String>,
@@ -484,8 +484,8 @@ fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInputs {
     endDataRollingHash = endDataRollingHash.decodeHex(),
     parentBlockHash = parentBlockHash.decodeHex(),
     endBlockHash = endBlockHash.decodeHex(),
-    parentDataTailTakeBytes = parentDataTailTakeBytes,
-    finalDataTailDiscardBytes = finalDataTailDiscardBytes,
+    parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
+    finalSharedBlobCarryOverTailBytes = finalSharedBlobCarryOverTailBytes,
     l2L1Messages = l2L1Messages.map { it.decodeHex() },
     filteredAddresses = filteredAddresses.map { it.decodeHex() },
     programVks = programVks.map { it.decodeHex() },
@@ -510,8 +510,8 @@ fun FinalizationPublicInputsDto.toDomainObject(): FinalizationPublicInputs {
     endDataRollingHash = endDataRollingHash.decodeHex(),
     parentBlockHash = parentBlockHash.decodeHex(),
     endBlockHash = endBlockHash.decodeHex(),
-    parentDataTailTakeBytes = parentDataTailTakeBytes,
-    finalDataTailDiscardBytes = finalDataTailDiscardBytes,
+    parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
+    finalSharedBlobCarryOverTailBytes = finalSharedBlobCarryOverTailBytes,
     l2L1Roots = l2L1Roots.map { it.decodeHex() },
     l2L1TreeDepth = l2L1TreeDepth.toULong(),
     filteredAddresses = filteredAddresses.map { it.decodeHex() },

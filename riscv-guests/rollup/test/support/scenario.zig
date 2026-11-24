@@ -434,7 +434,7 @@ pub const SegmentFault = enum {
 pub const Options = struct {
     parent_data_rolling_hash: Hash = @splat(0x47),
     /// The dataRollingHash before the first chunk, which a range starting inside that chunk opens.
-    boundary_prev_data_rolling_hash: Hash = @splat(0x39),
+    parent_blob_data_rolling_hash: Hash = @splat(0x39),
     dynamic_chain_config_hash: Hash = @splat(0xc0),
     /// One blob chunk owning the whole stream by default.
     chunks: []const ChunkSpec = &.{.{}},
@@ -448,8 +448,8 @@ pub const Options = struct {
 pub const Request = struct {
     chain_id: u64,
     parent_data_rolling_hash: Hash,
-    parent_data_tail_take_bytes: u64,
-    boundary_prev_data_rolling_hash: ?Hash,
+    parent_shared_blob_carry_over_tail_bytes: u64,
+    parent_blob_data_rolling_hash: ?Hash,
     conflations: []rollup_ssz.ConflationWitness,
     chunks: []rollup_ssz.ChunkWitness,
     proofs: []l2_execution_proof.VerifiableL2ExecutionProof,
@@ -458,18 +458,18 @@ pub const Request = struct {
     /// The dataRollingHash after the last chunk.
     end_data_rolling_hash: Hash,
     /// The bytes of the last blob behind the last segment.
-    final_data_tail_discard_bytes: u64,
+    final_shared_blob_carry_over_tail_bytes: u64,
 
     /// The input over this request's slices, which it must outlive.
     pub fn input(self: *const Request) rollup_ssz.RollupProofPrivateInput {
         return .{
             .parent_data_rolling_hash = self.parent_data_rolling_hash,
-            .parent_data_tail_take_bytes = self.parent_data_tail_take_bytes,
+            .parent_shared_blob_carry_over_tail_bytes = self.parent_shared_blob_carry_over_tail_bytes,
             .chain_id = self.chain_id,
             .conflations = .{ .items = self.conflations },
             .chunks = .{ .items = self.chunks },
             .l2_execution_proofs = .{ .items = self.proofs },
-            .boundary_prev_data_rolling_hash = .{ .items = if (self.boundary_prev_data_rolling_hash) |*hash| @as(*const [1]Hash, @ptrCast(hash)) else &.{} },
+            .parent_blob_data_rolling_hash = .{ .items = if (self.parent_blob_data_rolling_hash) |*hash| @as(*const [1]Hash, @ptrCast(hash)) else &.{} },
         };
     }
 };
@@ -538,7 +538,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     var end_data_rolling_hash = parent_data_rolling_hash;
     var folded: []const Hash = chunk_hashes;
     if (take > 0) {
-        parent_data_rolling_hash = keccakPair(options.boundary_prev_data_rolling_hash, chunk_hashes[0]);
+        parent_data_rolling_hash = keccakPair(options.parent_blob_data_rolling_hash, chunk_hashes[0]);
         end_data_rolling_hash = parent_data_rolling_hash;
         folded = chunk_hashes[1..];
     }
@@ -555,14 +555,14 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     return .{
         .chain_id = conflations_in[0].chain_id,
         .parent_data_rolling_hash = parent_data_rolling_hash,
-        .parent_data_tail_take_bytes = take,
-        .boundary_prev_data_rolling_hash = if (take > 0) options.boundary_prev_data_rolling_hash else null,
+        .parent_shared_blob_carry_over_tail_bytes = take,
+        .parent_blob_data_rolling_hash = if (take > 0) options.parent_blob_data_rolling_hash else null,
         .conflations = witnesses,
         .chunks = chunks,
         .proofs = proofs,
         .segments = segments,
         .end_data_rolling_hash = end_data_rolling_hash,
-        .final_data_tail_discard_bytes = discard,
+        .final_shared_blob_carry_over_tail_bytes = discard,
     };
 }
 

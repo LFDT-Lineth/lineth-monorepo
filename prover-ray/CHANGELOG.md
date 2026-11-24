@@ -1,4 +1,23 @@
-## [unreleased]
+## [0.5.0] - 2026-11-24
+
+### 🚀 Features
+
+- *(prover-ray)* Encode the rollup guest input (#4571)
+- *(prover-ray)* Run zkc Execute with gogen by default (#4573)
+
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Make the NonNative query sound (#4494)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+## [0.4.0] - 2026-11-23
+
+### 🚀 Features
+
+- *(prover-ray)* Dev-zkvm returns a devmode proof instead of marker bytes (#4569)
+## [0.3.0] - 2026-11-23
 
 ### 🚀 Features
 
@@ -6,7 +25,6 @@
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(prover-ray)* FRI over a fixed maximum domain (#4322)
 - *(prover-ray)* Register program vk to the public inputs (#4309)
-- *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
 - *(prover-ray)* Prepare centralized prover (#4242)
 - *(prover-ray)* Conglomerate the shard proofs behind a Merger interface (#4372)
 - *(prover-ray)* Merge conglomeration nodes of one kind only (#4404)
@@ -18,15 +36,17 @@
 - *(prover-ray)* Recursion merger with leaf, internal and root node programs (#4429)
 - *(prover-ray)* In-machine verifier interface with a mock (#4438)
 - *(prover-ray)* Bn packed hash (#4458)
+- *(prover-ray)* Make the native runner optional in dev-zkvm (#4528)
+- *(prover-ray)* Trace and prove shards in parallel (#4525)
 
 ### 🐛 Bug Fixes
 
-- *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
-- *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(prover-ray)* Fix lookup soundness bug due to improper reuse of th… (#4363)
 - *(prover-ray)* Adopt the guest log syscall in the prover-ray (#4371)
-- *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
 - *(prover-ray)* Bump arithmetization commit to support u16 addresses (#4396)
+- *(prover-ray)* Fail the job when a shard does not fit in a column (#4464)
+- *(prover-ray)* Send the proof's program VK as programVk, not the guest Program ID (zero in dev modes) (#4527)
+- *(prover-ray)* Bump zkc to v1.2.37 to keep the RAM paged (#4536)
 
 ### 🚜 Refactor
 
@@ -44,6 +64,8 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
+- *(prover-ray)* Ship guest programs separately from the prover-ray image (#4515)
+- *(prover-ray)* Remove nonnative zkcdriver tests (#4555)
 ## [0.2.0] - 2026-10-28
 
 ### 🚀 Features

@@ -66,7 +66,8 @@ func TestDevZkVM_Integration(t *testing.T) {
 
 	assert.Equal(t, statelessInputPublicInputs(t), result.PublicInputs,
 		"the public inputs decoded from the guest output should be the block's")
-	assert.Equal(t, DevMarkerProof(ProverModeDevZkVM), result.ProofBytes)
+	assert.Equal(t, devmodeImage(t, result.GuestOutput[:guestOutputHashSize]), result.ProofBytes,
+		"the proof should be a devmode proof of the output hash")
 
 	native := os.Getenv("NATIVE_RUNNER")
 	if native == "" {

@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.RepetitionInfo
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -34,7 +36,6 @@ import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.concurrent.timer
-import kotlin.math.log
 import kotlin.time.Duration.Companion.milliseconds
 
 class LoadBalancingJsonRpcClientTest {
@@ -176,6 +177,39 @@ class LoadBalancingJsonRpcClientTest {
     // assert that queued requests were fired in correct priority
     // Expected order: 1..10
     assertThat(requestsReceivedByClients).isEqualTo(requests.reversed())
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun close_fails_queued_requests_and_leaves_in_flight_ones_to_their_caller(withPriorityComparator: Boolean) {
+    if (withPriorityComparator) {
+      loadBalancer = LoadBalancingJsonRpcClient.create(
+        rpcClients = listOf(rpcClient1, rpcClient2),
+        requestLimitPerEndpoint = maxInflightRequestsPerClient,
+        requestPriorityComparator = compareBy { it.id.toString().toInt() },
+      )
+    }
+    val inflightPromises = List(4) { Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>() }
+    whenever(rpcClient1.makeRequest(any(), any()))
+      .thenReturn(inflightPromises[0].future())
+      .thenReturn(inflightPromises[1].future())
+    whenever(rpcClient2.makeRequest(any(), any()))
+      .thenReturn(inflightPromises[2].future())
+      .thenReturn(inflightPromises[3].future())
+    val inflightRequests = List(4) { loadBalancer.makeRequest(rpcRequest()) }
+    val queuedRequests = List(2) { loadBalancer.makeRequest(rpcRequest()) }
+
+    loadBalancer.close()
+
+    assertThat(queuedRequests).allSatisfy { queuedRequest ->
+      assertThat(queuedRequest.failed()).isTrue()
+      assertThat(queuedRequest.cause()).isInstanceOf(IllegalStateException::class.java)
+    }
+    assertThat(inflightRequests).allMatch { !it.isComplete }
+    inflightPromises[0].complete(result(1, "client-1-result"))
+    assertThat(inflightRequests[0].get()).isEqualTo(result(1, "client-1-result"))
+    verify(rpcClient1, times(2)).makeRequest(any(), any())
+    verify(rpcClient2, times(2)).makeRequest(any(), any())
   }
 
   @Test

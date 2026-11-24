@@ -83,25 +83,25 @@ pub fn foldOnto(from: Hash, chunks: []const Chunk) Hash {
 pub const Start = struct {
     parent: Hash = parent,
     take: u64 = 0,
-    boundary: ?Hash = null,
+    parent_blob: ?Hash = null,
 };
 
 /// The start of a range inside the first chunk, which the parent hash already folds.
 pub fn insideFirstChunk(chunks: []const Chunk, take: u64) Start {
-    return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .boundary = before_first_chunk };
+    return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .parent_blob = before_first_chunk };
 }
 
 /// Verifies the stream under the package dictionary.
 pub fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !decompress.Verified {
     const decoder = try zstd_decoder.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
-    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
+    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.parent_blob);
 }
 
 pub fn expectAccepted(chunks: []const Chunk, payloads: []const []const u8, start: Start, end_hash: Hash, discard: u64) !void {
     const outcome = try verify(chunks, payloads, start);
     try std.testing.expectEqualSlices(u8, &end_hash, &outcome.end_data_rolling_hash);
-    try std.testing.expectEqual(discard, outcome.final_data_tail_discard_bytes);
+    try std.testing.expectEqual(discard, outcome.final_shared_blob_carry_over_tail_bytes);
 }
 
 pub fn expectRejected(expected: anyerror, chunks: []const Chunk, payloads: []const []const u8, start: Start) !void {

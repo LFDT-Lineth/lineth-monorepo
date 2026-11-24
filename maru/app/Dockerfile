@@ -3,13 +3,17 @@ FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /opt/consensys/maru
 
-COPY --from=libs ./** ./
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/
 
 ARG LINETH_APP_JAR=/opt/consensys/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
+
+# Remove once the base image ships Temurin 25.0.5.1+2 or later.
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

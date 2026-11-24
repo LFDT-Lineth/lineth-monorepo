@@ -41,8 +41,8 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
-        parent_data_tail_take_bytes=0,
-        final_data_tail_discard_bytes=0,
+        parent_shared_blob_carry_over_tail_bytes=0,
+        final_shared_blob_carry_over_tail_bytes=0,
         l2_l1_messages=[],
         filtered_addresses=[],
         program_vks=[],
@@ -55,7 +55,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
     # start-of-range fields by default.
     defaults = dict(
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
-        final_data_tail_discard_bytes=500,
+        final_shared_blob_carry_over_tail_bytes=500,
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
@@ -68,7 +68,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
 def _right_pi(**overrides) -> RollupPublicInput:
     defaults = dict(
         parent_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
-        parent_data_tail_take_bytes=500,
+        parent_shared_blob_carry_over_tail_bytes=500,
         parent_block_hash=Hash32(bytes([0x0B]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         parent_ftx_number=U64(12),
@@ -136,21 +136,21 @@ def test_data_rolling_hash_mismatch_is_rejected() -> None:
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 
-def test_tail_count_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(parent_data_tail_take_bytes=501))
+def test_carry_over_tail_bytes_mismatch_is_rejected() -> None:
+    right = _proof(_right_pi(parent_shared_blob_carry_over_tail_bytes=501))
     with pytest.raises(Exception, match="tail-count continuity"):
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 
 def test_canonical_chunk_boundary_handoff_is_accepted() -> None:
-    left = _proof(_left_pi(final_data_tail_discard_bytes=0))
-    right = _proof(_right_pi(parent_data_tail_take_bytes=0))
+    left = _proof(_left_pi(final_shared_blob_carry_over_tail_bytes=0))
+    right = _proof(_right_pi(parent_shared_blob_carry_over_tail_bytes=0))
     assert_rollup_proof_continuity(left, right)
 
 
-def test_noncanonical_full_blob_tail_count_handoff_is_rejected() -> None:
-    left = _proof(_left_pi(final_data_tail_discard_bytes=131072))
-    right = _proof(_right_pi(parent_data_tail_take_bytes=0))
+def test_noncanonical_full_blob_carry_over_tail_bytes_handoff_is_rejected() -> None:
+    left = _proof(_left_pi(final_shared_blob_carry_over_tail_bytes=131072))
+    right = _proof(_right_pi(parent_shared_blob_carry_over_tail_bytes=0))
     with pytest.raises(Exception, match="tail-count continuity"):
         assert_rollup_proof_continuity(left, right)
 

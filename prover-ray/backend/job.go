@@ -102,9 +102,9 @@ type Result struct {
 	Status ResultStatus
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
-	// wiop.Proof (wire format not yet decided); for dev-partial it is the image of
-	// a devmode proof of the guest output hash; for dev-mock and dev-zkvm it is
-	// the mode's marker. nil when Status is not ResultStatusOK.
+	// wiop.Proof (wire format not yet decided); for dev-zkvm and dev-partial it
+	// is the image of a devmode proof of the guest output hash; for dev-mock it
+	// is the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
@@ -112,6 +112,12 @@ type Result struct {
 	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-zkvm and
 	// dev-partial, for the runner's native runner check. nil in the other modes.
 	GuestOutput []byte
+
+	// ProgramVK is the program VK in the statement of the proof, the response's
+	// programVk: 8 KoalaBear limbs, 4 big-endian canonical bytes each. It is
+	// zero in the dev modes: the devmode proofs of dev-zkvm and dev-partial
+	// commit nothing, and dev-mock has no proof.
+	ProgramVK [32]byte
 
 	// Node is the non-root conglomeration node when Status is
 	// ResultStatusNode: the shard proof itself for a single requested shard,

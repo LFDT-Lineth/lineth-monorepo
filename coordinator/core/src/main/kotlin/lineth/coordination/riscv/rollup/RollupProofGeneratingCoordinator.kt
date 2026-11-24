@@ -336,9 +336,9 @@ class RollupProofGeneratingCoordinator(
         )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
-      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
+      // Proof windows always start at a chunk boundary; the guest derives finalSharedBlobCarryOverTailBytes itself.
+      parentSharedBlobCarryOverTailBytes = 0,
+      parentBlobDataRollingHash = null,
     )
   }
 }
