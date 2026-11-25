@@ -8,6 +8,10 @@
 ### 🚜 Refactor
 
 - *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 ## [2.4.0] - 2026-11-19
 
 ### 🚀 Features

@@ -228,3 +228,5 @@
 - *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
 - *(deps)* Bump Node.js to 24.22.3 (#4457)
 - *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
+- *(maru)* Remove noisy p2p connection stack trace (#4542)

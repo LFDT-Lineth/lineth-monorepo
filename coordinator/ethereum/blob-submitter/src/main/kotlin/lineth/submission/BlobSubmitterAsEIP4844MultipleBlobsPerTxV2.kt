@@ -2,9 +2,9 @@ package lineth.submission
 
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.LinethRollupSmartContractClient
-import linea.domain.BlobRecordV2
 import linea.domain.BlobSubmittedEvent
 import linea.domain.DataRollingHashCalculator
+import linea.domain.RiscvRollupRecord
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.encodeHex
 import lineth.gaspricing.GasPriceCapProviderV2
@@ -24,7 +24,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
 ) : BlobSubmitterV2 {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  override fun submitBlobs(blobsChunks: List<BlobRecordV2>): SafeFuture<List<String>> {
+  override fun submitBlobs(blobsChunks: List<RiscvRollupRecord>): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobRecord ->
         val newChainOfFutures = chainOfFutures
@@ -36,7 +36,10 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  private fun submitBlobRecordInTxs(blobRecord: BlobRecordV2, isEthCall: Boolean = false): SafeFuture<List<String>> {
+  private fun submitBlobRecordInTxs(
+    blobRecord: RiscvRollupRecord,
+    isEthCall: Boolean = false,
+  ): SafeFuture<List<String>> {
     return (
       if (isEthCall) {
         gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecord.startBlockTimestamp)
@@ -88,7 +91,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
     blobs: List<ByteArray>,
     parentDataRollingHash: ByteArray,
     storedDataRollingHash: ByteArray,
-    blobRecord: BlobRecordV2,
+    blobRecord: RiscvRollupRecord,
     gasPriceCaps: GasPriceCaps?,
     isEthCall: Boolean = false,
   ): SafeFuture<String> {
@@ -133,7 +136,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  override fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*> {
+  override fun submitBlobCall(blobRecord: RiscvRollupRecord): SafeFuture<*> {
     return submitBlobRecordInTxs(blobRecord, true)
   }
 }
