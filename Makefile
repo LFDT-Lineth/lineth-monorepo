@@ -169,7 +169,10 @@ start-env:
 		mkdir -p "tmp/local/prover/$$pipeline/requests" "tmp/local/prover/$$pipeline/responses" "tmp/local/prover/$$pipeline/requests-done"; \
 	done; \
 	mkdir -p tmp/local/prover-ray/guests tmp/local/traces/v2/conflated tmp/local/conflation-backtesting; \
-	chmod -R a+rwX tmp/local; \
+	chmod -R a+rwX tmp/local 2>/dev/null || \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+			$(CLEANUP_IMAGE) chmod -R a+rwX /data; \
 
 	$(MAKE) seed-deny-list; \
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
