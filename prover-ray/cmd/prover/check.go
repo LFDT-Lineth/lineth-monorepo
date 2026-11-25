@@ -60,11 +60,11 @@ func (l layers) allows(t backend.ProofType) bool {
 	return false
 }
 
-// settings says how a mode treats each [execution] setting and the top-level
-// gogen.
+// settings says how a mode treats execution.native_runner_bin and the
+// top-level shard_size, shard_workers and gogen.
 type settings struct{ nativeRunner, shardSize, shardWorkers, gogen use }
 
-// modeSettings says how each mode treats the [execution] settings and gogen:
+// modeSettings says how each mode treats these settings:
 //
 //	mode                 native_runner_bin  shard_size  shard_workers  gogen
 //	dev-mock             ignored            ignored     ignored        ignored
@@ -126,10 +126,9 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 		}
 	}
 
-	// 5. Warn about each setting that is set but ignored. Only [execution]
-	// has these settings.
+	// 5. Warn about each setting that is set but ignored by this pipeline.
 	warn := func(key string) {
-		warnings = append(warnings, fmt.Sprintf("execution.%s is ignored in prover_mode %q", key, p.mode))
+		warnings = append(warnings, fmt.Sprintf("%s is ignored in %s.prover_mode %q", key, sectionNames[t], p.mode))
 	}
 	if uses.shardSize == ignored && p.shardSize > 0 {
 		warn("shard_size")
@@ -139,10 +138,10 @@ func checkPipeline(t backend.ProofType, p pipeline) (warnings []string, err erro
 	case uses.shardWorkers == ignored && p.shardWorkers > 1:
 		warn("shard_workers")
 	case p.shardWorkers > 1 && p.shardSize == 0:
-		warnings = append(warnings, "execution.shard_workers is ignored without execution.shard_size: there is one shard")
+		warnings = append(warnings, "shard_workers is ignored without shard_size: there is one shard")
 	}
 	if uses.nativeRunner == ignored && runnerSet {
-		warn("native_runner_bin")
+		warn("execution.native_runner_bin")
 	}
 	return warnings, nil
 }

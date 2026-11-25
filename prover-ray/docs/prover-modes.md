@@ -48,6 +48,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or 
 ### dev-partial
 
 - Runs the guest and traces it, in pieces called shards when `shard_size` is set. A real block needs it.
+- `shard_size` and `shard_workers` are top-level settings, like `gogen`, for every pipeline.
 - `shard_workers` sets how many shards are traced and checked at the same time (default: one). Memory measured with 500000 instructions per shard:
   - each shard in progress: about 30 to 35 GiB;
   - plus the trace checkpoints, shared by all the shards: about 85 MB per shard of the block.

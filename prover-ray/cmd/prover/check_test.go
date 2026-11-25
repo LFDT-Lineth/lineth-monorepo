@@ -143,39 +143,39 @@ func TestCheckPipeline_Warns(t *testing.T) {
 	}{
 		"shard_size in dev-mock": {
 			pipeline{mode: backend.ProverModeDevMock, shardSize: 500000},
-			"execution.shard_size is ignored in prover_mode \"dev-mock\"",
+			"shard_size is ignored in execution.prover_mode \"dev-mock\"",
 		},
 		"shard_size in dev-zkvm": {
 			pipeline{mode: backend.ProverModeDevZkVM, shardSize: 500000, nativeRunnerBin: runner},
-			"execution.shard_size is ignored in prover_mode \"dev-zkvm\"",
+			"shard_size is ignored in execution.prover_mode \"dev-zkvm\"",
 		},
 		"shard_workers in dev-mock": {
 			pipeline{mode: backend.ProverModeDevMock, shardWorkers: 10},
-			"execution.shard_workers is ignored in prover_mode \"dev-mock\"",
+			"shard_workers is ignored in execution.prover_mode \"dev-mock\"",
 		},
 		"shard_workers in dev-zkvm": {
 			pipeline{mode: backend.ProverModeDevZkVM, shardWorkers: 10, nativeRunnerBin: runner},
-			"execution.shard_workers is ignored in prover_mode \"dev-zkvm\"",
+			"shard_workers is ignored in execution.prover_mode \"dev-zkvm\"",
 		},
 		"shard_workers without shard_size": {
 			pipeline{mode: backend.ProverModeDevPartial, shardWorkers: 10},
-			"execution.shard_workers is ignored without execution.shard_size: there is one shard",
+			"shard_workers is ignored without shard_size: there is one shard",
 		},
 		"native runner in dev-mock": {
 			pipeline{mode: backend.ProverModeDevMock, nativeRunnerBin: runner},
-			"execution.native_runner_bin is ignored in prover_mode \"dev-mock\"",
+			"execution.native_runner_bin is ignored in execution.prover_mode \"dev-mock\"",
 		},
 		"native runner in full": {
 			pipeline{mode: backend.ProverModeFull, nativeRunnerBin: runner},
-			"execution.native_runner_bin is ignored in prover_mode \"full\"",
+			"execution.native_runner_bin is ignored in execution.prover_mode \"full\"",
 		},
 		"missing native runner in dev-mock": {
 			pipeline{mode: backend.ProverModeDevMock, nativeRunnerBin: missing},
-			"execution.native_runner_bin is ignored in prover_mode \"dev-mock\"",
+			"execution.native_runner_bin is ignored in execution.prover_mode \"dev-mock\"",
 		},
 		"missing native runner in full": {
 			pipeline{mode: backend.ProverModeFull, nativeRunnerBin: missing},
-			"execution.native_runner_bin is ignored in prover_mode \"full\"",
+			"execution.native_runner_bin is ignored in execution.prover_mode \"full\"",
 		},
 	}
 	for name, tc := range cases {
