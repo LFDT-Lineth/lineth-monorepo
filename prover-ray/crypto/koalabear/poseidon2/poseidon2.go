@@ -18,8 +18,7 @@ type MDHasher struct {
 	state field.Octuplet
 
 	// data to hash
-	buffer         []field.Element
-	bufferPosition int
+	buffer []field.Element
 }
 
 // NewMDHasher creates a new MDHasher with the given options.
@@ -60,7 +59,6 @@ func Compress(state, block field.Octuplet) field.Octuplet {
 // Reset clears the buffer, and reset state to iv
 func (d *MDHasher) Reset() {
 	d.buffer = d.buffer[:0]
-	d.bufferPosition = 0
 	d.state = field.Octuplet{}
 }
 
@@ -68,7 +66,6 @@ func (d *MDHasher) Reset() {
 func (d *MDHasher) SetStateOctuplet(state field.Octuplet) {
 	d.Reset()
 	d.buffer = d.buffer[:0]
-	d.bufferPosition = 0
 	for i := 0; i < 8; i++ {
 		d.state[i].Set(&state[i])
 	}
