@@ -1715,10 +1715,13 @@ func TestEncodeInstructionBase(t *testing.T) {
 	}
 }
 
-// TestEncodeDecodedRows checks that only whole 87-bit rows are kept: the bit
-// length is rounded down to a multiple of the row size, so a partial row is
-// dropped and the padding bits of the last byte are cleared. It also checks that
-// the result is a copy: changing the input afterwards does not change it.
+// TestEncodeDecodedRows checks that the exact length of the rows is preserved:
+// only whole 87-bit rows are kept. The cases cover every alignment of the last
+// byte, from 0 to 7 padding bits. A partial row is dropped and the padding bits
+// of the last byte are cleared.
+// It also checks that the result is a copy in both directions: 
+// changing the input afterwards does not change the result, and changing the result
+// does not change the input.
 func TestEncodeDecodedRows(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1727,8 +1730,13 @@ func TestEncodeDecodedRows(t *testing.T) {
 	}{
 		{name: "empty", size: 0, wantBits: 0},
 		{name: "less than one row", size: 10, wantBits: 0},
-		{name: "one row and one padding bit", size: 11, wantBits: 87},
-		{name: "two rows", size: 22, wantBits: 174},
+		{name: "one row, 1 padding bit", size: 11, wantBits: 87},
+		{name: "two rows, 2 padding bits", size: 22, wantBits: 174},
+		{name: "three rows, 3 padding bits", size: 33, wantBits: 261},
+		{name: "four rows, 4 padding bits", size: 44, wantBits: 348},
+		{name: "five rows, 5 padding bits", size: 55, wantBits: 435},
+		{name: "six rows, 6 padding bits", size: 66, wantBits: 522},
+		{name: "seven rows, 7 padding bits", size: 77, wantBits: 609},
 		{name: "eight rows, byte aligned", size: 87, wantBits: 696},
 		{name: "eight rows and a partial row", size: 88, wantBits: 696},
 	}
@@ -1753,6 +1761,11 @@ func TestEncodeDecodedRows(t *testing.T) {
 		}
 		if !bytes.Equal(got.Bytes(), want) {
 			t.Fatalf("%s: Bytes() changed with the input: got %x, want %x", tt.name, got.Bytes(), want)
+		}
+		// The input is now all 0xff. Clearing the result must leave it so.
+		clear(got.Bytes())
+		if !bytes.Equal(decoded, bytes.Repeat([]byte{0xff}, tt.size)) {
+			t.Fatalf("%s: input changed with the result: got %x", tt.name, decoded)
 		}
 	}
 }
