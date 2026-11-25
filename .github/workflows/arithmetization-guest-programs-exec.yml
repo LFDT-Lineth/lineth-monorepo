@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/build_common/**'
       - '.github/actions/setup-arithmetization-riscv/**'
       - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
@@ -14,6 +15,7 @@ on:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/build_common/**'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
@@ -54,6 +56,12 @@ jobs:
       - name: Run simple Zig guest program with zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
         run: make TEST=test.zig IN_BYTES="0xAABB" IN_ORIGIN=0x08800000
+        working-directory: arithmetization/src/test
+        timeout-minutes: 6
+
+      - name: Run Zig word-wise mem* guest test with zkc interpreter
+        # IN_BYTES is unused by mem_test.zig but required by elf_to_json
+        run: make TEST=mem_test.zig IN_BYTES="0x00" IN_ORIGIN=0x08800000
         working-directory: arithmetization/src/test
         timeout-minutes: 6
 
