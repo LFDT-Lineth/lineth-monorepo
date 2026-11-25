@@ -10,11 +10,12 @@
 # targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
 # run directly: `make -C <name> spec-test`.
 #
-# guest_common and lineth_da aren't guest programs themselves (no release ELF to link, just shared
-# Zig packages other guests consume as path dependencies — the same role lineth_accelerators plays)
-# but are listed here anyway so their own unit tests run as part of `make test`.
+# guest_common, lineth_da and lineth_recursion aren't guest programs themselves (no release ELF to
+# link, just shared Zig packages other guests consume as path dependencies — the same role
+# lineth_accelerators plays) but are listed here anyway so their own unit tests run as part of
+# `make test`.
 
-GUESTS ?= guest_common lineth_da l2_execution rollup
+GUESTS ?= guest_common lineth_da lineth_recursion l2_execution rollup
 ZIG    ?= zig
 
 # Every directory holding a build.zig is a Zig package, so a new package is formatted without

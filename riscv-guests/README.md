@@ -12,6 +12,7 @@ riscv-guests/
   lineth_accelerators/ Shared library package: Lineth accelerator wrappers + C headers, and the opt-in zkvm_* crypto providers
   guest_common/        Shared library package: generic SSZ primitives (`guest_common` module) and the cross-guest wire contracts with their SSZ codecs (`core_serde` module), with its own unit tests
   lineth_da/           Shared library package: data-availability building blocks (`lineth_da` module) — zstd dictionary decompression over upstream libzstd, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks — with its own unit and reference tests
+  lineth_recursion/    Shared library package: the recursive verification of a proof (`lineth_recursion` module) by the devmode system of verifier-ray, and the devmode prover (`devmode_prover` module) that builds proofs for tests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
   rollup/              Rollup guest: the rollup statement over conflations, DA chunks and l2-execution proofs: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
@@ -139,6 +140,7 @@ These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `e
 Each guest folder is a complete package: its own dependencies (`build.zig.zon`), compile/test logic (`build.zig`), lifecycle (`Makefile`), production source (`src/`), host-only test code (`test/`) and host programs (`tools/`). Shared build helpers are factored into `build_common/`; the toolchain pin (`.zigversion`) is shared at this level.
 
 - `lineth_da/`: the data-availability library package: zstd dictionary decompression, the truncation of blocks, the 254-bit blob packing, the dataRollingHash, EIP-4844 blob verification and the verification of a DA stream against its chunks. See `lineth_da/README.md`.
+- `lineth_recursion/`: the recursive verification of a proof by the devmode system of `verifier-ray`, and the devmode prover the tests of its consumers build their proofs with.
 - `l2_execution/`: the Rollup's extended l2-execution guest. See `l2_execution/README.md`.
 - `rollup/`: the rollup guest: block truncation, DA stream verification, recursion and chain checks, and the rollup public inputs. See `rollup/README.md`.
 ```

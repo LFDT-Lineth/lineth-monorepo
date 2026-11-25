@@ -13,14 +13,16 @@ const std = @import("std");
 const lineth_da = @import("lineth_da");
 const core_serde = @import("core_serde");
 const guest_common = @import("guest_common");
+const lineth_recursion = @import("lineth_recursion");
 const canonical = @import("canonical.zig");
 const chain = @import("chain.zig");
-const messaging_offsets = @import("messaging_offsets.zig");
-const recursion = @import("recursion.zig");
 const rollup_ssz = @import("rollup_ssz.zig");
 
 const Allocator = std.mem.Allocator;
 const decompress = lineth_da.decompress;
+const messaging_offsets = guest_common.messaging_offsets;
+const recursion = lineth_recursion.recursion;
+const l2_execution_proof = core_serde.l2_execution_proof;
 const rollup_proof = core_serde.rollup_proof;
 
 pub const Error = canonical.Error || decompress.Error || chain.Error || messaging_offsets.Error || recursion.Error || error{
@@ -63,8 +65,10 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     const range_end = last.public_inputs.end_block_number;
 
     try chain.verifyTiling(proofs);
-    const recursive_verifier = try recursion.Verifier.init(allocator, proofs);
-    for (proofs) |verifiable| try recursive_verifier.verifyL2ExecutionProof(allocator, verifiable);
+    var longest_proof_len: usize = 0;
+    for (proofs) |verifiable| longest_proof_len = @max(longest_proof_len, verifiable.proof.proof.bytes.len);
+    const recursive_verifier = try recursion.Verifier.init(allocator, longest_proof_len);
+    for (proofs) |verifiable| try verifyL2ExecutionProof(allocator, recursive_verifier, verifiable);
 
     const block_hashes = try concatHashes(allocator, conflations, .block_hashes);
     const parent_hashes = try concatHashes(allocator, conflations, .parent_hashes);
@@ -90,8 +94,7 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     var message_pos: usize = 0;
     var address_pos: usize = 0;
     var offset_pos: usize = 0;
-    var end_bridge_rolling_hash: [32]u8 = @splat(0);
-    var end_bridge_message_number: u64 = 0;
+    var end_bridge: guest_common.l1_l2_bridge.Pair = .none;
     for (proofs, program_vks) |verifiable, *program_vk| {
         const pi = verifiable.proof.public_inputs;
         @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.items.len], pi.l2_l1_messages.items);
@@ -99,20 +102,22 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         @memcpy(all_addresses[address_pos..][0..pi.filtered_addresses.items.len], pi.filtered_addresses.items);
         address_pos += pi.filtered_addresses.items.len;
         const proof_offsets = offsets[offset_pos..][0..pi.l2_messaging_blocks_offsets.items.len];
-        try messaging_offsets.rebase(verifiable.proof, range_start, proof_offsets);
+        try messaging_offsets.rebase(.{
+            .start_block_number = verifiable.proof.start_block_number,
+            .end_block_number = pi.end_block_number,
+            .block_count = pi.block_count,
+            .offsets = pi.l2_messaging_blocks_offsets.items,
+        }, range_start, proof_offsets);
         offset_pos += proof_offsets.len;
         program_vk.* = verifiable.program_vk;
-        if (pi.end_l1_l2_bridge_rolling_hash_message_number != 0) {
-            end_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash;
-            end_bridge_message_number = pi.end_l1_l2_bridge_rolling_hash_message_number;
-        }
+        end_bridge = guest_common.l1_l2_bridge.advance(end_bridge, pi);
     }
 
     return .{
         .end_block_number = range_end,
         .end_block_timestamp = last.public_inputs.end_block_timestamp,
-        .end_l1_l2_bridge_rolling_hash = end_bridge_rolling_hash,
-        .end_l1_l2_bridge_rolling_hash_message_number = end_bridge_message_number,
+        .end_l1_l2_bridge_rolling_hash = end_bridge.rolling_hash,
+        .end_l1_l2_bridge_rolling_hash_message_number = end_bridge.message_number,
         .dynamic_chain_config_hash = first.public_inputs.dynamic_chain_config_hash,
         .parent_ftx_rolling_hash = first.public_inputs.parent_ftx_rolling_hash,
         .parent_ftx_number = first.public_inputs.parent_ftx_number,
@@ -130,6 +135,17 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .block_count = range_end - range_start + 1,
         .l2_messaging_blocks_offsets = .{ .items = offsets },
     };
+}
+
+/// Verifies an l2-execution proof under the program VK it carries, against the hash of its public
+/// input, which is rejected when beyond a bound of its wire schema. `allocator` holds the encoding
+/// that is hashed.
+fn verifyL2ExecutionProof(allocator: Allocator, recursive_verifier: recursion.Verifier, verifiable: l2_execution_proof.VerifiableL2ExecutionProof) Error!void {
+    const public_input_hash = l2_execution_proof.hashPublicInputs(allocator, verifiable.proof.public_inputs) catch |err| switch (err) {
+        error.OutOfMemory => return error.OutOfMemory,
+        error.BoundsViolation => return error.RecursiveProofRejected,
+    };
+    try recursive_verifier.verify(verifiable.program_vk, verifiable.proof.proof.bytes, public_input_hash);
 }
 
 /// The chunks bound to their hashes and the stream they carry parsed and decompressed against the

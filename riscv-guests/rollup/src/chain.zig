@@ -4,6 +4,7 @@
 
 const std = @import("std");
 const core_serde = @import("core_serde");
+const guest_common = @import("guest_common");
 
 const l2_execution_proof = core_serde.l2_execution_proof;
 
@@ -26,9 +27,7 @@ pub const Error = error{
 /// The number of blocks in the proof's range, or null when the range is empty or does not fit 64
 /// bits.
 pub fn blockCount(proof: l2_execution_proof.L2ExecutionProof) ?u64 {
-    const end = proof.public_inputs.end_block_number;
-    if (end < proof.start_block_number) return null;
-    return std.math.add(u64, end - proof.start_block_number, 1) catch null;
+    return guest_common.messaging_offsets.blockCount(proof.start_block_number, proof.public_inputs.end_block_number);
 }
 
 /// Every proof starts right after the end of the proof before it.

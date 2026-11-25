@@ -1,0 +1,22 @@
+.{
+    .name = .lineth_recursion,
+    .version = "0.0.0",
+    .fingerprint = 0xc5541c82d1405c23,
+    .minimum_zig_version = "0.16.0",
+    // The sibling packages are spelled through the repository root: the verifier package refers to
+    // them that way, and a package is identified by the spelling of its path.
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain, the common freestanding rv64im guest target, the
+        // native test wiring).
+        .build_common = .{ .path = "../../riscv-guests/build_common" },
+        // The recursive verifier and the generated devmode system it verifies against (sibling path
+        // dependency): `make` generates the system, a gitignored file, before the first build.
+        .verifier_ray = .{ .path = "../../verifier-ray" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // production guest code (compiled into the rv64im object/ELF)
+        "test", // host-only: unit tests and the devmode prover
+    },
+}
