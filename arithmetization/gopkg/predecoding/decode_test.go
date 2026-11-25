@@ -1270,12 +1270,12 @@ func TestExecutableBlobs(t *testing.T) {
 		name    string
 		blobs   []Blob
 		want    []Blob
-		wantErr bool
+		wantErr string
 	}{
-		{name: "none", wantErr: true},
+		{name: "none", wantErr: "no executable blobs found"},
 		{name: "data only", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1}, Executable: false},
-		}, wantErr: true},
+		}, wantErr: "no executable blobs found"},
 		{name: "one", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2}, Name: ".text", Executable: true},
 		}, want: []Blob{
@@ -1299,14 +1299,8 @@ func TestExecutableBlobs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		got, err := executableBlobs(tt.blobs)
-		if tt.wantErr {
-			if err == nil {
-				t.Fatalf("%s: expected an error", tt.name)
-			}
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
 		}
 		if !reflect.DeepEqual(got, tt.want) {
 			t.Fatalf("%s: got %+v, want %+v", tt.name, got, tt.want)
@@ -1322,7 +1316,7 @@ func TestExecutableSpanEnd(t *testing.T) {
 		name    string
 		blobs   []Blob
 		want    uint64
-		wantErr bool
+		wantErr string
 	}{
 		{name: "one", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}},
@@ -1347,41 +1341,35 @@ func TestExecutableSpanEnd(t *testing.T) {
 		{name: "overlap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
 			{Address: 0x1004, Data: []byte{9}},
-		}, wantErr: true},
+		}, wantErr: "executable blob at 0x1004 overlaps preceding blob ending at 0x1008"},
 		{name: "overlap across an empty blob", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}},
 			{Address: 0x1004},
 			{Address: 0x1006, Data: []byte{9}},
-		}, wantErr: true},
+		}, wantErr: "executable blob at 0x1006 overlaps preceding blob ending at 0x1008"},
 		{name: "wraps", blobs: []Blob{
 			{Address: math.MaxUint64, Data: []byte{1}},
-		}, wantErr: true},
+		}, wantErr: "executable blob at 0xffffffffffffffff overflows address space"},
 		{name: "wraps before the top", blobs: []Blob{
 			{Address: math.MaxUint64 - 1, Data: []byte{1, 2}},
-		}, wantErr: true},
+		}, wantErr: "executable blob at 0xfffffffffffffffe overflows address space"},
 		{name: "fits 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 3},
 		}, want: math.MaxUint32 - 3},
 		{name: "past 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 2},
-		}, wantErr: true},
+		}, wantErr: "executable span end 0xfffffffd is outside the 32-bit address space"},
 		{name: "data passes 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32 - 4, Data: []byte{1, 2}},
-		}, wantErr: true},
+		}, wantErr: "outside the 32-bit address space"},
 		{name: "data crosses 32-bit address", blobs: []Blob{
 			{Address: math.MaxUint32, Data: []byte{1}},
-		}, wantErr: true},
+		}, wantErr: "outside the 32-bit address space"},
 	}
 	for _, tt := range tests {
 		got, err := executableSpanEnd(tt.blobs)
-		if tt.wantErr {
-			if err == nil {
-				t.Fatalf("%s: expected an error", tt.name)
-			}
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
 		}
 		if got != tt.want {
 			t.Fatalf("%s: end = %#x, want %#x", tt.name, got, tt.want)
@@ -1399,7 +1387,7 @@ func TestExecutableSpan(t *testing.T) {
 		name                      string
 		first, maxEnd, maxRecords uint64
 		wantBase, wantRecords     uint64
-		wantErr                   bool
+		wantErr                   string
 	}{
 		{name: "aligned", first: 0x1000, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
 		{name: "round base down", first: 0x1001, maxEnd: 0x1004, maxRecords: 1, wantBase: 0x1000, wantRecords: 1},
@@ -1407,20 +1395,16 @@ func TestExecutableSpan(t *testing.T) {
 		{name: "round both", first: 0x1002, maxEnd: 0x1005, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
 		{name: "empty span", first: 0x1000, maxEnd: 0x1000, maxRecords: 0, wantBase: 0x1000, wantRecords: 0},
 		{name: "records equal cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 2, wantBase: 0x1000, wantRecords: 2},
-		{name: "records above cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 1, wantErr: true},
+		{name: "records above cap", first: 0x1000, maxEnd: 0x1008, maxRecords: 1,
+			wantErr: "decoded program would have 2 records (cap 1)"},
 		{name: "span fits max int", first: 0, maxEnd: largestSpan, maxRecords: largestSpan / 4, wantBase: 0, wantRecords: largestSpan / 4},
-		{name: "span above max int", first: 0, maxEnd: 1 << 63, maxRecords: math.MaxUint64, wantErr: true},
+		{name: "span above max int", first: 0, maxEnd: 1 << 63, maxRecords: math.MaxUint64,
+			wantErr: "executable span has unsupported size 9223372036854775808"},
 	}
 	for _, tt := range tests {
 		base, records, err := executableSpan(tt.first, tt.maxEnd, tt.maxRecords)
-		if tt.wantErr {
-			if err == nil {
-				t.Fatalf("%s: expected an error", tt.name)
-			}
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
 		}
 		if base != tt.wantBase || records != tt.wantRecords {
 			t.Fatalf("%s: base=%#x records=%d, want base=%#x records=%d",
@@ -1441,9 +1425,9 @@ func TestExecutableImage(t *testing.T) {
 		wantBase    uint64
 		wantImage   []byte
 		wantRecords uint64
-		wantErr     bool
+		wantErr     string
 	}{
-		{name: "none", maxRecords: 1, wantErr: true},
+		{name: "none", maxRecords: 1, wantErr: "no executable blobs found"},
 		{name: "one word", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 		}, maxRecords: 1, wantBase: 0x1000, wantImage: []byte{1, 2, 3, 4}, wantRecords: 1},
@@ -1472,22 +1456,16 @@ func TestExecutableImage(t *testing.T) {
 		{name: "overlap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4, 5, 6, 7, 8}, Executable: true},
 			{Address: 0x1004, Data: []byte{9}, Executable: true},
-		}, maxRecords: 4, wantErr: true},
+		}, maxRecords: 4, wantErr: "executable blob at 0x1004 overlaps preceding blob ending at 0x1008"},
 		{name: "records above cap", blobs: []Blob{
 			{Address: 0x1000, Data: []byte{1, 2, 3, 4}, Executable: true},
 			{Address: 0x1008, Data: []byte{5, 6, 7, 8}, Executable: true},
-		}, maxRecords: 2, wantErr: true},
+		}, maxRecords: 2, wantErr: "decoded program would have 3 records (cap 2)"},
 	}
 	for _, tt := range tests {
 		base, image, records, err := executableImage(tt.blobs, tt.maxRecords)
-		if tt.wantErr {
-			if err == nil {
-				t.Fatalf("%s: expected an error", tt.name)
-			}
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
 		}
 		if base != tt.wantBase || records != tt.wantRecords || !bytes.Equal(image, tt.wantImage) {
 			t.Fatalf("%s: base=%#x records=%d image=%x, want base=%#x records=%d image=%x",
@@ -1512,9 +1490,9 @@ func TestPredecodeInternal(t *testing.T) {
 		maxRecords uint64
 		wantBase   uint64
 		wantWords  []uint32
-		wantErr    bool
+		wantErr    string
 	}{
-		{name: "error is returned", maxRecords: 1, wantErr: true},
+		{name: "error is returned", maxRecords: 1, wantErr: "no executable blobs found"},
 		{name: "empty", blobs: []Blob{
 			{Address: 0x2000, Executable: true},
 		}, maxRecords: 0, wantBase: 0x2000},
@@ -1524,14 +1502,8 @@ func TestPredecodeInternal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		got, err := predecode(Program{Blobs: tt.blobs}, tt.maxRecords)
-		if tt.wantErr {
-			if err == nil {
-				t.Fatalf("%s: expected an error", tt.name)
-			}
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: %v", tt.name, err)
 		}
 		var want bitWriter
 		for _, word := range tt.wantWords {
@@ -1630,20 +1602,21 @@ func TestApplyOptions(t *testing.T) {
 		name    string
 		options []Option
 		want    config
-		wantErr bool
+		wantErr string
 	}{
 		{name: "no options", want: config{maxDecodedRecords: DefaultMaxDecodedRecords}},
 		{name: "all options", options: []Option{
 			WithMaxDecodedRecords(5), WithIncludeExecutable(), WithSectionsWriter(&buf),
 		}, want: config{maxDecodedRecords: 5, includeExecutable: true, sectionsWriter: &buf}},
-		{name: "nil option", options: []Option{WithIncludeExecutable(), nil}, wantErr: true},
-		{name: "option error", options: []Option{WithIncludeExecutable(), WithSectionsWriter(nil)}, wantErr: true},
+		{name: "nil option", options: []Option{WithIncludeExecutable(), nil},
+			wantErr: "applying predecoding option: nil option"},
+		{name: "option error", options: []Option{WithIncludeExecutable(), WithSectionsWriter(nil)},
+			wantErr: "applying predecoding option: sections writer is nil"},
 	}
 	for _, tt := range tests {
 		got, err := applyOptions(tt.options)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
+		// The config is checked even on an error, where it must be empty.
+		expectErr(t, tt.name, err, tt.wantErr)
 		if got != tt.want {
 			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
 		}
@@ -1663,18 +1636,16 @@ func TestPredecode(t *testing.T) {
 	tests := []struct {
 		name    string
 		options []Option
-		wantErr bool
+		wantErr string
 	}{
 		{name: "default cap"},
-		{name: "cap of zero", options: []Option{WithMaxDecodedRecords(0)}, wantErr: true},
-		{name: "nil option", options: []Option{nil}, wantErr: true},
+		{name: "cap of zero", options: []Option{WithMaxDecodedRecords(0)},
+			wantErr: "decoded program would have 1 records (cap 0)"},
+		{name: "nil option", options: []Option{nil}, wantErr: "applying predecoding option: nil option"},
 	}
 	for _, tt := range tests {
 		got, err := Predecode(program, tt.options...)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
-		if tt.wantErr {
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
 		}
 		var want bitWriter

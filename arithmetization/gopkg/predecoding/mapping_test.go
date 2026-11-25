@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +18,23 @@ const (
 )
 
 var testText = []byte{0x97, 0x02, 0x00, 0x00}
+
+// expectErr checks err against wantErr, which is a part of the expected error
+// message, or "" when there must be no error. It returns true when an error was
+// expected, so that the caller skips the checks of the result.
+func expectErr(t *testing.T, name string, err error, wantErr string) bool {
+	t.Helper()
+	if wantErr == "" {
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", name, err)
+		}
+		return false
+	}
+	if err == nil || !strings.Contains(err.Error(), wantErr) {
+		t.Fatalf("%s: err = %v, want it to contain %q", name, err, wantErr)
+	}
+	return true
+}
 
 // ------------------------------------------------------------
 // extractBlobs
@@ -72,24 +90,26 @@ func TestSegmentEnd(t *testing.T) {
 		filesz  uint64
 		memsz   uint64
 		wantEnd uint64
-		wantErr bool
+		wantErr string
 	}{
 		{name: "memory equals file", vaddr: 0x1000, filesz: 4, memsz: 4, wantEnd: 0x1004},
 		// bss means Block Started by Symbol, a section that starts at a symbol
 		// and ends at the next symbol. It is empty and has no file size.
 		{name: "bss beyond file", vaddr: 0x1000, filesz: 0, memsz: 8, wantEnd: 0x1008},
-		{name: "file larger than memory", vaddr: 0x1000, filesz: 8, memsz: 4, wantErr: true},
+		{name: "file larger than memory", vaddr: 0x1000, filesz: 8, memsz: 4,
+			wantErr: "file size larger than memory size"},
 		{name: "range ends at the top", vaddr: ^uint64(0) - 4, filesz: 0, memsz: 4, wantEnd: ^uint64(0)},
-		{name: "range wraps", vaddr: ^uint64(0) - 3, filesz: 0, memsz: 4, wantErr: true},
+		{name: "range wraps", vaddr: ^uint64(0) - 3, filesz: 0, memsz: 4,
+			wantErr: "segment address overflow"},
 	}
 	for _, tt := range tests {
 		end, err := segmentEnd(&elf.Prog{ProgHeader: elf.ProgHeader{
 			Vaddr: tt.vaddr, Filesz: tt.filesz, Memsz: tt.memsz,
 		}})
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
-		if !tt.wantErr && end != tt.wantEnd {
+		if end != tt.wantEnd {
 			t.Fatalf("%s: end = %#x, want %#x", tt.name, end, tt.wantEnd)
 		}
 	}
@@ -136,21 +156,21 @@ func TestSectionEnd(t *testing.T) {
 		addr    uint64
 		size    uint64
 		wantEnd uint64
-		wantErr bool
+		wantErr string
 	}{
 		{name: "four bytes", addr: 0x1000, size: 4, wantEnd: 0x1004},
 		{name: "empty", addr: 0x1000, size: 0, wantEnd: 0x1000},
 		{name: "range ends at the top", addr: ^uint64(0) - 4, size: 4, wantEnd: ^uint64(0)},
-		{name: "range wraps", addr: ^uint64(0) - 3, size: 4, wantErr: true},
+		{name: "range wraps", addr: ^uint64(0) - 3, size: 4, wantErr: "address overflow"},
 	}
 	for _, tt := range tests {
 		end, err := sectionEnd(&elf.Section{SectionHeader: elf.SectionHeader{
 			Name: tt.name, Addr: tt.addr, Size: tt.size,
 		}})
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
-		if !tt.wantErr && end != tt.wantEnd {
+		if end != tt.wantEnd {
 			t.Fatalf("%s: end = %#x, want %#x", tt.name, end, tt.wantEnd)
 		}
 	}
@@ -210,11 +230,11 @@ func TestReadSection(t *testing.T) {
 		name    string
 		visible int // bytes of the file readable from the section start; -1 for all
 		fail    bool
-		wantErr bool
+		wantErr string
 	}{
 		{name: "full section", visible: -1},
-		{name: "short read", visible: 2, wantErr: true},
-		{name: "read error", visible: -1, fail: true, wantErr: true},
+		{name: "short read", visible: 2, wantErr: "short read for section .text: got 2 bytes, expected 4"},
+		{name: "read error", visible: -1, fail: true, wantErr: "reading ELF section .text"},
 	}
 	for _, tt := range tests {
 		reader := &truncatingReaderAt{data: elfBytes, limit: len(elfBytes)}
@@ -237,10 +257,10 @@ func TestReadSection(t *testing.T) {
 		reader.fail = tt.fail
 
 		got, err := readSection(section)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
-		if !tt.wantErr && !bytes.Equal(got, testText) {
+		if !bytes.Equal(got, testText) {
 			t.Fatalf("%s: data = %x, want %x", tt.name, got, testText)
 		}
 	}
@@ -323,7 +343,7 @@ func TestExtractBlobs(t *testing.T) {
 		name    string
 		mutate  func(f *elf.File)
 		want    []string
-		wantErr bool
+		wantErr string
 	}{
 		{name: "one segment", want: []string{".text"}},
 		{name: "segments keep header order", mutate: func(f *elf.File) {
@@ -344,23 +364,23 @@ func TestExtractBlobs(t *testing.T) {
 		}, want: []string{".text"}},
 		{name: "no loadable segment", mutate: func(f *elf.File) {
 			f.Progs[0].Type = elf.PT_NOTE
-		}, wantErr: true},
+		}, wantErr: "no loadable sections"},
 		{name: "no loadable section", mutate: func(f *elf.File) {
 			f.Sections[1].Type = elf.SHT_NOBITS
-		}, wantErr: true},
+		}, wantErr: "no loadable sections"},
 		{name: "section outside every segment", mutate: func(f *elf.File) {
 			f.Progs[0].Vaddr = 0x900000
-		}, wantErr: true},
+		}, wantErr: "no loadable sections"},
 		{name: "segment error", mutate: func(f *elf.File) {
 			f.Progs[0].Filesz = f.Progs[0].Memsz + 1
-		}, wantErr: true},
+		}, wantErr: "file size larger than memory size"},
 		{name: "section error", mutate: func(f *elf.File) {
 			f.Sections[1].Addr = ^uint64(0)
-		}, wantErr: true},
+		}, wantErr: "section .text address overflow"},
 		{name: "read error", mutate: func(f *elf.File) {
 			f.Progs[0].Memsz = 8
 			f.Sections[1].Size = 8
-		}, wantErr: true},
+		}, wantErr: "short read for section .text"},
 	}
 	for _, tt := range tests {
 		elfFile, err := elf.NewFile(bytes.NewReader(makeELF(testEntryPoint, testTextAddress, testText)))
@@ -371,8 +391,8 @@ func TestExtractBlobs(t *testing.T) {
 			tt.mutate(elfFile)
 		}
 		blobs, err := extractBlobs(elfFile)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
 		var got []string
 		for _, blob := range blobs {
@@ -457,18 +477,15 @@ func TestLoadPaths(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []byte
-		wantErr bool
+		wantErr string
 	}{
 		{name: "valid ELF", input: makeELF(testEntryPoint, testTextAddress, testText)},
-		{name: "not an ELF", input: []byte("not an ELF"), wantErr: true},
-		{name: "no loadable segment", input: noLoadable, wantErr: true},
+		{name: "not an ELF", input: []byte("not an ELF"), wantErr: "parsing guest ELF"},
+		{name: "no loadable segment", input: noLoadable, wantErr: "no loadable sections"},
 	}
 	for _, tt := range tests {
 		program, err := Load(bytes.NewReader(tt.input))
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
-		if tt.wantErr {
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
 		}
 		if program.EntryPoint != testEntryPoint {
@@ -554,19 +571,19 @@ func TestPayloadAddress(t *testing.T) {
 		name    string
 		address uint64
 		want    uint64
-		wantErr bool
+		wantErr string
 	}{
 		{name: "zero", address: 0, want: 0x08},
 		{name: "typical", address: 0x1000, want: 0x1008},
 		{name: "highest without wrap", address: ^uint64(0) - 8, want: ^uint64(0)},
-		{name: "payload wraps", address: ^uint64(0) - 7, wantErr: true},
+		{name: "payload wraps", address: ^uint64(0) - 7, wantErr: "data input offset overflow"},
 	}
 	for _, tt := range tests {
 		got, err := payloadAddress(tt.address)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
-		if !tt.wantErr && got != tt.want {
+		if got != tt.want {
 			t.Fatalf("%s: payload address = %#x, want %#x", tt.name, got, tt.want)
 		}
 	}
@@ -770,7 +787,7 @@ func TestValidateBlobsRanges(t *testing.T) {
 	tests := []struct {
 		name    string
 		blobs   []Blob
-		wantErr bool
+		wantErr string
 	}{
 		{name: "no blobs"},
 		{name: "one blob", blobs: []Blob{blob(0x1000, 4)}},
@@ -779,18 +796,18 @@ func TestValidateBlobsRanges(t *testing.T) {
 		{name: "empty blob inside another", blobs: []Blob{blob(0x1000, 8), blob(0x1004, 0)}},
 		{name: "empty blob at the top", blobs: []Blob{blob(^uint64(0), 0)}},
 		{name: "ends at the top", blobs: []Blob{blob(^uint64(0)-4, 4)}},
-		{name: "end wraps", blobs: []Blob{blob(^uint64(0)-3, 4)}, wantErr: true},
-		{name: "overlap", blobs: []Blob{blob(0x1000, 8), blob(0x1004, 4)}, wantErr: true},
-		{name: "same address", blobs: []Blob{blob(0x1000, 4), blob(0x1000, 4)}, wantErr: true},
+		{name: "end wraps", blobs: []Blob{blob(^uint64(0)-3, 4)}, wantErr: "overflows address space"},
+		{name: "overlap", blobs: []Blob{blob(0x1000, 8), blob(0x1004, 4)},
+			wantErr: "memory blob at 0x1004 overlaps blob at 0x1000 ending at 0x1008"},
+		{name: "same address", blobs: []Blob{blob(0x1000, 4), blob(0x1000, 4)},
+			wantErr: "memory blob at 0x1000 overlaps blob at 0x1000 ending at 0x1004"},
 		{name: "empty blob does not move the previous end", blobs: []Blob{
 			blob(0x1000, 8), blob(0x1004, 0), blob(0x1006, 4),
-		}, wantErr: true},
+		}, wantErr: "memory blob at 0x1006 overlaps blob at 0x1000 ending at 0x1008"},
 	}
 	for _, tt := range tests {
 		err := validateBlobsRanges(tt.blobs)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
+		expectErr(t, tt.name, err, tt.wantErr)
 	}
 }
 
@@ -870,7 +887,9 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 
 // TestU32Layout checks the u32 entry point, addresses and data size of a valid
 // layout, and that an entry point or blob outside the 32-bit address space is
-// an error. The blob count limit is not tested, because it needs more than 4
+// an error. The blobs at the edge are an accepted blob ending at 4 GiB and an
+// empty blob at the last address, and the rejected ones are an empty blob
+// above 4 GiB and a blob crossing it. The blob count limit is not tested, because it needs more than 4
 // billion blobs. The data size limit uses 4096 blobs sharing one 1 MiB slice,
 // which total 2^32 bytes without allocating them, and assumes a 64-bit int.
 func TestU32Layout(t *testing.T) {
@@ -889,21 +908,29 @@ func TestU32Layout(t *testing.T) {
 		wantEntry     uint32
 		wantAddresses []uint32
 		wantSize      int
-		wantErr       bool
+		wantErr       string
 	}{
 		{name: "no blobs", entryPoint: 0x800000, wantEntry: 0x800000},
 		{name: "two blobs", entryPoint: 0x800000, blobs: []Blob{blob(0x1000, 4), blob(0x2000, 8)},
 			wantEntry: 0x800000, wantAddresses: []uint32{0x1000, 0x2000}, wantSize: 12},
-		{name: "entry point outside 32 bits", entryPoint: 1 << 32, wantErr: true},
-		{name: "blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 4)}, wantErr: true},
-		{name: "data size exceeds u32", entryPoint: 0x800000, blobs: tooMuchData, wantErr: true},
+		{name: "blob ends at 4 GiB", entryPoint: 0x800000, blobs: []Blob{blob(1<<32-4, 4)},
+			wantEntry: 0x800000, wantAddresses: []uint32{0xfffffffc}, wantSize: 4},
+		{name: "empty blob at the last address", entryPoint: 0x800000, blobs: []Blob{blob(1<<32-1, 0)},
+			wantEntry: 0x800000, wantAddresses: []uint32{0xffffffff}},
+		{name: "entry point outside 32 bits", entryPoint: 1 << 32,
+			wantErr: "entry point 0x100000000 is outside the 32-bit address space"},
+		{name: "blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 4)},
+			wantErr: "memory blob at 0x100000000 with 4 bytes is outside the 32-bit address space"},
+		{name: "empty blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 0)},
+			wantErr: "memory blob at 0x100000000 with 0 bytes is outside the 32-bit address space"},
+		{name: "blob crosses 4 GiB", entryPoint: 0x800000, blobs: []Blob{blob(1<<32-1, 2)},
+			wantErr: "memory blob at 0xffffffff with 2 bytes is outside the 32-bit address space"},
+		{name: "data size exceeds u32", entryPoint: 0x800000, blobs: tooMuchData,
+			wantErr: "4096 memory blobs with 4294967296 bytes exceed the u32 input limit"},
 	}
 	for _, tt := range tests {
 		entry, addresses, size, err := u32Layout(tt.entryPoint, tt.blobs)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
-		if tt.wantErr {
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			continue
 		}
 		if entry != tt.wantEntry || !slices.Equal(addresses, tt.wantAddresses) || size != tt.wantSize {
@@ -1036,7 +1063,7 @@ func TestEncodeInputsInternal(t *testing.T) {
 		additional []Blob
 		cfg        config
 		want       map[string][]byte
-		wantErr    bool
+		wantErr    string
 	}{
 		{name: "without executable", program: program, additional: additional, want: wantInputs(nil)},
 		{name: "with executable", program: program, additional: additional,
@@ -1045,19 +1072,18 @@ func TestEncodeInputsInternal(t *testing.T) {
 			program:    Program{EntryPoint: 0x00800000, Blobs: []Blob{{Address: 0x00800000, Data: testText, Name: "other"}}},
 			additional: []Blob{{Address: 0x1000, Data: []byte{0xaa, 0xbb}, Name: "extra"}},
 			want:       wantInputs(nil)},
-		{name: "ranges overlap", program: program, wantErr: true,
-			additional: []Blob{{Address: 0x00800002, Data: []byte{1, 2}}}},
+		{name: "ranges overlap", program: program,
+			additional: []Blob{{Address: 0x00800002, Data: []byte{1, 2}}},
+			wantErr:    "memory blob at 0x800002 overlaps blob at 0x800000 ending at 0x800004"},
 		{name: "sections writer fails", program: program, additional: additional,
-			cfg: config{sectionsWriter: errWriter{}}, wantErr: true},
-		{name: "entry point outside 32 bits", additional: additional, wantErr: true,
-			program: Program{EntryPoint: 1 << 32, Blobs: programBlobs}},
+			cfg: config{sectionsWriter: errWriter{}}, wantErr: "writing sections: write failed"},
+		{name: "entry point outside 32 bits", additional: additional,
+			program: Program{EntryPoint: 1 << 32, Blobs: programBlobs},
+			wantErr: "entry point 0x100000000 is outside the 32-bit address space"},
 	}
 	for _, tt := range tests {
 		inputs, err := encodeInputs(tt.program, tt.additional, tt.cfg)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
-		if tt.wantErr {
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			if inputs != nil {
 				t.Fatalf("%s: inputs = %v on error, want nil", tt.name, inputs)
 			}
@@ -1090,7 +1116,7 @@ func TestApplyInputOptions(t *testing.T) {
 		name    string
 		options []Option
 		want    config
-		wantErr bool
+		wantErr string
 	}{
 		{name: "no options", want: config{}},
 		{name: "include executable", options: []Option{WithIncludeExecutable()},
@@ -1099,15 +1125,16 @@ func TestApplyInputOptions(t *testing.T) {
 			want: config{sectionsWriter: buf}},
 		{name: "both options", options: []Option{WithIncludeExecutable(), WithSectionsWriter(buf)},
 			want: config{includeExecutable: true, sectionsWriter: buf}},
-		{name: "nil option", options: []Option{nil}, wantErr: true},
-		{name: "failing option", options: []Option{WithSectionsWriter(nil)}, wantErr: true},
+		{name: "nil option", options: []Option{nil}, wantErr: "applying input option: nil option"},
+		{name: "failing option", options: []Option{WithSectionsWriter(nil)},
+			wantErr: "applying input option: sections writer is nil"},
 	}
 	for _, tt := range tests {
 		got, err := applyInputOptions(tt.options)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
+		if expectErr(t, tt.name, err, tt.wantErr) {
+			continue
 		}
-		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+		if !reflect.DeepEqual(got, tt.want) {
 			t.Fatalf("%s: config = %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
@@ -1128,12 +1155,12 @@ func TestEncodeInputs(t *testing.T) {
 		additional bool // add a second blob, which sorts before the program blob
 		options    []Option
 		wantInputs int
-		wantErr    bool
+		wantErr    string
 	}{
 		{name: "no options", wantInputs: 3},
 		{name: "with executable", options: []Option{WithIncludeExecutable()}, wantInputs: 4},
 		{name: "program and additional blob", additional: true, wantInputs: 3},
-		{name: "option error", options: []Option{nil}, wantErr: true},
+		{name: "option error", options: []Option{nil}, wantErr: "applying input option: nil option"},
 	}
 	for _, tt := range tests {
 		program := Program{EntryPoint: 0x00800000, Blobs: []Blob{
@@ -1146,10 +1173,7 @@ func TestEncodeInputs(t *testing.T) {
 		wantProgram := bytes.Clone(program.Blobs[0].Data)
 
 		inputs, err := EncodeInputs(program, additional, tt.options...)
-		if (err != nil) != tt.wantErr {
-			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
-		}
-		if tt.wantErr {
+		if expectErr(t, tt.name, err, tt.wantErr) {
 			if inputs != nil {
 				t.Fatalf("%s: inputs = %v on error, want nil", tt.name, inputs)
 			}
