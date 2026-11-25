@@ -9,6 +9,7 @@ import linea.error.DuplicatedRecordException
 import linea.kotlin.trimToSecondPrecision
 import linea.persistence.db.DbHelper
 import linea.persistence.db.test.CleanDbTestSuiteParallel
+import lineth.persistence.RiscvRollupsDao
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
@@ -114,11 +115,26 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `saveRollupWithBlobs fails when the rollup is already saved`() {
+  fun `saving a rollup that is already stored is ignored by default`() {
     val rollup = rollup(1UL, 100UL)
     save(rollup)
 
-    assertThrows<ExecutionException> { rollupsDao.saveRollupWithBlobs(rollup).get() }
+    rollupsDao.saveRollupWithBlobs(rollup).get()
+    assertThat(count(RiscvRollupsPostgresDao.RollupsTableName)).isEqualTo(1)
+    assertThat(rollupsDao.findRollupByStartBlockNumber(1UL).get()).isEqualTo(rollup)
+  }
+
+  @Test
+  fun `saving a rollup that is already stored fails when duplicates are not ignored`() {
+    val strictDao = RiscvRollupsPostgresDao(
+      config = RiscvRollupsPostgresDao.Config(maxRollupProofsToReturn = maxRollupsToReturn, ignoreDuplicates = false),
+      connection = sqlClient,
+      clock = fakeClock,
+    )
+    val rollup = rollup(1UL, 100UL)
+    save(rollup)
+
+    assertThrows<ExecutionException> { strictDao.saveRollupWithBlobs(rollup).get() }
       .also { error ->
         assertThat(error.cause).isInstanceOf(DuplicatedRecordException::class.java)
         assertThat(error.cause!!.message).isEqualTo("Rollup [1..100]100 is already persisted!")

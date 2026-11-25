@@ -2,6 +2,7 @@ package lineth.persistence.conflation
 
 import linea.domain.RiscvRollupRecord
 import linea.persistence.db.PersistenceRetryer
+import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

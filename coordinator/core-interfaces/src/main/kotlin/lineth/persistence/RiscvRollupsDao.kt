@@ -8,8 +8,12 @@ import kotlin.time.Instant
  * RISC-V rollup proofs and their blobs. A blob shared by adjacent rollups is stored once; deleting rollups also
  * deletes the blobs no remaining rollup uses.
  */
-interface RiscvRollupsRepository {
-  /** Saves [rollup] and its blobs. A rollup that is already saved is ignored. */
+interface RiscvRollupsDao {
+  /**
+   * Saves [rollup] and its blobs. Saving a rollup that is already stored is a duplicate: ignored or failed with
+   * `DuplicatedRecordException`, depending on the implementation's configuration. A rollup that shares only its start
+   * or end block with a stored one always fails.
+   */
   fun saveRollupWithBlobs(rollup: RiscvRollupRecord): SafeFuture<Unit>
 
   /**

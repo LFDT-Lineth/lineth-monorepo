@@ -12,6 +12,7 @@ import linea.domain.RiscvRollupRecord
 import linea.error.DuplicatedRecordException
 import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
+import lineth.persistence.RiscvRollupsDao
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -36,7 +37,14 @@ class RiscvRollupsPostgresDao(
   private val clock: Clock = Clock.System,
 ) : RiscvRollupsDao {
 
-  data class Config(val maxRollupProofsToReturn: UInt)
+  /**
+   * @property ignoreDuplicates when true, saving a rollup that is already stored succeeds without changes; when false
+   *   it fails with [DuplicatedRecordException]
+   */
+  data class Config(
+    val maxRollupProofsToReturn: UInt,
+    val ignoreDuplicates: Boolean = true,
+  )
 
   companion object {
     const val RollupsTableName = "riscv_rollups"
@@ -45,6 +53,7 @@ class RiscvRollupsPostgresDao(
   }
 
   private val queryLog = SQLQueryLogger(log)
+  private val ignoreDuplicates = config.ignoreDuplicates
 
   // One statement, so the rollup, its references and its new blobs are stored atomically. A blob that is already
   // stored (the shared first blob) is kept as is.
@@ -154,7 +163,8 @@ class RiscvRollupsPostgresDao(
   }
 
   /**
-   * A unique violation is a duplicate only if this rollup, by block range, is already stored. Otherwise the rollup
+   * A unique violation is a duplicate only if this rollup, by block range, is already stored: ignored or failed with
+   * [DuplicatedRecordException] per [Config.ignoreDuplicates]. Otherwise the rollup
    * overlaps a stored one (same start or end block), which is a bug: the Postgres error is returned as is, so callers
    * do not ignore it and retries stop.
    */
@@ -162,13 +172,15 @@ class RiscvRollupsPostgresDao(
     existsQuery
       .execute(Tuple.of(rollup.startBlockNumber.toLong(), rollup.endBlockNumber.toLong()))
       .compose { rows ->
-        if (rows.size() > 0) {
-          Future.failedFuture(
+        when {
+          rows.size() == 0 -> {
+            log.error("rollup={} overlaps a stored rollup: {}", rollup.intervalString(), error.message)
+            Future.failedFuture(error)
+          }
+          ignoreDuplicates -> Future.succeededFuture()
+          else -> Future.failedFuture(
             DuplicatedRecordException("Rollup ${rollup.intervalString()} is already persisted!", error),
           )
-        } else {
-          log.error("rollup={} overlaps a stored rollup: {}", rollup.intervalString(), error.message)
-          Future.failedFuture(error)
         }
       }
 
