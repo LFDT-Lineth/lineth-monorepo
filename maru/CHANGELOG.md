@@ -4,6 +4,11 @@
 
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
+- *(maru)* Remove noisy p2p connection stack trace (#4542)
 ## [1.6.0] - 2026-11-19
 
 ### 🚀 Features

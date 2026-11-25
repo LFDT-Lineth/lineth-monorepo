@@ -5,14 +5,14 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
-class BlobRecordV2Test {
+class RiscvRollupRecordTest {
   private val parent = Random.nextBytes(32)
   private val end = Random.nextBytes(32)
 
   @Test
   fun `a fresh-start record chains its blobs from the parent hash`() {
     val middle = Random.nextBytes(32)
-    val record = createBlobRecordV2(
+    val record = createRiscvRollupRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
@@ -25,7 +25,7 @@ class BlobRecordV2Test {
 
   @Test
   fun `a record starting inside a shared blob puts that blob between the parent blob and parent hashes`() {
-    val record = createBlobRecordV2(
+    val record = createRiscvRollupRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
@@ -34,13 +34,13 @@ class BlobRecordV2Test {
     )
 
     assertThat(record.blobsData.first().dataRollingHash).isEqualTo(parent)
-    assertThat(record.blobsData.first().prevDataRollingHash).isEqualTo(record.parentBlobDataRollingHash)
+    assertThat(record.blobsData.first().parentDataRollingHash).isEqualTo(record.parentBlobDataRollingHash)
   }
 
   @Test
   fun `a record that lies inside the shared blob has the parent as its end hash`() {
     val parentBlob = Random.nextBytes(32)
-    val record = createBlobRecordV2(
+    val record = createRiscvRollupRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 10UL,
       parentDataRollingHash = parent,
@@ -57,7 +57,7 @@ class BlobRecordV2Test {
   @Test
   fun `blobs that do not chain by rolling hash are rejected`() {
     assertThatThrownBy {
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentDataRollingHash = parent,
@@ -66,7 +66,7 @@ class BlobRecordV2Test {
       )
     }.hasMessageContaining("blob 1 does not follow blob 0")
     assertThatThrownBy {
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentDataRollingHash = parent,
@@ -75,7 +75,7 @@ class BlobRecordV2Test {
       )
     }.hasMessageContaining("first blob must follow parentDataRollingHash")
     assertThatThrownBy {
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentDataRollingHash = parent,
@@ -88,32 +88,36 @@ class BlobRecordV2Test {
   @Test
   fun `tails and the parent blob hash are validated`() {
     assertThatThrownBy {
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentSharedBlobCarryOverTailBytes = 100u,
         parentBlobDataRollingHash = null,
       )
-    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash is required when parentSharedBlobCarryOverTailBytes > 0")
     assertThatThrownBy {
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentBlobDataRollingHash = Random.nextBytes(32),
       )
-    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash must be null when the rollup starts on a fresh blob")
     assertThatThrownBy {
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalSharedBlobCarryOverTailBytes = 130_047u)
+      createRiscvRollupRecord(
+        startBlockNumber = 1UL,
+        endBlockNumber = 10UL,
+        finalSharedBlobCarryOverTailBytes = 130_047u,
+      )
     }.hasMessageContaining("finalSharedBlobCarryOverTailBytes=130047 must be in 0..130046")
     assertThatThrownBy {
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, blobsData = emptyList())
+      createRiscvRollupRecord(startBlockNumber = 1UL, endBlockNumber = 10UL, blobsData = emptyList())
     }.hasMessageContaining("blobsData must not be empty")
   }
 
   @Test
   fun `equality includes the tail fields and per-blob hashes`() {
     val record =
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, parentSharedBlobCarryOverTailBytes = 100u)
+      createRiscvRollupRecord(startBlockNumber = 1UL, endBlockNumber = 10UL, parentSharedBlobCarryOverTailBytes = 100u)
     val equalRecord = record.copy(
       parentBlobDataRollingHash = record.parentBlobDataRollingHash!!.copyOf(),
       blobsData = record.blobsData.map { it.copy(dataRollingHash = it.dataRollingHash.copyOf()) },

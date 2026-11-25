@@ -199,22 +199,20 @@ class RollupProofGeneratingCoordinatorTest {
       assertThat(it.kzgProof).isEqualTo(FakeDaStream.fakeKzgProof(it.blobBytes))
     }
     assertThat(request1.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
-    assertThat(request1.parentSharedBlobCarryOverTailBytes).isZero()
+    assertThat(request1.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(request1.parentBlobDataRollingHash).isNull()
     assertThat(request1.l2Executions.map { it.hash }).containsExactly(proofHash(a), proofHash(b), proofHash(c))
     assertThat(request2.startBlockNumber).isEqualTo(4UL)
     assertThat(request2.chunks).hasSize(3)
     assertThat(request2.chunks.first()).isEqualTo(request1.chunks.last())
-    assertThat(request2.parentSharedBlobCarryOverTailBytes).isEqualTo(70_094)
+    assertThat(request2.parentSharedBlobCarryOverTailBytes).isEqualTo(70_094u)
 
     val (context1, context2) = pollProofs()
     assertThat(context1.finalSharedBlobCarryOverTailBytes).isEqualTo(70_094u)
-    assertThat(context1.blobsData.map { it.batchesCount }).containsExactly(1U, 2U)
     assertThat(context1.totalBatchesCount).isEqualTo(3)
     assertThat(request2.parentDataRollingHash).isEqualTo(context1.dataRollingHash)
-    assertThat(request2.parentBlobDataRollingHash).isEqualTo(context1.blobsData.last().prevDataRollingHash)
+    assertThat(request2.parentBlobDataRollingHash).isEqualTo(context1.blobsData.last().parentDataRollingHash)
     assertThat(context2.parentSharedBlobCarryOverTailBytes).isEqualTo(70_094u)
-    assertThat(context2.blobsData.map { it.batchesCount }).containsExactly(2U, 0U, 2U)
     assertThat(context2.finalSharedBlobCarryOverTailBytes).isEqualTo(0u)
   }
 
@@ -359,7 +357,7 @@ class RollupProofGeneratingCoordinatorTest {
       } else {
         DaStreamPosition(
           dataRollingHash = context.dataRollingHash,
-          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          parentBlobDataRollingHash = lastBlob.parentDataRollingHash,
           sharedBlobCarryOverTailBytes = tail,
           sharedBlob = lastBlob.blobBytes,
         )

@@ -42,6 +42,16 @@ on:
         required: false
         type: boolean
         default: false
+      compute_docker_tag:
+        description: "Also compute the docker image tag ([semver]-[YYYYMMDD]-[commit][-suffix]) once the release tag is pushed"
+        required: false
+        type: boolean
+        default: false
+      image_tag_suffix:
+        description: "Custom docker image tag suffix; only used when compute_docker_tag is true"
+        required: false
+        type: string
+        default: ''
     outputs:
       release_tag:
         description: "Full release tag (e.g. releases/coordinator/v0.2.0)"
@@ -52,6 +62,12 @@ on:
       changelog:
         description: "Latest changelog section content"
         value: ${{ jobs.release-component.outputs.changelog }}
+      docker_tag:
+        description: "Docker image tag base (without suffix); empty unless compute_docker_tag is true"
+        value: ${{ jobs.release-component.outputs.docker_tag }}
+      docker_tag_with_suffix:
+        description: "Docker image tag with suffix (same value as docker_tag if no suffix is given); empty unless compute_docker_tag is true"
+        value: ${{ jobs.release-component.outputs.docker_tag_with_suffix }}
 
 jobs:
   release-component:
@@ -66,6 +82,8 @@ jobs:
       release_tag: ${{ steps.prepend-changelog.outputs.next_tag }}
       release_version: ${{ steps.prepend-changelog.outputs.next_version }}
       changelog: ${{ steps.prepend-changelog.outputs.changelog_content }}
+      docker_tag: ${{ steps.docker-tag.outputs.dockertag }}
+      docker_tag_with_suffix: ${{ steps.docker-tag.outputs.dockertag_with_suffix }}
     steps:
       # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
@@ -214,3 +232,20 @@ jobs:
           git push origin "${TAG}"
           echo "Pushed ${TAG} pointing at ${TARGET_SHA}"
 
+      # compute-version-tags resolves github.sha (the commit that triggered the workflow), not
+      # HEAD, so the docker tag embeds that commit's short SHA even though this checkout may sit
+      # on a later CHANGELOG.md update commit. The full-history checkout above also satisfies the
+      # github.sha~1 lookup.
+      - name: Compute version tags
+        id: version-tags
+        if: ${{ inputs.compute_docker_tag }}
+        uses: ./.github/actions/compute-version-tags
+
+      - name: Compute docker tag
+        id: docker-tag
+        if: ${{ inputs.compute_docker_tag }}
+        uses: ./.github/actions/compute-docker-tag
+        with:
+          version_prefix: ${{ steps.prepend-changelog.outputs.next_version }}
+          image_tag_suffix: ${{ inputs.image_tag_suffix }}
+          commit_tag: ${{ steps.version-tags.outputs.commit_tag }}

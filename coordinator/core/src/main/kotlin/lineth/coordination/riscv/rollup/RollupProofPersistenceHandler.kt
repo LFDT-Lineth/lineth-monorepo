@@ -1,19 +1,19 @@
 package lineth.coordination.riscv.rollup
 
 import linea.clients.RollupProofResponseV1
-import linea.domain.BlobRecordV2
+import linea.domain.RiscvRollupRecord
 import linea.kotlin.encodeHex
-import lineth.persistence.BlobsRepositoryV2
+import lineth.persistence.RiscvRollupsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
- * Persists each rollup proof as a [BlobRecordV2] row. A proof whose DA outputs differ from what the coordinator built
- * is not persisted: the row would not match its blobs. The returned future then fails, so the proof stays in progress.
+ * Persists each rollup proof as a [RiscvRollupRecord] with its blobs. A proof whose DA outputs differ from what the coordinator built
+ * is not persisted: the record would not match its blobs. The returned future then fails, so the proof stays in progress.
  */
 class RollupProofPersistenceHandler(
-  private val blobsRepository: BlobsRepositoryV2,
+  private val rollupsDao: RiscvRollupsDao,
   private val log: Logger = LogManager.getLogger(RollupProofPersistenceHandler::class.java),
 ) : RollupProofHandler {
   override fun acceptNewRollupProof(
@@ -37,7 +37,7 @@ class RollupProofPersistenceHandler(
       log.error(message)
       return SafeFuture.failedFuture<Unit>(IllegalStateException(message))
     }
-    val record = BlobRecordV2(
+    val record = RiscvRollupRecord(
       startBlockNumber = context.proofIndex.startBlockNumber,
       endBlockNumber = context.proofIndex.endBlockNumber,
       startBlockTimestamp = context.startBlockTimestamp,
@@ -51,6 +51,6 @@ class RollupProofPersistenceHandler(
       parentBlobDataRollingHash = context.parentBlobDataRollingHash,
       finalSharedBlobCarryOverTailBytes = context.finalSharedBlobCarryOverTailBytes,
     )
-    return blobsRepository.saveNewBlob(record)
+    return rollupsDao.saveRollupWithBlobs(record)
   }
 }

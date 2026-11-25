@@ -7,17 +7,15 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 fun createBlobData(
-  prevDataRollingHash: ByteArray = Random.nextBytes(32),
+  parentDataRollingHash: ByteArray = Random.nextBytes(32),
   dataRollingHash: ByteArray = Random.nextBytes(32),
   blobBytes: ByteArray = Random.nextBytes(32),
   chunkHash: ByteArray = Random.nextBytes(32),
-  batchesCount: UInt = 1U,
 ): BlobData =
   BlobData(
     chunkHash = chunkHash,
     blobBytes = blobBytes,
-    batchesCount = batchesCount,
-    prevDataRollingHash = prevDataRollingHash,
+    parentDataRollingHash = parentDataRollingHash,
     dataRollingHash = dataRollingHash,
   )
 
@@ -26,7 +24,7 @@ fun createBlobData(
  * [dataRollingHash]; with [parentSharedBlobCarryOverTailBytes] > 0 that blob is the shared one, from
  * [parentBlobDataRollingHash] to [parentDataRollingHash], and a second blob follows it up to [dataRollingHash].
  */
-fun createBlobRecordV2(
+fun createRiscvRollupRecord(
   startBlockNumber: ULong,
   endBlockNumber: ULong,
   startBlockTimestamp: Instant = Clock.System.now().trimToSecondPrecision(),
@@ -39,19 +37,19 @@ fun createBlobRecordV2(
   finalSharedBlobCarryOverTailBytes: UInt = 0u,
   blobsData: List<BlobData> = if (parentBlobDataRollingHash != null) {
     listOf(
-      createBlobData(prevDataRollingHash = parentBlobDataRollingHash, dataRollingHash = parentDataRollingHash),
-      createBlobData(prevDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash),
+      createBlobData(parentDataRollingHash = parentBlobDataRollingHash, dataRollingHash = parentDataRollingHash),
+      createBlobData(parentDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash),
     )
   } else {
-    listOf(createBlobData(prevDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash))
+    listOf(createBlobData(parentDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash))
   },
   proofHash: ByteArray = Random.nextBytes(32),
-): BlobRecordV2 {
+): RiscvRollupRecord {
   val resolvedEndBlockTimestamp = endBlockTimestamp
     ?: startBlockTimestamp
       .plus(LINEA_BLOCK_INTERVAL.times((endBlockNumber - startBlockNumber).toInt()))
       .trimToSecondPrecision()
-  return BlobRecordV2(
+  return RiscvRollupRecord(
     startBlockNumber = startBlockNumber,
     endBlockNumber = endBlockNumber,
     startBlockTimestamp = startBlockTimestamp,

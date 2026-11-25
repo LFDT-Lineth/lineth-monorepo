@@ -7,10 +7,10 @@ pub fn build(b: *std.Build) void {
     // The shared freestanding rv64im ZkC profile every guest builds for (build_common).
     const target = common.standardGuestTarget(b);
 
-    // Optimize for binary size by default; can be overridden with -Doptimize=
-    const optimize = b.standardOptimizeOption(.{
-        .preferred_optimize_mode = .ReleaseSmall,
-    });
+    // Use b.option directly (not standardOptimizeOption) so `-Doptimize=` stays exposed while
+    // defaulting to ReleaseSmall (standardOptimizeOption with preferred_optimize_mode defaults to
+    // Debug unless `-Drelease` is passed).
+    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
     const path = b.option([]const u8, "path", "Source path under src/, without .zig") orelse @panic("'-Dpath=<path>' is required");
 
