@@ -1719,7 +1719,7 @@ func TestEncodeInstructionBase(t *testing.T) {
 // only whole 87-bit rows are kept. The cases cover every alignment of the last
 // byte, from 0 to 7 padding bits. A partial row is dropped and the padding bits
 // of the last byte are cleared.
-// It also checks that the result is a copy in both directions: 
+// It also checks that the result is a copy in both directions:
 // changing the input afterwards does not change the result, and changing the result
 // does not change the input.
 func TestEncodeDecodedRows(t *testing.T) {
@@ -1773,6 +1773,9 @@ func TestEncodeDecodedRows(t *testing.T) {
 // TestDecodedProgramEncodeInputs checks that EncodeInputs returns exactly the
 // instruction base and the decoded rows, each under its own input name. How each
 // one is encoded is tested in TestEncodeInstructionBase and TestEncodeDecodedRows.
+// It also checks that every call returns fresh bytes: clearing the bytes of one
+// result changes neither a later call nor the program, which a cached program
+// relies on when it is encoded for every job.
 func TestDecodedProgramEncodeInputs(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -1805,6 +1808,20 @@ func TestDecodedProgramEncodeInputs(t *testing.T) {
 			if !gotArray.Equals(wantArray) {
 				t.Fatalf("%s: input %s = %s, want %s", tt.name, name, gotArray.String(), wantArray.String())
 			}
+		}
+		original := bytes.Clone(tt.program.Decoded)
+		for _, array := range got {
+			clear(array.Bytes())
+		}
+		again := tt.program.EncodeInputs()
+		for name, wantArray := range want {
+			if !again[name].Equals(wantArray) {
+				t.Fatalf("%s: input %s of a later call changed with an earlier result", tt.name, name)
+			}
+		}
+		if !bytes.Equal(tt.program.Decoded, original) {
+			t.Fatalf("%s: program Decoded changed with a result: got %x, want %x",
+				tt.name, tt.program.Decoded, original)
 		}
 	}
 }
