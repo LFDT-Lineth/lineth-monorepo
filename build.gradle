@@ -167,7 +167,7 @@ allprojects {
   }
 
   // By default the JaCoCo agent instruments every class a test JVM loads from the classpath, libraries included
-  // (kotlin-reflect, Jackson, Vert.x, Netty, log4j, ...): 98% of the instrumented classes in the test JVMs measured,
+  // (kotlin-reflect, Jackson, Vert.x, Netty, log4j, ...): 97% of the instrumented classes in the test JVMs measured,
   // while jacocoTestReport and jacocoRootReport only map the execution data onto the project's own classes, so the
   // coverage of the libraries is never read. Instrumenting them costs CPU at class load, under the class loading lock,
   // which slows the cold start of every test JVM and, on a CPU starved CI runner, leaves the test threads waiting for
