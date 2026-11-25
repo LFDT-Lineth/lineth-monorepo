@@ -94,14 +94,14 @@ class RiscvRollupRecordTest {
         parentSharedBlobCarryOverTailBytes = 100u,
         parentBlobDataRollingHash = null,
       )
-    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash is required when parentSharedBlobCarryOverTailBytes > 0")
     assertThatThrownBy {
       createRiscvRollupRecord(
         startBlockNumber = 1UL,
         endBlockNumber = 10UL,
         parentBlobDataRollingHash = Random.nextBytes(32),
       )
-    }.hasMessageContaining("parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0")
+    }.hasMessageContaining("parentBlobDataRollingHash must be null when the rollup starts on a fresh blob")
     assertThatThrownBy {
       createRiscvRollupRecord(
         startBlockNumber = 1UL,

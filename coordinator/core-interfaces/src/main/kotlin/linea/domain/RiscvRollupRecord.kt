@@ -11,8 +11,8 @@ import kotlin.time.Instant
  * @property dataRollingHash rolling hash after this rollup's last blob
  * @property parentSharedBlobCarryOverTailBytes payload bytes at the end of the first (shared) blob that the previous
  *   rollup carried over to this one; 0 when this rollup starts on a fresh blob
- * @property parentBlobDataRollingHash rolling hash before the shared first blob; non-null iff
- *   [parentSharedBlobCarryOverTailBytes] > 0
+ * @property parentBlobDataRollingHash rolling hash before the shared first blob: set when
+ *   [parentSharedBlobCarryOverTailBytes] > 0, null when this rollup starts on a fresh blob
  * @property finalSharedBlobCarryOverTailBytes payload bytes at the end of the last blob that this rollup carries over
  *   to the next one
  */
@@ -40,11 +40,19 @@ data class RiscvRollupRecord(
       "finalSharedBlobCarryOverTailBytes=$finalSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES: " +
         "rollup=${intervalString()}"
     }
-    require((parentSharedBlobCarryOverTailBytes > 0u) == (parentBlobDataRollingHash != null)) {
-      "parentBlobDataRollingHash must be set iff parentSharedBlobCarryOverTailBytes > 0: rollup=${intervalString()}"
+    // The rollup starts inside the previous rollup's last blob exactly when it carries over a tail from it.
+    val startsInSharedBlob = parentSharedBlobCarryOverTailBytes > 0u
+    if (startsInSharedBlob) {
+      require(parentBlobDataRollingHash != null) {
+        "parentBlobDataRollingHash is required when parentSharedBlobCarryOverTailBytes > 0: rollup=${intervalString()}"
+      }
+    } else {
+      require(parentBlobDataRollingHash == null) {
+        "parentBlobDataRollingHash must be null when the rollup starts on a fresh blob: rollup=${intervalString()}"
+      }
     }
     val first = blobsData.first()
-    if (parentBlobDataRollingHash != null) {
+    if (startsInSharedBlob) {
       require(
         first.prevDataRollingHash.contentEquals(parentBlobDataRollingHash) &&
           first.dataRollingHash.contentEquals(parentDataRollingHash),
