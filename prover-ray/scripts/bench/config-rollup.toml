@@ -1,0 +1,13 @@
+# Bench config for scripts/bench: the rollup pipeline in dev-zkvm, with the
+# guests staged in /tmp/rollup-bench/guests. For dev-partial, set
+# rollup.prover_mode = "dev-partial"; shard_size is needed for a real input.
+version = "0.0.0-bench"
+log_level = 4
+guests_dir = "/tmp/rollup-bench/guests"
+shard_size = 500000
+
+[execution]
+prover_mode = "dev-mock"
+
+[rollup]
+prover_mode = "dev-zkvm"
