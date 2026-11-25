@@ -16,6 +16,7 @@
 - *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(riscv-guest)* Zesu update with some small breaking change (#4586)
 
 ### 🚜 Refactor
 

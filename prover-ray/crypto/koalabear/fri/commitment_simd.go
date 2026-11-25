@@ -36,7 +36,7 @@ func newLeafLayout(t SizedTable, paired bool) leafLayout {
 		extWidth:  len(t.Ext),
 		paired:    paired,
 	}
-	l.header[0].SetUint64(leafDomainTag)
+	l.header[0].SetUint64(LeafDomainTag)
 	l.header[1].SetUint64(uint64(l.baseWidth))
 	l.header[2].SetUint64(uint64(l.extWidth))
 

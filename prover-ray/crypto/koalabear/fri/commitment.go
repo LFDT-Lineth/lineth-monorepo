@@ -10,11 +10,14 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
-// leafDomainTag domain-separates Merkle leaves so a table with the same row
+// LeafDomainTag domain-separates Merkle leaves so a table with the same row
 // values but a different (BaseWidth, ExtWidth) shape hashes to a different
 // digest. Without this, e.g. an all-zero base row and an all-zero ext row
 // collide, letting two structurally distinct commitments share a Merkle root.
-const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
+// It is the first element of every leaf hash, before the widths; it is
+// exported for verifiers written in another proof system, which hash leaves
+// as fri does.
+const LeafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 
 // absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
 // before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
@@ -27,7 +30,7 @@ const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
 // the columns were declared; see writeRowElements for why that is not needed.
 func absorbLeafHeader(h leafHasher, baseWidth, extWidth int) {
 	var tag, b, e field.Element
-	tag.SetUint64(leafDomainTag)
+	tag.SetUint64(LeafDomainTag)
 	b.SetUint64(uint64(baseWidth))
 	e.SetUint64(uint64(extWidth))
 	h.WriteElement(tag)

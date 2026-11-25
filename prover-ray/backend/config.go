@@ -31,4 +31,8 @@ type Config struct {
 	// own memory: about 30 to 35 GiB, on top of the trace checkpoints,
 	// measured on the blocks listed in docs/prover-modes.md.
 	ShardWorkers int
+
+	// GoGen runs zkc Execute with gogen (Go code built with the Go toolchain on
+	// PATH) instead of the interpreter: same output, much faster.
+	GoGen bool
 }
