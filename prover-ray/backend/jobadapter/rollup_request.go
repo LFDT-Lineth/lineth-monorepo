@@ -5,22 +5,23 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
 
 // Field keys for the rollup request. Keys in request.go (guestProgramIDKey,
 // chainIDKey, proofRequestKey, the byte sizes) are reused. parentDataRollingHashKey,
-// parentDataTailTakeBytesKey, filteredAddressesKey, l2L1MessagesKey,
+// parentSharedBlobCarryOverTailBytesKey, filteredAddressesKey, l2L1MessagesKey,
 // endBlockNumberKey, blockCountKey, l2MessagingBlocksOffsetsKey, publicInputsKey,
 // proofKey, and startBlockNumberKey are also used by aggregation_request.go.
 const (
 	decodeRollupOp = "DecodeRollupRequest"
 
-	conflationsKey                 = "conflations"
-	chunksKey                      = "chunks"
-	l2ExecutionProofsKey           = "l2ExecutionProofs"
-	parentDataRollingHashKey       = "parentDataRollingHash"
-	parentDataTailTakeBytesKey     = "parentDataTailTakeBytes"
-	boundaryPrevDataRollingHashKey = "boundaryPrevDataRollingHash"
+	conflationsKey                        = "conflations"
+	chunksKey                             = "chunks"
+	l2ExecutionProofsKey                  = "l2ExecutionProofs"
+	parentDataRollingHashKey              = "parentDataRollingHash"
+	parentSharedBlobCarryOverTailBytesKey = "parentSharedBlobCarryOverTailBytes"
+	parentBlobDataRollingHashKey          = "parentBlobDataRollingHash"
 
 	blockRlpsKey     = "blockRlps"
 	chunkHashKey     = "chunkHash"
@@ -42,24 +43,11 @@ const (
 	l2MessagingBlocksOffsetsKey = "l2MessagingBlocksOffsets"
 )
 
-// ConflationWitness is one conflation: the RLP blocks its paired proof attests.
-type ConflationWitness struct {
-	BlockRlps [][]byte
-}
-
-// ChunkWitness is one touched chunk: its L1-anchored binding hash, kind, and
-// serialized bytes. For a calldata chunk CalldataBytes is set and BlobBytes,
-// KZGCommitment and KZGProof are empty; for a blob chunk BlobBytes is set,
-// CalldataBytes is empty, and KZGCommitment and KZGProof are the 48-byte
-// commitment of BlobBytes and its EIP-4844 blob proof.
-type ChunkWitness struct {
-	ChunkHash     [32]byte
-	IsCalldata    bool
-	BlobBytes     []byte
-	CalldataBytes []byte
-	KZGCommitment []byte
-	KZGProof      []byte
-}
+// The request decodes straight into the guest input types.
+type (
+	ConflationWitness = ssz.ConflationWitness
+	ChunkWitness      = ssz.ChunkWitness
+)
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash.
@@ -71,22 +59,22 @@ type EmbeddedL2ExecutionProof struct {
 }
 
 // RollupRequest is a decoded getZkRollupProofV1 request. Conflations pair 1:1
-// with L2ExecutionProofs. BoundaryPrevDataRollingHash is optional.
+// with L2ExecutionProofs. ParentBlobDataRollingHash is optional.
 type RollupRequest struct {
-	ProgramVk               []byte
-	ChainID                 uint64
-	Conflations             []ConflationWitness
-	Chunks                  []ChunkWitness
-	ParentDataRollingHash   [32]byte
-	ParentDataTailTakeBytes uint64
+	ProgramVk                          []byte
+	ChainID                            uint64
+	Conflations                        []ConflationWitness
+	Chunks                             []ChunkWitness
+	ParentDataRollingHash              [32]byte
+	ParentSharedBlobCarryOverTailBytes uint64
 
-	BoundaryPrevDataRollingHash *[32]byte
-	L2ExecutionProofs           []EmbeddedL2ExecutionProof
+	ParentBlobDataRollingHash *[32]byte
+	L2ExecutionProofs         []EmbeddedL2ExecutionProof
 }
 
 // DecodeRollupRequest parses a getZkRollupProofV1 request and validates its
-// shape and the chunk invariants. It does not build guest input bytes: the
-// recursion input format is undecided, so the runner passes a placeholder.
+// shape and the chunk invariants. buildRollupInput turns it into the guest
+// input.
 func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	const op = decodeRollupOp
 
@@ -144,19 +132,21 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	parentDataTailTakeBytes, err := getU64(proofRequest, parentDataTailTakeBytesKey, op, "proofRequest.")
+	parentSharedBlobCarryOverTailBytes, err := getU64(
+		proofRequest, parentSharedBlobCarryOverTailBytesKey, op, "proofRequest.",
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	// boundaryPrevDataRollingHash is optional.
-	var boundaryPrev *[32]byte
-	if raw, ok := proofRequest[boundaryPrevDataRollingHashKey]; ok {
-		h, err := hash32Of(raw, op, "proofRequest."+boundaryPrevDataRollingHashKey)
+	// parentBlobDataRollingHash is optional.
+	var parentBlob *[32]byte
+	if raw, ok := proofRequest[parentBlobDataRollingHashKey]; ok {
+		h, err := hash32Of(raw, op, "proofRequest."+parentBlobDataRollingHashKey)
 		if err != nil {
 			return nil, err
 		}
-		boundaryPrev = &h
+		parentBlob = &h
 	}
 
 	conflations := make([]ConflationWitness, len(conflationsRaw))
@@ -187,14 +177,14 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 	}
 
 	return &RollupRequest{
-		ProgramVk:                   guestProgramID,
-		ChainID:                     chainID,
-		Conflations:                 conflations,
-		Chunks:                      chunks,
-		ParentDataRollingHash:       parentDataRollingHash,
-		ParentDataTailTakeBytes:     parentDataTailTakeBytes,
-		BoundaryPrevDataRollingHash: boundaryPrev,
-		L2ExecutionProofs:           proofs,
+		ProgramVk:                          guestProgramID,
+		ChainID:                            chainID,
+		Conflations:                        conflations,
+		Chunks:                             chunks,
+		ParentDataRollingHash:              parentDataRollingHash,
+		ParentSharedBlobCarryOverTailBytes: parentSharedBlobCarryOverTailBytes,
+		ParentBlobDataRollingHash:          parentBlob,
+		L2ExecutionProofs:                  proofs,
 	}, nil
 }
 

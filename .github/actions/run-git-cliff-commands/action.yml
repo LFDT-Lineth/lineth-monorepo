@@ -6,7 +6,11 @@ inputs:
     description: "Component name — used to derive tag pattern (e.g. coordinator, postman)"
     required: true
   folder-name:
-    description: "Folder name of the component which hosts CHANGELOG.md (e.g. linea-besu's home folder is linea-besu/package)"
+    description: >
+      Folder hosting the component's CHANGELOG.md (e.g. linea-besu's home folder is
+      linea-besu/package). Optional — defaults to component-name's component_folder
+      entry in scripts/components.sh (the single source of truth); pass only to
+      override, e.g. riscv-guests/<guest_dir>.
     required: false
   include-path:
     description: |

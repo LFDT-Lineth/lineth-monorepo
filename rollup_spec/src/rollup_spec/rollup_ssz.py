@@ -10,16 +10,16 @@ sibling `l2_execution_ssz.py`, mirroring the proof pipeline itself.
 Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
-  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
-  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
+  - `ROLLUP_INPUT_SCHEMA_ID`  (0x0004) — rollup guest input
+  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x0005) — rollup guest output
 
 The guest output is `keccak256(schema_id || SSZ(public_inputs)) || schema_id
 || SSZ(public_inputs)`. The prover attaches the proof and range metadata;
 decoding the guest output returns the committed public-input tuple.
 
-Optional modelling: `RollupProofPrivateInput.boundary_prev_data_rolling_hash`
+Optional modelling: `RollupProofPrivateInput.parent_blob_data_rolling_hash`
 is the one Optional field in this wire format (required only for a mid-chunk
-start, `parent_data_tail_take_bytes > 0`). It is modelled as `List[Bytes32, 1]` — an
+start, `parent_shared_blob_carry_over_tail_bytes > 0`). It is modelled as `List[Bytes32, 1]` — an
 SSZ list capped at length 1 — exactly as `stateless_input.py` models its
 optional fork-activation values. Absent is the empty list; present is a
 single-element list. This keeps every field a plain SSZ list/container type
@@ -61,8 +61,8 @@ from .rollup import (
 from .stateless_input import InvalidSsz
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_INPUT_SCHEMA_ID = 0x1001
-ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
+ROLLUP_INPUT_SCHEMA_ID = 0x0004
+ROLLUP_OUTPUT_SCHEMA_ID = 0x0005
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_CONFLATIONS_PER_ROLLUP = 2**10             # conflations one rollup proof recursively verifies
@@ -108,8 +108,8 @@ class SszRollupPublicInput(Container):
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
-    parent_data_tail_take_bytes: uint64
-    final_data_tail_discard_bytes: uint64
+    parent_shared_blob_carry_over_tail_bytes: uint64
+    final_shared_blob_carry_over_tail_bytes: uint64
     l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_ROLLUP]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
     program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
@@ -120,14 +120,14 @@ class SszRollupPublicInput(Container):
 class SszRollupProofPrivateInput(Container):
     # Field order matches `rollup.py::RollupProofPrivateInput`.
     parent_data_rolling_hash: SszBytes32
-    parent_data_tail_take_bytes: uint64
+    parent_shared_blob_carry_over_tail_bytes: uint64
     chain_id: uint64
     conflations: List[SszConflationWitness, MAX_CONFLATIONS_PER_ROLLUP]
     chunks: List[SszChunkWitness, MAX_CHUNKS_PER_ROLLUP]
     l2_execution_proofs: List[SszVerifiableL2ExecutionProof, MAX_L2_EXECUTION_PROOFS_PER_ROLLUP]
     # Optional[Hash32]: empty list means absent, single-element list means
     # present (see module docstring).
-    boundary_prev_data_rolling_hash: List[SszBytes32, 1]
+    parent_blob_data_rolling_hash: List[SszBytes32, 1]
 
 
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
@@ -156,8 +156,8 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
         end_data_rolling_hash=bytes(pi.end_data_rolling_hash),
         parent_block_hash=bytes(pi.parent_block_hash),
         end_block_hash=bytes(pi.end_block_hash),
-        parent_data_tail_take_bytes=int(pi.parent_data_tail_take_bytes),
-        final_data_tail_discard_bytes=int(pi.final_data_tail_discard_bytes),
+        parent_shared_blob_carry_over_tail_bytes=int(pi.parent_shared_blob_carry_over_tail_bytes),
+        final_shared_blob_carry_over_tail_bytes=int(pi.final_shared_blob_carry_over_tail_bytes),
         l2_l1_messages=[bytes(h) for h in pi.l2_l1_messages],
         filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         program_vks=[bytes(v) for v in pi.program_vks],
@@ -167,10 +167,10 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
 
 
 def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofPrivateInput:
-    boundary = private_input.boundary_prev_data_rolling_hash
+    parent_blob = private_input.parent_blob_data_rolling_hash
     return SszRollupProofPrivateInput(
         parent_data_rolling_hash=bytes(private_input.parent_data_rolling_hash),
-        parent_data_tail_take_bytes=int(private_input.parent_data_tail_take_bytes),
+        parent_shared_blob_carry_over_tail_bytes=int(private_input.parent_shared_blob_carry_over_tail_bytes),
         chain_id=int(private_input.chain_id),
         conflations=[_ssz_conflation_witness(c) for c in private_input.conflations],
         chunks=[
@@ -187,7 +187,7 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
         l2_execution_proofs=[
             _ssz_verifiable_l2_execution_proof(p) for p in private_input.l2_execution_proofs
         ],
-        boundary_prev_data_rolling_hash=[bytes(boundary)] if boundary is not None else [],
+        parent_blob_data_rolling_hash=[bytes(parent_blob)] if parent_blob is not None else [],
     )
 
 
@@ -217,8 +217,8 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
         end_data_rolling_hash=Hash32(bytes(view.end_data_rolling_hash)),
         parent_block_hash=Hash32(bytes(view.parent_block_hash)),
         end_block_hash=Hash32(bytes(view.end_block_hash)),
-        parent_data_tail_take_bytes=int(view.parent_data_tail_take_bytes),
-        final_data_tail_discard_bytes=int(view.final_data_tail_discard_bytes),
+        parent_shared_blob_carry_over_tail_bytes=int(view.parent_shared_blob_carry_over_tail_bytes),
+        final_shared_blob_carry_over_tail_bytes=int(view.final_shared_blob_carry_over_tail_bytes),
         l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         program_vks=[Hash32(bytes(v)) for v in view.program_vks],
@@ -228,13 +228,13 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
 
 
 def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
-    boundary_list = view.boundary_prev_data_rolling_hash
-    boundary: Optional[Hash32] = (
-        Hash32(bytes(boundary_list[0])) if len(boundary_list) == 1 else None
+    parent_blob_list = view.parent_blob_data_rolling_hash
+    parent_blob: Optional[Hash32] = (
+        Hash32(bytes(parent_blob_list[0])) if len(parent_blob_list) == 1 else None
     )
     return RollupProofPrivateInput(
         parent_data_rolling_hash=Hash32(bytes(view.parent_data_rolling_hash)),
-        parent_data_tail_take_bytes=int(view.parent_data_tail_take_bytes),
+        parent_shared_blob_carry_over_tail_bytes=int(view.parent_shared_blob_carry_over_tail_bytes),
         chain_id=U64(int(view.chain_id)),
         conflations=[_conflation_witness_from_view(c) for c in view.conflations],
         chunks=[
@@ -251,7 +251,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
         l2_execution_proofs=[
             _verifiable_l2_execution_proof_from_view(p) for p in view.l2_execution_proofs
         ],
-        boundary_prev_data_rolling_hash=boundary,
+        parent_blob_data_rolling_hash=parent_blob,
     )
 
 
@@ -259,7 +259,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
 
 
 def encode_rollup_input(private_input: RollupProofPrivateInput) -> bytes:
-    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1001 schema id)."""
+    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x0004 schema id)."""
     return _frame(ROLLUP_INPUT_SCHEMA_ID, _ssz_rollup_input(private_input).encode_bytes())
 
 
@@ -281,7 +281,7 @@ def hash_rollup_public_inputs(pi: RollupPublicInput) -> Hash32:
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
+    Encode the rollup guest's own output into framed SSZ bytes (0x0005 schema
     id). `proof.proof` is deliberately dropped — it is a prover-attached
     placeholder in `RollupProof`, never part of the guest-emitted bytes.
     """

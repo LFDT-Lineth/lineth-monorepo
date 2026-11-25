@@ -9,10 +9,10 @@ from .l2_execution import ZERO_HASH
 from .rollup import DataRollingHashWitness
 
 
-def _encode_tail_count(tail_count: int) -> bytes:
+def _encode_carry_over_tail_bytes(carry_over_tail_bytes: int) -> bytes:
     """32-byte big-endian encoding of a blob tail byte count, matching how the
     L1 contract ABI-packs a `uint256` into a keccak256 preimage."""
-    return tail_count.to_bytes(32, "big")
+    return carry_over_tail_bytes.to_bytes(32, "big")
 
 
 @dataclass
@@ -21,12 +21,11 @@ class PlonkVerifier:
     Model of the on-chain `IPlonkVerifier` interface (see
     `contracts/src/verifiers/interfaces/IPlonkVerifier.sol`).
 
-    The chain-configuration preimage (`chainId`, `baseFee`, `coinbase`,
-    `l2MessageServiceAddress`) is passed to the verifier at deploy time as
-    a `ChainConfigurationParameter[]` array of named bytes32 values (see
-    `contracts/deploy/01_deploy_PlonkVerifier.ts`); the constructor hashes
-    those values and stores ONLY the digest in `bytes32 immutable
-    CHAIN_CONFIGURATION`, then emits the full preimage in the
+    The chain-configuration preimage (the `ChainConfig.hash` words, §2.1)
+    is passed to the verifier at deploy time as a
+    `ChainConfigurationParameter[]` array of named bytes32 values; the
+    constructor hashes those values and stores ONLY the digest in
+    `bytes32 immutable CHAIN_CONFIGURATION`, then emits the full preimage in the
     `ChainConfigurationSet` event. The L1 `LinethRollupBase` reads the
     digest at finalization time via `getChainConfiguration()`; changing
     the chain configuration requires deploying a new verifier and pointing
@@ -51,10 +50,10 @@ class LinethRollupState:
     field below).
 
     `current_finalized_position_commitment` is the enforced-boundary variant
-    (§3.6, §8 Q2): `keccak256(endDataRollingHash || encode_tail_count(finalDataTailDiscardBytes))`, sealed
+    (§3.6, §8 Q2): `keccak256(endDataRollingHash || _encode_carry_over_tail_bytes(finalSharedBlobCarryOverTailBytes))`, sealed
     into the same slot that used to hold a plain shnarf — zero additional
-    storage. The next finalization supplies the parent `(data_rolling_hash, tail_count)` pair
-    as calldata (`finalize_rollup`'s `parent_data_rolling_hash`/`parent_data_tail_take_bytes` params); the
+    storage. The next finalization supplies the parent `(data_rolling_hash, carry_over_tail_bytes)` pair
+    as calldata (`finalize_rollup`'s `parent_data_rolling_hash`/`parent_shared_blob_carry_over_tail_bytes` params); the
     contract verifies the preimage against this commitment before checking
     exact continuity.
     """
@@ -96,8 +95,8 @@ class FinalizationPublicInput:
     end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
-    parent_data_tail_take_bytes: int
-    final_data_tail_discard_bytes: int
+    parent_shared_blob_carry_over_tail_bytes: int
+    final_shared_blob_carry_over_tail_bytes: int
     l2_l1_tree_depth: int
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
@@ -146,10 +145,10 @@ def finalize_rollup(
     state: LinethRollupState,
     submission: FinalizationSubmission,
     parent_data_rolling_hash: Hash32,
-    parent_data_tail_take_bytes: int,
+    parent_shared_blob_carry_over_tail_bytes: int,
 ) -> bytes:
     """
-    `parent_data_rolling_hash` / `parent_data_tail_take_bytes` are the previously-finalized end boundary,
+    `parent_data_rolling_hash` / `parent_shared_blob_carry_over_tail_bytes` are the previously-finalized end boundary,
     supplied as calldata so the contract can open the stored position
     commitment (§3.6, enforced variant) — the caller reads them from the
     prior finalization's event/return value rather than the contract storing
@@ -169,12 +168,12 @@ def finalize_rollup(
         ):
             raise Exception("invalid finalized messaging block offset")
         previous_messaging_offset = offset
-    if keccak256(parent_data_rolling_hash + _encode_tail_count(parent_data_tail_take_bytes)) != state.current_finalized_position_commitment:
-        raise Exception("parentDataRollingHash/parentDataTailTakeBytes do not match the finalized position commitment")
+    if keccak256(parent_data_rolling_hash + _encode_carry_over_tail_bytes(parent_shared_blob_carry_over_tail_bytes)) != state.current_finalized_position_commitment:
+        raise Exception("parentDataRollingHash/parentSharedBlobCarryOverTailBytes do not match the finalized position commitment")
     if pi.parent_data_rolling_hash != parent_data_rolling_hash:
         raise Exception("parentDataRollingHash does not match the finalized position")
-    if pi.parent_data_tail_take_bytes != parent_data_tail_take_bytes:
-        raise Exception("parentDataTailTakeBytes does not match the finalized position")
+    if pi.parent_shared_blob_carry_over_tail_bytes != parent_shared_blob_carry_over_tail_bytes:
+        raise Exception("parentSharedBlobCarryOverTailBytes does not match the finalized position")
     if pi.end_data_rolling_hash not in state.anchored_data_rolling_hashes:
         raise Exception("endDataRollingHash was not anchored by a chunk submission")
     if pi.parent_block_hash != state.current_finalized_last_block_hash:
@@ -190,9 +189,9 @@ def finalize_rollup(
             raise Exception("L1-to-L2 rolling hash does not match L1 storage")
     if pi.dynamic_chain_config_hash != state.verifier.get_chain_configuration():
         # The verifier holds the chain-configuration hash as an immutable
-        # bytes32 set at its deploy time; the full preimage (chainId,
-        # baseFee, coinbase, l2MessageServiceAddress) is auditable via the
-        # `ChainConfigurationSet` event the verifier emitted at deploy.
+        # bytes32 set at its deploy time; the full preimage (§2.1) is
+        # auditable via the `ChainConfigurationSet` event the verifier
+        # emitted at deploy.
         raise Exception("dynamic chain config hash mismatch")
     if pi.parent_ftx_rolling_hash != state.current_finalized_ftx_rolling_hash:
         raise Exception("FTX rolling hash continuity mismatch")
@@ -221,7 +220,7 @@ def finalize_rollup(
             raise Exception("program ID is not approved")
 
     state.current_finalized_position_commitment = keccak256(
-        pi.end_data_rolling_hash + _encode_tail_count(pi.final_data_tail_discard_bytes)
+        pi.end_data_rolling_hash + _encode_carry_over_tail_bytes(pi.final_shared_blob_carry_over_tail_bytes)
     )
     state.current_finalized_last_block_hash = pi.end_block_hash
     state.current_l2_block_number = pi.end_block_number

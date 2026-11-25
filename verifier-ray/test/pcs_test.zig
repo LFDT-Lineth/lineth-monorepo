@@ -1,6 +1,5 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
-const fixtures = @import("test_pcs_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
@@ -11,25 +10,10 @@ const pcs = verifier_ray.query.pcs;
 const fri = verifier_ray.query.fri;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 
-// Test vectors generated from prover-ray's real PCS.Commit/AddOpening/
-// NewProverState/Open/Verify pipeline, called through prover-ray's exported
-// surface only (see testdata/generate/main.go's PCS section): the claimed
-// values are computed independently (not via the unexported
-// pcs.shiftedPoint), and every honest case is self-checked against
-// prover-ray's own exported pcs.Verify before being emitted here. Regenerate
-// via `make generate-testdata`.
-
-fn toDigest(o: [8]u32) poseidon2.Digest {
-    var out: poseidon2.Digest = undefined;
-    for (&out, o) |*dst, v| dst.* = field.Element.init(v);
-    return out;
-}
-
-fn toDigests(allocator: std.mem.Allocator, os: []const [8]u32) ![]poseidon2.Digest {
-    const out = try allocator.alloc(poseidon2.Digest, os.len);
-    for (out, os) |*dst, o| dst.* = toDigest(o);
-    return out;
-}
+// Fixture-free PCS tests: hand-built systems, layouts and manifests exercising
+// the reconstruction, challenge-derivation, claim-routing and rejection paths
+// directly. End-to-end PCS verification runs through verify.zig
+// (verifier_test.zig).
 
 fn toExt(e: [6]u32) ext.Ext {
     return .{
@@ -39,159 +23,95 @@ fn toExt(e: [6]u32) ext.Ext {
     };
 }
 
-fn toExts(allocator: std.mem.Allocator, es: []const [6]u32) ![]ext.Ext {
-    const out = try allocator.alloc(ext.Ext, es.len);
-    for (out, es) |*dst, e| dst.* = toExt(e);
-    return out;
+fn withMerkleCapHeight(comptime system: pcs.System, comptime height: u8) pcs.System {
+    var s = system;
+    s.envelope_params.merkle_cap_height = height;
+    return s;
 }
 
-fn toExtsJagged(allocator: std.mem.Allocator, rows: []const []const [6]u32) ![]const []const ext.Ext {
-    const out = try allocator.alloc([]const ext.Ext, rows.len);
-    for (out, rows) |*dst, row| dst.* = try toExts(allocator, row);
-    return out;
+test "minFoldedTopSize raises the top only when the envelope can fold" {
+    const foldable = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 0));
+    try std.testing.expectEqual(@as(u8, 1), pcs.minFoldedTopSize(foldable, 1));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(foldable, 2));
+
+    const final_one = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 0));
+    try std.testing.expectEqual(@as(u8, 2), pcs.minFoldedTopSize(final_one, 1));
+
+    // An envelope with no fold at all cannot be raised (see the backstop).
+    const no_fold = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1, .merkle_cap_height = 0 };
+    try std.testing.expectEqual(@as(u8, 0), pcs.minFoldedTopSize(no_fold, 0));
 }
 
-fn toRowOpening(allocator: std.mem.Allocator, r: fixtures.RowOpeningData) !merkle.RowOpening {
-    const base = try allocator.alloc(field.Element, r.base.len);
-    for (base, r.base) |*dst, v| dst.* = field.Element.init(v);
-    return .{ .base = base, .ext = try toExts(allocator, r.ext) };
-}
-
-fn toRowPair(allocator: std.mem.Allocator, p: fixtures.RowPairData) !merkle.RowPair {
-    return .{ try toRowOpening(allocator, p[0]), try toRowOpening(allocator, p[1]) };
-}
-
-fn toInputTreeOpening(allocator: std.mem.Allocator, o: fixtures.InputTreeOpeningData) !merkle.InputTreeOpening {
-    const leaves = try allocator.alloc(?merkle.RowPair, o.leaves.len);
-    for (leaves, o.leaves) |*dst, l| dst.* = if (l) |v| try toRowPair(allocator, v) else null;
-    return .{ .siblings = try toDigests(allocator, o.siblings), .leaves = leaves };
-}
-
-fn toInputQueries(allocator: std.mem.Allocator, qs: []const []const fixtures.InputTreeOpeningData) ![]const []const merkle.InputTreeOpening {
-    const out = try allocator.alloc([]const merkle.InputTreeOpening, qs.len);
-    for (out, qs) |*dst, q| {
-        const trees = try allocator.alloc(merkle.InputTreeOpening, q.len);
-        for (trees, q) |*t, jo| t.* = try toInputTreeOpening(allocator, jo);
-        dst.* = trees;
-    }
-    return out;
-}
-
-fn toInputCaps(allocator: std.mem.Allocator, caps: []const fixtures.InputCapData) ![]const pcs.InputCap {
-    const out = try allocator.alloc(pcs.InputCap, caps.len);
-    for (out, caps) |*dst, cap| {
-        const tables = try allocator.alloc(pcs.InputCapTable, cap.tables.len);
-        for (tables, cap.tables) |*table_dst, table| {
-            const rows = try allocator.alloc(merkle.RowOpening, table.rows.len);
-            for (rows, table.rows) |*row_dst, row| row_dst.* = try toRowOpening(allocator, row);
-            table_dst.* = .{ .size_log2 = table.size_log2, .rows = rows };
-        }
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
-    }
-    return out;
-}
-
-fn toMerkleCaps(allocator: std.mem.Allocator, caps: []const fixtures.MerkleCapData) ![]const merkle.MerkleCap {
-    const out = try allocator.alloc(merkle.MerkleCap, caps.len);
-    for (out, caps) |*dst, cap| {
-        const aux = try allocator.alloc(?poseidon2.Digest, cap.aux.len);
-        for (aux, cap.aux) |*dst_aux, value| dst_aux.* = if (value) |v| toDigest(v) else null;
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .aux = aux };
-    }
-    return out;
-}
-
-fn toBranch(allocator: std.mem.Allocator, b: fixtures.BranchData) !merkle.Branch {
-    return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
-}
-
-fn toRunningQueries(allocator: std.mem.Allocator, qs: []const []const fixtures.BranchData) ![]const []const merkle.Branch {
-    const out = try allocator.alloc([]const merkle.Branch, qs.len);
-    for (out, qs) |*dst, q| {
-        const branches = try allocator.alloc(merkle.Branch, q.len);
-        for (branches, q) |*b, jb| b.* = try toBranch(allocator, jb);
-        dst.* = branches;
-    }
-    return out;
-}
-
-fn mapPcsError(name: []const u8) pcs.Error {
-    if (std.mem.eql(u8, name, "BoundaryAuxNotConstant")) return error.BoundaryAuxNotConstant;
-    if (std.mem.eql(u8, name, "BoundaryFinalSelfMismatch")) return error.BoundaryFinalSelfMismatch;
-    if (std.mem.eql(u8, name, "BoundaryFinalSiblingMismatch")) return error.BoundaryFinalSiblingMismatch;
-    if (std.mem.eql(u8, name, "ClaimPointOnDomain")) return error.ClaimPointOnDomain;
-    if (std.mem.eql(u8, name, "ClaimPointOnQueryPoint")) return error.ClaimPointOnQueryPoint;
-    if (std.mem.eql(u8, name, "MerkleProofInvalid")) return error.MerkleProofInvalid;
-    if (std.mem.eql(u8, name, "RowShapeMismatch")) return error.RowShapeMismatch;
-    if (std.mem.eql(u8, name, "ConjugateRowShapeMismatch")) return error.ConjugateRowShapeMismatch;
-    if (std.mem.eql(u8, name, "FoldMismatch")) return error.FoldMismatch;
-    if (std.mem.eql(u8, name, "FinalPolyMismatch")) return error.FinalPolyMismatch;
-    std.debug.panic("pcs_test: unrecognized expected error name '{s}'", .{name});
-}
-
-// system is a separate comptime parameter (not read off a plain-parameter
-// `case`) because pcs.verify requires a comptime System: the enclosing
-// `inline for` makes `case.system` comptime-known at the call site, but a
-// regular function parameter would lose that. Mirrors vanishing_test.zig's
-// own pattern of calling verify() directly against a comptime-extracted
-// `system`/`spec` rather than through a plain-parameter helper.
-fn toPCSVerifyInput(allocator: std.mem.Allocator, case: fixtures.PcsCase) !pcs.VerifyInput {
-    return .{
-        .roots = try toDigests(allocator, case.roots),
-        .entry_claims = try toExtsJagged(allocator, case.entry_claims),
-        .zeta = toExt(case.zeta),
-        .fold_alphas = try toExts(allocator, case.fold_alphas),
-        .query_positions = try allocator.dupe(usize, case.query_positions),
+// Backstop for an envelope that cannot fold (log_plaintext_size ==
+// log_final_poly_size): there is no fold challenge, so only one column can be
+// checked and a schedule over more than one is rejected up front, as
+// prover-ray's checkFoldedSchedule does.
+test "pcs rejects several columns opened with no fold" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        },
+        .all_shifts = &[_]i32{ 0, 0 },
+        .num_batches = 1,
+        .max_entries = 2,
+        .max_size_log2 = 0,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{ &claim, &claim };
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ext.Ext.zero()};
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = ext.Ext.one(),
+        .fold_alphas = &.{},
+        .query_positions = &[_]usize{0},
         .proof = .{
-            .input_queries = try toInputQueries(allocator, case.proof.input_queries),
-            .input_caps = try toInputCaps(allocator, case.proof.input_caps),
-            .fri_proof = .{
-                .round_roots = try toDigests(allocator, case.proof.fri_proof.round_roots),
-                .round_caps = try toMerkleCaps(allocator, case.proof.fri_proof.round_caps),
-                .final_poly = try toExts(allocator, case.proof.fri_proof.final_poly),
-                .running_queries = try toRunningQueries(allocator, case.proof.fri_proof.running_queries),
-            },
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
         },
     };
+    try std.testing.expectError(error.NoFoldMultipleColumns, pcs.verify(system, input));
 }
 
-fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
-    const input = try toPCSVerifyInput(allocator, case);
-
-    const result = pcs.verify(system, input);
-    if (case.expect_verify_error.len > 0) {
-        try std.testing.expectError(mapPcsError(case.expect_verify_error), result);
-        return;
-    }
-    try result;
-}
-
-test "pcs verify cases from prover-ray vectors" {
-    try std.testing.expect(fixtures.pcs_cases.len > 0);
-    inline for (fixtures.pcs_cases) |case| {
-        var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-        defer arena.deinit();
-        runPCSCase(arena.allocator(), case.system, case) catch |err| {
-            std.debug.print("pcs case '{s}' failed: {}\n", .{ case.name, err });
-            return err;
-        };
-    }
-}
-
-test "pcs rejects reordered input cap tables" {
-    const case = fixtures.pcs_cases[0];
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-
-    var input = try toPCSVerifyInput(arena.allocator(), case);
-    var caps = try arena.allocator().dupe(pcs.InputCap, input.proof.input_caps);
-    var tables = try arena.allocator().dupe(pcs.InputCapTable, caps[0].tables);
-    try std.testing.expectEqual(@as(usize, 2), tables.len);
-    std.mem.swap(pcs.InputCapTable, &tables[0], &tables[1]);
-    caps[0].tables = tables;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
+// With log_final_poly_size >= 1 the one-fold floor raises the top above a
+// column smaller than the final polynomial: a size-1 column under final_one
+// params (top 0 -> 2, num_rounds 1) would join at round 2, past the boundary.
+// prover-ray's resolve rejects that level; so must the verifier, rather than
+// read the per-round buffer out of bounds.
+test "pcs rejects a level beyond the boundary round" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
+        .columns = &.{
+            .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        },
+        .all_shifts = &[_]i32{0},
+        .num_batches = 1,
+        .max_entries = 1,
+        .max_size_log2 = 3,
+    };
+    const claim = [_]ext.Ext{ext.Ext.one()};
+    const claims = [_][]const ext.Ext{&claim};
+    const roots = [_]poseidon2.Digest{challengeDigest(3)};
+    const final_poly = [_]ext.Ext{ ext.Ext.zero(), ext.Ext.zero() };
+    const input = pcs.VerifyInput{
+        .roots = &roots,
+        .entry_claims = &claims,
+        .zeta = toExt(.{ 19, 2, 3, 5, 7, 11 }), // off every domain
+        .fold_alphas = &.{ext.Ext.one()},
+        .query_positions = &[_]usize{0},
+        .proof = .{
+            .input_queries = &.{},
+            .input_caps = &.{},
+            .fri_proof = .{ .round_roots = &.{}, .final_poly = &final_poly, .running_queries = &.{} },
+        },
+    };
+    try std.testing.expectError(error.LevelBeyondBoundaryRound, pcs.verify(system, input));
 }
 
 fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
@@ -212,95 +132,9 @@ fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
     try std.testing.expect(running_cap.aux[0] == null);
 }
 
-test "pcs rejects tampered unqueried input cap node" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
-    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
-    // The bottom-pair fold maps query positions 0..3 to frontier nodes 0/1,
-    // so node 3 is bound only through reconstruction of the committed root.
-    nodes[3][0] = nodes[3][0].add(field.Element.one());
-    caps[0].nodes = nodes;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered unqueried revealed input cap row" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
-    const tables = try allocator.dupe(pcs.InputCapTable, caps[0].tables);
-    const rows = try allocator.dupe(merkle.RowOpening, tables[1].rows);
-    const values = try allocator.dupe(ext.Ext, rows[2].ext);
-    // The size-one table has four encoded rows. Queries 0..3 consume only row
-    // pair 0/1; row 2 still contributes to the authenticated upper cap.
-    values[0].B0.a0 = values[0].B0.a0.add(field.Element.one());
-    rows[2].ext = values;
-    tables[1].rows = rows;
-    caps[0].tables = tables;
-    input.proof.input_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered unqueried running cap node" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
-    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
-    // At running round one, these query positions all authenticate to frontier
-    // node 0, leaving node 1 bound only through the cap-to-root comparison.
-    nodes[1][0] = nodes[1][0].add(field.Element.one());
-    caps[0].nodes = nodes;
-    input.proof.fri_proof.round_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
-test "pcs rejects tampered running cap auxiliary digest" {
-    const case = fixtures.pcs_cases[0];
-    try std.testing.expectEqualStrings("normal_flow", case.name);
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    var input = try toPCSVerifyInput(allocator, case);
-    try expectNormalFlowCapShape(input);
-
-    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
-    const aux = try allocator.dupe(?poseidon2.Digest, caps[0].aux);
-    aux[0] = caps[0].nodes[0];
-    caps[0].aux = aux;
-    input.proof.fri_proof.round_caps = caps;
-
-    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
-}
-
 test "routeInputRoots ignores an unused batch root" {
     const system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{},
         .num_batches = 2,
         .max_entries = 1,
@@ -314,8 +148,10 @@ test "routeInputRoots ignores an unused batch root" {
     }
     roots[1][0] = field.Element.init(1);
     const routing = try pcs.routeInputRoots(system, &recon, &roots);
-    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
+    try std.testing.expectEqual(@as(usize, 1), routing.tree_count);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
+    try std.testing.expectEqual(pcs.InputRootRouting(system).unrouted, routing.index_by_batch[1]);
+    try std.testing.expectEqual(@as(usize, 0), routing.batch_by_tree[0]);
 }
 
 // ── PCS challenge derivation ──────────────────────────────────────────────────
@@ -333,7 +169,7 @@ test "routeInputRoots ignores an unused batch root" {
 // log_plaintext_size = 2, num_queries = 3 } (numRounds = 2, one running-layer
 // root). The envelope is that same params (restrictTo is a no-op).
 const challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
+    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -364,7 +200,7 @@ fn challengeFriProof(root_seed: u32) fri.Proof {
 // roots, but prover-ray still squeezes one final alpha and uses it as the
 // top-level alpha_DEEP.
 const d1_challenge_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
@@ -442,7 +278,7 @@ test "deriveChallenges retains deep alpha when there are no fold rounds" {
 // STATIC base column at size 2^2. Batch 1 owns one STATIC ext column at size 2^3.
 // Declaration order: [dyn(b0), static2(b0), static3ext(b1)].
 const recon_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 0 },
@@ -546,7 +382,7 @@ test "reconstruct: accepts a dynamic size below the column's declared min_size_l
 // base s2 (shift 1), static-2 base s3 (shift 0)]. Batch 1: one static-3 ext
 // column. Declaration order: d0, s1, s2, s3, e4.
 const manifest_system = pcs.System{
-    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
@@ -649,7 +485,7 @@ test "buildEntryClaims pins elided claim cells; routedClaim serves them" {
     // An alias whose shift the target never opens cannot be pinned: column 1
     // (shift 1) aliases column 0, which is opened at shift 0 only.
     const narrow_system = pcs.System{
-        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+        .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1, .merkle_cap_height = 0 },
         .columns = &.{
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
             .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
@@ -744,30 +580,31 @@ test "routeInputRoots follows input-opening order as dynamic sizes change" {
 
     const smaller = try pcs.reconstruct(recon_system, &[_]usize{4});
     const smaller_routing = try pcs.routeInputRoots(recon_system, &smaller, &roots);
-    try std.testing.expectEqual(@as(usize, 2), smaller_routing.distinct_count);
-    try std.testing.expectEqualDeep(roots[1], smaller_routing.distinctRoots()[0]);
-    try std.testing.expectEqualDeep(roots[0], smaller_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 2), smaller_routing.tree_count);
+    try std.testing.expectEqualDeep(roots[1], smaller_routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(roots[0], smaller_routing.treeRoots()[1]);
     try std.testing.expectEqual(@as(usize, 1), smaller_routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 0), smaller_routing.index_by_batch[1]);
 
     const larger = try pcs.reconstruct(recon_system, &[_]usize{16});
     const larger_routing = try pcs.routeInputRoots(recon_system, &larger, &roots);
-    try std.testing.expectEqual(@as(usize, 2), larger_routing.distinct_count);
-    try std.testing.expectEqualDeep(roots[0], larger_routing.distinctRoots()[0]);
-    try std.testing.expectEqualDeep(roots[1], larger_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 2), larger_routing.tree_count);
+    try std.testing.expectEqualDeep(roots[0], larger_routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(roots[1], larger_routing.treeRoots()[1]);
     try std.testing.expectEqual(@as(usize, 0), larger_routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 1), larger_routing.index_by_batch[1]);
 }
 
-test "routeInputRoots deduplicates equal batch roots" {
+test "routeInputRoots gives batches with equal roots separate trees" {
     const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
     const shared = challengeDigest(300);
     const routing = try pcs.routeInputRoots(recon_system, &recon, &[_]poseidon2.Digest{ shared, shared });
 
-    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
-    try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
+    try std.testing.expectEqual(@as(usize, 2), routing.tree_count);
+    try std.testing.expectEqualDeep(shared, routing.treeRoots()[0]);
+    try std.testing.expectEqualDeep(shared, routing.treeRoots()[1]);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
-    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
+    try std.testing.expectEqual(@as(usize, 1), routing.index_by_batch[1]);
 }
 
 test "input auxiliary table includes encoded size two" {

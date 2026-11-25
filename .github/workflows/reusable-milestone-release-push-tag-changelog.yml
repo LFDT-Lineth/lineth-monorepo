@@ -53,6 +53,7 @@ permissions:
 jobs:
   update-linea-milestone-changelog:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    environment: ${{ !inputs.create_pull_request && (github.ref == 'refs/heads/main' && 'release-bot' || 'release-bot-approval') || '' }}
     outputs:
       changelog: ${{ steps.prepend-milestone-header.outputs.changelog }}
     env:
@@ -85,7 +86,8 @@ jobs:
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Outside main, run the approved commit rather than whatever the branch tip is now.
+          ref: ${{ github.ref == 'refs/heads/main' && github.ref_name || github.sha }}
           fetch-depth: 0
           fetch-tags: true
           submodules: false
@@ -99,7 +101,7 @@ jobs:
           git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: git-cliff
 
@@ -269,7 +271,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
         env:
           RELEASE_VERSION: ${{ inputs.release_version }}
         with:

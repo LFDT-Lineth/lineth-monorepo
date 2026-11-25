@@ -14,6 +14,11 @@ Two schema ids are defined here:
   - `L2_EXECUTION_INPUT_SCHEMA_ID`  (0x0002) — extended l2-execution guest input
   - `L2_EXECUTION_OUTPUT_SCHEMA_ID` (0x0003) — extended l2-execution guest output
 
+Schema ids number the guest messages in sequence: 0x0001 is the vanilla
+stateless input, 0x0002/0x0003 the l2-execution guest's input and output,
+0x0004/0x0005 the rollup guest's, 0x0006/0x0007 the rollup-aggregation
+guest's. A new guest message takes the next free number.
+
 The guest output wire is `keccak256(schema_id || SSZ(public_inputs)) ||
 schema_id || SSZ(public_inputs)`. The decoder validates the hash and returns the
 public-input tuple. `start_block_number` remains proof metadata outside the

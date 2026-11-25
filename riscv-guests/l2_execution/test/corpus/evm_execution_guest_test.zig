@@ -11,7 +11,7 @@ const input = @import("zesu_input");
 // Proves the log-preserving seam (guest.execution.executeStatelessInputWithLogs, src/execution.zig)
 // computes the SAME pre/post/receipts roots as zesu's vanilla executor.executeStatelessInput on the
 // same fixture — i.e. adding the log-preserving path does not change validation outcomes. The
-// committed fixture is an empty block, so there are no logs to preserve; this only proves parity of
+// embedded fixture is an empty block, so there are no logs to preserve; this only proves parity of
 // the roots and that the logs slice is (trivially) empty.
 test "executeStatelessInputWithLogs matches vanilla executeStatelessInput's roots" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);

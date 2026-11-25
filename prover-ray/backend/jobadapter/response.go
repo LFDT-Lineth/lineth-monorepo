@@ -5,12 +5,11 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 )
 
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
 // It mirrors proof_io_v1.py::encode_response structurally. The adapter maps
-// proof bytes and publicInputs from backend.Result. Those values are
+// proof bytes, publicInputs and programVk from backend.Result. Those values are
 // provisional until proof serialization and public-input extraction are wired.
 type executionResponse struct {
 	ProverVersion    string                `json:"proverVersion"`
@@ -49,30 +48,13 @@ type failureResponseBody struct {
 	Error       string      `json:"error,omitempty"`
 }
 
-func newExecutionResponse(
-	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
-) executionResponse {
+func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) executionResponse {
 	return executionResponse{
 		ProverVersion:    proverVersion,
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     publicInputs(result.PublicInputs),
-		ProgramVk:        hexBytes(programVk),
-	}
-}
-
-// newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-zkvm): the public inputs, a placeholder marker proof (dev-zkvm
-// produces no real proof), and the echoed programVk.
-func newExecutionResponseFromNative(
-	out nativerunner.Output, proverVersion string, programVk []byte,
-) executionResponse {
-	return executionResponse{
-		ProverVersion:    proverVersion,
-		ProofHex:         hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
-		StartBlockNumber: out.StartBlockNumber,
-		PublicInputs:     publicInputs(out.PublicInputs),
-		ProgramVk:        hexBytes(programVk),
+		ProgramVk:        hexHash(result.ProgramVK),
 	}
 }
 

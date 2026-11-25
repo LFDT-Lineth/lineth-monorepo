@@ -7,6 +7,7 @@ import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.RollupAggregationProofRequestV1
 import linea.clients.RollupProofRequestV1
+import linea.da.DaConstants
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
@@ -142,10 +143,10 @@ object RiscvProverClientTestFixtures {
   fun blobChunkWitness(fill: Byte = 0x20): ChunkWitness = ChunkWitness(
     chunkHash = ByteArray(32) { fill },
     isCalldata = false,
-    blobBytes = ByteArray(ChunkWitness.BLOB_BYTES_LENGTH) { fill },
+    blobBytes = ByteArray(DaConstants.BLOB_BYTES) { fill },
     calldataBytes = ByteArray(0),
-    kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 1).toByte() },
-    kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH) { (fill + 2).toByte() },
+    kzgCommitment = ByteArray(DaConstants.KZG_POINT_BYTES) { (fill + 1).toByte() },
+    kzgProof = ByteArray(DaConstants.KZG_POINT_BYTES) { (fill + 2).toByte() },
   )
 
   fun calldataChunkWitness(fill: Byte = 0x30): ChunkWitness = ChunkWitness(
@@ -161,14 +162,14 @@ object RiscvProverClientTestFixtures {
     conflations: List<ConflationWitness> = emptyList(),
     parentDataRollingHash: ByteArray = ByteArray(32) { 0x19 },
     chunks: List<ChunkWitness> = listOf(blobChunkWitness()),
-    parentDataTailTakeBytes: Int = 0,
+    parentSharedBlobCarryOverTailBytes: Int = 0,
     l2Executions: List<BlockIntervalProofIndex> = listOf(blockIntervalProofIndex(1000501UL, 1000520UL)),
   ): RollupProofRequestV1 = RollupProofRequestV1(
     conflations = conflations,
     l2Executions = l2Executions,
     chunks = chunks,
     parentDataRollingHash = parentDataRollingHash,
-    parentDataTailTakeBytes = parentDataTailTakeBytes,
+    parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
   )
 
   fun rollupAggregationProofRequestV1(
@@ -224,8 +225,8 @@ object RiscvProverClientTestFixtures {
     endDataRollingHash = "0x1a",
     parentBlockHash = "0x1b",
     endBlockHash = "0x1c",
-    parentDataTailTakeBytes = 0,
-    finalDataTailDiscardBytes = 1000,
+    parentSharedBlobCarryOverTailBytes = 0,
+    finalSharedBlobCarryOverTailBytes = 1000,
     l2L1Messages = listOf("0xaa"),
     filteredAddresses = emptyList(),
     programVks = listOf(L2_EXECUTION_PROGRAM_ID),
@@ -260,8 +261,8 @@ object RiscvProverClientTestFixtures {
     endDataRollingHash = "0x1a",
     parentBlockHash = "0x1b",
     endBlockHash = "0x1c",
-    parentDataTailTakeBytes = 0,
-    finalDataTailDiscardBytes = 1000,
+    parentSharedBlobCarryOverTailBytes = 0,
+    finalSharedBlobCarryOverTailBytes = 1000,
     l2L1Roots = listOf("0xaa"),
     l2L1TreeDepth = 5,
     filteredAddresses = listOf("0xbb"),

@@ -8,13 +8,15 @@ const (
 	// ProverModeDevMock runs no guest and returns a placeholder response. Needs
 	// no guest ELF or circuit bin.
 	ProverModeDevMock ProverMode = "dev-mock"
-	// ProverModeDevZkVM runs the guest under ZkC Execute for its real public
-	// inputs (via the native runner) and cross-checks the guest's commitment
-	// against that runner.
+	// ProverModeDevZkVM runs the guest under ZkC Execute, without a trace, and
+	// returns the public inputs from the guest output, with a devmode proof of
+	// the output hash in place of a real one. The guest output must equal the
+	// native runner's.
 	ProverModeDevZkVM ProverMode = "dev-zkvm"
-	// ProverModePartial traces and checks the trace against the constraints, no
-	// proof; memory-gated.
-	ProverModePartial ProverMode = "partial"
+	// ProverModeDevPartial runs the guest, checks its trace against every
+	// constraint and returns the public inputs from the guest output, with a
+	// devmode proof in place of a real one.
+	ProverModeDevPartial ProverMode = "dev-partial"
 	// ProverModeFull is the real STARK-proving path; blocked.
 	ProverModeFull ProverMode = "full"
 )
@@ -22,7 +24,7 @@ const (
 // Valid reports whether m is a known mode.
 func (m ProverMode) Valid() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevZkVM, ProverModePartial, ProverModeFull:
+	case ProverModeDevMock, ProverModeDevZkVM, ProverModeDevPartial, ProverModeFull:
 		return true
 	default:
 		return false
@@ -32,7 +34,7 @@ func (m ProverMode) Valid() bool {
 // IsDev reports whether m is a non-production mode.
 func (m ProverMode) IsDev() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevZkVM:
+	case ProverModeDevMock, ProverModeDevZkVM, ProverModeDevPartial:
 		return true
 	default:
 		return false

@@ -19,17 +19,18 @@ const (
 	SharedRandomnessContributionPI                     = messagebus.SharedRandomnessSeedContributionPI
 	GuestPublicOutputsPI           wiop.PublicInputTag = "GuestPublicOutputs"
 
-	// NumGuestPublicOutputs = 32 because only the first 32 bytes of the guest
-	// output are bound as public inputs, one byte per row.
+	// NumGuestPublicOutputs = 32 because the guest output is exactly 32 bytes:
+	// the commitment the guest writes to its public output, one byte per row.
+	// Anything else the guest emits goes to its private log, not to its output.
 	NumGuestPublicOutputs = 32
 
 	// NumSharedRandomness is the number of shared randomness cells. 8 because
 	// this is the state of a poseidon2 hasher.
 	NumSharedRandomness = messagebus.NumSharedRandomness
 
-	// NumSharedRandomnessContributions is not decided yet and is to be taken from
-	// another place. The negative value is an unset sentinel: it is deliberately
-	// unusable as a count or loop bound until it is given its real value.
+	// NumSharedRandomnessContributions is the number of cells of a shard's
+	// contribution to the shared randomness: the multiset-hash accumulator the
+	// contributions of all the shards add up in.
 	NumSharedRandomnessContributions = messagebus.NumSharedRandomnessContribution
 )
 

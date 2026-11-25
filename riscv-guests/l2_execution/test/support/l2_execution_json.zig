@@ -6,12 +6,13 @@
 //! guest never produces (see `l2_execution_ssz.L2ExecutionProofOutput`'s doc comment).
 //!
 //! This is a NATIVE-only convenience: the freestanding zkVM guest always emits SSZ
-//! (`l2_execution_ssz.encodeOutput` + the proving system's `write_output`) and has no argv to
+//! (`l2_execution_proof.encodeOutput` + the proving system's `write_output`) and has no argv to
 //! carry a format flag. The SSZ/JSON runtime toggle lives entirely in the native
 //! `l2_execution_runner` host tool, which is the only caller of `encodeOutputJson`.
 
 const std = @import("std");
 const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
+const l2_execution_proof = @import("core_serde").l2_execution_proof;
 
 const hex_digits = "0123456789abcdef";
 
@@ -58,13 +59,13 @@ fn appendKeyHexList(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), 
     try out.appendSlice(alloc, "]");
 }
 
-fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), pi: l2_execution_ssz.L2ExecutionProofPublicInput) !void {
+fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8), pi: l2_execution_proof.L2ExecutionProofPublicInput) !void {
     try out.appendSlice(alloc, "\"publicInputs\":{");
     try appendKeyHex(alloc, out, "parentBlockHash", &pi.parent_block_hash, true);
     try appendKeyHex(alloc, out, "endBlockHash", &pi.end_block_hash, false);
     try appendKeyInt(alloc, out, "endBlockNumber", pi.end_block_number, false);
     try appendKeyInt(alloc, out, "endBlockTimestamp", pi.end_block_timestamp, false);
-    try appendKeyHexList(alloc, out, "l2L1Messages", [32]u8, pi.l2_l1_messages);
+    try appendKeyHexList(alloc, out, "l2L1Messages", [32]u8, pi.l2_l1_messages.items);
     try appendKeyHex(alloc, out, "endL1L2BridgeRollingHash", &pi.end_l1_l2_bridge_rolling_hash, false);
     try appendKeyInt(alloc, out, "endL1L2BridgeRollingHashMessageNumber", pi.end_l1_l2_bridge_rolling_hash_message_number, false);
     try appendKeyHex(alloc, out, "dynamicChainConfigHash", &pi.dynamic_chain_config_hash, false);
@@ -72,11 +73,11 @@ fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8)
     try appendKeyInt(alloc, out, "parentFtxNumber", pi.parent_ftx_number, false);
     try appendKeyHex(alloc, out, "endFtxRollingHash", &pi.end_ftx_rolling_hash, false);
     try appendKeyInt(alloc, out, "endProcessedFtxNumber", pi.end_processed_ftx_number, false);
-    try appendKeyHexList(alloc, out, "filteredAddresses", [20]u8, pi.filtered_addresses);
+    try appendKeyHexList(alloc, out, "filteredAddresses", [20]u8, pi.filtered_addresses.items);
     try appendKeyHex(alloc, out, "txFromsHash", &pi.tx_froms_hash, false);
     try appendKeyInt(alloc, out, "blockCount", pi.block_count, false);
     try out.appendSlice(alloc, ",\"l2MessagingBlocksOffsets\":[");
-    for (pi.l2_messaging_blocks_offsets, 0..) |o, i| {
+    for (pi.l2_messaging_blocks_offsets.items, 0..) |o, i| {
         if (i != 0) try out.appendSlice(alloc, ",");
         try out.print(alloc, "{d}", .{o});
     }

@@ -2,8 +2,8 @@
 //! Vectors cover EIP-2537, EIP-4844, and secp256k1 recovery.
 
 const std = @import("std");
-const gc = @import("l2_execution").guest_crypto;
-const std_secp = @import("l2_execution").secp256k1_std;
+const gc = @import("guest_crypto");
+const std_secp = @import("secp256k1_std");
 
 // Both providers behind `-Dsecp256k1-backend` expose the same ecrecover/secp256k1Verify surface.
 const secp256k1_backends = .{ gc, std_secp };

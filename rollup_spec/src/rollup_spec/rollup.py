@@ -16,7 +16,6 @@ from ethereum.crypto.kzg import (
 )
 from .fork import (
     AccessListTransaction,
-    BlobTransaction,
     FeeMarketTransaction,
     LegacyTransaction,
     SetCodeTransaction,
@@ -24,6 +23,7 @@ from .fork import (
     decode_transaction,
     recover_sender,
 )
+from ethereum.merkle_patricia_trie import Trie, root, trie_set
 from ethereum.state import Address
 from ethereum_rlp import rlp
 from ethereum_types.bytes import Bytes, Bytes32
@@ -113,6 +113,26 @@ def trusted_setup():
             f"-o {_TRUSTED_SETUP_PATH}` if missing."
         )
     return ckzg.load_trusted_setup(str(_TRUSTED_SETUP_PATH), 0)
+
+
+# The zstd dictionary fixed by the rollup guest program: DA frames are compressed against it and
+# decompressed with it. parents[3] is the repo root, as for the trusted setup above.
+_ZSTD_DICTIONARY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "riscv-guests" / "lineth_da" / "dictionaries" / "v2025-04-21.bin"
+)
+
+
+# The largest window a DA frame may declare: the limit of libzstd's streaming decoder.
+ZSTD_MAX_WINDOW_SIZE = 2**27 + 1
+
+
+@lru_cache(maxsize=1)
+def zstd_dictionary() -> zstd.ZstdCompressionDict:
+    """Load the zstd dictionary once on first use; cached for the process lifetime via `lru_cache`."""
+    if not _ZSTD_DICTIONARY_PATH.is_file():
+        raise FileNotFoundError(f"zstd dictionary not found at {_ZSTD_DICTIONARY_PATH}")
+    return zstd.ZstdCompressionDict(_ZSTD_DICTIONARY_PATH.read_bytes(), dict_type=zstd.DICT_TYPE_FULLDICT)
 
 
 @dataclass
@@ -256,9 +276,23 @@ def derive_canonical_payload(
 
 
 def _validate_zstd_frame(zstd_frame: bytes, canonical_payload: bytes) -> None:
-    """Check that a segment's zstd frame decompresses exactly to its canonical payload."""
+    """
+    Check that a segment's zstd frame is the one form a DA frame takes and decompresses, with the program's dictionary,
+    exactly to its canonical payload.
+
+    The header declares the content size, equal to the payload's length, and the ID of the program's dictionary; the
+    frame carries no content checksum and declares a window of at most `ZSTD_MAX_WINDOW_SIZE`.
+    """
     try:
-        decompressed = zstd.ZstdDecompressor().decompress(
+        parameters = zstd.get_frame_parameters(zstd_frame)
+        if (
+            parameters.content_size != len(canonical_payload)
+            or parameters.dict_id != zstd_dictionary().dict_id()
+            or parameters.has_checksum
+            or parameters.window_size > ZSTD_MAX_WINDOW_SIZE
+        ):
+            raise zstd.ZstdError("frame header")
+        decompressed = zstd.ZstdDecompressor(dict_data=zstd_dictionary()).decompress(
             zstd_frame, max_output_size=len(canonical_payload), allow_extra_data=False,
         )
     except zstd.ZstdError as exc:
@@ -325,22 +359,22 @@ def _parse_segment_ends(stream: bytes, canonical_payloads: Sequence[bytes]) -> L
 
 def _fold_data_rolling_hash(
     chunks: Sequence[ChunkWitness],
-    parent_data_tail_take_bytes: int,
+    parent_shared_blob_carry_over_tail_bytes: int,
     parent_data_rolling_hash: Hash32,
-    boundary_prev_data_rolling_hash: Optional[Hash32],
+    parent_blob_data_rolling_hash: Optional[Hash32],
 ) -> Hash32:
     """
     Fold the touched chunks into the dataRollingHash (§3.1). After a mid-blob start,
     parentDataRollingHash already includes the first chunk, so its preimage is opened instead.
     """
     unfolded_chunks = chunks
-    if parent_data_tail_take_bytes > 0:
+    if parent_shared_blob_carry_over_tail_bytes > 0:
         if (
-            boundary_prev_data_rolling_hash is None
-            or DataRollingHashWitness(boundary_prev_data_rolling_hash, chunks[0].chunk_hash).hash()
+            parent_blob_data_rolling_hash is None
+            or DataRollingHashWitness(parent_blob_data_rolling_hash, chunks[0].chunk_hash).hash()
             != parent_data_rolling_hash
         ):
-            raise Exception("boundaryPrevDataRollingHash does not open parentDataRollingHash")
+            raise Exception("parentBlobDataRollingHash does not open parentDataRollingHash")
         unfolded_chunks = chunks[1:]
     data_rolling_hash = parent_data_rolling_hash
     for chunk in unfolded_chunks:
@@ -352,13 +386,13 @@ def verify_da_chunks(
     chunks: Sequence[ChunkWitness],
     canonical_payloads: Sequence[bytes],
     parent_data_rolling_hash: Hash32,
-    parent_data_tail_take_bytes: int = 0,
-    boundary_prev_data_rolling_hash: Optional[Hash32] = None,
+    parent_shared_blob_carry_over_tail_bytes: int = 0,
+    parent_blob_data_rolling_hash: Optional[Hash32] = None,
 ) -> Tuple[Hash32, int]:
     """
     Bind each chunk to its anchored hash, batch-verify the blob KZG proofs, and parse one
     segment per conflation from their stream.
-    Returns `(endDataRollingHash, finalDataTailDiscardBytes)`.
+    Returns `(endDataRollingHash, finalSharedBlobCarryOverTailBytes)`.
     """
     if not chunks:
         raise Exception("rollup proof must touch at least one chunk")
@@ -369,10 +403,10 @@ def verify_da_chunks(
         if chunks[i].is_blob and chunks[i + 1].is_blob and len(payloads[i]) != BLOB_PAYLOAD_CAPACITY:
             raise Exception(f"blob chunk {i} must hold a full payload before another blob")
 
-    take = parent_data_tail_take_bytes
+    take = parent_shared_blob_carry_over_tail_bytes
     if take > 0:
         if chunks[0].is_calldata or take >= len(payloads[0]):
-            raise Exception("positive parentDataTailTakeBytes requires a first blob with a longer payload")
+            raise Exception("positive parentSharedBlobCarryOverTailBytes requires a first blob with a longer payload")
         payloads[0] = payloads[0][-take:]
 
     stream = b"".join(payloads)
@@ -389,7 +423,7 @@ def verify_da_chunks(
         chunk_start = chunk_end
 
     end_data_rolling_hash = _fold_data_rolling_hash(
-        chunks, take, parent_data_rolling_hash, boundary_prev_data_rolling_hash,
+        chunks, take, parent_data_rolling_hash, parent_blob_data_rolling_hash,
     )
     return end_data_rolling_hash, len(stream) - consumed
 
@@ -402,7 +436,7 @@ class RollupPublicInput:
     `parent_block_hash` / `end_block_hash` are execution continuity — the role
     the old 3-input shnarf's `lastBlockHash` used to play — now explicit
     public-input fields rather than folded into the DA accumulator (§3.1).
-    `parent_data_tail_take_bytes` / `final_data_tail_discard_bytes` are tail byte counts (§3.4)
+    `parent_shared_blob_carry_over_tail_bytes` / `final_shared_blob_carry_over_tail_bytes` are tail byte counts (§3.4)
     paired with `parent_data_rolling_hash` / `end_data_rolling_hash` at the proof
     boundaries. The final count is derived from parsed segments.
 
@@ -423,8 +457,8 @@ class RollupPublicInput:
     end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
-    parent_data_tail_take_bytes: int
-    final_data_tail_discard_bytes: int
+    parent_shared_blob_carry_over_tail_bytes: int
+    final_shared_blob_carry_over_tail_bytes: int
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
@@ -440,12 +474,12 @@ class RollupProofPrivateInput:
     paired 1:1 with `l2_execution_proofs`), transported across >=1 chunks
     (§3.1).
 
-    `parent_data_rolling_hash` / `parent_data_tail_take_bytes` identify this proof's parent
-    boundary (§3.4). Positive take N reads the last N bytes of the first blob's
+    `parent_data_rolling_hash` / `parent_shared_blob_carry_over_tail_bytes` identify this proof's parent
+    boundary (§3.4). A positive carry-over N reads the last N bytes of the first blob's
     actual unpacked payload. Boundary foreign bytes reside in the physical blob witness.
-    `boundary_prev_data_rolling_hash` is required only for a mid-chunk start
-    (`parent_data_tail_take_bytes > 0`) — the dataRollingHash value before the first touched chunk, used
-    to open its preimage. `end_data_rolling_hash` and `final_data_tail_discard_bytes` are not request inputs:
+    `parent_blob_data_rolling_hash` is required only for a mid-chunk start
+    (`parent_shared_blob_carry_over_tail_bytes > 0`) — the dataRollingHash value before the first touched chunk, used
+    to open its preimage. `end_data_rolling_hash` and `final_shared_blob_carry_over_tail_bytes` are not request inputs:
     the guest derives them from parsed segment boundaries.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
@@ -456,12 +490,12 @@ class RollupProofPrivateInput:
     from the l2-execution proofs it recursively verifies.
     """
     parent_data_rolling_hash: Hash32
-    parent_data_tail_take_bytes: int
+    parent_shared_blob_carry_over_tail_bytes: int
     chain_id: U64
     conflations: List[ConflationWitness]
     chunks: List[ChunkWitness]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
-    boundary_prev_data_rolling_hash: Optional[Hash32] = None
+    parent_blob_data_rolling_hash: Optional[Hash32] = None
 
 
 @dataclass
@@ -532,12 +566,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
             rollup_input.conflations, rollup_input.l2_execution_proofs,
         )
     ]
-    end_data_rolling_hash, final_data_tail_discard_bytes = verify_da_chunks(
+    end_data_rolling_hash, final_shared_blob_carry_over_tail_bytes = verify_da_chunks(
         rollup_input.chunks,
         [conflation.payload for conflation in canonical_conflations],
         rollup_input.parent_data_rolling_hash,
-        rollup_input.parent_data_tail_take_bytes,
-        rollup_input.boundary_prev_data_rolling_hash,
+        rollup_input.parent_shared_blob_carry_over_tail_bytes,
+        rollup_input.parent_blob_data_rolling_hash,
     )
     block_hashes = [h for conflation in canonical_conflations for h in conflation.block_hashes]
     parent_hashes = [h for conflation in canonical_conflations for h in conflation.parent_hashes]
@@ -638,8 +672,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
-        parent_data_tail_take_bytes=rollup_input.parent_data_tail_take_bytes,
-        final_data_tail_discard_bytes=final_data_tail_discard_bytes,
+        parent_shared_blob_carry_over_tail_bytes=rollup_input.parent_shared_blob_carry_over_tail_bytes,
+        final_shared_blob_carry_over_tail_bytes=final_shared_blob_carry_over_tail_bytes,
         program_vks=program_vks,
         block_count=rollup_end_block_number - rollup_start_block_number + 1,
         l2_messaging_blocks_offsets=messaging_offsets,
@@ -765,12 +799,6 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
             tx.to, tx.value, tx.data, tx.access_list,
         ])
-    if isinstance(tx, BlobTransaction):
-        return b"\x03" + rlp.encode([
-            tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
-            tx.to, tx.value, tx.data, tx.access_list,
-            tx.max_fee_per_blob_gas, tx.blob_versioned_hashes,
-        ])
     if isinstance(tx, SetCodeTransaction):
         return b"\x04" + rlp.encode([
             tx.nonce, tx.max_priority_fee_per_gas, tx.max_fee_per_gas, tx.gas,
@@ -779,10 +807,36 @@ def _signature_stripped_tx_bytes(tx: Transaction) -> bytes:
     raise Exception(f"unknown transaction type {type(tx).__name__}")
 
 
+def _transactions_root(transactions: Sequence[Transaction | Bytes]) -> Hash32:
+    """The root of the transactions trie of a block body: key RLP(index), value the transaction's wire form."""
+    trie = Trie(secured=False, default=None)
+    for index, tx_item in enumerate(transactions):
+        trie_set(trie, rlp.encode(Uint(index)), tx_item)
+    return root(trie)
+
+
+def _decode_block_transaction(tx_item: Transaction | Bytes) -> Transaction:
+    """
+    Decode one entry of a block's transaction list: a legacy list, or an envelope of type 1, 2 or 4,
+    the types the truncation strips.
+    """
+    if isinstance(tx_item, (bytes, bytearray)):
+        if len(tx_item) < 2 or tx_item[0] not in (1, 2, 4):
+            raise Exception("transaction is neither a legacy list nor an envelope of type 1, 2 or 4")
+        return decode_transaction(Bytes(tx_item))
+    if not isinstance(tx_item, LegacyTransaction):
+        # A legacy transaction of an Osaka block has Osaka's class; its fields are Amsterdam's.
+        return rlp.decode_to(LegacyTransaction, rlp.encode(tx_item))
+    return tx_item
+
+
 def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBlock:
     """
     Decode the canonical full block RLP and apply the §3.2 DA truncation
     rule, returning a `TruncatedEthereumBlock`.
+
+    The block's transactions are the ones its header commits to: they hash
+    to the header's `transactions_root`.
 
     Header-derived fields:
       - `timestamp` and `prev_randao` are taken from the decoded header.
@@ -792,9 +846,14 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     Per-transaction fields:
       - `transactions[i]` is the signature- and chainID-stripped canonical
         bytes (see `_signature_stripped_tx_bytes`).
-      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`.
+      - `froms[i]` is the sender recovered via `recover_sender(chain_id, tx)`,
+        for a positive `chain_id`.
     """
+    if chain_id == 0:
+        raise Exception("sender recovery requires a positive chain ID")
     block = decode_block_rlp(block_rlp)
+    if _transactions_root(block.transactions) != block.header.transactions_root:
+        raise Exception("block transactions do not match the header's transactions root")
     bh = block_hash(block.header)
 
     transactions: List[bytes] = []
@@ -802,10 +861,7 @@ def truncate_block_rlp(block_rlp: bytes, chain_id: U64) -> TruncatedEthereumBloc
     for tx_item in block.transactions:
         # `Block.transactions` holds typed (EIP-2718) txs as bytes and
         # legacy txs as decoded `LegacyTransaction` objects.
-        if isinstance(tx_item, (bytes, bytearray)):
-            decoded_tx: Transaction = decode_transaction(Bytes(tx_item))
-        else:
-            decoded_tx = tx_item
+        decoded_tx = _decode_block_transaction(tx_item)
         transactions.append(_signature_stripped_tx_bytes(decoded_tx))
         froms.append(recover_sender(chain_id, decoded_tx))
 

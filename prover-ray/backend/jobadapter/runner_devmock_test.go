@@ -30,6 +30,8 @@ func TestRunner_DevMock_AcceptsMultiBlockAndForcedTx(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, testProverVersion+"-dev-mock", resp.ProverVersion)
 	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
+	assert.Equal(t, repeatHex(0x00), resp.ProgramVk,
+		"dev-mock has no proof, so programVk should be zero, not the guest program ID")
 }
 
 // full keeps the single-block restriction.

@@ -238,11 +238,10 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 		predecBaseInput    = inputs[predecoding.InstructionBaseInput]
 		predecDecodedInput = inputs[predecoding.DecodedInput]
 		//
-		entryBytes              = entry.Bytes()
-		metadataBytes           = metadata.Bytes()
-		dataBytes               = data.Bytes()
-		predecBaseInputBytes    = predecBaseInput.Bytes()
-		predecDecodedInputBytes = predecDecodedInput.Bytes()
+		entryBytes           = entry.Bytes()
+		metadataBytes        = metadata.Bytes()
+		dataBytes            = data.Bytes()
+		predecBaseInputBytes = predecBaseInput.Bytes()
 	)
 	if len(entryBytes) != 8 || len(metadataBytes)%8 != 0 {
 		return fmt.Errorf("invalid encoded ELF input lengths")
@@ -272,7 +271,7 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.InstructionBaseInput, hex.EncodeToString(predecBaseInputBytes)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", predecoding.DecodedInput, hex.EncodeToString(predecDecodedInputBytes)); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\"\n", predecoding.DecodedInput, predecDecodedInput.String()); err != nil {
 		return err
 	}
 	_, err = fmt.Fprintln(output, "}")

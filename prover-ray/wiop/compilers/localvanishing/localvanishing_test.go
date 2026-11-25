@@ -314,8 +314,8 @@ func TestCompile_SharesSelectorsByAnchor(t *testing.T) {
 	assert.Len(t, mod.Columns, colsBefore,
 		"LagrangeSelectors are not committed, so no column should be created")
 
-	// Both lifted vanishings share anchor 0, so the per-(module, anchor) cache
-	// must hand them the same selector instance.
+	// Both lifted vanishings share anchor 0, so registration must merge their
+	// selectors into one instance.
 	var selectors []*wiop.LagrangeSelector
 	for _, v := range mod.Vanishings {
 		if !v.IsReduced() && v.Expression.IsMultiValued() {
@@ -603,8 +603,8 @@ func liftedOperand(t *testing.T, v *wiop.Vanishing) wiop.Expression {
 	return prod.Operands[0]
 }
 
-// TestCompile_LiftPreservesSharing checks that the lift re-interns what it
-// rebuilds (issue #4035): structurally identical lifted nodes in one module
+// TestCompile_LiftPreservesSharing checks that what the lift rebuilds is
+// shared (issue #4035): structurally identical lifted nodes in one module
 // are one pointer — within a tree, across local constraints at the same
 // anchor or at different anchors, and against the module's global
 // constraints.
@@ -620,8 +620,8 @@ func TestCompile_LiftPreservesSharing(t *testing.T) {
 	// A global constraint carrying b·(b−1).
 	global := mod.NewVanishing(sys.Context.Childf("g"), binarity(b.View()))
 	// A global constraint carrying d·(d−1), built from independently allocated
-	// views as a compiler-generated global may be: it is not canonical, so
-	// seeding must key its parents on the canonical operands.
+	// views as a compiler-generated global may be: registering it canonicalises
+	// it, and the lift must match that canonical form.
 	globalNonCanonical := mod.NewVanishing(sys.Context.Childf("g-nc"),
 		wiop.Mul(d.View(), wiop.Sub(d.View(), wiop.NewConstantField(field.One()))))
 

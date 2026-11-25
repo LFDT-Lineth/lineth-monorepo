@@ -26,10 +26,9 @@ const l2_execution = @import("l2_execution").l2_execution;
 const l2_execution_ssz = @import("l2_execution").l2_execution_ssz;
 const vanilla_wrap = @import("vanilla_wrap.zig");
 
-/// The chosen corpus test case's own JSON, embedded straight from the execution-spec-tests
-/// dependency tree (wired in `build.zig`, mirroring `evm_execution_fixtures.zig`'s own
-/// `zkevm_stateless_block.json` embed) — no committed copy of either the corpus JSON or the
-/// input it produces. Four consecutive valid blocks (numbers 1-4), each carrying one real
+/// The chosen corpus test case's own JSON, embedded straight from the EF zkevm fixtures
+/// directory (`-Dzkevm-fixtures`, like the `zkevm_stateless_block.json` embed); the input is built
+/// from it at test time. Four consecutive valid blocks (numbers 1-4), each carrying one real
 /// signed transaction, no withdrawals, no EIP-7685 execution requests, and — since the transaction
 /// only ever reads `SLOTNUM`/`NUMBER` into storage — no dependency on any block's hash, making
 /// every block's witness carry exactly its own immediate parent header (no deeper ancestor chain to
@@ -76,7 +75,7 @@ pub fn buildEngineeredInput(alloc: std.mem.Allocator) ![]const u8 {
 
     const payloads = try alloc.alloc(l2_execution_ssz.LineaPayloadInput, decoded.len);
     for (raw_inputs, 0..) |raw, slot| {
-        payloads[slot] = .{ .stateless_input_ssz = raw, .forced_transactions = &.{} };
+        payloads[slot] = .{ .stateless_input_ssz = .{ .bytes = raw }, .forced_transactions = .{ .items = &.{} } };
     }
 
     const extended_input = l2_execution_ssz.L2ExecutionProofPrivateInput{
@@ -88,7 +87,7 @@ pub fn buildEngineeredInput(alloc: std.mem.Allocator) ![]const u8 {
             .l2_message_service_address = vanilla_wrap.DUMMY_L2_MESSAGE_SERVICE_ADDRESS,
             .system_contracts = vanilla_wrap.defaultSystemContracts(decoded[0].chain_config.chain_id),
         },
-        .payloads = payloads,
+        .payloads = .{ .items = payloads },
     };
     return l2_execution_ssz.encodeInput(alloc, extended_input);
 }

@@ -9,6 +9,8 @@ package maru.app
 import linea.kotlin.decodeHex
 import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.ethGetBlockByNumber
+import linea.timer.JvmTimer
+import linea.timer.TimerSchedule
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.methods.response.EthBlock
 import testutils.Checks.getMinedBlocks
 import testutils.Checks.verifyBlockTime
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -39,6 +42,7 @@ import kotlin.time.toJavaDuration
 class MaruConsensusSwitchTest {
   companion object {
     private const val VANILLA_EXTRA_DATA_LENGTH = 32
+    private val TRANSACTION_SEND_INTERVAL = 200.milliseconds
   }
 
   private lateinit var cluster: MaruCluster
@@ -65,6 +69,7 @@ class MaruConsensusSwitchTest {
     besuNode: BesuNode,
     expectedBlocksBeforeSwitch: Int,
     totalBlocksToProduce: Int,
+    shanghaiTimestamp: Instant,
   ) {
     val blockProducedByQbft = besuNode.ethGetBlockByNumber(1UL)
     assertThat(blockProducedByQbft.extraData.decodeHex().size).isGreaterThan(VANILLA_EXTRA_DATA_LENGTH)
@@ -76,6 +81,15 @@ class MaruConsensusSwitchTest {
       blocks.findSwitchBlock()
         ?: error("Could not find a PoS block (difficulty=0) in the mined block list")
     assertThat(parisSwitchBlockIndex).isEqualTo(expectedBlocksBeforeSwitch)
+    // Besu itself stops mining at TTD, so the first PoS block is always right after the terminal block. Assert it
+    // was produced before the Shanghai timestamp fork, i.e. by the DifficultyAwareQbft -> post-TTD transition and
+    // not by the timestamp-based switch to the Shanghai QBFT fork after a stall.
+    val firstPosBlock = blocks[parisSwitchBlockIndex]
+    assertThat(Instant.fromEpochSeconds(firstPosBlock.timestamp.toLong()))
+      .withFailMessage {
+        "First PoS block number=${firstPosBlock.number} timestamp=${firstPosBlock.timestamp} is not before " +
+          "shanghaiTimestamp=$shanghaiTimestamp, so it was not produced by the post-TTD transition"
+      }.isLessThan(shanghaiTimestamp)
 
     blocks.subList(0, parisSwitchBlockIndex).verifyBlockTime()
     blocks.subList(parisSwitchBlockIndex, blocks.size).verifyBlockTime()
@@ -129,16 +143,7 @@ class MaruConsensusSwitchTest {
         assertThat(validatorMaruNode.p2pNetwork.peerCount).isGreaterThanOrEqualTo(1)
         assertThat(followerMaruNode.p2pNetwork.peerCount).isGreaterThanOrEqualTo(1)
       }
-    log.info("Sending transactions")
-    do {
-      transactionsHelper.run {
-        validatorBesuNode.sendTransactionAndAssertExecution(
-          logger = log,
-          recipient = createAccount("pre-switch account"),
-          amount = Amount.ether(1),
-        )
-      }
-    } while (Clock.System.now() < pragueTimestamp + 2.seconds)
+    sendTransactionsContinuously(validatorBesuNode, until = pragueTimestamp + 2.seconds)
 
     await()
       .atMost(3.seconds.toJavaDuration())
@@ -157,12 +162,51 @@ class MaruConsensusSwitchTest {
       besuNode = validatorBesuNode,
       expectedBlocksBeforeSwitch = expectedBlocksBeforeSwitch,
       totalBlocksToProduce = sequencerHead,
+      shanghaiTimestamp = shanghaiTimestamp,
     )
     verifyConsensusSwitch(
       besuNode = followerBesuNode,
       expectedBlocksBeforeSwitch = expectedBlocksBeforeSwitch,
       totalBlocksToProduce = sequencerHead,
+      shanghaiTimestamp = shanghaiTimestamp,
     )
+  }
+
+  /**
+   * Sends transactions from a background thread without waiting for receipts, so the validator, which does not allow
+   * empty blocks, always has pending transactions and never skips a slot. Returns once the last transaction is mined.
+   */
+  private fun sendTransactionsContinuously(
+    besuNode: BesuNode,
+    until: Instant,
+  ) {
+    log.info("Sending transactions until {}", until)
+    val recipient = transactionsHelper.createAccount("pre-switch account")
+    val sendTransaction = { transactionsHelper.run { besuNode.sendTransaction(log, recipient, Amount.ether(1)) } }
+    val lastTxHash = AtomicReference(sendTransaction())
+    val sender =
+      JvmTimer(
+        name = "transaction-sender",
+        initialDelay = TRANSACTION_SEND_INTERVAL,
+        period = TRANSACTION_SEND_INTERVAL,
+        timerSchedule = TimerSchedule.FIXED_DELAY,
+        errorHandler = { log.warn("Failed to send transaction: {}", it.message, it) },
+        task = { lastTxHash.set(sendTransaction()) },
+      )
+    sender.start()
+    try {
+      val remaining = until - Clock.System.now()
+      if (remaining.isPositive()) {
+        Thread.sleep(remaining.inWholeMilliseconds)
+      }
+    } finally {
+      sender.stop().get()
+    }
+    val txHash = lastTxHash.get()
+    transactionsHelper.ethConditions
+      .expectSuccessfulTransactionReceipt(txHash.bytes.toHexString())
+      .verify(besuNode)
+    log.info("Last transaction {} was mined", txHash)
   }
 
   private fun List<EthBlock.Block>.findSwitchBlock(): Int? =

@@ -24,7 +24,9 @@ import org.junit.jupiter.api.extension.ExtensionContext
  *    [beforeAll]. It is JVM-global (not thread-local), so it captures logs from JVM-global pools
  *    like `ForkJoinPool.commonPool`, whose threads are created outside any test's [ThreadContext]
  *    scope and so never inherit a `testId`. This is reliable because the build runs one test class
- *    per JVM (`forkEvery = 1`) with methods executing sequentially (`same_thread`).
+ *    per JVM (`forkEvery = 1`); it stays reliable with opt-in method-level concurrency
+ *    (`-PmaruItMethodParallel=N`), since methods of the same class share the same fallback file
+ *    and per-method `testId` routing is thread-local.
  *
  * Auto-registered for the integrationTest source set via
  * `META-INF/services/org.junit.jupiter.api.extension.Extension` together with

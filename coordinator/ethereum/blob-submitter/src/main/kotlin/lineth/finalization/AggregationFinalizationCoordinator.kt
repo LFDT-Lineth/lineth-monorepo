@@ -124,7 +124,7 @@ class AggregationFinalizationCoordinator(
               AggregationData.genesis(
                 aggregationProof,
                 aggregationEndBlob,
-                aggregationStartBlob.blobCompressionProof!!.prevShnarf,
+                parentShnarf(aggregationProof, aggregationStartBlob),
               ),
             )
           } else {
@@ -136,7 +136,7 @@ class AggregationFinalizationCoordinator(
                     AggregationData(
                       aggregationProof = aggregationProof,
                       aggregationEndBlob = aggregationEndBlob,
-                      parentShnarf = aggregationStartBlob.blobCompressionProof!!.prevShnarf,
+                      parentShnarf = parentShnarf(aggregationProof, aggregationStartBlob),
                       parentL1RollingHash = parentAggregationProof.l1RollingHash,
                       parentL1RollingHashMessageNumber = parentAggregationProof.l1RollingHashMessageNumber,
                     ),
@@ -146,7 +146,7 @@ class AggregationFinalizationCoordinator(
                     "parent aggregation not found for aggregation={} " +
                       "lastFinalizedBlockNumber={} skipping because another finalization tx was executed.",
                     aggregationProof.intervalString(),
-                    parentAggregationProof,
+                    lastFinalizedBlockNumber,
                   )
                   SafeFuture.completedFuture(null)
                 }
@@ -154,6 +154,13 @@ class AggregationFinalizationCoordinator(
           }
         }
       }
+  }
+
+  private fun parentShnarf(aggregationProof: ProofToFinalize, aggregationStartBlob: BlobRecord): ByteArray {
+    return checkNotNull(aggregationStartBlob.blobCompressionProof) {
+      "blob compression proof missing for start blob=${aggregationStartBlob.intervalString()} " +
+        "of aggregation=${aggregationProof.intervalString()}"
+    }.prevShnarf
   }
 
   private fun finalizeAggregationAfterEthCall(

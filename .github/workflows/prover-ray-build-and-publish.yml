@@ -4,6 +4,7 @@ permissions:
   contents: read
   actions: read
   packages: write
+  id-token: write
 
 on:
   workflow_call:
@@ -26,11 +27,6 @@ on:
         required: false
         type: boolean
         default: false
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 concurrency:
   group: prover-ray-build-and-publish-${{ github.workflow }}-${{ github.ref }}
@@ -42,6 +38,7 @@ env:
 jobs:
   build-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && 'dockerhub-lineth-prover-ray' || 'dockerhub-lineth-prover-ray-approval' }}
     name: Prover-ray build
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
@@ -49,8 +46,6 @@ jobs:
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,11 +53,13 @@ jobs:
           submodules: false
 
       - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        env:
+          DOCKERHUB_OIDC_CONNECTIONID: ${{ inputs.push_image && vars.DOCKERHUB_OIDC_CONNECTIONID_LINETH_PROVER_RAY || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
+          DOCKERHUB_OIDC_EXPIREIN: 1800
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: consensys
 
       - name: Build and publish Docker image
         uses: ./.github/actions/docker-build-publish
@@ -74,13 +71,15 @@ jobs:
           dockerfile_path: ./prover-ray/Dockerfile
           docker_context: prover-ray
           build_contexts: |
-            riscv-guests=riscv-guests/
             licenses=.
           push_platforms: linux/amd64
 
-      # Smoke gate: on the local (push_image=false) build the image is loaded
-      # locally, so run the same smoke test used in dev. If it fails, the release
-      # is blocked before anything is pushed.
+      # Smoke gate on the local (push_image=false) build, against the guest built
+      # from this commit. If it fails, the release is blocked before any push.
+      - name: Build guest artifacts
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        run: make -C riscv-guests docker-artifacts GUEST=l2-execution OUT="$RUNNER_TEMP/guest-artifacts"
+
       - name: Smoke test the image
         if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}"
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" "$RUNNER_TEMP/guest-artifacts"

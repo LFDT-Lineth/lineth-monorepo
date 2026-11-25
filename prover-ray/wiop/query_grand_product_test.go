@@ -159,3 +159,27 @@ func TestNewGrandProduct_NoNextRoundPanic(t *testing.T) {
 		sys.NewGrandProduct(sys.Context.Childf("gp"), []wiop.Expression{num.View()}, []wiop.Expression{den.View()})
 	})
 }
+
+// TestGrandProduct_BaseFactorsWithExtensionData: base-declared factors that
+// hold extension-field data must not have their product cut down to its base
+// limb; SelfAssign panics instead.
+func TestGrandProduct_BaseFactorsWithExtensionData(t *testing.T) {
+	sys, num, den := newGrandProductSystem(t)
+	gp := sys.NewGrandProduct(
+		sys.Context.Childf("gp"),
+		[]wiop.Expression{num.View()},
+		[]wiop.Expression{den.View()},
+	)
+
+	rt := wiop.NewRuntime(sys)
+	ext := make([]field.Ext, 4)
+	for i := range ext {
+		ext[i].B0.A0.SetUint64(uint64(i + 2))
+		ext[i].B1.A0.SetUint64(1)
+	}
+	rt.AssignColumn(num, &wiop.ConcreteVector{Plain: field.VecFromExt(ext)})
+	rt.AssignColumn(den, makeVecU64(1, 1, 1, 1))
+	rt.AdvanceRound()
+
+	assert.Panics(t, func() { gp.SelfAssign(rt) })
+}

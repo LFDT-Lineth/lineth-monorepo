@@ -27,6 +27,9 @@ pub const Error = error{
     MisalignedImage,
 };
 
+/// Where the ZkC guest's input region starts: the address proof images are encoded for.
+pub const guest_base: usize = 0x08800000;
+
 /// Returns an encoded absolute pointer's byte offset within its image.
 pub fn imageOffset(encoded_pointer: u64, encoded_base: usize) Error!usize {
     if (encoded_pointer < encoded_base) return error.PointerBeforeImage;
@@ -205,59 +208,6 @@ const Walk = struct {
         _ = w.patch(row + abi.row_ext, 0);
     }
 };
-
-/// Byte-for-byte layout of the aggregator pair image header: two absolute
-/// little-endian u64 pointers, matching `EncodeAggregatorPair`'s header write
-/// and `verifier.AggregatorInput`.
-pub const pair_header_len = 2 * @sizeOf(u64);
-
-/// Offsets of an aggregator pair image's two `VerifyInput` members.
-pub const PairOffsets = struct {
-    a: usize,
-    b: usize,
-};
-
-/// Reads and checks an aggregator pair header without trusting it: the one
-/// definition of a well-formed header, shared by `validatePair` and
-/// `rebasePair` (and through them every loader in main.zig).
-///
-/// Proof A starts right after the header, as `EncodeAggregatorPair` writes
-/// it; proof B follows A's root, aligned for a `VerifyInput`, with room for
-/// its own root. Returns the members' offsets within the image.
-pub fn parsePairHeader(img: [*]const u8, img_len: usize, encoded_base: usize) Error!PairOffsets {
-    const root_len = @sizeOf(verifier.VerifyInput);
-    try requireRange(0, pair_header_len, img_len);
-    const a = try imageOffset(readU64(img, 0), encoded_base);
-    const b = try imageOffset(readU64(img, @sizeOf(u64)), encoded_base);
-    if (a != pair_header_len) return error.PointerPastImage;
-    if (b < a + root_len or b % @alignOf(verifier.VerifyInput) != 0) return error.PointerPastImage;
-    try requireRange(b, root_len, img_len);
-    return .{ .a = a, .b = b };
-}
-
-/// Validates an untrusted aggregator pair image: its header
-/// (`parsePairHeader`) and each member with `validateImage`, each bounded to
-/// its own region so neither can reach into the other.
-pub fn validatePair(img: [*]const u8, img_len: usize, encoded_base: usize) Error!PairOffsets {
-    const pair = try parsePairHeader(img, img_len, encoded_base);
-    try validateImage(img + pair.a, pair.b - pair.a, encoded_base + pair.a);
-    try validateImage(img + pair.b, img_len - pair.b, encoded_base + pair.b);
-    return pair;
-}
-
-/// Rebases an aggregator pair image (see `verifier.AggregatorInput`): rebases
-/// each `VerifyInput` member, then patches the two header pointers.
-/// `EncodeAggregatorPair` encodes each member with `Encode` at its own absolute
-/// start address, so each is walked relative to that start rather than to the
-/// pair image's base. Like `rebase`, the result is untrusted: validate it with
-/// `validatePair(img, img_len, mapped_base)` afterwards.
-pub fn rebasePair(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usize) Error!void {
-    const pair = try parsePairHeader(img, img_len, encoded_base);
-    rebase(img + pair.a, pair.b - pair.a, encoded_base + pair.a, mapped_base + pair.a);
-    rebase(img + pair.b, img_len - pair.b, encoded_base + pair.b, mapped_base + pair.b);
-    writeU64(img, 0, mapped_base + pair.a);
-    writeU64(img, @sizeOf(u64), mapped_base + pair.b);
-}
 
 const Region = struct {
     offset: usize,

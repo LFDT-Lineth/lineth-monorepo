@@ -93,7 +93,7 @@ jobs:
 
       - name: Run Claude AI analysis
         id: claude
-        uses: anthropics/claude-code-base-action@298ebba052ef5001fd3417bbc6f2cb23788c1df0 # main@2026-04-28 (sync from claude-code-action base-action@11a9dad)
+        uses: anthropics/claude-code-base-action@1ba86a1578bc4350db6af753284bc09734ca18bf # main@2026-04-28 (sync from claude-code-action base-action@11a9dad)
         env:
           ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
@@ -264,7 +264,9 @@ jobs:
     # always() so Slack still runs when ai-analysis is skipped, fails, or succeeds; needs still gates ordering.
     needs: [ai-analysis]
     if: always()
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub and Slack APIs, and still alerts when the
+    # self-hosted runners are the thing failing.
+    runs-on: ubuntu-24.04
     steps:
       - name: Compute context values
         id: ctx
@@ -301,26 +303,23 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
         run: |
           set -euo pipefail
+          # Keep only the fields used below and pass them via a file, not a step
+          # output: the full job objects (with steps) of a large run exceed the
+          # 128 KiB per-env-var limit and the next step fails with E2BIG.
           gh api --paginate "repos/${REPO}/actions/runs/${RUN_ID}/jobs" \
-            --jq '.jobs' \
-            | jq -s '{jobs: map(.[]) }' \
-            > jobs.json
-
-          echo "json<<EOF" >> $GITHUB_OUTPUT
-          cat jobs.json >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            --jq '.jobs[] | {name, conclusion, html_url}' \
+            | jq -s '{jobs: .}' \
+            > "${RUNNER_TEMP}/jobs.json"
 
       - name: Extract failed and cancelled jobs
         id: extract_jobs
         shell: bash
-        env:
-          JOBS_JSON: "${{ steps.jobs.outputs.json }}"
         run: |
           set -euo pipefail
 
           extract_jobs() {
             local conclusion="$1"
-            printf "%s" "$JOBS_JSON" | jq -c --arg c "$conclusion" '
+            jq -c --arg c "$conclusion" '
               [
                 .jobs[]
                 | select(.conclusion == $c)
@@ -332,7 +331,7 @@ jobs:
                     ]
                   }
               ]
-            '
+            ' "${RUNNER_TEMP}/jobs.json"
           }
 
           failed=$(extract_jobs "failure")

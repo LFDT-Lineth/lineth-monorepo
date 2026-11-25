@@ -33,16 +33,26 @@ clean-environment:
 
 RISCV_PROVER_MODE ?= dev-mock
 export RISCV_PROVER_MODE
-RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
+# dev-zkvm guest ELF source dir (e.g. release assets); empty builds it from riscv-guests.
+RISCV_GUEST_ARTIFACTS ?=
+RISCV_COMPOSE_FILE = docker/compose-tracing-v2.yml -f docker/compose-riscv.yml$(if $(OVERRIDE_COMPOSE_FILE), -f $(abspath $(OVERRIDE_COMPOSE_FILE)))
 
 start-env-with-riscv:
 	@test -f docker/config/prover/riscv/prover-ray-config.$(RISCV_PROVER_MODE).toml || \
 		{ echo "Unsupported RISCV_PROVER_MODE=$(RISCV_PROVER_MODE) (expected dev-mock or dev-zkvm)"; exit 1; }
+	@if [ "$(RISCV_PROVER_MODE)" = dev-zkvm ] && [ -z "$(LINEA_PROVER_RAY_TAG)" ]; then \
+		echo "dev-zkvm needs a prover-ray image with guest lookup: build one (make -C prover-ray docker-build) and set LINEA_PROVER_RAY_TAG"; exit 1; \
+	fi
 	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
-	# The coordinator needs the deployed L1 contract, so it starts last.
+	# The coordinator needs the deployed L1 contract, so it starts last. dev-zkvm
+	# stages the guest and gives the coordinator its Program ID.
+	if [ "$(RISCV_PROVER_MODE)" = dev-zkvm ]; then \
+		R5_L2_EXECUTION_PROGRAM_ID=$$(prover-ray/scripts/stage-guest.sh tmp/local/prover-ray/guests $(if $(RISCV_GUEST_ARTIFACTS),"$(RISCV_GUEST_ARTIFACTS)")) || exit 1; \
+		export R5_L2_EXECUTION_PROGRAM_ID; \
+	fi; \
 	COMPOSE_PROFILES=l1,l2,riscv docker compose -f $(RISCV_COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 prover-ray coordinator
 	$(MAKE) deploy-l2-evm-opcode-tester
 
@@ -62,13 +72,15 @@ OVERRIDE_COMPOSE_FILE ?=
 ifeq ($(E2E_STACK),riscv)
 E2E_START_TARGET := start-env-with-riscv
 E2E_TEST_SCRIPT := test:riscv:local
-E2E_TEST_TIMEOUT := $(if $(filter dev-zkvm,$(RISCV_PROVER_MODE)),40m,10m)
+E2E_TEST_TIMEOUT := 40m
 # Empty: keep the image tags pinned in docker/compose-riscv.yml.
 E2E_FALLBACK_IMAGE_TAG :=
-ifeq ($(RISCV_PROVER_MODE),dev-zkvm)
-# dev-zkvm runs prover-ray built from this commit (see e2e-ci-build-images).
+# CI always runs dev-zkvm with prover-ray and the guest built from this commit
+# (see e2e-ci-build-images), so the suite never runs against a stale prover-ray.
+export RISCV_PROVER_MODE := dev-zkvm
 export LINEA_PROVER_RAY_TAG := $(E2E_IMAGE_TAG)
-endif
+E2E_GUEST_ARTIFACTS := tmp/e2e-guest-artifacts
+export RISCV_GUEST_ARTIFACTS := $(CURDIR)/$(E2E_GUEST_ARTIFACTS)
 else ifeq ($(E2E_STACK),zkevm)
 E2E_START_TARGET := $(if $(OVERRIDE_COMPOSE_FILE),start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$(abspath $(OVERRIDE_COMPOSE_FILE)),start-env-with-tracing-v2-ci)
 E2E_TEST_SCRIPT := test:local
@@ -95,8 +107,12 @@ else
 endif
 
 e2e-ci-build-images:
-ifeq ($(E2E_STACK)-$(RISCV_PROVER_MODE),riscv-dev-zkvm)
+ifeq ($(E2E_STACK),riscv)
 	$(MAKE) -C prover-ray docker-build IMAGE_TAG="$(E2E_IMAGE_TAG)"
+	# Built once here, outside tmp/local, which env retries wipe. Cleared first: the
+	# export merges, so a stale Program-ID-named ELF would make staging ambiguous.
+	rm -rf "$(CURDIR)/$(E2E_GUEST_ARTIFACTS)"
+	$(MAKE) -C riscv-guests docker-artifacts GUEST=l2-execution OUT="$(CURDIR)/$(E2E_GUEST_ARTIFACTS)"
 else
 	@echo "No local images to build for E2E_STACK=$(E2E_STACK)"
 endif

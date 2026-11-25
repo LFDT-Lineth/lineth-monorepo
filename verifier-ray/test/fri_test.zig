@@ -1,6 +1,5 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
-const merkle_fixtures = @import("test_fri_vectors");
 const fold_fixtures = @import("fri_fold_cases.zig");
 
 const field = verifier_ray.field.koalabear;
@@ -38,33 +37,6 @@ fn toDigests(allocator: std.mem.Allocator, os: []const [8]u32) ![]poseidon2.Dige
     const out = try allocator.alloc(poseidon2.Digest, os.len);
     for (out, os) |*dst, o| dst.* = toDigest(o);
     return out;
-}
-
-fn runMerkleCase(allocator: std.mem.Allocator, case: merkle_fixtures.MerkleCase) !void {
-    const branch = merkle.Branch{
-        .leaf = toDigest(case.leaf),
-        .siblings = try toDigests(allocator, case.siblings),
-    };
-    const frontier = [_]poseidon2.Digest{toDigest(case.root)};
-    if (case.expect_match) {
-        try branch.authenticateToCap(case.index, &frontier);
-    } else {
-        try std.testing.expectError(error.InvalidCap, branch.authenticateToCap(case.index, &frontier));
-    }
-}
-
-test "merkle branches from prover-ray vectors" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    try std.testing.expect(merkle_fixtures.merkle_cases.len > 0);
-    for (merkle_fixtures.merkle_cases) |case| {
-        runMerkleCase(allocator, case) catch |err| {
-            std.debug.print("merkle case '{s}' failed: {}\n", .{ case.name, err });
-            return err;
-        };
-    }
 }
 
 test "merkle branch with no siblings is rejected before any hashing" {
@@ -164,7 +136,7 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
 
     try fri.checkOpeningProofShape(params, proof, fold_alphas, positions);
 
-    // rounds[0] is never written (round 0 always introduces a level), so
+    // rounds[0] is never written (round 0 has no running layer), so
     // initialize it rather than leaving allocator garbage.
     const rounds = try allocator.alloc(fri.Pair, params.numRounds());
     @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });

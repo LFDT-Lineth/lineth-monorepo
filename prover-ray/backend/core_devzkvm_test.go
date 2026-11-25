@@ -1,10 +1,14 @@
 package backend
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
+	"os/exec"
+	"slices"
 	"testing"
 
+	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/stretchr/testify/assert"
@@ -23,12 +27,12 @@ func specFrame(schema uint16, pi []byte) []byte {
 var samplePublicInputs = []byte("public inputs")
 
 func TestClassifyGuestOutput(t *testing.T) {
-	valid := bitsFromBytes(specFrame(guestOutputSchemaID, samplePublicInputs)...)
+	valid := specFrame(guestOutputSchemaID, samplePublicInputs)
 
 	t.Run("valid output is returned", func(t *testing.T) {
-		got, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: valid}, nil)
+		got, err := classifyGuestOutput(guestOutputs(valid), nil)
 		require.NoError(t, err)
-		assert.Equal(t, valid, got)
+		assert.Equal(t, bitsFromBytes(valid...), got)
 	})
 
 	t.Run("guest rejection is distinguished from a VM bug", func(t *testing.T) {
@@ -51,8 +55,20 @@ func TestClassifyGuestOutput(t *testing.T) {
 		assert.Contains(t, err.Error(), "no guest_output")
 	})
 
-	preSpec := append([]byte{0x00, 0x03}, samplePublicInputs...)
-	preSpec = append(preSpec, keccak256(samplePublicInputs)...)
+	t.Run("a single blob in guest_output is not the split frame", func(t *testing.T) {
+		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid...)}
+		_, err := classifyGuestOutput(out, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), fmt.Sprintf("guest wrote %d bytes to guest_output, want the 32-byte hash", len(valid)))
+	})
+
+	t.Run("hash without guest_log is reported", func(t *testing.T) {
+		out := map[string]bit.Array{guestOutputMemory: bitsFromBytes(valid[:guestOutputHashSize]...)}
+		_, err := classifyGuestOutput(out, nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "guest wrote the hash but no guest_log")
+	})
+
 	badHash := specFrame(guestOutputSchemaID, samplePublicInputs)
 	badHash[0] ^= 0xff
 
@@ -60,14 +76,13 @@ func TestClassifyGuestOutput(t *testing.T) {
 		out     []byte
 		wantErr string
 	}{
-		"pre-spec layout": {preSpec, "the spec expects keccak256(0x0003 || public inputs)"},
 		"hash mismatch":   {badHash, "hash does not match"},
 		"wrong schema id": {specFrame(0x0002, samplePublicInputs), "schema id is 0x0002, want 0x0003"},
-		"too short":       {make([]byte, 33), "shorter than the hash and schema id"},
+		"too short":       {make([]byte, 33), "shorter than the schema id"},
 	}
 	for name, tc := range rejected {
 		t.Run(name, func(t *testing.T) {
-			_, err := classifyGuestOutput(map[string]bit.Array{guestOutputMemory: bitsFromBytes(tc.out...)}, nil)
+			_, err := classifyGuestOutput(guestOutputs(tc.out), nil)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "guest_output does not follow the spec")
 			assert.Contains(t, err.Error(), tc.wantErr)
@@ -77,4 +92,91 @@ func TestClassifyGuestOutput(t *testing.T) {
 
 func bitsFromBytes(bytes ...byte) bit.Array {
 	return bit.NewArray(bytes, uint(len(bytes)*8), bit.BigEndian)
+}
+
+// guestOutputs splits frame as the guest writes it: the first
+// guestOutputHashSize bytes to guest_output and the rest to guest_log.
+func guestOutputs(frame []byte) map[string]bit.Array {
+	split := min(len(frame), guestOutputHashSize)
+	return map[string]bit.Array{
+		guestOutputMemory: bitsFromBytes(frame[:split]...),
+		guestLogMemory:    bitsFromBytes(frame[split:]...),
+	}
+}
+
+// TestProveDevZkVM runs dev-zkvm on guests that write a given output: it
+// returns the public inputs decoded from the output, the output itself, and a
+// devmode proof of the output hash.
+func TestProveDevZkVM(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	badHash := slices.Clone(hash)
+	badHash[0] ^= 0xff
+	// A well-hashed frame whose public inputs are shorter than the fixed head.
+	shortFrame := framed[:guestOutputSchemaIDSize+10]
+
+	dir := t.TempDir()
+	valid := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	wrongHash := writeGuest(t, dir, minimal_elf.OutputAndLogELF(badHash, framed))
+	shortInputs := writeGuest(t, dir, minimal_elf.OutputAndLogELF(keccak256(shortFrame), shortFrame))
+
+	c, err := New(Config{Mode: ProverModeDevZkVM, GuestsDir: dir})
+	require.NoError(t, err)
+	prove := func(id [32]byte) Result {
+		return c.Prove(context.Background(), Job{ID: "dev-zkvm", Type: ProofTypeL2Execution, GuestProgramID: id})
+	}
+
+	t.Run("valid output", func(t *testing.T) {
+		result := prove(valid)
+		require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
+		assert.Equal(t, referencePublicInputs(t), result.PublicInputs, "the public inputs should be decoded from the guest output")
+		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput, "the guest output should be returned for the native runner check")
+		assert.Equal(t, devmodeImage(t, hash), result.ProofBytes, "the proof should be a devmode proof of the output hash")
+		assert.Equal(t, [32]byte{}, result.ProgramVK, "the VK should be the one in the devmode proof, zero in dev modes")
+	})
+
+	t.Run("hash does not match the frame", func(t *testing.T) {
+		result := prove(wrongHash)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorContains(t, result.Err, "hash does not match")
+	})
+
+	t.Run("public inputs do not decode", func(t *testing.T) {
+		result := prove(shortInputs)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		assert.ErrorContains(t, result.Err, "fixed head")
+	})
+}
+
+// TestProveDevZkVM_GoGen checks that gogen gives the interpreter's output and needs the Go toolchain.
+func TestProveDevZkVM_GoGen(t *testing.T) {
+	hash, framed := referenceFrame(t)
+	dir := t.TempDir()
+	id := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	core := func(gogen bool) *Core {
+		c, err := New(Config{Mode: ProverModeDevZkVM, GuestsDir: dir, GoGen: gogen})
+		require.NoError(t, err)
+		return c
+	}
+	interpreter, generated := core(false), core(true)
+	prove := func(c *Core) Result {
+		return c.Prove(context.Background(), Job{ID: "gogen", Type: ProofTypeL2Execution, GuestProgramID: id})
+	}
+
+	t.Run("same output as the interpreter", func(t *testing.T) {
+		_, err := exec.LookPath("go")
+		require.NoError(t, err, "the Go toolchain should be on PATH to run gogen")
+		want, got := prove(interpreter), prove(generated)
+		require.Equal(t, ResultStatusOK, want.Status, "interpreter err: %v", want.Err)
+		require.Equal(t, ResultStatusOK, got.Status, "gogen err: %v", got.Err)
+		assert.Equal(t, want.GuestOutput, got.GuestOutput)
+		assert.Equal(t, want.PublicInputs, got.PublicInputs)
+	})
+
+	t.Run("gogen needs the Go toolchain", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir())
+		result := prove(generated)
+		assert.Equal(t, ResultStatusFailed, result.Status)
+		require.Error(t, result.Err, "gogen should fail without the Go toolchain")
+		assert.Equal(t, ResultStatusOK, prove(interpreter).Status, "the interpreter needs no Go toolchain")
+	})
 }

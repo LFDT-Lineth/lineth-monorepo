@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,12 +31,14 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 			EndProcessedFtxNumber:                 14,
 			FilteredAddresses:                     [][20]byte{{0x09}},
 			TxFromsHash:                           filledHash(0x0a),
+			BlockCount:                            3,
+			L2MessagingBlocksOffsets:              []uint16{1, 3},
+			L2L1Messages:                          [][32]byte{filledHash(0x11), filledHash(0x22)},
 		},
 	}
 
-	vkArr := filledHash(0xbb)
-	vk := vkArr[:]
-	resp := newExecutionResponse(result, 1000501, "test-version", vk)
+	result.ProgramVK = filledHash(0xbb)
+	resp := newExecutionResponse(result, 1000501, "test-version")
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
 	assert.Equal(t, "0xcafe", resp.ProofHex)
@@ -49,7 +50,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
 	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
-	assert.Empty(t, pi.L2L1Messages)
+	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, pi.L2L1Messages)
 	assert.Equal(t, repeatHex(0x05), pi.EndL1L2BridgeRollingHash)
 	assert.Equal(t, uint64(12), pi.EndL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x06), pi.DynamicChainConfigHash)
@@ -59,29 +60,12 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
 	assert.Equal(t, []string{"0x09" + strings.Repeat("00", 19)}, pi.FilteredAddresses)
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
-}
-
-// blockCount, l2L1Messages and offsets pass through from the native output.
-func TestNewExecutionResponseFromNative_PublicInputs(t *testing.T) {
-	out := nativerunner.Output{
-		StartBlockNumber: 1000501,
-		PublicInputs: backend.PublicInputs{
-			EndBlockNumber:           1000503,
-			L2L1Messages:             [][32]byte{filledHash(0x11), filledHash(0x22)},
-			BlockCount:               3,
-			L2MessagingBlocksOffsets: []uint16{1, 3},
-		},
-	}
-	vk := filledHash(0xbb)
-	resp := newExecutionResponseFromNative(out, "v-dev-zkvm", vk[:])
-
-	assert.Equal(t, uint64(3), resp.PublicInputs.BlockCount)
-	assert.Equal(t, []string{repeatHex(0x11), repeatHex(0x22)}, resp.PublicInputs.L2L1Messages)
-	assert.Equal(t, []uint16{1, 3}, resp.PublicInputs.L2MessagingBlocksOffsets)
+	assert.Equal(t, uint64(3), pi.BlockCount)
+	assert.Equal(t, []uint16{1, 3}, pi.L2MessagingBlocksOffsets)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
-	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version", make([]byte, 32)))
+	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version"))
 	require.NoError(t, err)
 
 	assertResponseShapeMatchesReference(t, raw)
@@ -97,7 +81,7 @@ func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {
 	// backend result.
 	t.Skip("enable after proof serialization, public-input extraction, and l2L1Messages/txFroms/filteredAddresses response arrays are wired")
 
-	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, "", make([]byte, 32)))
+	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, ""))
 	require.NoError(t, err)
 
 	assert.Equal(t, readReferenceResponse(t), got)

@@ -1,9 +1,9 @@
 include "../memory.zkc"
 
 #[debug]
-fn print_string<ram>(addr:Address, n:DoubleWord) {
-    for i:DoubleWord = 0; i<n; i = i + 1 {
-        print_char(addr + (i as Address))
+fn print_string<ram>(addr:Address, n:Word) {
+    for i:Word = 0; i<n; i = i + 1 {
+        print_char(addr + i)
     }
     printf "\n"
 }

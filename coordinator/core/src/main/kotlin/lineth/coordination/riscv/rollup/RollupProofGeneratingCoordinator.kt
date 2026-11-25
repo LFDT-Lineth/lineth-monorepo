@@ -5,6 +5,7 @@ import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
+import linea.da.DaConstants
 import linea.domain.BlobData
 import linea.domain.Block
 import linea.domain.BlockIntervalProofIndex
@@ -330,14 +331,14 @@ class RollupProofGeneratingCoordinator(
           isCalldata = false,
           blobBytes = it.blobBytes,
           calldataBytes = ByteArray(0),
-          kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
-          kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
+          kzgCommitment = ByteArray(DaConstants.KZG_POINT_BYTES),
+          kzgProof = ByteArray(DaConstants.KZG_POINT_BYTES),
         )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
-      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
+      // Proof windows always start at a chunk boundary; the guest derives finalSharedBlobCarryOverTailBytes itself.
+      parentSharedBlobCarryOverTailBytes = 0,
+      parentBlobDataRollingHash = null,
     )
   }
 }

@@ -29,7 +29,7 @@ func mustHex(t *testing.T, s string) []byte {
 }
 
 // TestDecodeRollupRequest_Golden decodes the reference fixture and checks the
-// envelope, chunk objects, boundary hash, and embedded proofs.
+// envelope, chunk objects, parent blob data rolling hash, and embedded proofs.
 func TestDecodeRollupRequest_Golden(t *testing.T) {
 	req, err := DecodeRollupRequest(readSpecFixture(t, referenceRollupRequest))
 	require.NoError(t, err)
@@ -38,25 +38,25 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, vk[:], req.ProgramVk)
 	assert.Equal(t, uint64(59144), req.ChainID)
 	assert.Equal(t, filledHash(0x47), req.ParentDataRollingHash)
-	assert.Equal(t, uint64(60), req.ParentDataTailTakeBytes)
+	assert.Equal(t, uint64(68), req.ParentSharedBlobCarryOverTailBytes)
 
-	require.NotNil(t, req.BoundaryPrevDataRollingHash)
-	assert.Equal(t, filledHash(0x39), *req.BoundaryPrevDataRollingHash)
+	require.NotNil(t, req.ParentBlobDataRollingHash)
+	assert.Equal(t, filledHash(0x39), *req.ParentBlobDataRollingHash)
 
 	require.Len(t, req.Conflations, 2)
 	require.Len(t, req.Conflations[0].BlockRlps, 2)
 	assert.Equal(t, mustHex(t, "0xf90215a0"), req.Conflations[0].BlockRlps[0])
 
 	require.Len(t, req.Chunks, 1)
-	assert.Equal(t, mustHex(t, "0x01787e92ee92078d97d6eb761e9224d362199ed44889a0543ac63ec6eec40062"),
+	assert.Equal(t, mustHex(t, "0x01b166d6411021bf24e7eb5911dd6f815ea30509afc19fc5b5bc781156c2dc78"),
 		req.Chunks[0].ChunkHash[:])
 	assert.False(t, req.Chunks[0].IsCalldata)
 	assert.NotEmpty(t, req.Chunks[0].BlobBytes)
 	assert.Empty(t, req.Chunks[0].CalldataBytes)
-	assert.Equal(t, mustHex(t, "0xb7a1e1fb958a4b99a2caf2a9b820288febfecf07e4f2a8ce7e1e6cd440f5e7b7"+
-		"67e7643954195a1264dcd090945cbeeb"), req.Chunks[0].KZGCommitment)
-	assert.Equal(t, mustHex(t, "0x8ce30126356d26665f7b0b2f04244c59c1dff059e3c3ceeac0260a615fa92784"+
-		"80261456261a383301bee674cf491b59"), req.Chunks[0].KZGProof)
+	assert.Equal(t, mustHex(t, "0x83f5402ceefaf0fec6856c8ba565834228193978ab06deadd71b07a18dd0461a"+
+		"4047fe19be9033c1a91ba74498b74f03"), req.Chunks[0].KZGCommitment)
+	assert.Equal(t, mustHex(t, "0x8fe9644760a26dbe51d26924fd57c29efb8752260116856d04f7643f3b5b6449"+
+		"ee68adf7ba380d39e54bf8f726e8c34a"), req.Chunks[0].KZGProof)
 
 	require.Len(t, req.L2ExecutionProofs, 2)
 	p0 := req.L2ExecutionProofs[0]
@@ -76,16 +76,16 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, uint64(14), req.L2ExecutionProofs[1].PublicInputs.EndBlockNumber)
 }
 
-// TestDecodeRollupRequest_OptionalBoundaryHash verifies boundaryPrevDataRollingHash
+// TestDecodeRollupRequest_OptionalBoundaryHash verifies parentBlobDataRollingHash
 // is optional: absent, it decodes to nil with no cross-check.
 func TestDecodeRollupRequest_OptionalBoundaryHash(t *testing.T) {
 	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 	pr := obj[proofRequestKey].(map[string]any)
-	delete(pr, boundaryPrevDataRollingHashKey)
+	delete(pr, parentBlobDataRollingHashKey)
 
 	req, err := DecodeRollupRequest(marshal(t, obj))
 	require.NoError(t, err)
-	assert.Nil(t, req.BoundaryPrevDataRollingHash)
+	assert.Nil(t, req.ParentBlobDataRollingHash)
 }
 
 // TestDecodeRollupRequest_CalldataChunk verifies a calldata chunk decodes with
@@ -148,8 +148,8 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 			"same length"},
 		{"MissingParentDataRollingHash",
 			func(o map[string]any) { delete(pr(o), parentDataRollingHashKey) }, parentDataRollingHashKey},
-		{"MissingParentDataTailTakeBytes",
-			func(o map[string]any) { delete(pr(o), parentDataTailTakeBytesKey) }, parentDataTailTakeBytesKey},
+		{"MissingParentSharedBlobCarryOverTailBytes",
+			func(o map[string]any) { delete(pr(o), parentSharedBlobCarryOverTailBytesKey) }, parentSharedBlobCarryOverTailBytesKey},
 		{"ConflationBlockRlpsEmpty",
 			func(o map[string]any) {
 				pr(o)[conflationsKey].([]any)[0].(map[string]any)[blockRlpsKey] = []any{}

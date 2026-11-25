@@ -1557,3 +1557,51 @@ func TestCompile_ConstantsInGroupKey(t *testing.T) {
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
 }
+
+func TestCompile_CrossGroupCancellationIsRejected(t *testing.T) {
+	sys := wiop.NewSystemf("ll-cross-group")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 2, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc1"),
+		[]wiop.Table{wiop.NewTable(colS1.View())},
+		[]wiop.Table{wiop.NewTable(colT1.View())})
+	sys.NewInclusion(sys.Context.Childf("inc2"),
+		[]wiop.Table{wiop.NewTable(colS2.View())},
+		[]wiop.Table{wiop.NewTable(colT2.View())})
+
+	indexOfMT1, indexOfMT2 := len(modT1.Columns), len(modT2.Columns)
+	lookuptologderivsum.Compile(sys)
+	require.Len(t, modT1.Columns, indexOfMT1+1)
+	require.Len(t, modT2.Columns, indexOfMT2+1)
+	m1 := modT1.Columns[indexOfMT1]
+	m2 := modT2.Columns[indexOfMT2]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colT1, makeVec(10, 20))
+	rt.AssignColumn(colT2, makeVec(100, 200))
+	// Cheat: S1[1] = 100 is not in T1.
+	rt.AssignColumn(colS1, makeVec(10, 100))
+	rt.AssignColumn(colS2, makeVec(100, 200))
+	// M1 only counts the legitimate 10; M2 absorbs S1's 100.
+	rt.AssignColumn(m1, makeVec(1, 0))
+	rt.AssignColumn(m2, makeVec(2, 1))
+
+	rt.AdvanceRound()
+	rt.AdvanceRound()
+	runRound(rt)
+
+	err := checkAllVerifierActions(rt)
+	assert.Error(t, err,
+		"verifier must reject a lookup satisfied only by cross-group cancellation")
+}

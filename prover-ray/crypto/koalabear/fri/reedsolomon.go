@@ -70,10 +70,9 @@ func (enc *RSEncoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.El
 }
 
 // EncodeInto is [RSEncoder.Encode] writing the codeword into the caller-provided
-// buffer out, whose length must be the codeword size. out must not alias p.
-// Letting the caller place codewords in a shared slab avoids one large
-// allocation per column; thousands of concurrent large allocations otherwise
-// serialize on the runtime page heap and dominate one-shot commits.
+// buffer out, whose length must be the codeword size. out must not alias p,
+// and may hold stale values: every element is overwritten. Callers pass
+// pooled buffers, so that commits reuse their codeword memory.
 func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, fftOpt ...fft.Option) {
 
 	// get the size of p
@@ -103,7 +102,7 @@ func (enc *RSEncoder) EncodeInto(p []field.Element, out []field.Element, fftOpt 
 	}
 
 	copy(_p, p)
-	clear(_p[n:]) // the slab is caller-provided and may be dirty
+	clear(_p[n:]) // out may hold stale values
 
 	// IFFT(DIF) consumes natural-order Lagrange input and returns n-bit-reversed
 	// coefficients. The n-to-N size change needs one normalization to natural
@@ -149,7 +148,7 @@ func (enc *RSEncoder) EncodeExtInto(p []field.Ext, out []field.Ext, fftOpt ...ff
 	}
 
 	copy(_p, p)
-	clear(_p[n:]) // the slab is caller-provided and may be dirty
+	clear(_p[n:]) // out may hold stale values
 
 	enc.smallDomain.FFTInverseExt6(_p[:n], fft.DIF, fftOpt...)
 	gutils.BitReverse(_p[:n])

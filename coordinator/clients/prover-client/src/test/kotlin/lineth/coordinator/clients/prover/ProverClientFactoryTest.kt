@@ -30,6 +30,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
@@ -37,12 +38,15 @@ import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 class ProverClientFactoryTest {
-  private fun buildFileBasedProverConfig(proverDir: Path): FileBasedProverConfig {
+  private fun buildFileBasedProverConfig(
+    proverDir: Path,
+    pollingTimeout: Duration = 500.milliseconds,
+  ): FileBasedProverConfig {
     return FileBasedProverConfig(
       requestsDirectory = proverDir.resolve("requests"),
       responsesDirectory = proverDir.resolve("responses"),
       pollingInterval = 100.milliseconds,
-      pollingTimeout = 500.milliseconds,
+      pollingTimeout = pollingTimeout,
       inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
       inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
     )
@@ -71,11 +75,14 @@ class ProverClientFactoryTest {
     )
   }
 
-  private fun buildPreRiscvProverConfig(proverDir: Path): PreRiscvProverConfig {
+  private fun buildPreRiscvProverConfig(
+    proverDir: Path,
+    pollingTimeout: Duration = 500.milliseconds,
+  ): PreRiscvProverConfig {
     return PreRiscvProverConfig(
-      execution = buildFileBasedProverConfig(proverDir.resolve("execution")),
-      blobCompression = buildFileBasedProverConfig(proverDir.resolve("compression")),
-      proofAggregation = buildFileBasedProverConfig(proverDir.resolve("aggregation")),
+      execution = buildFileBasedProverConfig(proverDir.resolve("execution"), pollingTimeout),
+      blobCompression = buildFileBasedProverConfig(proverDir.resolve("compression"), pollingTimeout),
+      proofAggregation = buildFileBasedProverConfig(proverDir.resolve("aggregation"), pollingTimeout),
     )
   }
 
@@ -107,17 +114,18 @@ class ProverClientFactoryTest {
     switchBlockNumber: Int? = null,
     switchBlockTimestamp: Instant? = null,
     withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
+    pollingTimeout: Duration = 500.milliseconds,
   ): ProversConfig {
     require(!(switchBlockNumber != null && switchBlockTimestamp != null)) {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
     }
     return ProversConfig(
       currentProver = ProverConfig(
-        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
+        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2"), pollingTimeout),
       ),
       nextProver = if (withProverB) {
         ProverConfig(
-          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
+          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3"), pollingTimeout),
         )
       } else {
         null
@@ -513,19 +521,42 @@ class ProverClientFactoryTest {
 
   @Test
   fun `should create metrics gauge and aggregate them`() {
-    val proverClientI1 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
-    val proverClientI2 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
+    // long enough for the in-flight gauge assertion to run before the requests time out
+    meterRegistry = SimpleMeterRegistry()
+    val factory = DefaultProverClientFactory(
+      vertx = vertx,
+      config = buildPreRiscvProversConfig(testTmpDir, switchBlockNumber = 200, pollingTimeout = 3.seconds),
+      chainId = 59144UL,
+      l2MessageServiceAddress = "0xa",
+      metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea"),
+    )
+    val proverClientI1 = factory.preRiscvProofAggregationProverClient()
+    val proverClientI2 = factory.preRiscvProofAggregationProverClient()
 
-    runCatching { proverClientI1.requestProof(request1).get() }
-    runCatching { proverClientI2.requestProof(request2).get() }
-    runCatching { proverClientI1.requestProof(request3).get() }
+    val requests = listOf(
+      proverClientI1.requestProof(request1),
+      proverClientI2.requestProof(request2),
+      proverClientI1.requestProof(request3),
+    )
 
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()).isNotNull
 
+    await()
+      .pollDelay(0.milliseconds.toJavaDuration())
+      .pollInterval(10.milliseconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(3.0)
+      }
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
     assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
-    assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(3.0)
+
+    // swallow timeout exception because responses are not available
+    requests.forEach { runCatching { it.get() } }
+
+    // waiting counter must be released even when the request fails (e.g. response timeout)
+    assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
   }
 }

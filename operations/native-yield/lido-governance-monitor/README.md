@@ -69,7 +69,7 @@ Claude calls are routed through the shared LiteLLM proxy. Two variables control 
 
 ### Prerequisites
 
-- Node.js >= 24.22.1 (see repo root `.nvmrc`)
+- Node.js >= 24.22.3 (see repo root `.nvmrc`)
 - PostgreSQL database
 - A LiteLLM virtual key (`ANTHROPIC_API_KEY`), or a direct Anthropic key for local dev (see [LLM access via LiteLLM](#llm-access-via-litellm))
 - Slack incoming webhook

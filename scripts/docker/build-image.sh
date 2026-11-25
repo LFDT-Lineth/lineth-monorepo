@@ -61,6 +61,9 @@ Options:
                             Created with the docker-container driver, which is
                             what CI uses. Leave empty to use the current builder.
   --dry-run                 Print the commands instead of running them.          [env: DRY_RUN=true]
+  --no-license-check        Skip the /licenses and license label check, for
+                            downstream images that do not ship the Lineth
+                            license files.                                       [env: LICENSE_CHECK=false]
 
 VERSION, VCS_REF and BUILD_DATE build args are injected automatically (from the
 primary tag, GITHUB_SHA or git HEAD, and the current UTC time) so every image
@@ -79,6 +82,7 @@ SAVE_TO="${SAVE_TO:-}"
 DOCKER_BUILDER="${DOCKER_BUILDER:-}"
 DRY_RUN="${DRY_RUN:-false}"
 NO_CACHE="${NO_CACHE:-false}"
+LICENSE_CHECK="${LICENSE_CHECK:-true}"
 PROGRESS="${PROGRESS:-}"
 PROVENANCE="${PROVENANCE:-}"
 # Registry cache defaults on in CI (where it is populated and warm) and off
@@ -116,6 +120,7 @@ while [[ $# -gt 0 ]]; do
     --no-registry-cache) REGISTRY_CACHE=false; shift ;;
     --builder) DOCKER_BUILDER="$2"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
+    --no-license-check) LICENSE_CHECK=false; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown argument: $1" ;;
   esac
@@ -306,7 +311,7 @@ fi
 
 # Every image must ship the license files in /licenses and declare its license.
 # Checked on locally loaded images only: a pushed image is not in the local store.
-if [[ "$PUSH_IMAGE" != "true" && ${#PLATFORM_LIST[@]} -eq 1 ]]; then
+if [[ "$LICENSE_CHECK" == "true" && "$PUSH_IMAGE" != "true" && ${#PLATFORM_LIST[@]} -eq 1 ]]; then
   label="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.licenses" }}' "$PRIMARY_IMAGE")"
   [[ -n "$label" ]] || die "${PRIMARY_IMAGE}: missing org.opencontainers.image.licenses label"
   container="$(docker create "$PRIMARY_IMAGE" true)"

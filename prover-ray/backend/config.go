@@ -7,12 +7,32 @@ type Config struct {
 	// circuit. Loaded once at startup and reused across all proof requests.
 	CircuitBinPath string
 
-	// GuestELFPath is the path to the guest ELF binary. For l2-execution
-	// proofs this is riscv-guests/l2_execution/zig-out/bin/evm_execution_guest.
-	// Different proof types will eventually point to different ELFs; that
-	// dispatch is not yet implemented.
-	GuestELFPath string
+	// GuestsDir holds the guest ELFs, each found by [Job.GuestProgramID]
+	// (see [guests.Store]). Required by every mode that runs a guest.
+	GuestsDir string
 
 	// Mode selects how a Job is proved; empty defaults to [ProverModeFull].
 	Mode ProverMode
+
+	// ShardSize is the number of executed RISC-V instructions per trace shard
+	// (see zkcdriver.Settings.ShardSize). Zero disables sharding: the whole
+	// execution is a single shard.
+	//
+	// Sharding is not production-ready. With a non-zero ShardSize the in-shard
+	// message-bus check is off and the bus balances only across shards, which
+	// a [conglomeration.Merger] must check. dev-partial checks it with
+	// [conglomeration.MockMerger]; full mode has no merger until
+	// [conglomeration.RecursionMerger] has its in-machine verifier, so every
+	// sharded job fails with [ErrNotImplemented]. Leave it zero in production.
+	ShardSize uint64
+
+	// ShardWorkers is the number of shards traced and proved at the same time.
+	// Zero or one proves them one at a time. Each shard in progress needs its
+	// own memory: about 30 to 35 GiB, on top of the trace checkpoints,
+	// measured on the blocks listed in docs/prover-modes.md.
+	ShardWorkers int
+
+	// GoGen runs zkc Execute with gogen (Go code built with the Go toolchain on
+	// PATH) instead of the interpreter: same output, much faster.
+	GoGen bool
 }

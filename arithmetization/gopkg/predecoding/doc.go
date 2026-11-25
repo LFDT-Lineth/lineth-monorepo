@@ -105,9 +105,8 @@
 // `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
 // to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
 // `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
-// keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
-// `RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
-// precompile side effects.
+// keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`)
+// have no `_WB` variant and return early after the precompile side effects.
 //
 // # Custom-1 precompiles (`opcode` = `0b0101011`)
 //
@@ -151,7 +150,7 @@
 //   - `jal` / `jalr x0, …` — control flow
 //   - branches and stores — side effects
 //   - `ecall` / `ebreak` — syscalls
-//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`) — memory side effects
+//   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`) — memory side effects
 //
 // The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `decode.go`
 // (see `decode_test.go`).
@@ -178,8 +177,10 @@
 //     `decode*Semantic` map, folds writeback (`*OpForRd`) and rd=`x0` no-ops into a
 //     single unified `compute_op`, and `unifiedOperands` packs the operands.
 //  5. Bit-pack each record into the `decoded` stream (see below).
-//  6. Return the packed bytes. The elf_to_json command hex-encodes them for
-//     the `decoded` JSON key.
+//  6. Return a DecodedProgram containing InstructionBase and the packed Decoded
+//     bytes. EncodeInputs excludes final-byte padding from the logical bit length;
+//     elf_to_json serializes that bit array as extended hexadecimal, potentially
+//     including a partial-byte suffix, for the decoded JSON key.
 //
 // # Bit-packing (the subtle part)
 //
@@ -190,7 +191,9 @@
 // `bitWriter.writeBits(val, width)` appends the low `width` bits of `val`,
 // most-significant bit first, into a continuous big-endian bit stream. Records are
 // concatenated with no per-record alignment, and the final byte is zero-padded
-// in its low bits. This mirrors ZkC's `EncodeBytes` / `DecodeUnsignedInt`.
+// in its low bits. EncodeInputs wraps the buffer with bit.NewArray using
+// bit.BigEndian and the exact record bit length, excluding that padding from
+// the ZkC input.
 //
 // The field widths come from the semantic types in
 // `arithmetization/src/main/common/type.zkc`, so each `decoded` record is the sum

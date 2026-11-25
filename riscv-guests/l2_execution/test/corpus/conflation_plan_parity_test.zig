@@ -19,7 +19,7 @@ const input = @import("zesu_input");
 const l2_execution = @import("l2_execution").l2_execution;
 const conflation_plan = @import("support").conflation_plan;
 
-test "StubEngine with no active plan matches the real execution seam on the committed EF fixture" {
+test "StubEngine with no active plan matches the real execution seam on the embedded EF fixture" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -116,7 +116,7 @@ test "executeStatelessInputWithLogs rejects a non-genesis block with no resolvab
 
 const executor = @import("zesu_executor");
 
-test "the engine's header encoder reproduces the committed EF fixture's block hash" {
+test "the engine's header encoder reproduces the embedded EF fixture's block hash" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();

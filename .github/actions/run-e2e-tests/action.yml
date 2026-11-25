@@ -9,10 +9,6 @@ inputs:
     description: 'Local stack and test suite (zkevm or riscv)'
     required: false
     default: 'zkevm'
-  riscv_prover_mode:
-    description: 'prover-ray mode for the RISC-V stack (dev-mock or dev-zkvm)'
-    required: false
-    default: 'dev-mock'
   image_tag:
     description: 'The commit tag to use'
     required: true
@@ -59,10 +55,12 @@ inputs:
       "start-env-with-tracing-v2-ci" is used.
     required: false
     default: ''
-  dockerhub_username:
+  jest-config:
+    description: 'Optional absolute path to a jest config replacing e2e/jest.riscv.config.ts (riscv only)'
     required: false
     default: ''
-  dockerhub_token:
+  dockerhub_oidc_connection_id:
+    description: 'Docker Hub OIDC connection ID; login is skipped when empty. The calling job needs id-token: write.'
     required: false
     default: ''
 
@@ -87,11 +85,13 @@ runs:
           pnpm run -F "e2e^..." build
 
     - name: Login to Docker Hub
-      if: ${{ inputs.dockerhub_username != '' && inputs.dockerhub_token != '' }}
+      if: ${{ inputs.dockerhub_oidc_connection_id != '' }}
       uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      env:
+        DOCKERHUB_OIDC_CONNECTIONID: ${{ inputs.dockerhub_oidc_connection_id }}
+        DOCKERHUB_OIDC_EXPIREIN: 3600
       with:
-        username: ${{ inputs.dockerhub_username }}
-        password: ${{ inputs.dockerhub_token }}
+        username: consensys
 
     - name: Create directory for conflated traces
       shell: bash
@@ -136,7 +136,6 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         E2E_IMAGE_TAG: ${{ inputs.image_tag }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
       run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry
@@ -145,7 +144,6 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         E2E_IMAGE_TAG: ${{ inputs.image_tag }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
       run: make e2e-ci-start-env-with-retry
 
@@ -163,7 +161,7 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         E2E_STACK: ${{ inputs.stack }}
-        RISCV_PROVER_MODE: ${{ inputs.riscv_prover_mode }}
+        E2E_JEST_CONFIG: ${{ inputs.jest-config }}
       run: make e2e-ci-test
 
     - name: Show e2e tests result
@@ -173,7 +171,7 @@ runs:
         echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
 
     - name: Dump logs
-      if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
+      if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -192,12 +190,13 @@ runs:
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
         docker logs prover-ray --since 1h &>> docker_logs/prover-ray.txt || true
-        cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
+        # prover-ray writes these as root with owner-only modes; copy through the daemon instead.
+        docker cp prover-ray:/data/prover/riscv docker_logs/riscv-proofs || true
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
+      if: ${{ (failure() || (cancelled() && inputs.stack == 'riscv')) && inputs.e2e-tests-logs-dump == 'true' }}
       with:
         name: end-2-end-debug-logs${{ inputs.stack == 'riscv' && '-riscv' || '' }}
         if-no-files-found: error

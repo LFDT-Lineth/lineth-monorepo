@@ -43,12 +43,12 @@ jobs:
 
       - name: Run Claude Coordinator Review
         id: review
-        uses: anthropics/claude-code-action@aa8a7738e48bf30a40ee499ce818bef081c5ab5e # v1.0.257
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
         env:
           ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
           anthropic_api_key: ${{ secrets.LITELLM_KEY_CLAUDE_COORDINATOR_REVIEW }}
-          claude_args: --model claude-opus-4-7
+          claude_args: --model claude-opus-5-5 --disallowedTools Agent
           prompt: |
             Before starting your analysis, read the file `previous-findings.txt` in the
             repository root. It contains file:line references (e.g. `coordinator/src/.../Foo.kt:42`)
