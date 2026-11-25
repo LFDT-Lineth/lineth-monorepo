@@ -151,7 +151,8 @@ start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONT
 # Pre-create every bind-mounted host dir and make it world-writable. Docker
 # creates missing mount sources as root:root, and the root prover image can win
 # the startup race with the uid-1000 coordinator; either leaves 0755 root-owned
-# request directories that the coordinator cannot write to.
+# request directories that the coordinator cannot write to. If the host chmod
+# fails on existing root-owned data, retry through the pinned cleanup container.
 start-env:
 	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
@@ -163,7 +164,10 @@ start-env:
 		mkdir -p "tmp/local/prover/$$pipeline/requests" "tmp/local/prover/$$pipeline/responses" "tmp/local/prover/$$pipeline/requests-done"; \
 	done; \
 	mkdir -p tmp/local/prover-ray/guests tmp/local/traces/v2/conflated tmp/local/conflation-backtesting; \
-	chmod -R a+rwX tmp/local; \
+	chmod -R a+rwX tmp/local 2>/dev/null || \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+			$(CLEANUP_IMAGE) chmod -R a+rwX /data; \
 
 	$(MAKE) seed-deny-list; \
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
