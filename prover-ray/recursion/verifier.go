@@ -26,8 +26,10 @@ import (
 // Native verification takes it from the proof's value, so Inputs rejects a
 // proof whose values do not follow the declarations.
 //
-// The PCS opening is checked in the machine too (see verifier_pcs.go), for
-// the PCS's default configuration. Not supported yet: dynamic modules.
+// Dynamic modules are supported (see verifier_sizes.go): the sizes are
+// inputs, so one verifier checks the proofs of every size. The PCS opening is
+// checked in the machine too (see verifier_pcs.go), for the PCS's default
+// configuration and sized modules only.
 type Verifier struct {
 	m   *Machine
 	sys *wiop.System
@@ -40,18 +42,25 @@ type Verifier struct {
 	t           *transcript  // the inner transcript, after the replay of the rounds
 	pcs         *pcsVerifier // the PCS opening, nil if skipped
 
+	sizes      map[int]*dynSize // module index → the dynamic module's size
+	sizeOrder  []int            // the dynamic modules' indices, in module order
+	sizeTables map[sizeTableKey]Table
+	sizeCells  map[sizeCellKey]int // the size constants looked up, per module
+	powTables  map[int]Table       // x's cell → the table of x^(2^i)
+
 	// skipPCS skips the PCS opening (tests only): the verifier then checks a
 	// proof's values and transcript, not that they are bound to the committed
 	// columns, so that tests can compare it with the other native actions.
 	skipPCS bool
 }
 
-// verifierInput is one machine input: a proof cell, a round's commitment, or
-// a value of the PCS opening proof.
+// verifierInput is one machine input: a proof cell, a round's commitment, a
+// dynamic module's log size, or a value of the PCS opening proof.
 type verifierInput struct {
-	cell  *wiop.Cell
-	round int // the commitment's round, if cell and pcs are nil
-	pub   int // the cell's index in sys.PublicInputs, -1 if it is not a public input
+	cell   *wiop.Cell
+	module *wiop.Module // the module whose log size it is
+	round  int          // the commitment's round, if cell, module and pcs are nil
+	pub    int          // the cell's index in sys.PublicInputs, -1 if it is not a public input
 	// pcs reads the value from the opening proof, whose shape Inputs checks
 	// first.
 	pcs func(*fri.OpeningProof) Cell
@@ -79,11 +88,7 @@ func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) 
 			sys.Context.Path(), len(unreduced), unreduced[0].Context().Path())
 	}
 	for _, mod := range sys.Modules {
-		if mod.IsDynamic() {
-			return nil, fmt.Errorf("recursion: module %q is dynamic, which the verifier does not support yet",
-				mod.Context.Path())
-		}
-		if !mod.IsSized() {
+		if !mod.IsDynamic() && !mod.IsSized() {
 			return nil, fmt.Errorf("recursion: module %q has no size", mod.Context.Path())
 		}
 	}
@@ -93,6 +98,10 @@ func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) 
 		coins:       map[wiop.ObjectID]int{},
 		commitments: map[int]int{},
 		public:      make([]int, len(sys.PublicInputs)),
+		sizes:       map[int]*dynSize{},
+		sizeTables:  map[sizeTableKey]Table{},
+		sizeCells:   map[sizeCellKey]int{},
+		powTables:   map[int]Table{},
 	}
 	if err := v.replay(); err != nil {
 		return nil, err
@@ -112,11 +121,12 @@ func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) 
 func (v *Verifier) PublicInput(i int) int { return v.public[i] }
 
 // replay allocates the proof's inputs and derives the coins, as
-// Runtime.AdvanceRound does between rounds: each round but the last absorbs its
-// commitment (if committed) and its cells, then the next round's coins are
-// squeezed, one challenge each. The last round's commitment and cells are
-// inputs, but not absorbed: the transcript left in v.t, which the PCS opening
-// continues, is the native one after the last AdvanceRound.
+// Runtime.AdvanceRound does between rounds: each round but the last absorbs
+// the dynamic sizes (from System.DynamicSizeRound on), its commitment (if
+// committed) and its cells, then the next round's coins are squeezed, one
+// challenge each. The last round's commitment and cells are inputs, but not
+// absorbed: the transcript left in v.t, which the PCS opening continues, is
+// the native one after the last AdvanceRound.
 func (v *Verifier) replay() error {
 	pi := map[wiop.ObjectID]int{}
 	for i, c := range v.sys.PublicInputs {
@@ -124,6 +134,7 @@ func (v *Verifier) replay() error {
 	}
 	t := &transcript{m: v.m, state: -1}
 	v.t = t
+	v.allocSizes()
 	for i, r := range v.sys.Rounds {
 		// Runtime.AdvanceRound draws coins only for the rounds after the
 		// first.
@@ -131,6 +142,9 @@ func (v *Verifier) replay() error {
 			return fmt.Errorf("recursion: round 0 declares %d coins", len(r.Coins))
 		}
 		next, hasNext := r.Next()
+		if hasNext && r.ID >= v.sys.DynamicSizeRound {
+			v.absorbSizes()
+		}
 		absorb := func(addr, kind int) {
 			if hasNext {
 				t.absorb(addr, kind)
@@ -200,16 +214,14 @@ func (t *transcript) squeeze() int {
 }
 
 // Inputs returns the values of the verifier's machine inputs for a proof and
-// its public inputs. It rejects a proof that misses a value, carries dynamic
-// sizes, or holds a value whose field differs from its cell's declaration: an
-// extension value in a base cell, or a base value in an extension cell, which
-// the native transcript would absorb as one element instead of six.
+// its public inputs. It rejects a proof that misses a value, whose dynamic
+// sizes are not one power of two per dynamic module (the machine checks their
+// bounds), or holds a value whose field differs from its cell's declaration:
+// an extension value in a base cell, or a base value in an extension cell,
+// which the native transcript would absorb as one element instead of six.
 func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error) {
 	if len(pub) != len(v.sys.PublicInputs) {
 		return nil, fmt.Errorf("recursion: %d public inputs, want %d", len(pub), len(v.sys.PublicInputs))
-	}
-	if len(proof.DynamicSizes) != 0 {
-		return nil, fmt.Errorf("recursion: the proof has dynamic sizes")
 	}
 	if v.pcs != nil {
 		if err := v.pcs.checkOpeningShape(proof.PCSOpeningProof); err != nil {
@@ -217,7 +229,13 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 		}
 	}
 	res := make([]Cell, len(v.inputs))
+	if err := v.sizeInputs(proof.DynamicSizes, res); err != nil {
+		return nil, err
+	}
 	for k, in := range v.inputs {
+		if in.module != nil {
+			continue // set by sizeInputs
+		}
 		if in.pcs != nil {
 			res[k] = in.pcs(proof.PCSOpeningProof)
 			continue
@@ -262,14 +280,19 @@ func (v *Verifier) check(a wiop.VerifierAction) error {
 	case *lookuptologderivsum.ResultIsZeroVerifierAction:
 		v.assertEq(v.cell(a.LogDerivativeSum.Result), v.scalar(field.Zero()))
 	case *lookuptologderivsum.RowLimitVerifierAction:
-		// Static modules: the limit holds or not whatever the proof.
-		return a.Check(nil)
+		if err := v.checkRowLimit("lookup row limit, A side", a.IncludedModules, wiop.MaxLookupRows); err != nil {
+			return err
+		}
+		return v.checkRowLimit("lookup row limit, B side", a.IncludingsModules, wiop.MaxLookupRows)
 	case *grandproduct.FinalProductCheck:
 		v.checkFinalProduct(a)
 	case *grandproduct.CheckResultIsOne:
 		v.assertEq(v.cell(a.GrandProduct.Result), v.scalar(field.One()))
 	case *grandproduct.RowLimitAction:
-		return a.Check(nil)
+		if err := v.checkRowLimit("permutation row limit, A side", tableModules(a.Query.A), a.Limit); err != nil {
+			return err
+		}
+		return v.checkRowLimit("permutation row limit, B side", tableModules(a.Query.B), a.Limit)
 	case *messagebus.CheckHandleSumInShard:
 		v.assertEq(v.cell(a.Cell), v.m.Const(E6Cell(a.Expected.Ext)))
 	case *E6Check:
@@ -317,7 +340,7 @@ func (v *Verifier) assertEq(a, b int) { v.m.AssertEqE6(a, b) }
 func (v *Verifier) checkLogDerivativeSum(a *logderivativesum.VerifierAction) {
 	as, ns := make([]int, len(a.Entries)), make([]int, len(a.Entries))
 	for i, e := range a.Entries {
-		as[i], ns[i] = v.cell(e.Average), v.scalarInt(e.Module().Size())
+		as[i], ns[i] = v.cell(e.Average), v.size(e.Module())
 	}
 	sums := v.m.MulAddChain(v.scalar(field.Zero()), as, ns)
 	v.assertEq(sums[len(sums)-1], v.cell(a.LogDerivativeSum.Result))
@@ -347,4 +370,14 @@ func (v *Verifier) checkE6(a *E6Check) {
 	}
 	sums := v.m.MulAddChain(v.scalar(field.Zero()), lanes, basis)
 	v.assertEq(sums[len(sums)-1], v.cell(a.Cell))
+}
+
+// tableModules returns the module of each table, as the row limits count
+// them.
+func tableModules(ts []wiop.Table) []*wiop.Module {
+	res := make([]*wiop.Module, len(ts))
+	for i, t := range ts {
+		res[i] = t.Module()
+	}
+	return res
 }
