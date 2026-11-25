@@ -21,6 +21,7 @@ import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import lineth.persistence.conflation.RecordsCleanupFinalizationHandler
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
@@ -46,6 +47,7 @@ class L1FinalizationMonitorApp(
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
+  private val riscvRollupsDao: RiscvRollupsDao,
   private val metricsFacade: MetricsFacade,
   private val l1FinalizationUpdateHandler: (blockNumber: Long) -> SafeFuture<Unit>,
   private val l2EthApiClient: EthApiClient = createEthApiClient(
@@ -93,6 +95,7 @@ class L1FinalizationMonitorApp(
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
         forcedTransactionsDao = forcedTransactionsDao,
+        riscvRollupsDao = riscvRollupsDao,
       ),
       "highest_accepted_finalization_on_l1" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
         highestAcceptedFinalizationTracker(update.blockNumber)

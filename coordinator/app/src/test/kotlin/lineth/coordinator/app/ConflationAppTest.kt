@@ -19,7 +19,7 @@ import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
-import lineth.persistence.BlobsRepositoryV2
+import lineth.persistence.RiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -107,14 +107,14 @@ class ConflationAppTest {
   @Test
   fun `riscv pipeline resumes after the consecutive batches and rollup rows, aggregating from the finalized block`() {
     val batchesRepository = mock<BatchesRepository>()
-    val blobsRepository = mock<BlobsRepositoryV2>()
+    val rollupsDao = mock<RiscvRollupsDao>()
     whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101L))
       .thenReturn(SafeFuture.completedFuture(150L))
-    whenever(blobsRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
+    whenever(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
       .thenReturn(SafeFuture.completedFuture(140uL))
 
     val lastProcessedBlocks =
-      getLastRiscvProcessedBlocks(100uL, batchesRepository, blobsRepository, l2ClientReturningBlocks()).get()
+      getLastRiscvProcessedBlocks(100uL, batchesRepository, rollupsDao, l2ClientReturningBlocks()).get()
 
     assertThat(lastProcessedBlocks.lastConflatedBlock.number).isEqualTo(150uL)
     assertThat(lastProcessedBlocks.lastRollupEndBlockNumber).isEqualTo(140uL)
@@ -124,14 +124,14 @@ class ConflationAppTest {
   @Test
   fun `riscv pipeline resumes at the finalized block when no batch or rollup row follows it`() {
     val batchesRepository = mock<BatchesRepository>()
-    val blobsRepository = mock<BlobsRepositoryV2>()
+    val rollupsDao = mock<RiscvRollupsDao>()
     whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101L))
       .thenReturn(SafeFuture.completedFuture(null))
-    whenever(blobsRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
+    whenever(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
       .thenReturn(SafeFuture.completedFuture(null))
 
     val lastProcessedBlocks =
-      getLastRiscvProcessedBlocks(100uL, batchesRepository, blobsRepository, l2ClientReturningBlocks()).get()
+      getLastRiscvProcessedBlocks(100uL, batchesRepository, rollupsDao, l2ClientReturningBlocks()).get()
 
     assertThat(lastProcessedBlocks.lastConflatedBlock.number).isEqualTo(100uL)
     assertThat(lastProcessedBlocks.lastRollupEndBlockNumber).isEqualTo(100uL)
@@ -140,24 +140,24 @@ class ConflationAppTest {
 
   @Test
   fun `riscv rollups resume after the consecutive rollup rows, or at the finalized block`() {
-    val blobsRepository = mock<BlobsRepositoryV2>()
-    whenever(blobsRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
+    val rollupsDao = mock<RiscvRollupsDao>()
+    whenever(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(101uL))
       .thenReturn(SafeFuture.completedFuture(140uL))
-    whenever(blobsRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(201uL))
+    whenever(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(201uL))
       .thenReturn(SafeFuture.completedFuture(null))
 
-    assertThat(resumeRiscvRollupFrom(blobsRepository, 100uL).get()).isEqualTo(140uL)
-    assertThat(resumeRiscvRollupFrom(blobsRepository, 200uL).get()).isEqualTo(200uL)
+    assertThat(resumeRiscvRollupFrom(rollupsDao, 100uL).get()).isEqualTo(140uL)
+    assertThat(resumeRiscvRollupFrom(rollupsDao, 200uL).get()).isEqualTo(200uL)
   }
 
   @Test
   fun `riscv startup db cleanup deletes after each stage's resume point`() {
     val batchesRepository = mock<BatchesRepository>()
-    val blobsRepository = mock<BlobsRepositoryV2>()
+    val rollupsDao = mock<RiscvRollupsDao>()
     val aggregationsRepository = mock<AggregationsRepository>()
     whenever(batchesRepository.deleteBatchesAfterBlockNumber(anyLong()))
       .thenReturn(SafeFuture.completedFuture(0))
-    whenever(blobsRepository.deleteBlobsAfterBlockNumber(anyLong().toULong()))
+    whenever(rollupsDao.deleteRollupsAfterBlockNumber(anyLong().toULong()))
       .thenReturn(SafeFuture.completedFuture(0))
     whenever(aggregationsRepository.deleteAggregationsAfterBlockNumber(anyLong()))
       .thenReturn(SafeFuture.completedFuture(0))
@@ -167,12 +167,12 @@ class ConflationAppTest {
       lastRollupEndBlockNumber = 140uL,
       lastAggregatedBlockNumber = 100uL,
       batchesRepository = batchesRepository,
-      blobsRepository = blobsRepository,
+      rollupsDao = rollupsDao,
       aggregationsRepository = aggregationsRepository,
     ).get()
 
     verify(batchesRepository).deleteBatchesAfterBlockNumber(151L)
-    verify(blobsRepository).deleteBlobsAfterBlockNumber(141uL)
+    verify(rollupsDao).deleteRollupsAfterBlockNumber(141uL)
     verify(aggregationsRepository).deleteAggregationsAfterBlockNumber(101L)
   }
 
@@ -186,7 +186,7 @@ class ConflationAppTest {
         lastRollupEndBlockNumber = 160uL,
         lastAggregatedBlockNumber = 100uL,
         batchesRepository = batchesRepository,
-        blobsRepository = mock<BlobsRepositoryV2>(),
+        rollupsDao = mock<RiscvRollupsDao>(),
         aggregationsRepository = mock<AggregationsRepository>(),
       ).get()
     }.hasMessageContaining("last rollup ends at block 160, after the last persisted batch 150")

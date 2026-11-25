@@ -7,7 +7,7 @@ import io.vertx.sqlclient.RowSet
 import linea.domain.createAggregation
 import linea.domain.createBatch
 import linea.domain.createBlobRecordFromBatches
-import linea.domain.createBlobRecordV2
+import linea.domain.createRiscvRollupRecord
 import linea.persistence.db.DbHelper
 import linea.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.finalization.FinalizationMonitor
@@ -15,6 +15,7 @@ import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import lineth.persistence.ftx.PostgresForcedTransactionsDao
 import net.consensys.FakeFixedClock
@@ -39,6 +40,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
   private lateinit var blobsRepository: BlobsRepository
   private lateinit var aggregationsRepository: AggregationsRepository
   private lateinit var forcedTransactionsDao: ForcedTransactionsDao
+  private lateinit var riscvRollupsDao: RiscvRollupsDao
 
   private lateinit var recordsCleanupFinalizationHandler: RecordsCleanupFinalizationHandler
 
@@ -71,11 +73,17 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       clock = fakeClock,
     )
 
+    riscvRollupsDao = RiscvRollupsPostgresDao(
+      config = RiscvRollupsPostgresDao.Config(maxRollupProofsToReturn = 10u),
+      connection = sqlClient,
+      clock = fakeClock,
+    )
     recordsCleanupFinalizationHandler = RecordsCleanupFinalizationHandler(
       batchesRepository,
       blobsRepository,
       aggregationsRepository,
       forcedTransactionsDao,
+      riscvRollupsDao,
     )
   }
 
@@ -192,28 +200,25 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `cleanup after the RISC-V cutover keeps the rollup row ending at the finalized block and the rows after it`() {
-    val blobsRepositoryV2 = BlobsRepositoryImplV2(
-      BlobsPostgresDaoV2(
-        config = BlobsPostgresDaoV2.Config(maxRollupProofsToReturn = 10u),
-        connection = sqlClient,
-        clock = fakeClock,
-      ),
-    )
     val riscvBatches = (0L until 8L).map { createBatch(startBlockNumber = it * 5 + 1, endBlockNumber = it * 5 + 5) }
     // Rollups ending inside a blob share it with the next one.
     val rollups = listOf(
-      createBlobRecordV2(startBlockNumber = 1UL, endBlockNumber = 10UL, finalSharedBlobCarryOverTailBytes = 100u),
-      createBlobRecordV2(
+      createRiscvRollupRecord(startBlockNumber = 1UL, endBlockNumber = 10UL, finalSharedBlobCarryOverTailBytes = 100u),
+      createRiscvRollupRecord(
         startBlockNumber = 11UL,
         endBlockNumber = 20UL,
         parentSharedBlobCarryOverTailBytes = 100u,
         finalSharedBlobCarryOverTailBytes = 200u,
       ),
-      createBlobRecordV2(startBlockNumber = 21UL, endBlockNumber = 30UL, parentSharedBlobCarryOverTailBytes = 200u),
-      createBlobRecordV2(startBlockNumber = 31UL, endBlockNumber = 40UL),
+      createRiscvRollupRecord(
+        startBlockNumber = 21UL,
+        endBlockNumber = 30UL,
+        parentSharedBlobCarryOverTailBytes = 200u,
+      ),
+      createRiscvRollupRecord(startBlockNumber = 31UL, endBlockNumber = 40UL),
     )
     riscvBatches.forEach { batchesRepository.saveNewBatch(it).get() }
-    rollups.forEach { blobsRepositoryV2.saveNewBlob(it).get() }
+    rollups.forEach { riscvRollupsDao.saveRollupWithBlobs(it).get() }
 
     recordsCleanupFinalizationHandler.handleUpdate(
       FinalizationMonitor.FinalizationUpdate(
@@ -223,12 +228,15 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       ),
     ).get()
 
-    // The resume anchor and every row after it survive, and parse as RISC-V rollup rows.
-    Assertions.assertThat(blobsRepositoryV2.findBlobByEndBlockNumber(20L).get()).isEqualTo(rollups[1])
-    Assertions.assertThat(blobsRepositoryV2.findBlobByEndBlockNumber(10L).get()).isNull()
-    Assertions.assertThat(blobsRepositoryV2.findHighestConsecutiveEndBlockNumberFromBlockNumber(21UL).get())
+    // The resume anchor and every rollup after it survive.
+    Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(20UL).get()).isEqualTo(rollups[1])
+    Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(10UL).get()).isNull()
+    Assertions.assertThat(riscvRollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(21UL).get())
       .isEqualTo(40UL)
-    Assertions.assertThat(blobsContentQuery().execute().get().size()).isEqualTo(3)
+    Assertions.assertThat(
+      sqlClient.preparedQuery("select count(*) as n from ${RiscvRollupsPostgresDao.RollupsTableName}")
+        .execute().get().first().getInteger("n"),
+    ).isEqualTo(3)
     // Batches after the finalized block survive for conflation and rollup resume.
     Assertions.assertThat(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(21L).get())
       .isEqualTo(40L)

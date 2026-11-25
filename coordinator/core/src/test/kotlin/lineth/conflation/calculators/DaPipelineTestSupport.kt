@@ -43,7 +43,7 @@ object DaPipelineTestSupport {
     if (tail == 0u) return DaStreamPosition.fresh(rollup.da.expectedEndDataRollingHash)
     return DaStreamPosition(
       dataRollingHash = rollup.da.expectedEndDataRollingHash,
-      parentBlobDataRollingHash = last.prevDataRollingHash,
+      parentBlobDataRollingHash = last.parentDataRollingHash,
       sharedBlobCarryOverTailBytes = tail,
       sharedBlob = last.blob,
     )

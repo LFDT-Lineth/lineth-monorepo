@@ -341,7 +341,7 @@ class RollupProofGeneratingCoordinator(
         )
       },
       parentDataRollingHash = da.parentDataRollingHash,
-      parentSharedBlobCarryOverTailBytes = da.parentSharedBlobCarryOverTailBytes.toInt(),
+      parentSharedBlobCarryOverTailBytes = da.parentSharedBlobCarryOverTailBytes,
       parentBlobDataRollingHash = da.midBlobStartParentBlobDataRollingHash(),
     )
   }
@@ -362,8 +362,7 @@ class RollupProofGeneratingCoordinator(
         BlobData(
           chunkHash = it.chunkHash,
           blobBytes = it.blob,
-          batchesCount = it.segmentEnds.size.toUInt(),
-          prevDataRollingHash = it.prevDataRollingHash,
+          parentDataRollingHash = it.parentDataRollingHash,
           dataRollingHash = it.dataRollingHash,
         )
       },

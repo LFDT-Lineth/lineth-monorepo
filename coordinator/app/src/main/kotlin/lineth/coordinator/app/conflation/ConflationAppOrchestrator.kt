@@ -14,7 +14,7 @@ import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
-import lineth.coordination.riscv.rollup.BlobsRepositoryV2RollupResumePointProvider
+import lineth.coordination.riscv.rollup.RiscvRollupsResumePointProvider
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
@@ -25,8 +25,8 @@ import lineth.metrics.LineaMetricsCategory
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
-import lineth.persistence.BlobsRepositoryV2
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
@@ -47,7 +47,7 @@ class ConflationAppOrchestrator(
   private val clock: Clock,
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
-  private val blobsRepositoryV2: BlobsRepositoryV2,
+  private val riscvRollupsDao: RiscvRollupsDao,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val lastFinalizedBlock: ULong,
@@ -192,7 +192,7 @@ class ConflationAppOrchestrator(
     ConflationAppHelper.getLastRiscvProcessedBlocks(
       lastFinalizedBlock = lastFinalizedBlock,
       batchesRepository = batchesRepository,
-      blobsRepository = blobsRepositoryV2,
+      rollupsDao = riscvRollupsDao,
       l2EthClient = l2EthClient,
     ).get()
   } else {
@@ -212,8 +212,8 @@ class ConflationAppOrchestrator(
    */
   private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)? =
     configs.conflation.rollup?.let { rollupConfig ->
-      val resumePointProvider = BlobsRepositoryV2RollupResumePointProvider(
-        blobsRepository = blobsRepositoryV2,
+      val resumePointProvider = RiscvRollupsResumePointProvider(
+        rollupsDao = riscvRollupsDao,
         riscvCutoverTimestamp = riscvCutoverTimestamp!!,
         genesisDataRollingHashProvider = ConfigRiscvGenesisDataRollingHashProvider(rollupConfig.genesisDataRollingHash),
       )
@@ -322,7 +322,7 @@ class ConflationAppOrchestrator(
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,
-        blobsRepositoryV2 = blobsRepositoryV2,
+        riscvRollupsDao = riscvRollupsDao,
         rollupResumePointSupplier = rollupResumePointSupplier,
       )
     } else {
@@ -405,7 +405,7 @@ class ConflationAppOrchestrator(
       lastRollupEndBlockNumber = lastRollupEndBlockNumber,
       lastAggregatedBlockNumber = lastAggregatedBlockNumber,
       batchesRepository = batchesRepository,
-      blobsRepository = blobsRepositoryV2,
+      rollupsDao = riscvRollupsDao,
       aggregationsRepository = aggregationsRepository,
     ).thenCompose<Unit> {
       cleanupRiscvProverRequests(lastConflatedBlockNumber, lastRollupEndBlockNumber, lastAggregatedBlockNumber)

@@ -27,7 +27,7 @@ data class DaStreamPosition(
     require(parentBlobDataRollingHash.size == 32) {
       "parentBlobDataRollingHash must be 32 bytes, got ${parentBlobDataRollingHash.size}"
     }
-    require(sharedBlobCarryOverTailBytes <= DaConstants.MAX_TAIL_BYTES.toUInt()) {
+    require(sharedBlobCarryOverTailBytes <= DaConstants.MAX_TAIL_BYTES) {
       "sharedBlobCarryOverTailBytes=$sharedBlobCarryOverTailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
     if (sharedBlobCarryOverTailBytes > 0u) {

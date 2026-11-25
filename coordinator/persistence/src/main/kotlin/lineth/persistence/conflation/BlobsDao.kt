@@ -1,7 +1,6 @@
 package lineth.persistence.conflation
 
 import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
@@ -23,7 +22,3 @@ interface BlobsDaoG<T> {
 }
 
 interface BlobsDao : BlobsDaoG<BlobRecord>
-interface BlobsDaoV2 : BlobsDaoG<BlobRecordV2> {
-  /** End block of the last row in the gap-free run of proven rows starting at [startingBlockNumberInclusive]. */
-  fun findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<ULong?>
-}

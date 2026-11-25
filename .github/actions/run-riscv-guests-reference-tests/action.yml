@@ -1,0 +1,15 @@
+name: 'Run RISC-V guests reference tests'
+description: 'Run the l2-execution extended-guest reference-test guards on the host.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup RISC-V guests environment
+      uses: ./.github/actions/setup-riscv-guests
+      with:
+        needs-zkevm-fixtures: 'true'
+
+    - name: Run extended-guest reference-test guards
+      shell: bash
+      run: make reference-test
+      working-directory: riscv-guests/l2_execution

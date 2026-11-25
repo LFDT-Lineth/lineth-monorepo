@@ -41,8 +41,8 @@ import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.RiscvProverConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository
-import lineth.persistence.BlobsRepositoryV2
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.async.toSafeFutureNonNull
 import net.consensys.linea.metrics.MetricsFacade
@@ -75,7 +75,7 @@ class ConflationAppV2(
   private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
   private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val lastProcessedBlocks: LastProcessedBlocks,
-  private val blobsRepositoryV2: BlobsRepositoryV2,
+  private val riscvRollupsDao: RiscvRollupsDao,
   private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)?,
 ) : LongRunningService {
 
@@ -185,7 +185,7 @@ class ConflationAppV2(
     val rollupProverClient = proverClientFactory.rollupProverClient()
     val rollupProofPoller = RollupProofPoller(
       rollupProverClient = rollupProverClient,
-      rollupProofHandler = RollupProofPersistenceHandler(blobsRepositoryV2),
+      rollupProofHandler = RollupProofPersistenceHandler(riscvRollupsDao),
       vertx = vertx,
       config = RollupProofPoller.Config(pollingInterval = riscvProverConfig.rollup.pollingInterval),
       metricsFacade = metricsFacade,

@@ -6,6 +6,7 @@ import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class RecordsCleanupFinalizationHandler(
@@ -13,6 +14,7 @@ class RecordsCleanupFinalizationHandler(
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
+  private val riscvRollupsDao: RiscvRollupsDao? = null,
 ) : FinalizationHandler {
   override fun handleUpdate(update: FinalizationMonitor.FinalizationUpdate): SafeFuture<*> {
     // We do not need to keep batches, blobs and aggregation objects in the DB that are not needed after finalization.
@@ -20,7 +22,8 @@ class RecordsCleanupFinalizationHandler(
     // - the last blob because BlobCompressionProofCoordinator needs the shnarf from the previous blob and, after the
     //   RISC-V cutover, the rollup row ending at the finalized block is where the rollup stage resumes from;
     // - the last aggregation because we do not want to delete the last aggregation.
-    // The blobs and aggregations tables hold both pre-RISC-V and RISC-V rows, so this cleans both.
+    // RISC-V rollups live in their own tables and follow the blobs rule: the rollup ending at the finalized block is the
+    // rollup stage's resume anchor, and deleting rollups keeps any blob a remaining rollup still shares.
     //
     // Consider the case when we have a finalization event for block 100.
     //
@@ -43,6 +46,9 @@ class RecordsCleanupFinalizationHandler(
     )
     val aggregationsCleanup = aggregationsRepository
       .deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive = update.blockNumber.toLong() - 1L)
+    val riscvRollupsCleanup = riscvRollupsDao
+      ?.deleteRollupsUpToEndBlockNumber(endBlockNumberInclusive = update.blockNumber - 1u)
+      ?: SafeFuture.completedFuture(0)
     val ftxRecordsCleanup =
       if (update.forcedTransactionNumber > 0UL) {
         forcedTransactionsDao.deleteFtxUpToInclusive(update.forcedTransactionNumber - 1UL)
@@ -50,6 +56,6 @@ class RecordsCleanupFinalizationHandler(
         SafeFuture.completedFuture(Unit)
       }
 
-    return SafeFuture.allOf(batchesCleanup, blobsCleanup, aggregationsCleanup, ftxRecordsCleanup)
+    return SafeFuture.allOf(batchesCleanup, blobsCleanup, riscvRollupsCleanup, aggregationsCleanup, ftxRecordsCleanup)
   }
 }
