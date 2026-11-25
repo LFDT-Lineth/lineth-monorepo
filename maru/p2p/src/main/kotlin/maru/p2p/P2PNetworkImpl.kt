@@ -369,7 +369,6 @@ class P2PNetworkImpl(
               peerAddress,
               p2pConfig.reconnectDelay,
               t.message,
-              t,
             )
             if (t.cause?.message != "Transport is closed") {
               SafeFuture

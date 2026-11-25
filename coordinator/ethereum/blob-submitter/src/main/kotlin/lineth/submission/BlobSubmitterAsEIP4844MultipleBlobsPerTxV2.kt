@@ -3,8 +3,8 @@ package lineth.submission
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobData
-import linea.domain.BlobRecordV2
 import linea.domain.BlobSubmittedEvent
+import linea.domain.RiscvRollupRecord
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.encodeHex
 import lineth.gaspricing.GasPriceCapProviderV2
@@ -27,7 +27,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
 ) : BlobSubmitterV2 {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  override fun submitBlobs(blobsChunks: List<BlobRecordV2>): SafeFuture<List<String>> {
+  override fun submitBlobs(blobsChunks: List<RiscvRollupRecord>): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobRecord ->
         val newChainOfFutures = chainOfFutures
@@ -39,10 +39,13 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  private fun blobsToSubmit(blobRecord: BlobRecordV2): List<BlobData> =
+  private fun blobsToSubmit(blobRecord: RiscvRollupRecord): List<BlobData> =
     if (blobRecord.parentSharedBlobCarryOverTailBytes > 0u) blobRecord.blobsData.drop(1) else blobRecord.blobsData
 
-  private fun submitBlobRecordInTxs(blobRecord: BlobRecordV2, isEthCall: Boolean = false): SafeFuture<List<String>> {
+  private fun submitBlobRecordInTxs(
+    blobRecord: RiscvRollupRecord,
+    isEthCall: Boolean = false,
+  ): SafeFuture<List<String>> {
     if (blobsToSubmit(blobRecord).isEmpty()) {
       log.debug(
         "rollup={} has no new blobs: its only blob was submitted with the previous rollup",
@@ -65,7 +68,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
               .thenCompose { listOfTxHashes ->
                 submitBlobsInSingleTx(
                   blobs = blobs.map { it.blobBytes },
-                  parentDataRollingHash = blobs.first().prevDataRollingHash,
+                  parentDataRollingHash = blobs.first().parentDataRollingHash,
                   storedDataRollingHash = blobs.last().dataRollingHash,
                   blobRecord = blobRecord,
                   gasPriceCaps = gasPriceCaps,
@@ -92,7 +95,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
     blobs: List<ByteArray>,
     parentDataRollingHash: ByteArray,
     storedDataRollingHash: ByteArray,
-    blobRecord: BlobRecordV2,
+    blobRecord: RiscvRollupRecord,
     gasPriceCaps: GasPriceCaps?,
     isEthCall: Boolean = false,
   ): SafeFuture<String> {
@@ -137,7 +140,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  override fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*> {
+  override fun submitBlobCall(blobRecord: RiscvRollupRecord): SafeFuture<*> {
     return submitBlobRecordInTxs(blobRecord, true)
   }
 }

@@ -3,9 +3,9 @@ package lineth.coordination.riscv.rollup
 import linea.da.DaStreamPosition
 import linea.da.RollupResumePoint
 import linea.da.RollupResumePointProvider
-import linea.domain.BlobRecordV2
 import linea.domain.RiscvGenesisDataRollingHashProvider
-import lineth.persistence.BlobsRepositoryV2
+import linea.domain.RiscvRollupRecord
+import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
@@ -18,8 +18,8 @@ import kotlin.time.Instant
  *
  * The resume point is then the end of the last row in the gap-free run from F + 1, or the anchor if there is none.
  */
-class BlobsRepositoryV2RollupResumePointProvider(
-  private val blobsRepository: BlobsRepositoryV2,
+class RiscvRollupsResumePointProvider(
+  private val rollupsDao: RiscvRollupsDao,
   private val riscvCutoverTimestamp: Instant,
   private val genesisDataRollingHashProvider: RiscvGenesisDataRollingHashProvider,
 ) : RollupResumePointProvider {
@@ -37,7 +37,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
       }.thenApply(::resumePointAfter)
     }
     return anchor.thenCompose { anchorPoint ->
-      blobsRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
+      rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
         .thenCompose { lastEnd ->
           if (lastEnd == null) {
             SafeFuture.completedFuture(anchorPoint)
@@ -48,12 +48,12 @@ class BlobsRepositoryV2RollupResumePointProvider(
     }
   }
 
-  private fun findRow(endBlockNumber: ULong, missingMessage: () -> String): SafeFuture<BlobRecordV2> =
-    blobsRepository.findBlobByEndBlockNumber(endBlockNumber.toLong()).thenApply {
+  private fun findRow(endBlockNumber: ULong, missingMessage: () -> String): SafeFuture<RiscvRollupRecord> =
+    rollupsDao.findRollupByEndBlockNumber(endBlockNumber).thenApply {
       it ?: throw IllegalStateException(missingMessage())
     }
 
-  private fun resumePointAfter(row: BlobRecordV2): RollupResumePoint {
+  private fun resumePointAfter(row: RiscvRollupRecord): RollupResumePoint {
     val lastBlob = row.blobsData.last()
     val tail = row.finalSharedBlobCarryOverTailBytes
     return RollupResumePoint(
@@ -63,7 +63,7 @@ class BlobsRepositoryV2RollupResumePointProvider(
       } else {
         DaStreamPosition(
           dataRollingHash = row.dataRollingHash,
-          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          parentBlobDataRollingHash = lastBlob.parentDataRollingHash,
           sharedBlobCarryOverTailBytes = tail,
           sharedBlob = lastBlob.blobBytes,
         )

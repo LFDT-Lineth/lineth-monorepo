@@ -4,9 +4,9 @@ import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobData
-import linea.domain.BlobRecordV2
+import linea.domain.RiscvRollupRecord
 import linea.domain.createBlobData
-import linea.domain.createBlobRecordV2
+import linea.domain.createRiscvRollupRecord
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -22,7 +22,7 @@ import kotlin.random.Random
 
 class BlobSubmittersV2Test {
   private val hashes = List(5) { Random.nextBytes(32) }
-  private val blobs = List(4) { createBlobData(prevDataRollingHash = hashes[it], dataRollingHash = hashes[it + 1]) }
+  private val blobs = List(4) { createBlobData(parentDataRollingHash = hashes[it], dataRollingHash = hashes[it + 1]) }
 
   // rollup1 = [b0, b1, b2] ending inside b2; rollup2 = [b2 (shared), b3] ending inside b3; rollup3 lies inside b3.
   private val rollup1 =
@@ -40,14 +40,14 @@ class BlobSubmittersV2Test {
     blobsData: List<BlobData>,
     parentCarryOver: UInt,
     finalCarryOver: UInt,
-  ): BlobRecordV2 =
-    createBlobRecordV2(
+  ): RiscvRollupRecord =
+    createRiscvRollupRecord(
       startBlockNumber = startBlockNumber,
       endBlockNumber = endBlockNumber,
       parentDataRollingHash = parentDataRollingHash,
       dataRollingHash = dataRollingHash,
       parentSharedBlobCarryOverTailBytes = parentCarryOver,
-      parentBlobDataRollingHash = if (parentCarryOver > 0u) blobsData.first().prevDataRollingHash else null,
+      parentBlobDataRollingHash = if (parentCarryOver > 0u) blobsData.first().parentDataRollingHash else null,
       finalSharedBlobCarryOverTailBytes = finalCarryOver,
       blobsData = blobsData,
     )

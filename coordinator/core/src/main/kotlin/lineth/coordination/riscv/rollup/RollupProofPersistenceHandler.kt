@@ -1,18 +1,18 @@
 package lineth.coordination.riscv.rollup
 
 import linea.clients.RollupProofResponseV1
-import linea.domain.BlobRecordV2
-import lineth.persistence.BlobsRepositoryV2
+import linea.domain.RiscvRollupRecord
+import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class RollupProofPersistenceHandler(
-  private val blobsRepository: BlobsRepositoryV2,
+  private val rollupsDao: RiscvRollupsDao,
 ) : RollupProofHandler {
   override fun acceptNewRollupProof(
     proof: RollupProofResponseV1,
     context: RollupProofPoller.ProofContext,
   ): SafeFuture<*> {
-    val record = BlobRecordV2(
+    val record = RiscvRollupRecord(
       startBlockNumber = context.proofIndex.startBlockNumber,
       endBlockNumber = context.proofIndex.endBlockNumber,
       startBlockTimestamp = context.startBlockTimestamp,
@@ -26,6 +26,6 @@ class RollupProofPersistenceHandler(
       parentBlobDataRollingHash = context.parentBlobDataRollingHash,
       finalSharedBlobCarryOverTailBytes = context.finalSharedBlobCarryOverTailBytes,
     )
-    return blobsRepository.saveNewBlob(record)
+    return rollupsDao.saveRollupWithBlobs(record)
   }
 }

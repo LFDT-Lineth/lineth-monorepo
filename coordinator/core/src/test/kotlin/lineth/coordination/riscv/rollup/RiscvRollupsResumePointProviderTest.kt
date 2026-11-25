@@ -3,10 +3,10 @@ package lineth.coordination.riscv.rollup
 import linea.da.DaConstants
 import linea.da.DaStreamPosition
 import linea.da.RollupResumePoint
-import linea.domain.BlobRecordV2
+import linea.domain.RiscvRollupRecord
 import linea.domain.createBlobData
-import linea.domain.createBlobRecordV2
-import lineth.persistence.BlobsRepositoryV2
+import linea.domain.createRiscvRollupRecord
+import lineth.persistence.RiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -16,15 +16,15 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-class BlobsRepositoryV2RollupResumePointProviderTest {
+class RiscvRollupsResumePointProviderTest {
   private val cutover = Instant.parse("2026-10-01T00:00:00Z")
   private val genesisDataRollingHash = ByteArray(32) { 0x11 }
-  private val rows = mutableMapOf<ULong, BlobRecordV2>()
-  private lateinit var provider: BlobsRepositoryV2RollupResumePointProvider
+  private val rows = mutableMapOf<ULong, RiscvRollupRecord>()
+  private lateinit var provider: RiscvRollupsResumePointProvider
 
-  private inner class FakeRepository : BlobsRepositoryV2 {
-    override fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<BlobRecordV2?> =
-      SafeFuture.completedFuture(rows[endBlockNumber.toULong()])
+  private inner class FakeRollupsDao : RiscvRollupsDao {
+    override fun findRollupByEndBlockNumber(endBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
+      SafeFuture.completedFuture(rows[endBlockNumber])
 
     override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
       startingBlockNumberInclusive: ULong,
@@ -39,37 +39,38 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
       return SafeFuture.completedFuture(lastEnd)
     }
 
-    override fun saveNewBlob(blobRecord: BlobRecordV2): SafeFuture<Unit> = throw UnsupportedOperationException()
+    override fun saveRollupWithBlobs(rollup: RiscvRollupRecord): SafeFuture<Unit> =
+      throw UnsupportedOperationException()
 
-    override fun getConsecutiveBlobsFromBlockNumber(
-      startingBlockNumberInclusive: Long,
+    override fun getConsecutiveRollupsFromBlockNumber(
+      startingBlockNumberInclusive: ULong,
       endBlockCreatedBefore: Instant,
-    ): SafeFuture<List<BlobRecordV2>> = throw UnsupportedOperationException()
+    ): SafeFuture<List<RiscvRollupRecord>> = throw UnsupportedOperationException()
 
-    override fun findBlobByStartBlockNumber(startBlockNumber: Long): SafeFuture<BlobRecordV2?> =
+    override fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
       throw UnsupportedOperationException()
 
-    override fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> =
+    override fun deleteRollupsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> =
       throw UnsupportedOperationException()
 
-    override fun deleteBlobsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int> =
+    override fun deleteRollupsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int> =
       throw UnsupportedOperationException()
   }
 
   @BeforeEach
   fun setUp() {
-    provider = BlobsRepositoryV2RollupResumePointProvider(
-      blobsRepository = FakeRepository(),
+    provider = RiscvRollupsResumePointProvider(
+      rollupsDao = FakeRollupsDao(),
       riscvCutoverTimestamp = cutover,
       genesisDataRollingHashProvider = { SafeFuture.completedFuture(genesisDataRollingHash) },
     )
   }
 
-  private fun addRow(start: ULong, end: ULong, finalSharedBlobCarryOverTailBytes: UInt = 0u): BlobRecordV2 {
+  private fun addRow(start: ULong, end: ULong, finalSharedBlobCarryOverTailBytes: UInt = 0u): RiscvRollupRecord {
     val record = if (finalSharedBlobCarryOverTailBytes > 0u) {
       val parent = Random.nextBytes(32)
       val drh = Random.nextBytes(32)
-      createBlobRecordV2(
+      createRiscvRollupRecord(
         startBlockNumber = start,
         endBlockNumber = end,
         parentDataRollingHash = parent,
@@ -78,7 +79,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
         blobsData = listOf(createBlobData(parent, drh, blobBytes = Random.nextBytes(DaConstants.BLOB_BYTES))),
       )
     } else {
-      createBlobRecordV2(startBlockNumber = start, endBlockNumber = end)
+      createRiscvRollupRecord(startBlockNumber = start, endBlockNumber = end)
     }
     rows[end] = record
     return record
@@ -122,7 +123,7 @@ class BlobsRepositoryV2RollupResumePointProviderTest {
         110UL,
         DaStreamPosition(
           dataRollingHash = last.dataRollingHash,
-          parentBlobDataRollingHash = lastBlob.prevDataRollingHash,
+          parentBlobDataRollingHash = lastBlob.parentDataRollingHash,
           sharedBlobCarryOverTailBytes = 500u,
           sharedBlob = lastBlob.blobBytes,
         ),

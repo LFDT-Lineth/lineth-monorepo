@@ -305,8 +305,7 @@ class RollupProofGeneratingCoordinator(
         BlobData(
           chunkHash = chunk.chunkHash,
           blobBytes = chunk.blobBytes,
-          batchesCount = 0u,
-          prevDataRollingHash = chunk.parentDataRollingHash,
+          parentDataRollingHash = chunk.parentDataRollingHash,
           dataRollingHash = chunkedData.chunks.getOrNull(i + 1)?.parentDataRollingHash ?: chunkedData.dataRollingHash,
         )
       },
@@ -345,7 +344,7 @@ class RollupProofGeneratingCoordinator(
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
       // Proof windows always start at a chunk boundary; the guest derives finalSharedBlobCarryOverTailBytes itself.
-      parentSharedBlobCarryOverTailBytes = 0,
+      parentSharedBlobCarryOverTailBytes = 0u,
       parentBlobDataRollingHash = null,
     )
   }
