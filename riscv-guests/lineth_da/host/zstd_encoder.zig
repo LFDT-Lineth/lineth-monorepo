@@ -25,13 +25,13 @@ pub const Error = error{
 pub const level = 3;
 
 /// Compresses payloads against one dictionary. The dictionary is digested once, when the encoder is
-/// created.
+/// created. Every `compress` has its own libzstd context and shares only that digest, which it reads
+/// alone, so any number of threads may compress with one encoder.
 pub const Encoder = struct {
     state: *State,
 
     const State = struct {
         memory: zstd_memory.Memory,
-        cctx: *c.ZSTD_CCtx,
         cdict: *c.ZSTD_CDict,
     };
 
@@ -40,34 +40,35 @@ pub const Encoder = struct {
         const state = try allocator.create(State);
         errdefer allocator.destroy(state);
         state.memory = .{ .allocator = allocator };
-        const hooks = state.memory.hooks();
 
-        state.cdict = c.ZSTD_createCDict_advanced(dictionary.ptr, dictionary.len, c.ZSTD_dlm_byRef, c.ZSTD_dct_fullDict, c.ZSTD_getCParams(level, 0, dictionary.len), hooks) orelse
+        state.cdict = c.ZSTD_createCDict_advanced(dictionary.ptr, dictionary.len, c.ZSTD_dlm_byRef, c.ZSTD_dct_fullDict, c.ZSTD_getCParams(level, 0, dictionary.len), state.memory.hooks()) orelse
             return if (state.memory.exhausted) error.OutOfMemory else error.InvalidDictionary;
         errdefer _ = c.ZSTD_freeCDict(state.cdict);
         if (c.ZSTD_getDictID_fromCDict(state.cdict) == 0) return error.InvalidDictionary;
-        state.cctx = c.ZSTD_createCCtx_advanced(hooks) orelse return error.OutOfMemory;
-        errdefer _ = c.ZSTD_freeCCtx(state.cctx);
-        try check(c.ZSTD_CCtx_setParameter(state.cctx, c.ZSTD_c_compressionLevel, level));
-        try check(c.ZSTD_CCtx_setParameter(state.cctx, c.ZSTD_c_contentSizeFlag, 1));
-        try check(c.ZSTD_CCtx_setParameter(state.cctx, c.ZSTD_c_checksumFlag, 0));
-        try check(c.ZSTD_CCtx_setParameter(state.cctx, c.ZSTD_c_dictIDFlag, 1));
-        try check(c.ZSTD_CCtx_refCDict(state.cctx, state.cdict));
         return .{ .state = state };
     }
 
     pub fn deinit(self: Encoder) void {
         const allocator = self.state.memory.allocator;
-        _ = c.ZSTD_freeCCtx(self.state.cctx);
         _ = c.ZSTD_freeCDict(self.state.cdict);
         allocator.destroy(self.state);
     }
 
-    /// Compresses `payload` into one frame, allocated from `allocator`, which the caller owns.
+    /// Compresses `payload` into one frame, allocated from `allocator`, which the caller owns. The
+    /// libzstd context of the call allocates from `allocator` too and is gone when the call returns.
     pub fn compress(self: Encoder, allocator: Allocator, payload: []const u8) Error![]u8 {
+        var memory: zstd_memory.Memory = .{ .allocator = allocator };
+        const cctx = c.ZSTD_createCCtx_advanced(memory.hooks()) orelse return error.OutOfMemory;
+        defer _ = c.ZSTD_freeCCtx(cctx);
+        try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_compressionLevel, level));
+        try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_contentSizeFlag, 1));
+        try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_checksumFlag, 0));
+        try check(c.ZSTD_CCtx_setParameter(cctx, c.ZSTD_c_dictIDFlag, 1));
+        try check(c.ZSTD_CCtx_refCDict(cctx, self.state.cdict));
+
         const out = try allocator.alloc(u8, c.ZSTD_compressBound(payload.len));
         errdefer allocator.free(out);
-        const len = c.ZSTD_compress2(self.state.cctx, out.ptr, out.len, payload.ptr, payload.len);
+        const len = c.ZSTD_compress2(cctx, out.ptr, out.len, payload.ptr, payload.len);
         try check(len);
         return allocator.realloc(out, len);
     }
