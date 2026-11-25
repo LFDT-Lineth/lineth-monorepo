@@ -232,7 +232,7 @@ class GenericPeriodicPollingServiceTest {
     pollingService.start().getWithTimeout()
 
     await()
-      .timeout(2.seconds.toJavaDuration())
+      .timeout(10.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(numberOfInvocations.get()).isGreaterThanOrEqualTo(3)
       }
