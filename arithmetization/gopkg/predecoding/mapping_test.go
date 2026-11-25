@@ -448,7 +448,8 @@ func makeELF(entryPoint, sectionAddress uint64, sectionData []byte) []byte {
 }
 
 // TestLoadPaths checks that Load returns the entry point and blobs of a valid
-// ELF, and fails when the input is not an ELF or extractBlobs fails.
+// ELF, with blob data that does not alias the ELF bytes, and fails when the
+// input is not an ELF or extractBlobs fails.
 func TestLoadPaths(t *testing.T) {
 	noLoadable := makeELF(testEntryPoint, testTextAddress, testText)
 	// Set p_type of the only program header to PT_NOTE, so no segment is loadable.
@@ -477,6 +478,12 @@ func TestLoadPaths(t *testing.T) {
 			!bytes.Equal(program.Blobs[0].Data, testText) {
 			t.Fatalf("%s: Blobs = %+v, want one blob at %#x with %x",
 				tt.name, program.Blobs, testTextAddress, testText)
+		}
+		// The blob data is a copy: clearing the ELF bytes must not change it.
+		clear(tt.input)
+		if !bytes.Equal(program.Blobs[0].Data, testText) {
+			t.Fatalf("%s: blob data = %x after clearing the ELF, want %x",
+				tt.name, program.Blobs[0].Data, testText)
 		}
 	}
 }
@@ -1002,9 +1009,10 @@ func TestBuildInputs(t *testing.T) {
 
 // TestEncodeInputsInternal checks the inputs of a program blob at 0x800000 and an extra
 // blob at 0x1000, which sorts first. The executable input is present only with
-// includeExecutable. Each failing step is an error: the ranges, the sections
-// writer and the 32-bit address space. The blob count and data size limit is
-// tested in TestU32Layout.
+// includeExecutable, and the blob names do not change the inputs. Each failing
+// step is an error with nil inputs: the ranges, the sections writer and the
+// 32-bit address space. The blob count and data size limit is tested in
+// TestU32Layout.
 func TestEncodeInputsInternal(t *testing.T) {
 	programBlobs := []Blob{{Address: 0x00800000, Data: testText, Name: ".text", Executable: true}}
 	program := Program{EntryPoint: 0x00800000, Blobs: programBlobs}
@@ -1033,6 +1041,10 @@ func TestEncodeInputsInternal(t *testing.T) {
 		{name: "without executable", program: program, additional: additional, want: wantInputs(nil)},
 		{name: "with executable", program: program, additional: additional,
 			cfg: config{includeExecutable: true}, want: wantInputs([]byte{0x40})},
+		{name: "blob names do not matter",
+			program:    Program{EntryPoint: 0x00800000, Blobs: []Blob{{Address: 0x00800000, Data: testText, Name: "other"}}},
+			additional: []Blob{{Address: 0x1000, Data: []byte{0xaa, 0xbb}, Name: "extra"}},
+			want:       wantInputs(nil)},
 		{name: "ranges overlap", program: program, wantErr: true,
 			additional: []Blob{{Address: 0x00800002, Data: []byte{1, 2}}}},
 		{name: "sections writer fails", program: program, additional: additional,
@@ -1046,6 +1058,9 @@ func TestEncodeInputsInternal(t *testing.T) {
 			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
 		}
 		if tt.wantErr {
+			if inputs != nil {
+				t.Fatalf("%s: inputs = %v on error, want nil", tt.name, inputs)
+			}
 			continue
 		}
 		if len(inputs) != len(tt.want) {
@@ -1104,28 +1119,55 @@ func TestApplyInputOptions(t *testing.T) {
 
 // TestEncodeInputs checks that the options are applied, with the executable
 // input added by WithIncludeExecutable, and that an error from the options is
-// returned. The option errors themselves are tested in TestApplyInputOptions.
+// returned with nil inputs. The returned bytes do not alias the blob data:
+// clearing them leaves the program and additional blobs unchanged. The option
+// errors themselves are tested in TestApplyInputOptions.
 func TestEncodeInputs(t *testing.T) {
-	program := Program{EntryPoint: 0x00800000, Blobs: []Blob{
-		{Address: 0x00800000, Data: testText, Name: ".text", Executable: true},
-	}}
 	tests := []struct {
 		name       string
+		additional bool // add a second blob, which sorts before the program blob
 		options    []Option
 		wantInputs int
 		wantErr    bool
 	}{
 		{name: "no options", wantInputs: 3},
 		{name: "with executable", options: []Option{WithIncludeExecutable()}, wantInputs: 4},
+		{name: "program and additional blob", additional: true, wantInputs: 3},
 		{name: "option error", options: []Option{nil}, wantErr: true},
 	}
 	for _, tt := range tests {
-		inputs, err := EncodeInputs(program, nil, tt.options...)
+		program := Program{EntryPoint: 0x00800000, Blobs: []Blob{
+			{Address: 0x00800000, Data: bytes.Clone(testText), Name: ".text", Executable: true},
+		}}
+		var additional []Blob
+		if tt.additional {
+			additional = []Blob{{Address: 0x1000, Data: []byte{0xaa, 0xbb}}}
+		}
+		wantProgram := bytes.Clone(program.Blobs[0].Data)
+
+		inputs, err := EncodeInputs(program, additional, tt.options...)
 		if (err != nil) != tt.wantErr {
 			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
 		}
-		if !tt.wantErr && len(inputs) != tt.wantInputs {
+		if tt.wantErr {
+			if inputs != nil {
+				t.Fatalf("%s: inputs = %v on error, want nil", tt.name, inputs)
+			}
+			continue
+		}
+		if len(inputs) != tt.wantInputs {
 			t.Fatalf("%s: %d inputs, want %d", tt.name, len(inputs), tt.wantInputs)
+		}
+		for _, array := range inputs {
+			clear(array.Bytes())
+		}
+		if !bytes.Equal(program.Blobs[0].Data, wantProgram) {
+			t.Fatalf("%s: program blob = %x after clearing the inputs, want %x",
+				tt.name, program.Blobs[0].Data, wantProgram)
+		}
+		if tt.additional && !bytes.Equal(additional[0].Data, []byte{0xaa, 0xbb}) {
+			t.Fatalf("%s: additional blob = %x after clearing the inputs, want aabb",
+				tt.name, additional[0].Data)
 		}
 	}
 }
