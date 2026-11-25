@@ -68,9 +68,9 @@ const buf_len = guard + max_delta + 8 + max_size + max_delta + guard;
 var src_buf: [buf_len]u8 align(8) = undefined;
 var dst_buf: [buf_len]u8 align(8) = undefined;
 
-/// Position-dependent byte pattern (odd multiplier: period 256, broken by `k >> 8`).
+/// Position-dependent byte pattern (period 256, broken by `k >> 8`).
 fn pat(k: usize) u8 {
-    return @truncate(k *% 0x9D +% (k >> 8) +% 1);
+    return @truncate(k + (k >> 8) + 1);
 }
 /// The destination's own initial pattern, distinct from `pat` at every position.
 fn dpat(k: usize) u8 {
