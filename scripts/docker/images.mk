@@ -65,7 +65,7 @@ docker-build-list:
 
 docker-build-all: $(DOCKER_IMAGE_TARGETS)
 
-# .github/workflows/coordinator-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: coordinator)
 docker-build-coordinator:
 	$(call prebuild,./gradlew coordinator:app:installDist)
 	$(DOCKER_BUILD) \
@@ -74,7 +74,7 @@ docker-build-coordinator:
 		--context . \
 		--build-context libs=./coordinator/app/build/install/coordinator/lib
 
-# .github/workflows/transaction-exclusion-api-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: transaction-exclusion-api)
 docker-build-transaction-exclusion-api:
 	$(call prebuild,./gradlew transaction-exclusion-api:app:installDist)
 	$(DOCKER_BUILD) \
@@ -83,7 +83,7 @@ docker-build-transaction-exclusion-api:
 		--context . \
 		--build-context libs=./transaction-exclusion-api/app/build/install/transaction-exclusion-api/lib
 
-# .github/workflows/maru-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: maru)
 docker-build-maru:
 	$(call prebuild,./gradlew :maru:app:installDist)
 	$(DOCKER_BUILD) \
@@ -94,7 +94,7 @@ docker-build-maru:
 		--build-context maru=./maru/app/build/libs/ \
 		--build-context licenses=.
 
-# .github/workflows/postman-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: postman)
 docker-build-postman:
 	$(DOCKER_BUILD) \
 		--image-name consensys/linea-postman \
@@ -103,7 +103,7 @@ docker-build-postman:
 		--build-arg NATIVE_LIBS_RELEASE_TAG=$(POSTMAN_NATIVE_LIBS_RELEASE_TAG) \
 		--build-arg NODE_VERSION=$(NODE_VERSION)
 
-# .github/workflows/prover-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: prover)
 docker-build-prover:
 	$(DOCKER_BUILD) \
 		--image-name consensys/linea-prover \
@@ -111,7 +111,7 @@ docker-build-prover:
 		--context . \
 		--build-context prover=prover/
 
-# .github/workflows/prover-ray-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: prover-ray)
 docker-build-prover-ray:
 	$(DOCKER_BUILD) \
 		--image-name consensys/lineth-prover-ray \
@@ -119,7 +119,7 @@ docker-build-prover-ray:
 		--context prover-ray \
 		--build-context licenses=.
 
-# .github/workflows/native-yield-automation-service-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: native-yield-automation-service)
 docker-build-native-yield-automation-service:
 	$(DOCKER_BUILD) \
 		--image-name consensys/linea-native-yield-automation-service \
@@ -127,7 +127,7 @@ docker-build-native-yield-automation-service:
 		--context . \
 		--build-arg NODE_VERSION=$(NODE_VERSION)
 
-# .github/workflows/lido-governance-monitor-build-and-publish.yml
+# .github/workflows/reusable-docker-service-build.yml (component: lido-governance-monitor)
 docker-build-lido-governance-monitor:
 	$(DOCKER_BUILD) \
 		--image-name consensys/linea-lido-governance-monitor \

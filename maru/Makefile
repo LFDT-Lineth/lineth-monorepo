@@ -18,7 +18,7 @@ clean:
 	$(GRADLEW) clean
 
 # Delegates to the monorepo-wide recipe in scripts/docker/images.mk, which mirrors
-# .github/workflows/maru-build-and-publish.yml. Produces consensys/maru:local.
+# .github/workflows/reusable-docker-service-build.yml (component: maru). Produces consensys/maru:local.
 # Overrides propagate, e.g. `make docker-build-local-image PLATFORMS=linux/arm64`.
 docker-build-local-image:
 	$(MAKE) -C .. docker-build-maru

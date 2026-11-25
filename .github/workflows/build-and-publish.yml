@@ -49,9 +49,10 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.coordinator_changed == 'true' }}
     with:
+      component: coordinator
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       push_image: false
@@ -63,12 +64,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/native-yield-automation-service-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.native_yield_automation_service_changed == 'true' }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      component: native-yield-automation-service
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-native-yield-automation-service
       push_image: false
     secrets: inherit
 
@@ -78,12 +79,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/lido-governance-monitor-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.lido_governance_monitor_changed == 'true' }}
     with:
-      commit_tag: ${{ inputs.commit_tag }}
+      component: lido-governance-monitor
+      image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-lido-governance-monitor
       push_image: false
     secrets: inherit
 
@@ -93,9 +94,10 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/prover-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.prover_changed == 'true' }}
     with:
+      component: prover
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       push_image: false
@@ -107,9 +109,10 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/postman-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.postman_changed == 'true' }}
     with:
+      component: postman
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       push_image: false
@@ -121,9 +124,10 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
     with:
+      component: transaction-exclusion-api
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       push_image: false
@@ -135,9 +139,10 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/maru-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     if: ${{ inputs.maru_changed == 'true' }}
     with:
+      component: maru
       image_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       push_image: false

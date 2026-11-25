@@ -16,6 +16,7 @@ coordinator:
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
+  - '.github/workflows/reusable-docker-service-build.yml'
 staterecovery:
   - 'state-recovery/**'
   - 'buildSrc/**'
@@ -37,6 +38,7 @@ postman:
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
   - '.nvmrc'
+  - '.github/workflows/reusable-docker-service-build.yml'
 # Mirrors sdk-testing.yml triggers so Postman can skip duplicate sdk-viem tests when SDK CI is running.
 sdk:
   - 'ts-libs/sdk/**'
@@ -48,6 +50,7 @@ prover:
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
+  - '.github/workflows/reusable-docker-service-build.yml'
 prover-ray:
   - 'prover-ray/**'
   - 'rollup_spec/src/**'
@@ -56,6 +59,7 @@ prover-ray:
   - '.github/workflows/prover-ray-testing.yml'
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
+  - '.github/workflows/reusable-docker-service-build.yml'
 rollup-spec:
   - 'rollup_spec/src/**'
   - 'rollup_spec/tests/**'
@@ -81,6 +85,7 @@ transaction-exclusion-api:
   - 'build.gradle'
   - 'gradle.properties'
   - 'settings.gradle'
+  - '.github/workflows/reusable-docker-service-build.yml'
 smart-contracts:
   - 'contracts/**'
   - 'testdata/**'
@@ -107,11 +112,13 @@ native-yield-automation-service:
   - 'ts-libs/linea-shared-utils/**'
   - '.github/workflows/native-yield-automation-service-*.yml'
   - '.nvmrc'
+  - '.github/workflows/reusable-docker-service-build.yml'
 lido-governance-monitor:
   - 'operations/native-yield/lido-governance-monitor/**'
   - 'ts-libs/linea-shared-utils/**'
   - '.github/workflows/lido-governance-monitor-*.yml'
   - '.nvmrc'
+  - '.github/workflows/reusable-docker-service-build.yml'
 tracer:
   - 'gradle/**'
   - 'tracer/**'
@@ -132,3 +139,4 @@ maru:
   - '.github/workflows/build-and-publish.yml'
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
+  - '.github/workflows/reusable-docker-service-build.yml'

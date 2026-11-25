@@ -69,7 +69,7 @@ clean-build:
 	${MAKE} build
 
 # The image itself is built by the monorepo-wide target, which mirrors
-# .github/workflows/prover-build-and-publish.yml. PLATFORMS keeps the host-native
+# .github/workflows/reusable-docker-service-build.yml (component: prover). PLATFORMS keeps the host-native
 # default this target had before it was routed through scripts/docker/build-image.sh.
 build-prover:
 	echo "Build prover image from source with tag=$(PROVER_TAG)"
