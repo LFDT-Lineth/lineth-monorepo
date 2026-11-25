@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
 ## [2.4.0] - 2026-11-19
 
 ### 🚀 Features
