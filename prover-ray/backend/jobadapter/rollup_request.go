@@ -139,7 +139,8 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	// parentBlobDataRollingHash is optional.
+	// parentBlobDataRollingHash is optional, but required when carry-over bytes
+	// come from the parent blob.
 	var parentBlob *[32]byte
 	if raw, ok := proofRequest[parentBlobDataRollingHashKey]; ok {
 		h, err := hash32Of(raw, op, "proofRequest."+parentBlobDataRollingHashKey)
@@ -147,6 +148,9 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 			return nil, err
 		}
 		parentBlob = &h
+	} else if parentSharedBlobCarryOverTailBytes > 0 {
+		return nil, decErrf(op, "proofRequest.%s is required when proofRequest.%s > 0",
+			parentBlobDataRollingHashKey, parentSharedBlobCarryOverTailBytesKey)
 	}
 
 	conflations := make([]ConflationWitness, len(conflationsRaw))
