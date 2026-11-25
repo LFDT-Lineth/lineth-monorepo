@@ -1,7 +1,7 @@
 package lineth.submission
 
 import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
+import linea.domain.RiscvRollupRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BlobSubmitter {
@@ -11,7 +11,7 @@ interface BlobSubmitter {
 }
 
 interface BlobSubmitterV2 {
-  fun submitBlobs(blobsChunks: List<BlobRecordV2>): SafeFuture<List<String>>
+  fun submitBlobs(blobsChunks: List<RiscvRollupRecord>): SafeFuture<List<String>>
 
-  fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*>
+  fun submitBlobCall(blobRecord: RiscvRollupRecord): SafeFuture<*>
 }

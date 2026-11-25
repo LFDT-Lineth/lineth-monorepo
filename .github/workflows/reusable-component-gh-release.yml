@@ -66,10 +66,10 @@ on:
     outputs:
       docker_tag:
         description: "Docker image tag base (without suffix)"
-        value: ${{ jobs.compute-docker-tag.outputs.docker_tag }}
+        value: ${{ jobs.release-push-tag-changelog.outputs.docker_tag }}
       docker_tag_with_suffix:
         description: "Docker image tag with suffix (same value as docker_tag if no suffix is given)"
-        value: ${{ jobs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+        value: ${{ jobs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
 
 jobs:
   release-push-tag-changelog:
@@ -81,15 +81,9 @@ jobs:
       scopes: ${{ inputs.scopes }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       upload_changelog: ${{ inputs.upload_changelog }}
+      compute_docker_tag: ${{ !inputs.dry_run_release }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix }}
     secrets: inherit
-
-  compute-docker-tag:
-    needs: [release-push-tag-changelog]
-    if: inputs.dry_run_release == false
-    uses: ./.github/workflows/reusable-component-docker-tag.yml
-    with:
-      version-prefix: ${{ needs.release-push-tag-changelog.outputs.release_version }}
-      image-tag-suffix: ${{ inputs.image_tag_suffix }}
 
   build-and-publish-image-coordinator:
     permissions:
@@ -97,12 +91,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
@@ -113,12 +107,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
     uses: ./.github/workflows/postman-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
@@ -129,12 +123,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
     uses: ./.github/workflows/prover-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
@@ -145,15 +139,15 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: >
       !cancelled() && !inputs.dry_run_release &&
       inputs.component-name == 'prover-ray' &&
-      needs.compute-docker-tag.result == 'success'
+      needs.release-push-tag-changelog.result == 'success'
     uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
@@ -164,12 +158,12 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
     uses: ./.github/workflows/maru-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
@@ -180,18 +174,18 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [compute-docker-tag]
+    needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     with:
-      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
       push_image: true
     secrets: inherit
 
   gh-release:
-    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-prover-ray, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
+    needs: [release-push-tag-changelog, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-prover-ray, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
     if: >
       always() && !cancelled() &&
       (inputs.dry_run_release ||
@@ -213,8 +207,8 @@ jobs:
           # Pass via env to avoid shell injection: changelog content is derived
           # from commit messages (via git-cliff) and may contain backticks, $(...), etc.
           CHANGELOG: ${{ needs.release-push-tag-changelog.outputs.changelog }}
-          DOCKER_TAG: ${{ needs.compute-docker-tag.outputs.docker_tag }}
-          DOCKER_TAG_WITH_SUFFIX: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          DOCKER_TAG: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
+          DOCKER_TAG_WITH_SUFFIX: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
           COMPONENT_NAME: ${{ inputs.component-name }}
           DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
           SKIP_DOCKER_IMAGE_INFO: ${{ inputs.dry_run_release }}
@@ -247,7 +241,7 @@ jobs:
         if: inputs.component-name == 'coordinator' && !inputs.dry_run_release
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: coordinator-config-docs-${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          name: coordinator-config-docs-${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
           path: release/config-docs
 
       - name: Append Coordinator config reference to release note

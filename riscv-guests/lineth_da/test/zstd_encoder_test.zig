@@ -63,3 +63,36 @@ test "bytes that are not a usable zstd dictionary are rejected" {
         try std.testing.expectError(error.InvalidDictionary, zstd_encoder.Encoder.init(gpa, bytes));
     }
 }
+
+test "threads compress on one encoder to the frames a lone thread gets" {
+    const encoder = try zstd_encoder.Encoder.init(gpa, dictionary);
+    defer encoder.deinit();
+    const payloads = [_][]u8{ try mixedPayload(3_000), try mixedPayload(150_000), try mixedPayload(700_000) };
+    defer for (payloads) |payload| gpa.free(payload);
+    var expected: [payloads.len][]u8 = undefined;
+    for (payloads, &expected) |payload, *frame| frame.* = try encoder.compress(gpa, payload);
+    defer for (expected) |frame| gpa.free(frame);
+
+    const Worker = struct {
+        fn run(shared: zstd_encoder.Encoder, inputs: []const []u8, frames: []const []u8, first: usize, failed: *bool) void {
+            failed.* = false;
+            for (0..12) |round| {
+                const at = (first + round) % inputs.len;
+                const frame = shared.compress(gpa, inputs[at]) catch {
+                    failed.* = true;
+                    return;
+                };
+                defer gpa.free(frame);
+                if (!std.mem.eql(u8, frames[at], frame)) failed.* = true;
+            }
+        }
+    };
+    var failed: [4]bool = undefined;
+    var threads: [4]std.Thread = undefined;
+    for (&threads, &failed, 0..) |*thread, *flag, first| {
+        thread.* = try std.Thread.spawn(.{}, Worker.run, .{ encoder, &payloads, &expected, first, flag });
+    }
+    for (threads) |thread| thread.join();
+
+    for (failed) |flag| try std.testing.expect(!flag);
+}

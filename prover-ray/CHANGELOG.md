@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(prover-ray)* Decode the rollup guest output by job type (#4572)
 ## [0.5.0] - 2026-11-24
 
 ### 🚀 Features

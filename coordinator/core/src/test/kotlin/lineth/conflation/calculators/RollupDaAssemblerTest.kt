@@ -58,7 +58,7 @@ class RollupDaAssemblerTest {
   private fun assertChained(rollups: List<Rollup>) {
     rollups.forEach { rollup ->
       rollup.da.blobs.zipWithNext().forEach { (previous, next) ->
-        assertThat(next.prevDataRollingHash).isEqualTo(previous.dataRollingHash)
+        assertThat(next.parentDataRollingHash).isEqualTo(previous.dataRollingHash)
       }
       assertThat(rollup.da.expectedEndDataRollingHash).isEqualTo(rollup.da.blobs.last().dataRollingHash)
     }
@@ -70,7 +70,7 @@ class RollupDaAssemblerTest {
       ).isEqualTo(previous.da.expectedFinalSharedBlobCarryOverTailBytes)
       if (next.da.parentSharedBlobCarryOverTailBytes > 0u) {
         assertThat(next.da.blobs.first()).isSameAs(previous.da.blobs.last())
-        assertThat(next.da.parentBlobDataRollingHash).isEqualTo(previous.da.blobs.last().prevDataRollingHash)
+        assertThat(next.da.parentBlobDataRollingHash).isEqualTo(previous.da.blobs.last().parentDataRollingHash)
       } else {
         assertThat(next.da.parentBlobDataRollingHash).isEqualTo(next.da.parentDataRollingHash)
       }
@@ -162,7 +162,7 @@ class RollupDaAssemblerTest {
     assertThat(first.da.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(second.da.blobs).containsExactly(blob1)
     assertThat(second.da.parentSharedBlobCarryOverTailBytes).isEqualTo(blob1.payloadBytes - 40_000u)
-    assertThat(second.da.parentBlobDataRollingHash).isEqualTo(blob1.prevDataRollingHash)
+    assertThat(second.da.parentBlobDataRollingHash).isEqualTo(blob1.parentDataRollingHash)
     assertThat(third.da.blobs).containsExactly(blob1, blob2)
     assertThat(third.da.expectedEndDataRollingHash).isEqualTo(blob2.dataRollingHash)
     assertThat(third.da.expectedFinalSharedBlobCarryOverTailBytes).isEqualTo(0u)
@@ -190,7 +190,7 @@ class RollupDaAssemblerTest {
     val assembler = RollupDaAssembler(
       DaStreamPosition(
         dataRollingHash = blob1.dataRollingHash,
-        parentBlobDataRollingHash = blob1.prevDataRollingHash,
+        parentBlobDataRollingHash = blob1.parentDataRollingHash,
         sharedBlobCarryOverTailBytes = 100u,
         sharedBlob = ByteArray(BLOB_BYTES),
       ),
@@ -236,7 +236,7 @@ class RollupDaAssemblerTest {
       chunkHash = ByteArray(32),
       kzgCommitment = ByteArray(KZG_POINT_BYTES),
       kzgProof = ByteArray(KZG_POINT_BYTES),
-      prevDataRollingHash = ByteArray(32),
+      parentDataRollingHash = ByteArray(32),
       dataRollingHash = ByteArray(32),
       payloadBytes = 1u,
       segmentEnds = emptyList(),

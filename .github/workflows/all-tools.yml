@@ -29,9 +29,21 @@ jobs:
     name: Filter commit changes
     outputs:
       all-tools: ${{ steps.filter.outputs['all-tools'] }}
+      commit_tag: ${{ steps.compute-version-tags.outputs.commit_tag }}
+      last_commit_tag: ${{ steps.compute-version-tags.outputs.last_commit_tag }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.develop_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compute version tags
+        id: compute-version-tags
+        uses: ./.github/actions/compute-version-tags
+      - name: Show version tags
+        run: |
+          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.commit_tag }}"
+          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.last_commit_tag }}"
+          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.develop_tag }}"
+          echo "github.ref: ${{ github.ref }}"
       - name: Filter commit changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
@@ -45,14 +57,10 @@ jobs:
               - '.github/workflows/reusable-*.yml'
               - '.nvmrc'
 
-  store_image_name_and_tags:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    uses: ./.github/workflows/reusable-store-image-name-and-tags.yml
-
   check_image_tags_exist:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Check image tags exist
-    needs: [changes, store_image_name_and_tags]
+    needs: [changes]
     if: ${{ needs.changes.outputs['all-tools'] == 'false' }}
     steps:
       - name: Checkout
@@ -60,7 +68,7 @@ jobs:
       - name: Check image tags exist
         uses: ./.github/actions/check-image-tags-exist
         with:
-          last_commit_tag: ${{ needs.store_image_name_and_tags.outputs.last_commit_tag }}
+          last_commit_tag: ${{ needs.changes.outputs.last_commit_tag }}
           image_name: consensys/linea-alltools
 
   all-tools-tag-only:
@@ -72,7 +80,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     environment: dockerhub-linea-alltools
     name: All tools tag only
-    needs: [changes, store_image_name_and_tags, check_image_tags_exist]
+    needs: [changes, check_image_tags_exist]
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs['all-tools'] == 'false' }}
     outputs:
       image_tagged: ${{ steps.image_tag_push.outputs.image_tagged }}
@@ -83,9 +91,9 @@ jobs:
         id: image_tag_push
         uses: ./.github/actions/image-tag-and-push
         with:
-          commit_tag: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
-          last_commit_tag: ${{ needs.store_image_name_and_tags.outputs.last_commit_tag }}
-          develop_tag: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
+          commit_tag: ${{ needs.changes.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.changes.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.changes.outputs.develop_tag }}
           image_name: consensys/linea-alltools
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists }}
           dockerhub_oidc_connection_id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_ALLTOOLS }}
@@ -96,14 +104,14 @@ jobs:
       actions: read
       packages: write
       id-token: write
-    needs: [changes, store_image_name_and_tags, all-tools-tag-only]
-    if: ${{ always() && needs.store_image_name_and_tags.outputs.commit_tag != '' && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
+    needs: [changes, all-tools-tag-only]
+    if: ${{ always() && needs.changes.outputs.commit_tag != '' && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
     # ~0.5 mins saved vs small
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     environment: ${{ github.event_name != 'pull_request' && 'dockerhub-linea-alltools' || 'dockerhub-pull' }}
     env:
-      COMMIT_TAG: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
-      DEVELOP_TAG: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
+      COMMIT_TAG: ${{ needs.changes.outputs.commit_tag }}
+      DEVELOP_TAG: ${{ needs.changes.outputs.develop_tag }}
       IMAGE_NAME: consensys/linea-alltools
     name: All tools build and push
     steps:
@@ -148,7 +156,6 @@ jobs:
     needs:
       [
         changes,
-        store_image_name_and_tags,
         check_image_tags_exist,
         all-tools-tag-only,
         build-and-publish,

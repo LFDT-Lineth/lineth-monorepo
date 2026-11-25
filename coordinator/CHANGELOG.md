@@ -4,10 +4,12 @@
 
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
+- *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
 
 ### 🚜 Refactor
 
 - *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+- *(coordinator)* Rename the per-blob prevDataRollingHash to parentDataRollingHash (#4602)
 
 ### ⚙️ Miscellaneous Tasks
 

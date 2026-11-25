@@ -100,22 +100,23 @@ class RollupDaAssembler(start: DaStreamPosition) {
   fun addBlob(blob: SealedBlob) {
     val previous = blobs.lastOrNull()
     if (previous != null) {
-      check(blob.prevDataRollingHash.contentEquals(previous.dataRollingHash)) {
-        "blob does not continue the open rollup: prevDataRollingHash=${blob.prevDataRollingHash.encodeHex()} " +
+      check(blob.parentDataRollingHash.contentEquals(previous.dataRollingHash)) {
+        "blob does not continue the open rollup: parentDataRollingHash=${blob.parentDataRollingHash.encodeHex()} " +
           "but the previous blob ends at ${previous.dataRollingHash.encodeHex()}"
       }
     } else if (parentCarryOver > 0u) {
       // A rollup starting inside a shared blob: its first blob must be that shared blob.
       check(
-        blob.dataRollingHash.contentEquals(parent) && blob.prevDataRollingHash.contentEquals(parentBlobDataRollingHash),
+        blob.dataRollingHash.contentEquals(parent) &&
+          blob.parentDataRollingHash.contentEquals(parentBlobDataRollingHash),
       ) {
         "first blob of a rollup starting inside a shared blob must be that blob: " +
           "expected dataRollingHash=${parent.encodeHex()}, got ${blob.dataRollingHash.encodeHex()}"
       }
     } else {
-      check(blob.prevDataRollingHash.contentEquals(parent)) {
+      check(blob.parentDataRollingHash.contentEquals(parent)) {
         "first blob of the rollup must follow parentDataRollingHash=${parent.encodeHex()}, " +
-          "got prevDataRollingHash=${blob.prevDataRollingHash.encodeHex()}"
+          "got parentDataRollingHash=${blob.parentDataRollingHash.encodeHex()}"
       }
     }
     blobs += blob
@@ -147,7 +148,7 @@ class RollupDaAssembler(start: DaStreamPosition) {
     if (tail > 0u) blobs += last
     parentCarryOver = tail
     parent = last.dataRollingHash
-    parentBlobDataRollingHash = if (tail > 0u) last.prevDataRollingHash else last.dataRollingHash
+    parentBlobDataRollingHash = if (tail > 0u) last.parentDataRollingHash else last.dataRollingHash
     val rollup = Rollup(conflations.toList(), witness)
     conflations.clear()
     return rollup

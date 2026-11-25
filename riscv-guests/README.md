@@ -112,14 +112,16 @@ linux/amd64, pinned Zig), at version `0.0.0-dev`.
 
 Two workflows guard the guests.
 
-[`riscv-guests-host-tests.yml`](../.github/workflows/riscv-guests-host-tests.yml) runs on every PR touching `riscv-guests/**`, with two parallel host-machine jobs:
+[`riscv-guests-host-tests.yml`](../.github/workflows/riscv-guests-host-tests.yml) is the manual entry point for two sequential host-machine jobs:
 
 - **Guest unit tests** — `make fmt-check` (`zig fmt --check` over every package's sources) plus the orchestrated `make test` (every guest in `GUESTS`).
 - **EF reference-test guards (l2-execution)** — the l2-execution full EF fixture suite via `make reference-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
 
+The integrated guest pipeline reuses the same test actions automatically on relevant PRs and `main` pushes. Reference-output-only changes run just the unit tests; full guest or interpreter changes run the unit and reference suites in parallel after the guest build.
+
 [`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2_execution exec ZKC_EXEC_FLAGS="--fast"` (the ELF → JSON → `zkc` path described below). Fast mode (`--fast`) skips tracing, which is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above. The same job runs the rollup guest on a generated sample request of one conflation in one blob (`make -C rollup zkc-smoke-external`) and requires the output it prints under zkc to equal, byte for byte, the output the native statement computes for that request.
 
-The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig version pinned in `.zigversion`, Nim, and LLVM for the Constantine build, with Zig package fetches, build artifacts and (for the jobs that read them) the EF zkevm fixtures cached. The interpreter-run workflow reuses that action and adds Go plus a `zkc` install.
+The shared host-test steps live in [`.github/actions/run-riscv-guests-host-tests`](../.github/actions/run-riscv-guests-host-tests/action.yml) and [`.github/actions/run-riscv-guests-reference-tests`](../.github/actions/run-riscv-guests-reference-tests/action.yml). Both compose [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml), which installs the Zig version pinned in `.zigversion`, Nim, and LLVM for the Constantine build, with Zig package fetches, build artifacts and EF zkevm fixtures cached. The interpreter-run workflow reuses that setup and adds Go plus a `zkc` install.
 
 ## ZKC Interpreter Integration
 
