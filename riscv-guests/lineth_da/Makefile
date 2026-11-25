@@ -112,11 +112,17 @@ host-lib-bundle:
 	for license in LICENSE-APACHE LICENSE-MIT; do \
 		[ -f "$$license_dir/$$license" ] || { echo "host-lib-bundle: $$license_dir/$$license is missing" >&2; exit 1; }; \
 	done; \
+	sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$$1"; else shasum -a 256 "$$1"; fi | cut -c1-64; }; \
+	notes=""; \
+	for d in $$dictionaries; do \
+		sum=$$(sha256 "$$d"); \
+		[ "$${#sum}" -eq 64 ] || { echo "host-lib-bundle: no sha256 of $$d" >&2; exit 1; }; \
+		notes="$$notes$$(basename "$$d") $$sum; "; \
+	done; \
 	filename="lineth-da-libs-v$(RELEASE_VERSION).zip"; \
 	rm -f "$$dir/$$filename"; \
 	zip -q -X -j "$$dir/$$filename" $$files $$dictionaries "$$license_dir/LICENSE-APACHE" "$$license_dir/LICENSE-MIT"; \
-	echo "host-lib-bundle: $$dir/$$filename"; \
+	echo "host-lib-bundle: $$dir/$$filename (dictionaries: $$notes)"; \
 	if [ -n "$${GITHUB_OUTPUT:-}" ]; then \
-		printf 'asset=%s\nfilename=%s\n' "$$dir/$$filename" "$$filename" >> "$$GITHUB_OUTPUT"; \
-		printf 'dictionaries=%s\n' "$$(for d in $$dictionaries; do printf '%s %s; ' "$$(basename "$$d")" "$$(shasum -a 256 "$$d" | cut -c1-64)"; done)" >> "$$GITHUB_OUTPUT"; \
+		printf 'asset=%s\nfilename=%s\ndictionaries=%s\n' "$$dir/$$filename" "$$filename" "$$notes" >> "$$GITHUB_OUTPUT"; \
 	fi
