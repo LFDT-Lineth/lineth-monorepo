@@ -5,12 +5,15 @@ import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.ADDRESS
 import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.lang.foreign.ValueLayout.JAVA_LONG
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 /**
- * A `lineth_da_compressor` behind its arena: closing the arena frees the native compressor, and FFM refuses to close
- * it while a downcall that received the handle is in flight.
+ * A `lineth_da_compressor` behind its arena: closing the arena frees the native compressor.
  *
- * [compress] runs on any number of threads at once, as the library allows.
+ * [compress] runs on any number of threads at once, as the library allows; [close] waits for the calls in flight,
+ * then frees, and a repeated or concurrent [close] is a no-op.
  */
 internal class ZigDaCompressor(
   override val version: DaCodecVersion,
@@ -19,6 +22,7 @@ internal class ZigDaCompressor(
   chainId: ULong,
 ) : DaCompressor {
   private val arena = Arena.ofShared()
+  private val lifecycle = ReentrantReadWriteLock()
   private val handle: MemorySegment = try {
     create(dictionary, chainId)
   } catch (e: Throwable) {
@@ -38,7 +42,11 @@ internal class ZigDaCompressor(
       out.get(ADDRESS, 0).reinterpret(0, arena) { library.compressorFree(it) }
     }
 
-  override fun compress(blockRlps: List<ByteArray>): ByteArray = handle.whileOpen {
+  override fun compress(blockRlps: List<ByteArray>): ByteArray = lifecycle.read {
+    handle.whileOpen { compressLocked(blockRlps) }
+  }
+
+  private fun compressLocked(blockRlps: List<ByteArray>): ByteArray =
     Arena.ofConfined().use { call ->
       val inputs = call.allocate(NativeLayouts.bytes, blockRlps.size.toLong())
       val inputSize = NativeLayouts.bytes.byteSize()
@@ -61,9 +69,8 @@ internal class ZigDaCompressor(
         library.compressedFree(out)
       }
     }
-  }
 
-  override fun close() {
+  override fun close() = lifecycle.write {
     if (handle.scope().isAlive) arena.close()
   }
 }

@@ -149,7 +149,10 @@ fun interface DaStreamFactory {
   fun open(version: DaCodecVersion, initialState: DaStreamPosition): DaStream
 }
 
-/** Identifies the DA codec build. The compression dictionary is configured independently. */
+/**
+ * Identifies the DA codec build. The compression dictionary is configured independently. A bundled codec is named by
+ * its release's version without a prerelease suffix, the form its library resource carries.
+ */
 enum class DaCodecVersion(val version: String) {
   /** Pure-Kotlin stand-in with the real stream semantics. */
   FAKE("fake-v1"),

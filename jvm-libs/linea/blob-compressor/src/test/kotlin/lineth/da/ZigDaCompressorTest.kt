@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
 class ZigDaCompressorTest {
@@ -117,5 +118,31 @@ class ZigDaCompressorTest {
 
     expectError(DaStreamErrorType.INVALID_ARGUMENT, "closed") { compressor.compress(conflation) }
     compressor.close()
+  }
+
+  @Test
+  fun `threads closing one compressor at once all return`() {
+    val threads = 8
+    val pool = Executors.newFixedThreadPool(threads)
+    try {
+      val compressor = compressor()
+      val ready = CountDownLatch(threads)
+      val go = CountDownLatch(1)
+      val closes = List(threads) {
+        pool.submit {
+          ready.countDown()
+          go.await()
+          compressor.close()
+        }
+      }
+      ready.await()
+      go.countDown()
+
+      closes.forEach { it.get() }
+
+      expectError(DaStreamErrorType.INVALID_ARGUMENT, "closed") { compressor.compress(conflation) }
+    } finally {
+      pool.shutdownNow()
+    }
   }
 }
