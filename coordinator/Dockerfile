@@ -1,5 +1,5 @@
 # BUILDER image
-FROM eclipse-temurin:25-jdk-noble@sha256:80f67fb3d6f76e2d817d98a4cc2a9cf05f054d4e6adc5e2144bde671d722e63f AS builder
+FROM eclipse-temurin:25-jdk-noble@sha256:4ddc1a8bdaf283421df5487411aff10b797ccf1e06a339041005114c8f489b5c AS builder
 
 RUN mkdir -p /libs
 # Keep the libs tree so downstream builds can ship nested layouts.
@@ -27,7 +27,7 @@ RUN bcJar=$(find /libs -name 'blob-compressor*.jar') && \
 RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 
 # FINAL image
-FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 
 WORKDIR /opt/lineth/coordinator
 
@@ -48,9 +48,6 @@ USER 1000:1000
 
 ARG LINETH_APP_JAR=/opt/lineth/coordinator/libs/coordinator.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
-
-# Remove once the base image ships Temurin 25.0.5.1+2 or later.
-ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

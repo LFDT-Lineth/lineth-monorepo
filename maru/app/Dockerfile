@@ -1,5 +1,5 @@
-# FINAL image
-FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
+# BUILDER image
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 
 WORKDIR /opt/lineth/maru
 
@@ -24,9 +24,6 @@ USER 1000:1000
 
 ARG LINETH_APP_JAR=/opt/lineth/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
-
-# Remove once the base image ships Temurin 25.0.5.1+2 or later.
-ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

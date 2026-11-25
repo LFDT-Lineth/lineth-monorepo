@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jre-noble@sha256:e3b6f7887a50f20d8f07abf279d8a81a5953fb398a9555bd9edd56b9bd15968c
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 WORKDIR /opt/lineth/transaction-exclusion-api/
 
 # Run as a dedicated non-root user (uid 1000, same convention as the besu image).
@@ -13,8 +13,6 @@ COPY LICENSE-APACHE LICENSE-MIT /licenses/
 
 # Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
 USER 1000:1000
-# Remove once the base image ships Temurin 25.0.5.1+2 or later.
-ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
