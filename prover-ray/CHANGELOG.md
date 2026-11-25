@@ -1,8 +1,9 @@
-## [unreleased]
+## [0.5.0] - 2026-11-24
 
 ### 🚀 Features
 
 - *(prover-ray)* Encode the rollup guest input (#4571)
+- *(prover-ray)* Run zkc Execute with gogen by default (#4573)
 
 ### 🐛 Bug Fixes
 

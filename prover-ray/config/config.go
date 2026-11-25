@@ -25,6 +25,9 @@ type Config struct {
 	// GuestsDir holds the guest ELFs, found by the guestProgramId of each
 	// request. Required by every mode that runs a guest.
 	GuestsDir string `mapstructure:"guests_dir"`
+	// GoGen runs the guests of every pipeline with gogen instead of the
+	// interpreter. On by default.
+	GoGen bool `mapstructure:"gogen"`
 }
 
 // Execution holds the L2-execution pipeline settings.
@@ -69,6 +72,7 @@ func (p Pipeline) Configured() bool {
 func NewConfigFromFile(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
+	v.SetDefault("gogen", true)
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("reading config %q: %w", path, err)
 	}

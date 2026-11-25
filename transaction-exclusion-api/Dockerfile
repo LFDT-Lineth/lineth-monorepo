@@ -1,13 +1,10 @@
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 WORKDIR /opt/consensys/linea/transaction-exclusion-api/
 
 RUN mkdir -p logs
 
 COPY --from=libs ./** libs/
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
-
-# Remove once the base image ships Temurin 25.0.5.1+2 or later.
-ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE

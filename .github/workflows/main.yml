@@ -38,6 +38,7 @@ jobs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
+      sdk: ${{ steps.filter.outputs.sdk }}
       prover: ${{ steps.filter.outputs.prover }}
       prover-ray: ${{ steps.filter.outputs.prover-ray }}
       rollup-spec: ${{ steps.filter.outputs.rollup-spec }}
@@ -183,6 +184,8 @@ jobs:
       coordinator_changed: ${{ needs.plan.outputs.coordinator }}
       linea_sequencer_changed: ${{ needs.plan.outputs.linea-sequencer-plugin }}
       postman_changed: ${{ needs.plan.outputs.postman }}
+      # Manual main dispatch does not run sdk-testing, so Postman must retain sdk-viem tests there.
+      sdk_changed: ${{ github.event_name != 'workflow_dispatch' && needs.plan.outputs.sdk == 'true' }}
       prover_changed: ${{ needs.plan.outputs.prover }}
       prover_ray_changed: ${{ needs.plan.outputs.prover-ray }}
       rollup_spec_changed: ${{ needs.plan.outputs.rollup-spec }}
