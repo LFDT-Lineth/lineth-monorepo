@@ -1,9 +1,7 @@
-# syntax=docker/dockerfile:1
 # kics-scan disable=d3499f6d-1651-41bb-a9a7-de925fea487b
 # Unpinned Package Version in Apk Add: apk packages intentionally track the
 # digest-pinned alpine base; version pinning would break the build on base
 # refresh for negligible security gain on top of apk's --no-cache.
-# Required to use the --build-context flag
 
 ###############################
 #
