@@ -149,13 +149,14 @@ data class BlobRecord(
 /**
  * One sealed blob of a [RiscvRollupRecord].
  *
- * @property prevDataRollingHash rolling hash before this blob
+ * @property parentDataRollingHash rolling hash after the previous blob, i.e. before this one. "Parent" is the previous
+ *   blob here, not the previous rollup ([RiscvRollupRecord.parentDataRollingHash]).
  * @property dataRollingHash rolling hash after this blob
  */
 data class BlobData(
   val chunkHash: ByteArray,
   val blobBytes: ByteArray,
-  val prevDataRollingHash: ByteArray,
+  val parentDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
@@ -166,7 +167,7 @@ data class BlobData(
 
     if (!chunkHash.contentEquals(other.chunkHash)) return false
     if (!blobBytes.contentEquals(other.blobBytes)) return false
-    if (!prevDataRollingHash.contentEquals(other.prevDataRollingHash)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
     if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
 
     return true
@@ -175,7 +176,7 @@ data class BlobData(
   override fun hashCode(): Int {
     var result = chunkHash.contentHashCode()
     result = 31 * result + blobBytes.contentHashCode()
-    result = 31 * result + prevDataRollingHash.contentHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
     return result
   }

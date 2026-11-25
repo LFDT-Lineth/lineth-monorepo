@@ -54,19 +54,19 @@ data class RiscvRollupRecord(
     val first = blobsData.first()
     if (startsInSharedBlob) {
       require(
-        first.prevDataRollingHash.contentEquals(parentBlobDataRollingHash) &&
+        first.parentDataRollingHash.contentEquals(parentBlobDataRollingHash) &&
           first.dataRollingHash.contentEquals(parentDataRollingHash),
       ) {
         "shared first blob must sit between parentBlobDataRollingHash and parentDataRollingHash: " +
           "rollup=${intervalString()}"
       }
     } else {
-      require(first.prevDataRollingHash.contentEquals(parentDataRollingHash)) {
+      require(first.parentDataRollingHash.contentEquals(parentDataRollingHash)) {
         "first blob must follow parentDataRollingHash: rollup=${intervalString()}"
       }
     }
     blobsData.zipWithNext().forEachIndexed { i, (prev, next) ->
-      require(next.prevDataRollingHash.contentEquals(prev.dataRollingHash)) {
+      require(next.parentDataRollingHash.contentEquals(prev.dataRollingHash)) {
         "blob ${i + 1} does not follow blob $i by rolling hash: rollup=${intervalString()}"
       }
     }
