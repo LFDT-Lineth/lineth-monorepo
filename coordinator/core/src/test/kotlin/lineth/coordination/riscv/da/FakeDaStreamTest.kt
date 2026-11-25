@@ -30,7 +30,7 @@ class FakeDaStreamTest : DaStreamContractTest(
     assertThat(blob.kzgProof).hasSize(KZG_POINT_BYTES).isEqualTo(FakeDaStream.fakeKzgProof(bytes))
     assertThat(blob.kzgCommitment).isNotEqualTo(blob.kzgProof)
     assertThat(blob.dataRollingHash)
-      .isEqualTo(Keccak256DataRollingHashCalculator.fold(blob.prevDataRollingHash, blob.chunkHash))
+      .isEqualTo(Keccak256DataRollingHashCalculator.fold(blob.parentDataRollingHash, blob.chunkHash))
   }
 
   @Test
@@ -59,7 +59,7 @@ class FakeDaStreamTest : DaStreamContractTest(
     stream.append(compressor.compress(listOf(byteArrayOf(0x01, 0x02))), conflationEndBlock = 1UL)
     val blob = stream.flush()!!
 
-    assertThat(blob.prevDataRollingHash).isEqualTo(genesis)
+    assertThat(blob.parentDataRollingHash).isEqualTo(genesis)
     assertThat(blob.payloadBytes).isEqualTo((SEGMENT_LENGTH_PREFIX_BYTES + 2).toUInt())
   }
 }

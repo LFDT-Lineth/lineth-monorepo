@@ -40,7 +40,7 @@ class ZigDaStreamTest {
     assertThat(blob.payloadBytes).isEqualTo((segmentSize(first) + segmentSize(second)).toUInt())
     assertThat(blob.segmentEnds)
       .containsExactly(SegmentEnd(firstEnd, segmentSize(second).toUInt()), SegmentEnd(secondEnd, 0u))
-    assertThat(blob.prevDataRollingHash).isEqualTo(genesis)
+    assertThat(blob.parentDataRollingHash).isEqualTo(genesis)
     listOf(blob.chunkHash, blob.kzgCommitment, blob.kzgProof, blob.dataRollingHash).forEach { bytes ->
       assertThat(bytes).isNotEqualTo(ByteArray(bytes.size))
     }
@@ -53,7 +53,7 @@ class ZigDaStreamTest {
     val blob = sealAll(DaStreamPosition.fresh(genesis), listOf(first to firstEnd, second to secondEnd)).single()
     val position = DaStreamPosition(
       dataRollingHash = blob.dataRollingHash,
-      parentBlobDataRollingHash = blob.prevDataRollingHash,
+      parentBlobDataRollingHash = blob.parentDataRollingHash,
       sharedBlobCarryOverTailBytes = segmentSize(second).toUInt(),
       sharedBlob = blob.blob,
     )

@@ -123,7 +123,7 @@ class GlobalBlobCalculatorTest {
     assertThat(events[1].conflationEnds()).containsExactly(4UL)
     assertThat(events[1].flushed).isTrue()
     assertThat(events[1].next).isNull()
-    assertThat(events[1].blob.prevDataRollingHash).isEqualTo(events[0].blob.dataRollingHash)
+    assertThat(events[1].blob.parentDataRollingHash).isEqualTo(events[0].blob.dataRollingHash)
     assertThat(events[1].blob.payloadBytes).isLessThan(BLOB_PAYLOAD_CAPACITY.toUInt())
   }
 
@@ -256,7 +256,7 @@ class GlobalBlobCalculatorTest {
       dataRollingHash = blob2.dataRollingHash,
       sharedBlobCarryOverTailBytes = cutAfterC.unusedTailBytes,
       sharedBlob = blob2.blob,
-      parentBlobDataRollingHash = blob2.prevDataRollingHash,
+      parentBlobDataRollingHash = blob2.parentDataRollingHash,
     )
     events.clear()
     val resumed = calculator(
@@ -290,7 +290,7 @@ class GlobalBlobCalculatorTest {
       dataRollingHash = flushed.blob.dataRollingHash,
       sharedBlobCarryOverTailBytes = flushed.conflations.first().cut.unusedTailBytes,
       sharedBlob = flushed.blob.blob,
-      parentBlobDataRollingHash = flushed.blob.prevDataRollingHash,
+      parentBlobDataRollingHash = flushed.blob.parentDataRollingHash,
     )
     return position to flushed
   }
@@ -339,7 +339,7 @@ class GlobalBlobCalculatorTest {
       dataRollingHash = blob2.dataRollingHash,
       sharedBlobCarryOverTailBytes = events[1].conflations.last().cut.unusedTailBytes,
       sharedBlob = blob2.blob,
-      parentBlobDataRollingHash = blob2.prevDataRollingHash,
+      parentBlobDataRollingHash = blob2.parentDataRollingHash,
     )
     events.clear()
     val resumed = calculator(
@@ -382,7 +382,7 @@ class GlobalBlobCalculatorTest {
     chunkHash = ByteArray(32),
     kzgCommitment = ByteArray(KZG_POINT_BYTES),
     kzgProof = ByteArray(KZG_POINT_BYTES),
-    prevDataRollingHash = ByteArray(32),
+    parentDataRollingHash = ByteArray(32),
     dataRollingHash = ByteArray(32),
     payloadBytes = BLOB_PAYLOAD_CAPACITY.toUInt(),
     segmentEnds = cuts.toList(),

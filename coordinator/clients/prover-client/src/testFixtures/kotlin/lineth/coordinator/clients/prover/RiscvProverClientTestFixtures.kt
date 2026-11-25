@@ -162,7 +162,7 @@ object RiscvProverClientTestFixtures {
     conflations: List<ConflationWitness> = emptyList(),
     parentDataRollingHash: ByteArray = ByteArray(32) { 0x19 },
     chunks: List<ChunkWitness> = listOf(blobChunkWitness()),
-    parentSharedBlobCarryOverTailBytes: Int = 0,
+    parentSharedBlobCarryOverTailBytes: UInt = 0u,
     l2Executions: List<BlockIntervalProofIndex> = listOf(blockIntervalProofIndex(1000501UL, 1000520UL)),
   ): RollupProofRequestV1 = RollupProofRequestV1(
     conflations = conflations,

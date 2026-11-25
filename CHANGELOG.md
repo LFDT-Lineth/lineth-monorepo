@@ -54,6 +54,7 @@
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
+- *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
 
 ### 🐛 Bug Fixes
 
@@ -134,10 +135,12 @@
 - *(coordinator)* Move prover transport from per-proof-type to RiscvProverConfig (#4172)
 - *(coordinator)* Remove TracingModuleV2 and TracingModuleV4 support (#4180)
 - *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+- *(coordinator)* Rename the per-blob prevDataRollingHash to parentDataRollingHash (#4602)
 
 ### ⚡ Performance
 
 - *(prover)* Limitless prover performance optimization (#3362)
+- *(prover)* Remove heap allocations from native Poseidon2 MDHasher (#4574)
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -229,3 +232,4 @@
 - *(deps)* Bump Node.js to 24.22.3 (#4457)
 - *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 - *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
+- *(maru)* Remove noisy p2p connection stack trace (#4542)

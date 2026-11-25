@@ -99,7 +99,7 @@ internal class ZigDaStream(
       chunkHash = native.getBytes(layout.offsetOf("chunk_hash"), 32),
       kzgCommitment = native.getBytes(layout.offsetOf("kzg_commitment"), DaConstants.KZG_POINT_BYTES),
       kzgProof = native.getBytes(layout.offsetOf("kzg_proof"), DaConstants.KZG_POINT_BYTES),
-      prevDataRollingHash = native.getBytes(layout.offsetOf("prev_data_rolling_hash"), 32),
+      parentDataRollingHash = native.getBytes(layout.offsetOf("prev_data_rolling_hash"), 32),
       dataRollingHash = native.getBytes(layout.offsetOf("data_rolling_hash"), 32),
       payloadBytes = native.get(JAVA_INT, layout.offsetOf("payload_bytes")).toUInt(),
       segmentEnds = (0 until endCount).map { index ->

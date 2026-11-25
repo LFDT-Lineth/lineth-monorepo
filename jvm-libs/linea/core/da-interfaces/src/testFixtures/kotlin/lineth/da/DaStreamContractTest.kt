@@ -58,7 +58,7 @@ abstract class DaStreamContractTest(
     var rest = streamBytes
     var before = prev
     for (blob in blobs) {
-      assertThat(blob.prevDataRollingHash).isEqualTo(before)
+      assertThat(blob.parentDataRollingHash).isEqualTo(before)
       val payloadBytes = blob.payloadBytes.toInt()
       assertThat(rest.size).isGreaterThanOrEqualTo(payloadBytes)
       expectBlobLayout(blob, rest.copyOfRange(0, payloadBytes))
@@ -79,7 +79,7 @@ abstract class DaStreamContractTest(
     return if (tail == 0u) {
       DaStreamPosition.fresh(blob.dataRollingHash)
     } else {
-      DaStreamPosition(blob.dataRollingHash, blob.prevDataRollingHash, tail, blob.blob)
+      DaStreamPosition(blob.dataRollingHash, blob.parentDataRollingHash, tail, blob.blob)
     }
   }
 
@@ -260,7 +260,7 @@ abstract class DaStreamContractTest(
       expectSameBlobBytes(shared, sealed[0])
       assertThat(sealed[0].segmentEnds).containsExactly(SegmentEnd(2UL, 0u))
       val last = stream.flush()!!
-      assertThat(last.prevDataRollingHash).isEqualTo(shared.dataRollingHash)
+      assertThat(last.parentDataRollingHash).isEqualTo(shared.dataRollingHash)
       assertThat(last.payloadBytes).isEqualTo(6_000u)
     }
   }
