@@ -13,7 +13,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b // indirect
-	github.com/consensys/gnark-crypto v0.22.1-0.20261123170552-3326f85ee9a6 // indirect
+	github.com/consensys/gnark-crypto v0.22.1-0.20261125162630-5e64eb0e9152 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

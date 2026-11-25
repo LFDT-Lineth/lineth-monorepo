@@ -19,8 +19,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38GC8=
 github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b h1:9tkZUHoSuLqwB+QEGycQ8k3MqOwe8xD54WCB0vA+mXs=
 github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b/go.mod h1:rHLjoSuIcqxkvcZgDyhhsNY60y+4TIzyBPh5ya5SQeA=
-github.com/consensys/gnark-crypto v0.22.1-0.20261123170552-3326f85ee9a6 h1:UtPdSFmZUvxNhA0lRHYZeGNuHt+eeVbwkY+N21o6d80=
-github.com/consensys/gnark-crypto v0.22.1-0.20261123170552-3326f85ee9a6/go.mod h1:vYaA9W9JB8IrOql97j92990RA+RE/dA7vB66x2bHKrM=
+github.com/consensys/gnark-crypto v0.22.1-0.20261125162630-5e64eb0e9152 h1:lOudteByd2Qdpw8QzYUHr3mM/+J6NgvIPnilgwaWRzs=
+github.com/consensys/gnark-crypto v0.22.1-0.20261125162630-5e64eb0e9152/go.mod h1:vYaA9W9JB8IrOql97j92990RA+RE/dA7vB66x2bHKrM=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
