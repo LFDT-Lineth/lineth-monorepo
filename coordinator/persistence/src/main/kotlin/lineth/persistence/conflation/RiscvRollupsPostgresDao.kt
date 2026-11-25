@@ -59,7 +59,7 @@ class RiscvRollupsPostgresDao(
         on conflict (data_rolling_hash) do nothing
       ),
       inserted_references as (
-        insert into $RollupBlobsTableName (start_block_number, end_block_number, blob_index, data_rolling_hash)
+        insert into $RollupBlobsTableName (start_block_number, end_block_number, position_in_rollup, data_rolling_hash)
         select $2, $3, r.ordinality - 1, r.data_rolling_hash
         from unnest($13::bytea[]) with ordinality as r(data_rolling_hash, ordinality)
       )
@@ -103,7 +103,7 @@ class RiscvRollupsPostgresDao(
       from $RollupBlobsTableName r
       join $BlobsTableName b on b.data_rolling_hash = r.data_rolling_hash
       where (r.start_block_number, r.end_block_number) in (select * from unnest($1::bigint[], $2::bigint[]))
-      order by r.start_block_number, r.end_block_number, r.blob_index
+      order by r.start_block_number, r.end_block_number, r.position_in_rollup
     """
       .trimIndent()
 

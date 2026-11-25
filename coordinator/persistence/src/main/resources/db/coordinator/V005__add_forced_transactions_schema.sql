@@ -93,9 +93,9 @@ COMMENT ON COLUMN riscv_blobs.created_epoch_milli IS 'Timestamp (epoch millis) w
 CREATE TABLE riscv_rollup_blobs (
     start_block_number BIGINT NOT NULL,
     end_block_number BIGINT NOT NULL,
-    blob_index INTEGER NOT NULL,
+    position_in_rollup INTEGER NOT NULL,
     data_rolling_hash BYTEA NOT NULL REFERENCES riscv_blobs (data_rolling_hash),
-    PRIMARY KEY (start_block_number, end_block_number, blob_index),
+    PRIMARY KEY (start_block_number, end_block_number, position_in_rollup),
     FOREIGN KEY (start_block_number, end_block_number)
         REFERENCES riscv_rollups (start_block_number, end_block_number) ON DELETE CASCADE
 );
@@ -105,5 +105,5 @@ CREATE INDEX riscv_rollup_blobs_data_rolling_hash_idx ON riscv_rollup_blobs (dat
 COMMENT ON TABLE riscv_rollup_blobs IS 'Blobs of each RISC-V rollup, in stream order';
 COMMENT ON COLUMN riscv_rollup_blobs.start_block_number IS 'First block of the rollup in riscv_rollups';
 COMMENT ON COLUMN riscv_rollup_blobs.end_block_number IS 'Last block of the rollup in riscv_rollups';
-COMMENT ON COLUMN riscv_rollup_blobs.blob_index IS 'Position of the blob in the rollup, from 0';
+COMMENT ON COLUMN riscv_rollup_blobs.position_in_rollup IS 'Position of the blob in the rollup, from 0';
 COMMENT ON COLUMN riscv_rollup_blobs.data_rolling_hash IS 'The blob in riscv_blobs';
