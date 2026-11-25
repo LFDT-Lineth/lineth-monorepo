@@ -54,240 +54,132 @@ jobs:
   # Hence we cannot provide the correct set of 'before' and 'after' commits for dorny/paths-filter@v3 to accurately assess PR file changes
   # So instead we unconditionally use 'continue-on-error: true' and try to download every possible test coverage report that we want to upload to Codecov
 
-  upload-codecov-coordinator:
+  upload-codecov:
     needs: [ get-commit-tag ]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-coordinator
+    name: upload-codecov-${{ matrix.component }}
     permissions:
       actions: read    # download artifacts from another workflow run
       contents: read   # codecov commit correlation
+    strategy:
+      fail-fast: false
+      matrix:
+        # The artifact is named "<artifact_prefix><tag><artifact_suffix>" and extracted to <dir>.
+        # tag_output selects which get-commit-tag output the artifact name embeds.
+        # Upload N sends <dir>/**/<files_N>. A lenient_N upload is skipped when that file is absent;
+        # a strict one fails the job (the artifact downloaded but the expected report is missing).
+        include:
+          - component: coordinator
+            artifact_prefix: jacocoRootReport-
+            artifact_suffix: .xml
+            tag_output: commit-tag
+            dir: ci-coordinator-coverage
+            files_1: jacocoRootReport.xml
+            flags_1: kotlin
+            name_1: codecov-coordinator
+          - component: smart-contracts
+            artifact_prefix: smart-contract-coverage-
+            artifact_suffix: .json
+            tag_output: commit-tag
+            dir: ci-smart-contract-coverage
+            files_1: coverage-final.json
+            flags_1: hardhat
+            name_1: codecov-contracts
+          - component: ts
+            artifact_prefix: ts-coverage-
+            tag_output: commit-tag
+            dir: ci-ts-coverage
+            files_1: native-libs-lcov.info
+            flags_1: linea-native-libs
+            name_1: codecov-linea-native-libs-fork
+            files_2: postman-lcov.info
+            flags_2: postman
+            name_2: codecov-postman
+            lenient_2: false
+            files_3: sdk-viem-lcov.info
+            flags_3: sdk-viem
+            name_3: codecov-sdk-viem
+            lenient_3: true
+          - component: native-yield-ts
+            artifact_prefix: native-yield-ts-coverage-
+            tag_output: commit-tag
+            dir: ci-native-yield-coverage
+            files_1: shared-utils-lcov.info
+            flags_1: linea-shared-utils
+            name_1: codecov-linea-shared-utils-native-yield-fork
+            files_2: automation-service-lcov.info
+            flags_2: native-yield-automation-service
+            name_2: codecov-native-yield-automation-service-fork
+          - component: lido-ts
+            artifact_prefix: lido-ts-coverage-
+            tag_output: commit-tag
+            dir: ci-lido-coverage
+            files_1: shared-utils-lcov.info
+            flags_1: linea-shared-utils
+            name_1: codecov-linea-shared-utils-lido-fork
+            lenient_1: true
+            files_2: lido-governance-monitor-lcov.info
+            flags_2: lido-governance-monitor
+            name_2: codecov-lido-governance-monitor-fork
+          - component: sdk-ts
+            artifact_prefix: sdk-ts-coverage-
+            tag_output: sdk-commit-tag
+            dir: ci-sdk-coverage
+            files_1: sdk-core-lcov.info
+            flags_1: sdk-core
+            name_1: codecov-sdk-core-fork
+            files_2: sdk-viem-lcov.info
+            flags_2: sdk-viem
+            name_2: codecov-sdk-viem-sdk-testing-fork
+            files_3: sdk-ethers-lcov.info
+            flags_3: sdk-ethers
+            name_3: codecov-sdk-ethers-fork
     steps:
-      - name: Download Jacoco test coverage report (from coordinator-testing.yml)
+      - name: Download coverage artifact
+        id: download
         continue-on-error: true
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        id: coordinator-report-download
         with:
-          name: jacocoRootReport-${{ needs.get-commit-tag.outputs.commit-tag }}.xml
+          name: ${{ matrix.artifact_prefix }}${{ needs.get-commit-tag.outputs[matrix.tag_output] }}${{ matrix.artifact_suffix }}
           path: |
-            ${{ github.workspace }}/ci-coordinator-coverage
+            ${{ github.workspace }}/${{ matrix.dir }}
           # Required to download artifacts from another workflow run
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Gets run id of the precedeing workflow that triggered this workflow_run
+          # Gets run id of the preceding workflow that triggered this workflow_run
           run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.coordinator-report-download.outcome == 'success' }}
+
+      - name: Upload coverage (1)
+        if: ${{ steps.download.outcome == 'success' && matrix.files_1 != '' && (!matrix.lenient_1 || hashFiles(format('{0}/**/{1}', matrix.dir, matrix.files_1)) != '') }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-coordinator-coverage/**/jacocoRootReport.xml
-          flags: kotlin
+          files: ${{ github.workspace }}/${{ matrix.dir }}/**/${{ matrix.files_1 }}
+          flags: ${{ matrix.flags_1 }}
           os: linux
-          name: codecov-coordinator
+          name: ${{ matrix.name_1 }}
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  upload-codecov-smart-contracts:
-    needs: [ get-commit-tag ]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-smart-contracts
-    permissions:
-      actions: read    # download artifacts from another workflow run
-      contents: read   # codecov commit correlation
-    steps:
-      - name: Download smart contract coverage report (from run-smc.tests.yml)
-        id: smc-report-download
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
-          path: |
-            ${{ github.workspace }}/ci-smart-contract-coverage
-          # Required to download artifacts from another workflow run
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Gets run id of the precedeing workflow that triggered this workflow_run
-          run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.smc-report-download.outcome == 'success' }}
+      - name: Upload coverage (2)
+        if: ${{ steps.download.outcome == 'success' && matrix.files_2 != '' && (!matrix.lenient_2 || hashFiles(format('{0}/**/{1}', matrix.dir, matrix.files_2)) != '') }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-smart-contract-coverage/**/coverage-final.json
-          flags: hardhat
+          files: ${{ github.workspace }}/${{ matrix.dir }}/**/${{ matrix.files_2 }}
+          flags: ${{ matrix.flags_2 }}
           os: linux
-          name: codecov-contracts
+          name: ${{ matrix.name_2 }}
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  upload-codecov-ts:
-    needs: [ get-commit-tag ]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-ts
-    permissions:
-      actions: read    # download artifacts from another workflow run
-      contents: read   # codecov commit correlation
-    steps:
-      - name: Download TS test coverage reports (from postman-testing.yml)
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        id: ts-coverage-download
-        with:
-          name: ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
-          path: |
-            ${{ github.workspace }}/ci-ts-coverage
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
+      - name: Upload coverage (3)
+        if: ${{ steps.download.outcome == 'success' && matrix.files_3 != '' && (!matrix.lenient_3 || hashFiles(format('{0}/**/{1}', matrix.dir, matrix.files_3)) != '') }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-ts-coverage/**/native-libs-lcov.info
-          flags: linea-native-libs
+          files: ${{ github.workspace }}/${{ matrix.dir }}/**/${{ matrix.files_3 }}
+          flags: ${{ matrix.flags_3 }}
           os: linux
-          name: codecov-linea-native-libs-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-ts-coverage/**/postman-lcov.info
-          flags: postman
-          os: linux
-          name: codecov-postman
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.ts-coverage-download.outcome == 'success' && hashFiles('ci-ts-coverage/**/sdk-viem-lcov.info') != '' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-ts-coverage/**/sdk-viem-lcov.info
-          flags: sdk-viem
-          os: linux
-          name: codecov-sdk-viem
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  upload-codecov-native-yield-ts:
-    needs: [ get-commit-tag ]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-native-yield-ts
-    permissions:
-      actions: read    # download artifacts from another workflow run
-      contents: read   # codecov commit correlation
-    steps:
-      - name: Download TS coverage (from native-yield-automation-service-testing.yml)
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        id: native-yield-coverage-download
-        with:
-          name: native-yield-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
-          path: |
-            ${{ github.workspace }}/ci-native-yield-coverage
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-native-yield-coverage/**/shared-utils-lcov.info
-          flags: linea-shared-utils
-          os: linux
-          name: codecov-linea-shared-utils-native-yield-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.native-yield-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-native-yield-coverage/**/automation-service-lcov.info
-          flags: native-yield-automation-service
-          os: linux
-          name: codecov-native-yield-automation-service-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  upload-codecov-lido-ts:
-    needs: [ get-commit-tag ]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-lido-ts
-    permissions:
-      actions: read    # download artifacts from another workflow run
-      contents: read   # codecov commit correlation
-    steps:
-      - name: Download TS coverage (from lido-governance-monitor-testing.yml)
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        id: lido-coverage-download
-        with:
-          name: lido-ts-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}
-          path: |
-            ${{ github.workspace }}/ci-lido-coverage
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.lido-coverage-download.outcome == 'success' && hashFiles('ci-lido-coverage/**/shared-utils-lcov.info') != '' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-lido-coverage/**/shared-utils-lcov.info
-          flags: linea-shared-utils
-          os: linux
-          name: codecov-linea-shared-utils-lido-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.lido-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-lido-coverage/**/lido-governance-monitor-lcov.info
-          flags: lido-governance-monitor
-          os: linux
-          name: codecov-lido-governance-monitor-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  upload-codecov-sdk-ts:
-    needs: [ get-commit-tag ]
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
-    name: upload-codecov-sdk-ts
-    permissions:
-      actions: read    # download artifacts from another workflow run
-      contents: read   # codecov commit correlation
-    steps:
-      - name: Download TS coverage (from sdk-testing.yml)
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        id: sdk-coverage-download
-        with:
-          name: sdk-ts-coverage-${{ needs.get-commit-tag.outputs.sdk-commit-tag }}
-          path: |
-            ${{ github.workspace }}/ci-sdk-coverage
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-core-lcov.info
-          flags: sdk-core
-          os: linux
-          name: codecov-sdk-core-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-viem-lcov.info
-          flags: sdk-viem
-          os: linux
-          name: codecov-sdk-viem-sdk-testing-fork
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.sdk-coverage-download.outcome == 'success' }}
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/ci-sdk-coverage/**/sdk-ethers-lcov.info
-          flags: sdk-ethers
-          os: linux
-          name: codecov-sdk-ethers-fork
+          name: ${{ matrix.name_3 }}
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
