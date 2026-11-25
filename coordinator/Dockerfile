@@ -35,8 +35,7 @@ WORKDIR /opt/lineth/coordinator
 # Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
 RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
     adduser --uid 1000 --disabled-password --gecos "" --home /opt/lineth/coordinator coordinator && \
-    mkdir -p logs /tmp/prover/request /tmp/prover/response && \
-    chown -R coordinator:coordinator /opt/lineth/coordinator /tmp/prover
+    chown -R coordinator:coordinator /opt/lineth/coordinator
 
 COPY --from=builder --chown=coordinator:coordinator /libs/ libs/
 # The glob lets downstream builds whose context has no license files skip them
