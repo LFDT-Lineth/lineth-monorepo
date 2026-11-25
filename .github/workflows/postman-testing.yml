@@ -10,6 +10,11 @@ on:
       commit_tag:
         required: true
         type: string
+      run_sdk_viem_tests:
+        description: Run sdk-viem tests and upload their coverage (used by direct release gates)
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: postman-testing-${{ github.workflow }}-${{ github.ref }}
@@ -41,7 +46,10 @@ jobs:
           pnpm run -F "@lfdt-lineth/postman^..." build
           pnpm run -F @lfdt-lineth/native-libs test
           pnpm run -F ./postman test;
-          pnpm run -F ./ts-libs/sdk/sdk-viem test;
+
+      - name: Run sdk-viem tests and generate coverage report
+        if: ${{ inputs.run_sdk_viem_tests }}
+        run: pnpm run -F ./ts-libs/sdk/sdk-viem test
 
       # Use a non-hidden directory name: upload-artifact@v4 excludes hidden paths by default
       # (include-hidden-files=false), so .ci-ts-coverage/ would upload zero files.
@@ -50,7 +58,9 @@ jobs:
           mkdir -p ci-ts-coverage
           cp ts-libs/linea-native-libs/coverage/lcov.info ci-ts-coverage/native-libs-lcov.info
           cp postman/coverage/lcov.info ci-ts-coverage/postman-lcov.info
-          cp ts-libs/sdk/sdk-viem/coverage/lcov.info ci-ts-coverage/sdk-viem-lcov.info
+          if [[ "${{ inputs.run_sdk_viem_tests }}" == "true" ]]; then
+            cp ts-libs/sdk/sdk-viem/coverage/lcov.info ci-ts-coverage/sdk-viem-lcov.info
+          fi
 
       - name: Upload TS coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -84,7 +94,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload sdk-viem coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' && inputs.run_sdk_viem_tests }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true

@@ -37,6 +37,11 @@ postman:
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
   - '.nvmrc'
+# Mirrors sdk-testing.yml triggers so Postman can skip duplicate sdk-viem tests when SDK CI is running.
+sdk:
+  - 'ts-libs/sdk/**'
+  - '.github/workflows/sdk-testing.yml'
+  - '.nvmrc'
 prover:
   - 'prover/**'
   - '.github/workflows/prover-testing.yml'
