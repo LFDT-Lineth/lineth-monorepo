@@ -17,7 +17,6 @@ pub fn makeLog(alloc: std.mem.Allocator, address: [20]u8, topics: []const [32]u8
         .topics = try alloc.dupe([32]u8, topics),
         .data = &.{},
         .block_number = 0,
-        .tx_hash = zero_hash,
         .tx_index = 0,
         .block_hash = zero_hash,
         .log_index = 0,
