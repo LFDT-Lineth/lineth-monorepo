@@ -7,6 +7,8 @@ import (
 	"math"
 	"reflect"
 	"testing"
+
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 // TestInstructionTypeFromOpcode
@@ -1680,6 +1682,116 @@ func TestPredecode(t *testing.T) {
 		if got.InstructionBase != 0x2000 || !bytes.Equal(got.Decoded, want.buf) {
 			t.Fatalf("%s: base=%#x decoded=%x, want base=0x2000 decoded=%x",
 				tt.name, got.InstructionBase, got.Decoded, want.buf)
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// EncodeInputs
+// ------------------------------------------------------------
+
+// TestEncodeInstructionBase checks that the instruction base is encoded as a
+// 32-bit big-endian value, with leading zero bytes kept.
+func TestEncodeInstructionBase(t *testing.T) {
+	tests := []struct {
+		name string
+		base uint64
+		want []byte
+	}{
+		{name: "zero", base: 0, want: []byte{0x00, 0x00, 0x00, 0x00}},
+		{name: "one byte", base: 0x12, want: []byte{0x00, 0x00, 0x00, 0x12}},
+		{name: "typical", base: 0x00800000, want: []byte{0x00, 0x80, 0x00, 0x00}},
+		{name: "all different bytes", base: 0x11223344, want: []byte{0x11, 0x22, 0x33, 0x44}},
+		{name: "largest", base: math.MaxUint32, want: []byte{0xff, 0xff, 0xff, 0xff}},
+	}
+	for _, tt := range tests {
+		got := encodeInstructionBase(tt.base)
+		if got.Len() != 32 {
+			t.Fatalf("%s: Len() = %d, want 32", tt.name, got.Len())
+		}
+		if !bytes.Equal(got.Bytes(), tt.want) {
+			t.Fatalf("%s: Bytes() = %x, want %x", tt.name, got.Bytes(), tt.want)
+		}
+	}
+}
+
+// TestEncodeDecodedRows checks that only whole 87-bit rows are kept: the bit
+// length is rounded down to a multiple of the row size, so a partial row is
+// dropped and the padding bits of the last byte are cleared. It also checks that
+// the result is a copy: changing the input afterwards does not change it.
+func TestEncodeDecodedRows(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int // bytes in the decoded rows
+		wantBits uint
+	}{
+		{name: "empty", size: 0, wantBits: 0},
+		{name: "less than one row", size: 10, wantBits: 0},
+		{name: "one row and one padding bit", size: 11, wantBits: 87},
+		{name: "two rows", size: 22, wantBits: 174},
+		{name: "eight rows, byte aligned", size: 87, wantBits: 696},
+		{name: "eight rows and a partial row", size: 88, wantBits: 696},
+	}
+	for _, tt := range tests {
+		decoded := make([]byte, tt.size)
+		for i := range decoded {
+			decoded[i] = byte(i + 1)
+		}
+		want := bytes.Clone(decoded[:(tt.wantBits+7)/8])
+		if padding := tt.wantBits % 8; padding != 0 {
+			want[len(want)-1] &= 0xff << (8 - padding)
+		}
+		got := encodeDecodedRows(decoded)
+		if got.Len() != tt.wantBits {
+			t.Fatalf("%s: Len() = %d, want %d", tt.name, got.Len(), tt.wantBits)
+		}
+		if !bytes.Equal(got.Bytes(), want) {
+			t.Fatalf("%s: Bytes() = %x, want %x", tt.name, got.Bytes(), want)
+		}
+		for i := range decoded {
+			decoded[i] = 0xff
+		}
+		if !bytes.Equal(got.Bytes(), want) {
+			t.Fatalf("%s: Bytes() changed with the input: got %x, want %x", tt.name, got.Bytes(), want)
+		}
+	}
+}
+
+// TestDecodedProgramEncodeInputs checks that EncodeInputs returns exactly the
+// instruction base and the decoded rows, each under its own input name. How each
+// one is encoded is tested in TestEncodeInstructionBase and TestEncodeDecodedRows.
+func TestDecodedProgramEncodeInputs(t *testing.T) {
+	tests := []struct {
+		name    string
+		program DecodedProgram
+	}{
+		{name: "empty program", program: DecodedProgram{}},
+		{name: "one row", program: DecodedProgram{
+			InstructionBase: 0x2000,
+			Decoded:         []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+		}},
+		{name: "two rows", program: DecodedProgram{
+			InstructionBase: 0x00800000,
+			Decoded:         bytes.Repeat([]byte{0xa5}, 22),
+		}},
+	}
+	for _, tt := range tests {
+		want := map[string]bit.Array{
+			InstructionBaseInput: encodeInstructionBase(tt.program.InstructionBase),
+			DecodedInput:         encodeDecodedRows(tt.program.Decoded),
+		}
+		got := tt.program.EncodeInputs()
+		if len(got) != len(want) {
+			t.Fatalf("%s: %d inputs, want %d", tt.name, len(got), len(want))
+		}
+		for name, wantArray := range want {
+			gotArray, ok := got[name]
+			if !ok {
+				t.Fatalf("%s: input %s is missing", tt.name, name)
+			}
+			if !gotArray.Equals(wantArray) {
+				t.Fatalf("%s: input %s = %s, want %s", tt.name, name, gotArray.String(), wantArray.String())
+			}
 		}
 	}
 }

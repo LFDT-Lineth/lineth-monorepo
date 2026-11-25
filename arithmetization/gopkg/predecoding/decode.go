@@ -717,14 +717,23 @@ type DecodedProgram struct {
 
 // EncodeInputs returns fresh raw input bytes suitable for ZkC input loading.
 func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
-	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
-	decoded := append([]byte(nil), program.Decoded...)
-	// Each row is a fixed number of bits; discard the final byte's padding bits.
-	nbits := ((uint(len(decoded)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
 	return map[string]bit.Array{
-		InstructionBaseInput: BitArrayFromBytes(base...),
-		DecodedInput:         bit.NewArray(decoded, nbits, bit.BigEndian),
+		InstructionBaseInput: encodeInstructionBase(program.InstructionBase),
+		DecodedInput:         encodeDecodedRows(program.Decoded),
 	}
+}
+
+// encodeInstructionBase encodes the instruction base as a big-endian u32.
+func encodeInstructionBase(base uint64) bit.Array {
+	return BitArrayFromBytes(binary.BigEndian.AppendUint32(nil, uint32(base))...)
+}
+
+// encodeDecodedRows copies the decoded rows into a bit array. Each row is a
+// fixed number of bits, so the padding bits of the final byte are discarded.
+func encodeDecodedRows(decoded []byte) bit.Array {
+	rows := append([]byte(nil), decoded...)
+	nbits := ((uint(len(rows)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
+	return bit.NewArray(rows, nbits, bit.BigEndian)
 }
 
 // Predecode creates one packed instruction row for every four-byte word in the
