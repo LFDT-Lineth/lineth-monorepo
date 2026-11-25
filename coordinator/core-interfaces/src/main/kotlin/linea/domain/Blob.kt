@@ -146,57 +146,17 @@ data class BlobRecord(
   }
 }
 
-data class BlobRecordV2(
-  override val startBlockNumber: ULong,
-  override val endBlockNumber: ULong,
-  val startBlockTimestamp: Instant,
-  val endBlockTimestamp: Instant,
-  val parentDataRollingHash: ByteArray,
-  val dataRollingHash: ByteArray,
-  val totalBatchesCount: UInt,
-  val blobsData: List<BlobData>,
-  val proofHash: ByteArray,
-  val endOffset: Int,
-) : BlockInterval {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as BlobRecordV2
-
-    if (startBlockNumber != other.startBlockNumber) return false
-    if (endBlockNumber != other.endBlockNumber) return false
-    if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
-    if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
-    if (totalBatchesCount != other.totalBatchesCount) return false
-    if (blobsData != other.blobsData) return false
-    if (!proofHash.contentEquals(other.proofHash)) return false
-    if (endOffset != other.endOffset) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = startBlockNumber.hashCode()
-    result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentDataRollingHash.contentHashCode()
-    result = 31 * result + dataRollingHash.contentHashCode()
-    result = 31 * result + totalBatchesCount.hashCode()
-    result = 31 * result + blobsData.hashCode()
-    result = 31 * result + proofHash.contentHashCode()
-    result = 31 * result + endOffset
-    return result
-  }
-}
-
+/**
+ * One sealed blob of a [RiscvRollupRecord].
+ *
+ * @property prevDataRollingHash rolling hash before this blob
+ * @property dataRollingHash rolling hash after this blob
+ */
 data class BlobData(
   val chunkHash: ByteArray,
   val blobBytes: ByteArray,
-  val batchesCount: UInt,
+  val prevDataRollingHash: ByteArray,
+  val dataRollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -206,7 +166,8 @@ data class BlobData(
 
     if (!chunkHash.contentEquals(other.chunkHash)) return false
     if (!blobBytes.contentEquals(other.blobBytes)) return false
-    if (batchesCount != other.batchesCount) return false
+    if (!prevDataRollingHash.contentEquals(other.prevDataRollingHash)) return false
+    if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
 
     return true
   }
@@ -214,7 +175,8 @@ data class BlobData(
   override fun hashCode(): Int {
     var result = chunkHash.contentHashCode()
     result = 31 * result + blobBytes.contentHashCode()
-    result = 31 * result + batchesCount.hashCode()
+    result = 31 * result + prevDataRollingHash.contentHashCode()
+    result = 31 * result + dataRollingHash.contentHashCode()
     return result
   }
 }
