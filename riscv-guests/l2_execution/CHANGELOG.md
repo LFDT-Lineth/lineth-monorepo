@@ -15,6 +15,7 @@
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(riscv-guest)* Zesu update with some small breaking change (#4586)
 
 ### 🚜 Refactor
 
