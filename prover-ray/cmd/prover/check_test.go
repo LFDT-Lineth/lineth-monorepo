@@ -37,14 +37,6 @@ func TestCheckPipeline_Rejects(t *testing.T) {
 		"invalid mode": {
 			backend.ProofTypeL2Execution, pipeline{mode: "bogus"}, "invalid prover_mode \"bogus\"",
 		},
-		"dev-zkvm for rollup": {
-			backend.ProofTypeRollup, pipeline{mode: backend.ProverModeDevZkVM},
-			"rollup.prover_mode \"dev-zkvm\" is not supported yet",
-		},
-		"dev-partial for rollup": {
-			backend.ProofTypeRollup, pipeline{mode: backend.ProverModeDevPartial},
-			"rollup.prover_mode \"dev-partial\" is not supported yet",
-		},
 		"dev-zkvm for aggregation": {
 			backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeDevZkVM},
 			"aggregation.prover_mode \"dev-zkvm\" is not supported yet",
@@ -103,6 +95,8 @@ func TestCheckPipeline_Accepts(t *testing.T) {
 		"dev-partial with runner, sharded": {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeDevPartial, nativeRunnerBin: runner, shardSize: 500000}},
 		"full, sharded":                    {backend.ProofTypeL2Execution, pipeline{mode: backend.ProverModeFull, shardSize: 500000}},
 		"rollup in dev-mock":               {backend.ProofTypeRollup, pipeline{mode: backend.ProverModeDevMock}},
+		"rollup in dev-zkvm":               {backend.ProofTypeRollup, pipeline{mode: backend.ProverModeDevZkVM}},
+		"rollup in dev-partial, sharded":   {backend.ProofTypeRollup, pipeline{mode: backend.ProverModeDevPartial, shardSize: 500000}},
 		"aggregation in dev-mock":          {backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeDevMock}},
 		// full is not ready on any layer, but stays startable while it is built.
 		"aggregation in full": {backend.ProofTypeRollupAggregation, pipeline{mode: backend.ProverModeFull}},
@@ -258,15 +252,15 @@ func TestModeTables_CoverEveryMode(t *testing.T) {
 	}
 }
 
-// rollupDevPartialConfig writes a config whose rollup pipeline is in a mode
-// that is not ready for rollup.
-func rollupDevPartialConfig(t *testing.T) string {
+// aggregationDevPartialConfig writes a config whose aggregation pipeline is in
+// a mode that is not ready for aggregation.
+func aggregationDevPartialConfig(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	require.NoError(t, os.WriteFile(path, []byte("version = \"t\"\n"+
 		"[execution]\nprover_mode = \"dev-mock\"\nrequests_root_dir = \""+dir+"\"\n"+
-		"[rollup]\nprover_mode = \"dev-partial\"\nrequests_root_dir = \""+dir+"\"\n"), 0o600))
+		"[aggregation]\nprover_mode = \"dev-partial\"\nrequests_root_dir = \""+dir+"\"\n"), 0o600))
 	return path
 }
 
@@ -274,27 +268,27 @@ func rollupDevPartialConfig(t *testing.T) string {
 // pipeline in a mode that would fail every job, and returns the queues of a
 // config that works.
 func TestPipelineQueues(t *testing.T) {
-	path := rollupDevPartialConfig(t)
+	path := aggregationDevPartialConfig(t)
 	cfg, err := config.NewConfigFromFile(path)
 	require.NoError(t, err)
 	_, err = pipelineQueues(cfg, path)
 	require.ErrorContains(t, err, "invalid config")
-	require.ErrorContains(t, err, "rollup.prover_mode \"dev-partial\" is not supported yet")
+	require.ErrorContains(t, err, "aggregation.prover_mode \"dev-partial\" is not supported yet")
 
-	cfg.Rollup.ProverMode = string(backend.ProverModeDevMock)
+	cfg.Aggregation.ProverMode = string(backend.ProverModeDevMock)
 	queues, err := pipelineQueues(cfg, path)
 	require.NoError(t, err)
-	assert.Len(t, queues, 2, "execution and rollup are configured")
+	assert.Len(t, queues, 2, "execution and aggregation are configured")
 }
 
-// TestRunProve_RejectsDevModeForRollup checks that a one-shot prove rejects
-// the same config before it runs the job.
-func TestRunProve_RejectsDevModeForRollup(t *testing.T) {
-	path := rollupDevPartialConfig(t)
-	in := filepath.Join(t.TempDir(), "1-1-getZkRollupProofV1.json")
+// TestRunProve_RejectsDevModeForAggregation checks that a one-shot prove
+// rejects the same config before it runs the job.
+func TestRunProve_RejectsDevModeForAggregation(t *testing.T) {
+	path := aggregationDevPartialConfig(t)
+	in := filepath.Join(t.TempDir(), "1-1-getZkRollupAggregationProofV1.json")
 	require.NoError(t, os.WriteFile(in, []byte("{}"), 0o600))
 
 	err := run([]string{cmdProve, flagConfig, path, flagIn, in, flagOut, filepath.Join(t.TempDir(), "out.json")})
 	require.ErrorContains(t, err, "invalid config")
-	require.ErrorContains(t, err, "rollup.prover_mode \"dev-partial\" is not supported yet")
+	require.ErrorContains(t, err, "aggregation.prover_mode \"dev-partial\" is not supported yet")
 }

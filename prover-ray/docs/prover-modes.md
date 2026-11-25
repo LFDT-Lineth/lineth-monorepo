@@ -17,14 +17,14 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | Mode | Execution | Rollup | Aggregation |
 |---|---|---|---|
 | `dev-mock` | ready | ready | ready |
-| `dev-zkvm` | ready | not yet | not yet |
-| `dev-partial` | ready | not yet | not yet |
+| `dev-zkvm` | ready | ready | not yet |
+| `dev-partial` | ready | ready | not yet |
 | `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For rollup and aggregation, the modes other than `dev-mock` need the layer's guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
+For aggregation, the modes other than `dev-mock` need the guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. The rollup guest verifies the devmode proofs of the l2-execution responses in `dev-zkvm` and `dev-partial`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
 
-The prover does not start when `dev-zkvm` or `dev-partial` is set for rollup or aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
+The prover does not start when `dev-zkvm` or `dev-partial` is set for aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
 
 ## Modes
 
