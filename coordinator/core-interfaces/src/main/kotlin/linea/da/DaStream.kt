@@ -164,7 +164,7 @@ data class SegmentEnd(
   val unusedTailBytes: UInt,
 ) {
   init {
-    require(unusedTailBytes <= DaConstants.MAX_TAIL_BYTES.toUInt()) {
+    require(unusedTailBytes <= DaConstants.MAX_TAIL_BYTES) {
       "unusedTailBytes=$unusedTailBytes must be in 0..${DaConstants.MAX_TAIL_BYTES}"
     }
   }
@@ -200,7 +200,7 @@ object DaConstants {
    * Upper bound of a blob tail byte count (`sharedBlobCarryOverTailBytes` in the V1 schemas): a tail shared with the
    * next rollup is strictly shorter than a blob's payload, otherwise the whole blob would belong to the next rollup.
    */
-  const val MAX_TAIL_BYTES = BLOB_PAYLOAD_CAPACITY - 1
+  val MAX_TAIL_BYTES: UInt = (BLOB_PAYLOAD_CAPACITY - 1).toUInt()
 
   /** Size of a segment's big-endian `u32` length prefix, written before its zstd frame. */
   const val SEGMENT_LENGTH_PREFIX_BYTES = 4

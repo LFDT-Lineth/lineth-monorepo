@@ -172,7 +172,7 @@ class RollupProofGeneratingCoordinatorTest {
     val request = rollupProverClient.requests.first()
     assertThat(request.startBlockNumber).isEqualTo(1UL)
     assertThat(request.endBlockNumber).isEqualTo(6UL)
-    assertThat(request.parentSharedBlobCarryOverTailBytes).isEqualTo(0)
+    assertThat(request.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(request.parentBlobDataRollingHash).isNull()
     assertThat(request.chunks).hasSize(1)
     val chunk = request.chunks.first()

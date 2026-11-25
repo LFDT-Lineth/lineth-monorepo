@@ -32,11 +32,11 @@ data class RiscvRollupRecord(
 ) : BlockInterval {
   init {
     require(blobsData.isNotEmpty()) { "blobsData must not be empty: rollup=${intervalString()}" }
-    require(parentSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES.toUInt()) {
+    require(parentSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES) {
       "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES: " +
         "rollup=${intervalString()}"
     }
-    require(finalSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES.toUInt()) {
+    require(finalSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES) {
       "finalSharedBlobCarryOverTailBytes=$finalSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES: " +
         "rollup=${intervalString()}"
     }
