@@ -860,9 +860,9 @@ var classifyInstructionVectors = []struct {
 	{"lui x0", uType, opcodeLUI, 0, 0, 0, 0, computeNoOp},
 	{"u bad opcode", uType, 0, 0, 0, 0, 5, computeInvalid},
 
-	// No switch arm matches. op stays 0, so checkNoOp returns NO_OP.
-	{"undefined", undefinedType, 0, 0, 0, 0, 0, computeNoOp},
-	{"undefined rd set", undefinedType, opcodeOPIMM, 0b000, 0, 1, 5, computeNoOp},
+	// An undefined opcode is invalid, whatever rd is.
+	{"undefined", undefinedType, 0, 0, 0, 0, 0, computeInvalid},
+	{"undefined rd set", undefinedType, opcodeOPIMM, 0b000, 0, 1, 5, computeInvalid},
 }
 
 func TestClassifyInstruction(t *testing.T) {
@@ -1185,7 +1185,7 @@ func TestDecodeInstruction(t *testing.T) {
 		{"lui", (5 << 7) | opcodeLUI, utypeLuiWB, 0, 0, 0, 5},
 		{"lui x0", opcodeLUI, computeNoOp, 0, 0, 0, 0},
 		{"fence", opcodeMISCMEM, computeNoOp, 0, 0, 0, 0},
-		{"unknown", 0x7f, computeNoOp, 0, 0, 0, 0},
+		{"unknown", 0x7f, computeInvalid, 0, 0, 0, 0},
 	}
 
 	var got, want bitWriter
@@ -1654,6 +1654,37 @@ func TestPredecode(t *testing.T) {
 			t.Fatalf("%s: base=%#x decoded=%x, want base=0x2000 decoded=%x",
 				tt.name, got.InstructionBase, got.Decoded, want.buf)
 		}
+	}
+}
+
+// TestPredecodeDenseExecutableSpan checks that a zero word between two
+// executable blobs is decoded as a record, not skipped. The gap word 0x00000000
+// is an undefined opcode, so its record is invalid, and the two instructions
+// sit in the records either side of it.
+func TestPredecodeDenseExecutableSpan(t *testing.T) {
+	first := []byte{0x93, 0x00, 0x10, 0x00}  // addi x1, x0, 1
+	second := []byte{0x13, 0x01, 0x20, 0x00} // addi x2, x0, 2
+	decoded, err := Predecode(Program{Blobs: []Blob{
+		{Address: 0x1008, Data: second, Executable: true},
+		{Address: 0x1000, Data: first, Executable: true},
+	}})
+	if err != nil {
+		t.Fatalf("Predecode() error = %v", err)
+	}
+	if decoded.InstructionBase != 0x1000 {
+		t.Fatalf("InstructionBase = %#x, want 0x1000", decoded.InstructionBase)
+	}
+	var gap bitWriter
+	decodeInstruction(&gap, 0)
+	if gap.buf[0] != computeInvalid {
+		t.Fatalf("gap record op = %d, want computeInvalid", gap.buf[0])
+	}
+	var want bitWriter
+	decodeInstruction(&want, 0x00100093)
+	decodeInstruction(&want, 0)
+	decodeInstruction(&want, 0x00200113)
+	if !bytes.Equal(decoded.Decoded, want.buf) {
+		t.Fatalf("decoded = %x, want %x", decoded.Decoded, want.buf)
 	}
 }
 
