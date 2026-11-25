@@ -56,22 +56,25 @@ fn main<registers, ram>() {
     // Loading blobs data into RAM
     // =============================
 
-
     // Preliminary check to ensure no-overlaps among blobs
-    for i:u32 = 0; i<blobs_count; i = i + 1 {
+    for i:u32 = 0; i<(blobs_count-1); i = i + 1 {
         var blob_offset:Address
         var blob_size:Length
         blob_offset, blob_size = blobs_offset_and_size[i]
         var blob_start:Address = blob_offset
         var blob_end:Address = blob_offset + blob_size
+        printf "\n# Checking blob_%x[%x,%x]...\n", i, blob_start, blob_end
         for j:u32 = i+1; j<blobs_count; j = j + 1 {
             var other_blob_offset:Address
             var other_blob_size:Length
             other_blob_offset, other_blob_size = blobs_offset_and_size[j]
             var other_blob_start:Address = other_blob_offset
             var other_blob_end:Address = other_blob_offset + other_blob_size
-            if blob_start <= other_blob_end && blob_end >= other_blob_start {
+            printf "...against blob_%x[%x,%x]", j, other_blob_start, other_blob_end
+            if blob_start < other_blob_end && blob_end > other_blob_start {
                 fail
+            } else {
+                printf " ok\n"
             }
         }
     }
