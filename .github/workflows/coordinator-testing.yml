@@ -44,8 +44,10 @@ jobs:
         with:
           pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
       - name: Build coordinator and Unit tests
+        # The runner has a 16 CPU quota and Gradle runs one worker per CPU by default, so about 15 test JVMs ran at once,
+        # each getting about one core, which made the cold start of the tests slow enough to trip their timeouts.
         run: |
-          ./gradlew -V coordinator:app:buildNeeded
+          ./gradlew -V --max-workers=8 coordinator:app:buildNeeded
       - name: Verify generated coordinator config docs are up to date
         run: |
           ./gradlew -V :coordinator:config:generateConfigDocs
