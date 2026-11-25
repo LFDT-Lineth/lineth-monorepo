@@ -105,12 +105,14 @@ defer stream.freeSealed(allocator, sealed);
 
 ### Builds
 
-`make host-lib` builds `zig-out/lib/liblineth_da.so` (`.dylib` on macOS) and installs `zig-out/include/lineth_da.h`: ReleaseSafe, stripped, for the machine that builds it, with a baseline CPU model, so the library does not depend on the CPU features of the machine, and on Linux glibc 2.39. libzstd is compiled with hidden visibility, and on Linux lld applies the version script `host/lineth_da.map`, which exports the `lineth_da_*` functions and nothing else. The Constantine archive is built by the host's Nim and clang, so a Linux library needs the glibc of the machine that built it.
+`make host-lib` builds `zig-out/lib/liblineth_da.so` (`.dylib` on macOS) and installs `zig-out/include/lineth_da.h`: ReleaseSafe, stripped, for the machine that builds it, with a baseline CPU model, so the library does not depend on the CPU features of the machine, and on Linux glibc 2.39. libzstd is compiled with hidden visibility, and on Linux lld applies the version script `host/lineth_da.map`, which exports the `lineth_da_*` functions and nothing else. The Constantine archive is built by the host's Nim and clang, so a Linux library needs the glibc of the machine that built it: the release builds on Ubuntu 24.04.
 
 | Make target | Result |
 | --- | --- |
 | `host-lib` | the library and the header |
 | `host-lib-check` | on Linux, fails unless `nm -D` lists `lineth_da_*` symbols alone and the newest `GLIBC_x.y` of `objdump -T` is at most 2.39; elsewhere skipped |
+| `host-lib-asset RELEASE_VERSION=<semver> RELEASE_DIR=<dir>` | builds the library and writes it as `lineth_da_v<version>_<os>_<arch>.<so\|dylib>` into `RELEASE_DIR`, where `<os>_<arch>` is `linux_x86_64`, `linux_arm64` or `darwin_arm64` |
+| `host-lib-bundle RELEASE_VERSION=<semver> RELEASE_DIR=<dir> [LICENSE_DIR=<dir>]` | fails unless the libraries of the three platforms are in `RELEASE_DIR`, and writes `lineth-da-libs-v<version>.zip` with them and the licenses |
 
 ## Dictionary
 
