@@ -94,16 +94,16 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["guestProgramId"]
 cat > "$WORK/zkvm/config.toml" <<'TOML'
 version = "smoke"
 log_level = 4
-guests_dir = "/opt/linea/prover-ray/guests"
+guests_dir = "/opt/lineth/prover-ray/guests"
 [execution]
 prover_mode = "dev-zkvm"
 requests_root_dir = "/data"
 TOML
 if ! $DOCKER run --rm \
         "${run_opts[@]}" \
-        --entrypoint /opt/linea/prover-ray/prover \
+        --entrypoint /opt/lineth/prover-ray/prover \
         -v "$WORK/zkvm:/data" \
-        -v "$WORK/guests:/opt/linea/prover-ray/guests:ro" \
+        -v "$WORK/guests:/opt/lineth/prover-ray/guests:ro" \
         "$IMAGE" prove --config /data/config.toml \
         --in /data/1-1-getZkL2ExecutionProofV1.json --out /data/response.json; then
     echo "FAIL: dev-zkvm prove failed"
@@ -122,9 +122,9 @@ echo "==> dev-zkvm over stdin/stdout: the way the supervisor runs every child"
 # if anything besides the response reaches stdout (for example ZkC DEBUG output).
 if ! $DOCKER run --rm -i \
         "${run_opts[@]}" \
-        --entrypoint /opt/linea/prover-ray/prover \
+        --entrypoint /opt/lineth/prover-ray/prover \
         -v "$WORK/zkvm:/data" \
-        -v "$WORK/guests:/opt/linea/prover-ray/guests:ro" \
+        -v "$WORK/guests:/opt/lineth/prover-ray/guests:ro" \
         "$IMAGE" prove --config /data/config.toml --type l2-execution --id smoke \
         --in - --out - < "$ZKVM_REQUEST" > "$WORK/zkvm/stdout.json"; then
     echo "FAIL: dev-zkvm prove over stdin/stdout failed"

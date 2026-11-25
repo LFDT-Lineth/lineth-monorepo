@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
 # Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
 # They track the digest-pinned debian base images; pinning would break the build
@@ -43,21 +42,21 @@ LABEL org.label-schema.version=$VERSION \
 # Go toolchain for gogen: zkc builds the circuit as Go code at run time. It goes
 # before the prover binary so this large, stable layer is not rebuilt on every release.
 COPY --from=go-builder /usr/local/go /usr/local/go
-COPY --from=go-builder /out/prover /opt/linea/prover-ray/prover
+COPY --from=go-builder /out/prover /opt/lineth/prover-ray/prover
 COPY --from=licenses LICENSE-APACHE LICENSE-MIT /licenses/
 
 # GOTOOLCHAIN=local: no download. CGO off: no C compiler. GOCACHE in /tmp: any user can write it.
-ENV PATH="/opt/linea/prover-ray:/usr/local/go/bin:${PATH}" \
+ENV PATH="/opt/lineth/prover-ray:/usr/local/go/bin:${PATH}" \
     GOTOOLCHAIN=local \
     CGO_ENABLED=0 \
     GOCACHE=/tmp/go-build
-WORKDIR /opt/linea/prover-ray
+WORKDIR /opt/lineth/prover-ray
 
 # Run as a dedicated non-root user (uid 1000). Volumes mounted at runtime
 # (e.g. /data, guests/) must be readable/writable by uid 1000 — chown them
 # on the host (1000:1000) before docker run.
-RUN useradd --uid 1000 --no-create-home --home-dir /opt/linea/prover-ray prover-ray \
-    && chown -R prover-ray:prover-ray /opt/linea/prover-ray
+RUN useradd --uid 1000 --no-create-home --home-dir /opt/lineth/prover-ray prover-ray \
+    && chown -R prover-ray:prover-ray /opt/lineth/prover-ray
 
 # Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
 USER 1000:1000
@@ -70,6 +69,6 @@ USER 1000:1000
 # dev-zkvm and dev-partial also need the guests folder (scripts/stage-guest.sh):
 #   docker run -e CONFIG_FILE=/data/config.toml -e WORKER_ID=prover-ray-0 \
 #              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data \
-#              -v ./guests:/opt/linea/prover-ray/guests:ro <image>
-ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
+#              -v ./guests:/opt/lineth/prover-ray/guests:ro <image>
+ENV CONFIG_FILE="/opt/lineth/prover-ray/config/config.toml"
 CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]
