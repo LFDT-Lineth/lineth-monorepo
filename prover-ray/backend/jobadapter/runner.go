@@ -193,13 +193,22 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 	startBlock := req.L2ExecutionProofs[0].StartBlockNumber
 	endBlock := req.L2ExecutionProofs[len(req.L2ExecutionProofs)-1].PublicInputs.EndBlockNumber
 
+	// dev-zkvm and dev-partial run the rollup guest on this input; the other
+	// modes get none.
+	var payload []byte
+	if r.mode == backend.ProverModeDevZkVM || r.mode == backend.ProverModeDevPartial {
+		if payload, err = ssz.EncodeRollupInput(buildRollupInput(req)); err != nil {
+			return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
+		}
+	}
+
 	result := r.prover.Prove(ctx, backend.Job{
 		ID:             runReq.ID,
 		Type:           runReq.Type,
 		GuestProgramID: [32]byte(req.ProgramVk),
 		StartBlock:     startBlock,
 		EndBlock:       endBlock,
-		Payload:        nil, // recursion guest input format undecided; mock passes no payload
+		Payload:        payload,
 	})
 	if result.Status != backend.ResultStatusOK {
 		return proverFailure(runReq.ID, result)
