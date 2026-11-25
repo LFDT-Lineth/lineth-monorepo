@@ -7,7 +7,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 fun createBlobData(
-  prevDataRollingHash: ByteArray = Random.nextBytes(32),
+  parentDataRollingHash: ByteArray = Random.nextBytes(32),
   dataRollingHash: ByteArray = Random.nextBytes(32),
   blobBytes: ByteArray = Random.nextBytes(32),
   chunkHash: ByteArray = Random.nextBytes(32),
@@ -15,7 +15,7 @@ fun createBlobData(
   BlobData(
     chunkHash = chunkHash,
     blobBytes = blobBytes,
-    prevDataRollingHash = prevDataRollingHash,
+    parentDataRollingHash = parentDataRollingHash,
     dataRollingHash = dataRollingHash,
   )
 
@@ -37,11 +37,11 @@ fun createRiscvRollupRecord(
   finalSharedBlobCarryOverTailBytes: UInt = 0u,
   blobsData: List<BlobData> = if (parentBlobDataRollingHash != null) {
     listOf(
-      createBlobData(prevDataRollingHash = parentBlobDataRollingHash, dataRollingHash = parentDataRollingHash),
-      createBlobData(prevDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash),
+      createBlobData(parentDataRollingHash = parentBlobDataRollingHash, dataRollingHash = parentDataRollingHash),
+      createBlobData(parentDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash),
     )
   } else {
-    listOf(createBlobData(prevDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash))
+    listOf(createBlobData(parentDataRollingHash = parentDataRollingHash, dataRollingHash = dataRollingHash))
   },
   proofHash: ByteArray = Random.nextBytes(32),
 ): RiscvRollupRecord {

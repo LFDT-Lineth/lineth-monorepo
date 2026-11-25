@@ -50,7 +50,7 @@ class FakeDaStream(
   /** The blob being filled. [capacity] is smaller than [BLOB_PAYLOAD_CAPACITY] only for a short (flushed) shared blob. */
   private class OpenBlob(
     val capacity: Int,
-    val prevDataRollingHash: ByteArray,
+    val parentDataRollingHash: ByteArray,
     val reproduce: Reproduction? = null,
   ) {
     val payload = ByteArray(capacity)
@@ -127,7 +127,7 @@ class FakeDaStream(
 
   private fun newBlob(): OpenBlob = OpenBlob(
     capacity = BLOB_PAYLOAD_CAPACITY,
-    prevDataRollingHash = dataRollingHash,
+    parentDataRollingHash = dataRollingHash,
   )
 
   private fun seal(blob: OpenBlob): SealedBlob {
@@ -135,7 +135,7 @@ class FakeDaStream(
     blob.payload.copyInto(blobBytes, endIndex = blob.used)
     blobBytes[blob.used] = BLOB_PAYLOAD_TERMINAL
     val chunkHash = chunkHasher(blobBytes)
-    val sealedDataRollingHash = dataRollingHashCalculator.fold(blob.prevDataRollingHash, chunkHash)
+    val sealedDataRollingHash = dataRollingHashCalculator.fold(blob.parentDataRollingHash, chunkHash)
     // Invariant: append checks every reproduced byte before writing it, so a re-sealed shared blob equals the original.
     blob.reproduce?.let { reproduction ->
       check(
@@ -150,7 +150,7 @@ class FakeDaStream(
       chunkHash = chunkHash,
       kzgCommitment = fakeKzgCommitment(blobBytes),
       kzgProof = fakeKzgProof(blobBytes),
-      prevDataRollingHash = blob.prevDataRollingHash,
+      parentDataRollingHash = blob.parentDataRollingHash,
       dataRollingHash = sealedDataRollingHash,
       payloadBytes = blob.used.toUInt(),
       segmentEnds = blob.segmentEnds.map { (endBlock, segmentEnd) ->
@@ -178,7 +178,7 @@ class FakeDaStream(
 
   private fun openInsideSharedBlob(position: DaStreamPosition): OpenBlob {
     val sharedBlob = position.sharedBlob!!
-    val prevDataRollingHash = position.parentBlobDataRollingHash
+    val parentDataRollingHash = position.parentBlobDataRollingHash
     val payloadBytes = sharedBlob.indexOfLast { it != 0.toByte() }
     if (payloadBytes < 0 || sharedBlob[payloadBytes] != BLOB_PAYLOAD_TERMINAL) {
       throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "shared blob has no payload terminal")
@@ -191,7 +191,7 @@ class FakeDaStream(
           "blob's payload of $payloadBytes bytes",
       )
     }
-    val sharedDataRollingHash = dataRollingHashCalculator.fold(prevDataRollingHash, chunkHasher(sharedBlob))
+    val sharedDataRollingHash = dataRollingHashCalculator.fold(parentDataRollingHash, chunkHasher(sharedBlob))
     if (!sharedDataRollingHash.contentEquals(position.dataRollingHash)) {
       throw DaStreamException(
         DaStreamErrorType.INVALID_ARGUMENT,
@@ -200,7 +200,7 @@ class FakeDaStream(
     }
     return OpenBlob(
       capacity = payloadBytes,
-      prevDataRollingHash = prevDataRollingHash,
+      parentDataRollingHash = parentDataRollingHash,
       reproduce = Reproduction(sharedBlob = sharedBlob, dataRollingHash = position.dataRollingHash),
     ).also { blob ->
       blob.used = payloadBytes - carryOver

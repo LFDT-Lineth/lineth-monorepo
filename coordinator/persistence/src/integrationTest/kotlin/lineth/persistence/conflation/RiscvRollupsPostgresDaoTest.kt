@@ -74,7 +74,7 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
 
   // rollup1 = [b0, b1] ending inside b1; rollup2 = [b1 (shared), b2].
   private val hashes = List(4) { Random.nextBytes(32) }
-  private val blobs = List(3) { createBlobData(prevDataRollingHash = hashes[it], dataRollingHash = hashes[it + 1]) }
+  private val blobs = List(3) { createBlobData(parentDataRollingHash = hashes[it], dataRollingHash = hashes[it + 1]) }
   private val rollup1 = createRiscvRollupRecord(
     startBlockNumber = 1UL,
     endBlockNumber = 10UL,

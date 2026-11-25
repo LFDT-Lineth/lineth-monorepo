@@ -87,7 +87,7 @@ data class CompressedConflation(
  * @property chunkHash KZG versioned hash of [blob], derived from [kzgCommitment]
  * @property kzgCommitment [DaConstants.KZG_POINT_BYTES]-byte KZG commitment of [blob]
  * @property kzgProof [DaConstants.KZG_POINT_BYTES]-byte KZG proof for [blob] against [kzgCommitment]
- * @property prevDataRollingHash data rolling hash before this blob
+ * @property parentDataRollingHash data rolling hash after the previous blob, i.e. before this one
  * @property dataRollingHash data rolling hash after this blob
  * @property payloadBytes payload bytes in this blob: [DaConstants.BLOB_PAYLOAD_CAPACITY] unless ended early by a flush
  * @property segmentEnds cut points inside this blob, in order: where each conflation segment ending in this blob ends
@@ -97,7 +97,7 @@ data class SealedBlob(
   val chunkHash: ByteArray,
   val kzgCommitment: ByteArray,
   val kzgProof: ByteArray,
-  val prevDataRollingHash: ByteArray,
+  val parentDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
   val payloadBytes: UInt,
   val segmentEnds: List<SegmentEnd>,
@@ -111,7 +111,9 @@ data class SealedBlob(
     require(kzgProof.size == DaConstants.KZG_POINT_BYTES) {
       "kzgProof must be ${DaConstants.KZG_POINT_BYTES} bytes, got ${kzgProof.size}"
     }
-    require(prevDataRollingHash.size == 32) { "prevDataRollingHash must be 32 bytes, got ${prevDataRollingHash.size}" }
+    require(parentDataRollingHash.size == 32) {
+      "parentDataRollingHash must be 32 bytes, got ${parentDataRollingHash.size}"
+    }
     require(dataRollingHash.size == 32) { "dataRollingHash must be 32 bytes, got ${dataRollingHash.size}" }
     require(payloadBytes in 1u..DaConstants.BLOB_PAYLOAD_CAPACITY.toUInt()) {
       "payloadBytes=$payloadBytes must be in 1..${DaConstants.BLOB_PAYLOAD_CAPACITY}"
@@ -128,7 +130,7 @@ data class SealedBlob(
     if (!chunkHash.contentEquals(other.chunkHash)) return false
     if (!kzgCommitment.contentEquals(other.kzgCommitment)) return false
     if (!kzgProof.contentEquals(other.kzgProof)) return false
-    if (!prevDataRollingHash.contentEquals(other.prevDataRollingHash)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
     if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
     if (payloadBytes != other.payloadBytes) return false
     if (segmentEnds != other.segmentEnds) return false
@@ -141,7 +143,7 @@ data class SealedBlob(
     result = 31 * result + chunkHash.contentHashCode()
     result = 31 * result + kzgCommitment.contentHashCode()
     result = 31 * result + kzgProof.contentHashCode()
-    result = 31 * result + prevDataRollingHash.contentHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
     result = 31 * result + payloadBytes.hashCode()
     result = 31 * result + segmentEnds.hashCode()
@@ -149,7 +151,8 @@ data class SealedBlob(
   }
 
   override fun toString(): String {
-    return "SealedBlob(chunkHash=${chunkHash.encodeHex()}, prevDataRollingHash=${prevDataRollingHash.encodeHex()}, " +
+    return "SealedBlob(chunkHash=${chunkHash.encodeHex()}, " +
+      "parentDataRollingHash=${parentDataRollingHash.encodeHex()}, " +
       "dataRollingHash=${dataRollingHash.encodeHex()}, payloadBytes=$payloadBytes, segmentEnds=$segmentEnds)"
   }
 }

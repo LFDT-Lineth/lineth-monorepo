@@ -34,7 +34,7 @@ class RiscvRollupRecordTest {
     )
 
     assertThat(record.blobsData.first().dataRollingHash).isEqualTo(parent)
-    assertThat(record.blobsData.first().prevDataRollingHash).isEqualTo(record.parentBlobDataRollingHash)
+    assertThat(record.blobsData.first().parentDataRollingHash).isEqualTo(record.parentBlobDataRollingHash)
   }
 
   @Test
