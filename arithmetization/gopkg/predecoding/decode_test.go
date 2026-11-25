@@ -1797,6 +1797,33 @@ func TestDecodedProgramEncodeInputs(t *testing.T) {
 	}
 }
 
+// TestPredecodeEncodeInputsRowLength checks the decoded input of a real
+// Predecode for 0 to 8 records: the predecoder writes records × 87 bits, and the
+// encoded input holds exactly that many bits, with the padding of the final
+// byte dropped. TestEncodeDecodedRows checks the same on hand-built bytes.
+func TestPredecodeEncodeInputsRowLength(t *testing.T) {
+	addi := []byte{0x93, 0x00, 0x10, 0x00} // addi x1, x0, 1
+	for records := 0; records <= 8; records++ {
+		decoded, err := Predecode(Program{Blobs: []Blob{{
+			Address: 0x1000, Data: bytes.Repeat(addi, records), Executable: true,
+		}}})
+		if err != nil {
+			t.Fatalf("%d records: Predecode() error = %v", records, err)
+		}
+		if got, want := len(decoded.Decoded), (records*87+7)/8; got != want {
+			t.Fatalf("%d records: %d decoded bytes, want %d", records, got, want)
+		}
+		input := decoded.EncodeInputs()[DecodedInput]
+		if got, want := input.Len(), uint(records*87); got != want {
+			t.Fatalf("%d records: input has %d bits, want %d", records, got, want)
+		}
+		want := bit.NewArray(append([]byte(nil), decoded.Decoded...), uint(records*87), bit.BigEndian)
+		if !input.Equals(want) {
+			t.Fatalf("%d records: input = %s, want %s", records, input.String(), want.String())
+		}
+	}
+}
+
 // ------------------------------------------------------------
 // PrepareInputs
 // ------------------------------------------------------------
@@ -1951,4 +1978,3 @@ func TestPrepareInputsInternal(t *testing.T) {
 		}
 	}
 }
-
