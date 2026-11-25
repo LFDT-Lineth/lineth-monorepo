@@ -121,7 +121,7 @@ fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.L
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
     // The host archive embeds the full trusted setup and exposes the whole KZG API: verification,
     // commitments and proofs.
-    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG", "-d:noSignalHandler" });
+    nim.addArgs(&.{ "-d:CTT_EMBEDDED_KZG", "-d:noSignalHandler" });
     // Position-independent objects, so a Linux shared library can link the archive.
     if (b.graph.host.result.os.tag == .linux) nim.addArg("--passC:-fPIC");
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");

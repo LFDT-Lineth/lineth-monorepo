@@ -144,9 +144,10 @@ jobs:
           CHANGELOG: ${{ needs.push-tag-and-changelog.outputs.changelog }}
           TAG: ${{ needs.push-tag-and-changelog.outputs.release_tag }}
           FILENAME: ${{ steps.bundle.outputs.filename }}
+          DICTIONARIES: ${{ steps.bundle.outputs.dictionaries }}
         run: |
           printf '%s\n' "$CHANGELOG" > "$RUNNER_TEMP/lineth-da-release-notes.md"
-          printf '\n### Native libraries\n\nBundle: `%s`\n\nSource tag: `%s`\n' "$FILENAME" "$TAG" >> "$RUNNER_TEMP/lineth-da-release-notes.md"
+          printf '\n### Native libraries\n\nBundle: `%s`\n\nDictionaries (name sha256): `%s`\n\nSource tag: `%s`\n' "$FILENAME" "$DICTIONARIES" "$TAG" >> "$RUNNER_TEMP/lineth-da-release-notes.md"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:

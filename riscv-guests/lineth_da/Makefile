@@ -93,8 +93,8 @@ host-lib-asset: host-lib
 	echo "host-lib-asset: $(RELEASE_DIR)/$$library"
 
 # The release archive of RELEASE_DIR, which holds the library of every platform:
-# lineth-da-libs-v<RELEASE_VERSION>.zip in RELEASE_DIR, with the three libraries and the licenses of
-# LICENSE_DIR at its top level.
+# lineth-da-libs-v<RELEASE_VERSION>.zip in RELEASE_DIR, with the three libraries, the dictionaries the
+# library compresses with, and the licenses of LICENSE_DIR at its top level.
 LICENSE_DIR ?= $(MAKEFILE_DIR)../..
 HOST_LIB_PLATFORMS := linux_x86_64.so linux_arm64.so darwin_arm64.dylib
 
@@ -107,11 +107,16 @@ host-lib-bundle:
 		[ -f "$$dir/$$library" ] || { echo "host-lib-bundle: $$dir/$$library is missing" >&2; exit 1; }; \
 		files="$$files $$dir/$$library"; \
 	done; \
+	dictionaries=$$(ls "$(MAKEFILE_DIR)dictionaries"/*.bin 2>/dev/null || true); \
+	[ -n "$$dictionaries" ] || { echo "host-lib-bundle: no dictionary in $(MAKEFILE_DIR)dictionaries" >&2; exit 1; }; \
 	for license in LICENSE-APACHE LICENSE-MIT; do \
 		[ -f "$$license_dir/$$license" ] || { echo "host-lib-bundle: $$license_dir/$$license is missing" >&2; exit 1; }; \
 	done; \
 	filename="lineth-da-libs-v$(RELEASE_VERSION).zip"; \
 	rm -f "$$dir/$$filename"; \
-	zip -q -X -j "$$dir/$$filename" $$files "$$license_dir/LICENSE-APACHE" "$$license_dir/LICENSE-MIT"; \
+	zip -q -X -j "$$dir/$$filename" $$files $$dictionaries "$$license_dir/LICENSE-APACHE" "$$license_dir/LICENSE-MIT"; \
 	echo "host-lib-bundle: $$dir/$$filename"; \
-	if [ -n "$${GITHUB_OUTPUT:-}" ]; then printf 'asset=%s\nfilename=%s\n' "$$dir/$$filename" "$$filename" >> "$$GITHUB_OUTPUT"; fi
+	if [ -n "$${GITHUB_OUTPUT:-}" ]; then \
+		printf 'asset=%s\nfilename=%s\n' "$$dir/$$filename" "$$filename" >> "$$GITHUB_OUTPUT"; \
+		printf 'dictionaries=%s\n' "$$(for d in $$dictionaries; do printf '%s %s; ' "$$(basename "$$d")" "$$(shasum -a 256 "$$d" | cut -c1-64)"; done)" >> "$$GITHUB_OUTPUT"; \
+	fi
