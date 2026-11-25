@@ -4,9 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -16,12 +13,11 @@ class ZigDaCompressorTest {
 
   @BeforeEach
   fun requireInputs() {
-    ZigTestLibrary.assumeAvailable()
     MainnetWindow.assumeAvailable()
   }
 
   private fun compressor(chainId: ULong = MainnetWindow.chainId): DaCompressor =
-    ZigTestLibrary.factory.create(DaCodecVersion.DEV, ZigTestLibrary.dictionary, chainId)
+    ZigDaFactory.bundled.create(DaCodecVersion.V1, chainId)
 
   private fun expectError(type: DaStreamErrorType, message: String, call: () -> Unit) {
     assertThatThrownBy(call)
@@ -36,7 +32,7 @@ class ZigDaCompressorTest {
     compressor().use { compressor ->
       val frame = compressor.compress(conflation)
 
-      assertThat(compressor.version).isEqualTo(DaCodecVersion.DEV)
+      assertThat(compressor.version).isEqualTo(DaCodecVersion.V1)
       assertThat(frame).isNotEmpty()
       assertThat(frame.size).isLessThan(conflation.sumOf { it.size })
     }
@@ -82,15 +78,6 @@ class ZigDaCompressorTest {
   fun `a conflation without blocks is INVALID_ARGUMENT`() {
     compressor().use { compressor ->
       expectError(DaStreamErrorType.INVALID_ARGUMENT, "no blocks") { compressor.compress(emptyList()) }
-    }
-  }
-
-  @Test
-  fun `bytes that are not a dictionary are INVALID_DICTIONARY at create`(@TempDir dir: Path) {
-    val notADictionary = Files.write(dir.resolve("not-a-dictionary.bin"), ByteArray(1_000) { it.toByte() })
-
-    expectError(DaStreamErrorType.INVALID_DICTIONARY, "not a zstd dictionary") {
-      ZigTestLibrary.factory.create(DaCodecVersion.DEV, notADictionary, MainnetWindow.chainId)
     }
   }
 

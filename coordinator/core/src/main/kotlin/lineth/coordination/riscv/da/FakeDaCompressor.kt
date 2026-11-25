@@ -6,7 +6,6 @@ import lineth.da.DaCompressorFactory
 import lineth.da.DaStreamErrorType
 import lineth.da.DaStreamException
 import java.io.ByteArrayOutputStream
-import java.nio.file.Path
 
 /**
  * Pure-Kotlin [DaCompressor] for [FakeDaStream]. Stand-in: no zstd and no block truncation, the frame is the
@@ -25,9 +24,9 @@ class FakeDaCompressor : DaCompressor {
   override fun close() = Unit
 }
 
-/** Creates [FakeDaCompressor]s. The dictionary and the chain ID are ignored: the fake neither compresses nor truncates. */
+/** Creates [FakeDaCompressor]s. The chain ID is ignored: the fake neither compresses nor truncates. */
 class FakeDaCompressorFactory : DaCompressorFactory {
-  override fun create(version: DaCodecVersion, dictionary: Path, chainId: ULong): DaCompressor {
+  override fun create(version: DaCodecVersion, chainId: ULong): DaCompressor {
     if (version != DaCodecVersion.FAKE) {
       throw DaStreamException(
         DaStreamErrorType.INVALID_ARGUMENT,

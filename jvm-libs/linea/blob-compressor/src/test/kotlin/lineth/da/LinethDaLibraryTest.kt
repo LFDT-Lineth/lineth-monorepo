@@ -32,19 +32,17 @@ class LinethDaLibraryTest {
   }
 
   @Test
-  fun `the library of the tests has the ABI version of the binding`() {
-    ZigTestLibrary.assumeAvailable()
-
-    val library = LinethDaLibrary.load(ZigTestLibrary.path!!)
+  fun `the bundled library has the ABI version of the binding`() {
+    val library = LinethDaLibrary.load(ZigDaFactory.bundledLibrary(DaCodecVersion.V1))
 
     assertThat(library.abiVersion()).isEqualTo(LinethDaLibrary.ABI_VERSION)
   }
 
   @Test
   fun `a library of another ABI version is refused at load`() {
-    ZigTestLibrary.assumeAvailable()
+    val bundled = ZigDaFactory.bundledLibrary(DaCodecVersion.V1)
 
-    assertThatThrownBy { LinethDaLibrary.load(ZigTestLibrary.path!!, abiVersion = LinethDaLibrary.ABI_VERSION + 1) }
+    assertThatThrownBy { LinethDaLibrary.load(bundled, abiVersion = LinethDaLibrary.ABI_VERSION + 1) }
       .isInstanceOfSatisfying(DaStreamException::class.java) {
         assertThat(it.errorType).isEqualTo(DaStreamErrorType.INTERNAL)
         assertThat(it).hasMessageContaining("ABI version ${LinethDaLibrary.ABI_VERSION}")

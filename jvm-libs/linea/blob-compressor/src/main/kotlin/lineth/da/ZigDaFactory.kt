@@ -1,20 +1,19 @@
 package lineth.da
 
 import linea.jvm.ResourcesUtil.copyResourceToTmpDir
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [DaCompressor]s and [DaStream]s over the native `lineth_da` library: [bundled] serves the libraries this jar ships,
- * [forLibrary] one library a path names.
+ * each with the dictionary of its version.
  */
 class ZigDaFactory private constructor(
   private val libraryOf: (DaCodecVersion) -> LinethDaLibrary,
 ) : DaCompressorFactory, DaStreamFactory {
 
-  override fun create(version: DaCodecVersion, dictionary: Path, chainId: ULong): DaCompressor =
-    ZigDaCompressor(version, libraryOf(version), Files.readAllBytes(dictionary), chainId)
+  override fun create(version: DaCodecVersion, chainId: ULong): DaCompressor =
+    ZigDaCompressor(version, libraryOf(version), bundledDictionary(version), chainId)
 
   override fun open(version: DaCodecVersion, initialState: DaStreamPosition): DaStream =
     ZigDaStream(version, libraryOf(version), initialState)
@@ -26,28 +25,19 @@ class ZigDaFactory private constructor(
 
     /** The libraries bundled in this jar, each extracted and loaded once. */
     val bundled = ZigDaFactory { version ->
-      bundledLibraries.computeIfAbsent(version) { LinethDaLibrary.load(extractBundledLibrary(it)) }
+      bundledLibraries.computeIfAbsent(version) { LinethDaLibrary.load(bundledLibrary(it)) }
     }
 
-    /** Serves [DaCodecVersion.DEV] from the library at [path], loaded on first use. */
-    fun forLibrary(path: Path): ZigDaFactory {
-      val library by lazy { LinethDaLibrary.load(path) }
-      return ZigDaFactory { version ->
-        if (version != DaCodecVersion.DEV) {
-          throw DaStreamException(
-            DaStreamErrorType.INVALID_ARGUMENT,
-            "the library $path serves ${DaCodecVersion.DEV}, not $version",
-          )
-        }
-        library
-      }
+    /** The dictionary of [version]: `compressor-dictionaries/<name>.bin` of this jar. */
+    internal fun bundledDictionary(version: DaCodecVersion): ByteArray {
+      val name = version.dictionary
+        ?: throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "$version has no dictionary")
+      val resource = "$DICTIONARIES_DIR/$name.bin"
+      return ZigDaFactory::class.java.classLoader.getResourceAsStream(resource)?.use { it.readAllBytes() }
+        ?: throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "no bundled dictionary for $version: $resource")
     }
 
-    /** Extracts the dictionary `compressor-dictionaries/<name>.bin` of this jar to a temporary file. */
-    fun bundledDictionary(name: String): Path =
-      copyResourceToTmpDir("$DICTIONARIES_DIR/$name.bin", ZigDaFactory::class.java.classLoader)
-
-    private fun extractBundledLibrary(version: DaCodecVersion): Path {
+    internal fun bundledLibrary(version: DaCodecVersion): Path {
       val os = System.getProperty("os.name").lowercase()
       val arch = System.getProperty("os.arch").lowercase()
       val (osDir, extension) = when {

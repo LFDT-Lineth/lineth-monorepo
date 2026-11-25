@@ -16,18 +16,17 @@ class ZigDaStreamTest {
 
   @BeforeEach
   fun requireInputs() {
-    ZigTestLibrary.assumeAvailable()
     MainnetWindow.assumeAvailable()
   }
 
   private fun compress(conflation: List<ByteArray>): ByteArray =
-    ZigTestLibrary.factory.create(DaCodecVersion.DEV, ZigTestLibrary.dictionary, MainnetWindow.chainId)
+    ZigDaFactory.bundled.create(DaCodecVersion.V1, MainnetWindow.chainId)
       .use { it.compress(conflation) }
 
   private fun segmentSize(frame: ByteArray): Int = DaConstants.SEGMENT_LENGTH_PREFIX_BYTES + frame.size
 
   private fun sealAll(position: DaStreamPosition, frames: List<Pair<ByteArray, ULong>>): List<SealedBlob> =
-    ZigTestLibrary.factory.open(DaCodecVersion.DEV, position).use { stream ->
+    ZigDaFactory.bundled.open(DaCodecVersion.V1, position).use { stream ->
       frames.flatMap { (frame, endBlock) -> stream.append(frame, endBlock) } + listOfNotNull(stream.flush())
     }
 

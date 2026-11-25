@@ -1,10 +1,9 @@
 package lineth.da
 
 import linea.kotlin.encodeHex
-import java.nio.file.Path
 
 /**
- * Compresses conflations into zstd frames for the RISC-V DA stream, with one codec version, dictionary and chain ID.
+ * Compresses conflations into zstd frames for the RISC-V DA stream, with one codec version and chain ID.
  *
  * Stateless: [compress] is order-free and pure, so it may run ahead of [DaStream.append] and from any thread.
  */
@@ -141,7 +140,7 @@ data class SegmentEnd(
 
 /** Creates [DaCompressor]s. */
 fun interface DaCompressorFactory {
-  fun create(version: DaCodecVersion, dictionary: Path, chainId: ULong): DaCompressor
+  fun create(version: DaCodecVersion, chainId: ULong): DaCompressor
 }
 
 /** Opens [DaStream]s. */
@@ -150,15 +149,17 @@ fun interface DaStreamFactory {
 }
 
 /**
- * Identifies the DA codec build. The compression dictionary is configured independently. A bundled codec is named by
- * its release's version without a prerelease suffix, the form its library resource carries.
+ * Identifies the DA codec build and the compression dictionary it was built with. A bundled codec is named by its
+ * release's version without a prerelease suffix, the form its library resource carries.
+ *
+ * @property dictionary name of the dictionary of this codec, absent for the fake
  */
-enum class DaCodecVersion(val version: String) {
+enum class DaCodecVersion(val version: String, val dictionary: String? = null) {
   /** Pure-Kotlin stand-in with the real stream semantics. */
   FAKE("fake-v1"),
 
-  /** A library supplied by path, for tests and development. */
-  DEV("dev"),
+  /** The first `lineth_da` release. */
+  V1("v0.1.0", dictionary = "v2025-04-21"),
 }
 
 object DaConstants {

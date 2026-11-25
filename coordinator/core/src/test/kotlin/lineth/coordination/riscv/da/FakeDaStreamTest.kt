@@ -14,7 +14,6 @@ import lineth.da.SealedBlob
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import java.nio.file.Path
 
 class FakeDaStreamTest : DaStreamContractTest(
   factory = FakeDaStreamFactory(),
@@ -54,7 +53,7 @@ class FakeDaStreamTest : DaStreamContractTest(
   @Test
   fun `factories create a fake compressor and open a fake stream at the given position`() {
     val genesis = ByteArray(32) { 0x11 }
-    val compressor = FakeDaCompressorFactory().create(DaCodecVersion.FAKE, Path.of("unused"), 1337UL)
+    val compressor = FakeDaCompressorFactory().create(DaCodecVersion.FAKE, 1337UL)
     val stream = FakeDaStreamFactory().open(DaCodecVersion.FAKE, DaStreamPosition.fresh(genesis))
 
     stream.append(compressor.compress(listOf(byteArrayOf(0x01, 0x02))), conflationEndBlock = 1UL)
