@@ -10,6 +10,11 @@ on:
       commit_tag:
         required: true
         type: string
+      run_shared_utils_tests:
+        description: Run shared-utils tests and upload their coverage when native-yield has not already done so
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: lido-governance-monitor-testing-${{ github.workflow }}-${{ github.ref }}
@@ -37,13 +42,17 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: |
-          pnpm --filter @lfdt-lineth/shared-utils test
+          if [[ "${{ inputs.run_shared_utils_tests }}" == "true" ]]; then
+            pnpm --filter @lfdt-lineth/shared-utils test
+          fi
           pnpm --filter @lfdt-lineth/lido-governance-monitor test
 
       - name: Stage TS coverage for artifact (fork PR uploads)
         run: |
           mkdir -p ci-lido-coverage
-          cp ts-libs/linea-shared-utils/coverage/lcov.info ci-lido-coverage/shared-utils-lcov.info
+          if [[ "${{ inputs.run_shared_utils_tests }}" == "true" ]]; then
+            cp ts-libs/linea-shared-utils/coverage/lcov.info ci-lido-coverage/shared-utils-lcov.info
+          fi
           cp operations/native-yield/lido-governance-monitor/coverage/lcov.info ci-lido-coverage/lido-governance-monitor-lcov.info
 
       - name: Upload TS coverage report
@@ -54,7 +63,7 @@ jobs:
           path: ci-lido-coverage/
 
       - name: Upload linea-shared-utils coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ env.CODECOV_TOKEN != '' && inputs.run_shared_utils_tests }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true

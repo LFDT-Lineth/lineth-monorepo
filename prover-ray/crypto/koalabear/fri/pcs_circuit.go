@@ -1111,7 +1111,7 @@ func hashAuxPairGnark(
 // absorbLeafHeaderGnark mirrors [absorbLeafHeader].
 func absorbLeafHeaderGnark(api *circuit.KoalaBearAPI, h gnarkLeafHasher, baseWidth, extWidth int) {
 	var tag field.Element
-	tag.SetUint64(leafDomainTag)
+	tag.SetUint64(LeafDomainTag)
 	h.Write(
 		api.ConstBig(tag.BigInt(new(big.Int))),
 		api.Const(int64(baseWidth)),

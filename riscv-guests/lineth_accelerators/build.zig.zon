@@ -9,8 +9,8 @@
         // Fetched for -Dzkvm-provide: the zesu crypto backend and the Constantine archive that the
         // zkvm_* providers are built from.
         .zesu = .{
-            .url = "https://github.com/Consensys-Incorporated/zesu/archive/fbebc62e5ae8e8b545b2d24819b36c5425b73812.tar.gz",
-            .hash = "zesu-0.1.0-UtqpANRERwAmoPAYMD7NJOsUL0zwYOQcnCdWsRI-d8Nm",
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/9fd1e6e676f5b3ee99e4036d5b767955762f1a9d.tar.gz",
+            .hash = "zesu-0.1.0-UtqpADjKRwAj-TslHFnC7zml1zTZwuWTr_EPpOUDWARm",
             .lazy = true,
         },
         .guest_crypto_ctt = .{ .path = "../guest_crypto_ctt", .lazy = true },
