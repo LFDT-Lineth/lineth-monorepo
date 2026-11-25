@@ -1801,13 +1801,73 @@ func TestDecodedProgramEncodeInputs(t *testing.T) {
 // PrepareInputs
 // ------------------------------------------------------------
 
-// TestPrepareInputs checks that PrepareInputs is prepareInputs with
-// DefaultInputOrigin: same inputs on success, and an error when prepareInputs
-// fails. The pipeline itself is tested in TestPrepareInputsInternal.
+// TestPrepareInputs checks the layout that PrepareInputs gives at
+// DefaultInputOrigin, and that it is prepareInputs at that origin. The layout is
+// pinned with golden bytes for the makeELF guest and the input aabb: the 4-byte
+// .text at 0x800000, the 8-byte little-endian input length at 0x08800000, and
+// the 2-byte payload eight bytes later. The sections table is compared in full,
+// and so is the optional executable input, where only .text is executable. The
+// decoded row is that of the word 0x297. The pipeline itself is tested in
+// TestPrepareInputsInternal.
 func TestPrepareInputs(t *testing.T) {
 	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
 	inputData := []byte{0xaa, 0xbb}
-	tests := []struct {
+	const sections = "index, offset,             size,               exec, name\n" +
+		"0    , 0x0000000000800000, 0x0000000000000004, yes, .text\n" +
+		"1    , 0x0000000008800000, 0x0000000000000008, no , \n" +
+		"2    , 0x0000000008800008, 0x0000000000000002, no , \n"
+	var word bitWriter
+	decodeInstruction(&word, 0x00000297)
+	golden := []struct {
+		name           string
+		executable     bool
+		wantExecutable []byte
+		wantSections   string
+	}{
+		{name: "default options"},
+		{name: "executable and sections", executable: true, wantExecutable: []byte{0x80}, wantSections: sections},
+	}
+	for _, tt := range golden {
+		var buf bytes.Buffer
+		var options []Option
+		if tt.executable {
+			options = append(options, WithIncludeExecutable(), WithSectionsWriter(&buf))
+		}
+		got, err := PrepareInputs(elfBytes, inputData, options...)
+		if err != nil {
+			t.Fatalf("%s: PrepareInputs() error = %v", tt.name, err)
+		}
+		want := map[string][]byte{
+			EntryPointAndBlobsCountInput: {0x00, 0x80, 0x00, 0x00, 0, 0, 0, 3},
+			BlobsOffsetAndSizeInput: {
+				0x00, 0x80, 0x00, 0x00, 0, 0, 0, 4,
+				0x08, 0x80, 0x00, 0x00, 0, 0, 0, 8,
+				0x08, 0x80, 0x00, 0x08, 0, 0, 0, 2,
+			},
+			BlobsDataInput:       {0x97, 0x02, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0xaa, 0xbb},
+			InstructionBaseInput: {0x00, 0x80, 0x00, 0x00},
+		}
+		if tt.wantExecutable != nil {
+			want[BlobsExecutableInput] = tt.wantExecutable
+		}
+		if len(got) != len(want)+1 {
+			t.Fatalf("%s: %d inputs, want %d", tt.name, len(got), len(want)+1)
+		}
+		for name, wantBytes := range want {
+			if !bytes.Equal(got[name].Bytes(), wantBytes) {
+				t.Fatalf("%s: input %s = %x, want %x", tt.name, name, got[name].Bytes(), wantBytes)
+			}
+		}
+		if !got[DecodedInput].Equals(encodeDecodedRows(word.buf)) {
+			t.Fatalf("%s: decoded input = %s, want the row of 0x297", tt.name, got[DecodedInput].String())
+		}
+		if buf.String() != tt.wantSections {
+			t.Fatalf("%s: sections table:\n%q\nwant:\n%q", tt.name, buf.String(), tt.wantSections)
+		}
+	}
+
+	// PrepareInputs is prepareInputs at DefaultInputOrigin, including its errors.
+	wrapper := []struct {
 		name    string
 		elf     []byte
 		options []Option
@@ -1817,7 +1877,7 @@ func TestPrepareInputs(t *testing.T) {
 		{name: "with executable", elf: elfBytes, options: []Option{WithIncludeExecutable()}},
 		{name: "invalid ELF", elf: []byte("not an ELF"), wantErr: true},
 	}
-	for _, tt := range tests {
+	for _, tt := range wrapper {
 		got, err := PrepareInputs(tt.elf, inputData, tt.options...)
 		if (err != nil) != tt.wantErr {
 			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
@@ -1892,9 +1952,3 @@ func TestPrepareInputsInternal(t *testing.T) {
 	}
 }
 
-// commit 88fe45d
-// TestDecodedInputsPreserveExactRowLength
-// TestDecodedProgramEncodeInputsReturnsFreshBytes
-// TestBitsPerRowOfModuleDecoded
-
-// commit

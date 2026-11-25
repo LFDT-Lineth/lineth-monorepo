@@ -835,20 +835,26 @@ func (w *failAfterWriter) Write(p []byte) (int, error) {
 }
 
 // TestWriteSectionsIfRequested checks that the sections table is written only
-// when a writer is set, and that a failing write is returned wrapped.
+// when a writer is set, and that a failing write is returned wrapped. The table
+// is compared in full: the header, then one row per blob with its index,
+// address, size, executable flag and name. An unnamed blob has an empty name.
 func TestWriteSectionsIfRequested(t *testing.T) {
+	const table = "index, offset,             size,               exec, name\n" +
+		"0    , 0x0000000000001000, 0x0000000000000004, yes, .text\n" +
+		"1    , 0x0000000000002000, 0x0000000000000004, no , .data\n" +
+		"2    , 0x0000000000003000, 0x0000000000000002, no , \n"
 	tests := []struct {
-		name       string
-		newWriter  func(buf *bytes.Buffer) io.Writer
-		wantHeader bool
-		wantErr    bool
+		name      string
+		newWriter func(buf *bytes.Buffer) io.Writer
+		wantTable string
+		wantErr   bool
 	}{
 		{name: "nil writer writes nothing", newWriter: func(*bytes.Buffer) io.Writer {
 			return nil
 		}},
 		{name: "writer receives the table", newWriter: func(buf *bytes.Buffer) io.Writer {
 			return buf
-		}, wantHeader: true},
+		}, wantTable: table},
 		{name: "header write error is returned", newWriter: func(*bytes.Buffer) io.Writer {
 			return errWriter{}
 		}, wantErr: true},
@@ -860,6 +866,7 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 	blobs := []Blob{
 		{Address: 0x1000, Data: testText, Name: ".text", Executable: true},
 		{Address: 0x2000, Data: testText, Name: ".data"},
+		{Address: 0x3000, Data: []byte{1, 2}},
 	}
 	for _, tt := range tests {
 		var buf bytes.Buffer
@@ -870,17 +877,8 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 		if tt.wantErr && !errors.Is(err, errWrite) {
 			t.Fatalf("%s: err = %v, want it to wrap %v", tt.name, err, errWrite)
 		}
-		if bytes.Contains(buf.Bytes(), []byte("index, offset")) != tt.wantHeader {
-			t.Fatalf("%s: table written = %v, want %v", tt.name, !tt.wantHeader, tt.wantHeader)
-		}
-		if !tt.wantHeader {
-			continue
-		}
-		// One row per blob, with the executable flag.
-		for _, row := range []string{"yes, .text", "no , .data"} {
-			if !bytes.Contains(buf.Bytes(), []byte(row)) {
-				t.Fatalf("%s: table has no row %q:\n%s", tt.name, row, buf.String())
-			}
+		if buf.String() != tt.wantTable {
+			t.Fatalf("%s: table written:\n%q\nwant:\n%q", tt.name, buf.String(), tt.wantTable)
 		}
 	}
 }
