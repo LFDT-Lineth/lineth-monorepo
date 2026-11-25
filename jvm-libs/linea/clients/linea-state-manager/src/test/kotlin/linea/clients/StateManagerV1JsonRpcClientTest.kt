@@ -19,7 +19,7 @@ import linea.error.ErrorResponse
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.decodeHex
 import linea.kotlin.fromHexString
-import net.consensys.linea.async.get
+import net.consensys.linea.async.toCompletableFuture
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -75,9 +76,13 @@ class StateManagerV1JsonRpcClientTest {
 
   @AfterEach
   fun tearDown(vertx: Vertx) {
-    val vertxStopFuture = vertx.close()
-    wiremock.stop()
-    vertxStopFuture.get()
+    try {
+      // Closing Vert.x also closes the HTTP clients created from it. Wait for it before stopping WireMock,
+      // so no in-flight request or retry timer outlives the server it targets.
+      vertx.close().toCompletableFuture().get(HANG_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    } finally {
+      wiremock.stop()
+    }
   }
 
   @Test
@@ -367,7 +372,7 @@ class StateManagerV1JsonRpcClientTest {
   fun rollupGetHeadBlockNumber_success_response() {
     wiremockStubForPost("""{"jsonrpc":"2.0","id":1,"result":"0xf1"}""")
 
-    assertThat(stateManagerClient.rollupGetHeadBlockNumber().get())
+    assertThat(stateManagerClient.rollupGetHeadBlockNumber().get(HANG_TIMEOUT_SECONDS, TimeUnit.SECONDS))
       .isEqualTo(ULong.fromHexString("0xf1"))
   }
 
@@ -377,7 +382,15 @@ class StateManagerV1JsonRpcClientTest {
 
     wiremockStubForPost(response)
 
-    assertThatThrownBy { stateManagerClient.rollupGetHeadBlockNumber().get() }
+    assertThatThrownBy {
+      stateManagerClient.rollupGetHeadBlockNumber().get(HANG_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
       .hasMessageContaining("Internal error")
+  }
+
+  private companion object {
+    // Upper bound for blocking waits. It only turns a hang into a failure well before the 5-minute JUnit default,
+    // it is deliberately not a performance assertion.
+    const val HANG_TIMEOUT_SECONDS = 30L
   }
 }
