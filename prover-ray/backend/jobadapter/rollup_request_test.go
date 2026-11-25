@@ -77,10 +77,11 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 }
 
 // TestDecodeRollupRequest_OptionalBoundaryHash verifies parentBlobDataRollingHash
-// is optional: absent, it decodes to nil with no cross-check.
+// is optional with no carry-over bytes: absent, it decodes to nil.
 func TestDecodeRollupRequest_OptionalBoundaryHash(t *testing.T) {
 	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 	pr := obj[proofRequestKey].(map[string]any)
+	pr[parentSharedBlobCarryOverTailBytesKey] = 0
 	delete(pr, parentBlobDataRollingHashKey)
 
 	req, err := DecodeRollupRequest(marshal(t, obj))
@@ -150,6 +151,8 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 			func(o map[string]any) { delete(pr(o), parentDataRollingHashKey) }, parentDataRollingHashKey},
 		{"MissingParentSharedBlobCarryOverTailBytes",
 			func(o map[string]any) { delete(pr(o), parentSharedBlobCarryOverTailBytesKey) }, parentSharedBlobCarryOverTailBytesKey},
+		{"MissingParentBlobDataRollingHashWithCarryOver",
+			func(o map[string]any) { delete(pr(o), parentBlobDataRollingHashKey) }, parentBlobDataRollingHashKey},
 		{"ConflationBlockRlpsEmpty",
 			func(o map[string]any) {
 				pr(o)[conflationsKey].([]any)[0].(map[string]any)[blockRlpsKey] = []any{}
