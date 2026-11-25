@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 ## [1.0.1] - 2026-11-19
 
 ### 🚜 Refactor
