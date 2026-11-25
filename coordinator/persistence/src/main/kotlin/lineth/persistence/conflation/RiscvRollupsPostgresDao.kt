@@ -52,10 +52,10 @@ class RiscvRollupsPostgresDao(
     """
       with inserted_blobs as (
         insert into $BlobsTableName
-        (data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, created_epoch_milli)
-        select data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, $1
+        (data_rolling_hash, parent_data_rolling_hash, chunk_hash, blob_bytes, created_epoch_milli)
+        select data_rolling_hash, parent_data_rolling_hash, chunk_hash, blob_bytes, $1
         from unnest($13::bytea[], $14::bytea[], $15::bytea[], $16::bytea[])
-          as b(data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes)
+          as b(data_rolling_hash, parent_data_rolling_hash, chunk_hash, blob_bytes)
         on conflict (data_rolling_hash) do nothing
       ),
       inserted_references as (
@@ -239,7 +239,7 @@ class RiscvRollupsPostgresDao(
     BlobData(
       chunkHash = row.getBuffer("chunk_hash").bytes,
       blobBytes = row.getBuffer("blob_bytes").bytes,
-      prevDataRollingHash = row.getBuffer("prev_data_rolling_hash").bytes,
+      prevDataRollingHash = row.getBuffer("parent_data_rolling_hash").bytes,
       dataRollingHash = row.getBuffer("data_rolling_hash").bytes,
     )
 

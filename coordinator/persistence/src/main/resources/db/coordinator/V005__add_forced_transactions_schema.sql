@@ -37,6 +37,8 @@ ALTER TABLE batches ADD COLUMN IF NOT EXISTS proof_index_hash varchar;
 
 -- RISC-V rollup proofs and their blobs. Adjacent rollups can share a blob: the previous rollup's last blob is the
 -- next rollup's first. Each blob is stored once in riscv_blobs, and riscv_rollup_blobs lists each rollup's blobs.
+-- "parent" refers to the previous row of the same table: the previous rollup in riscv_rollups, the previous blob in
+-- riscv_blobs.
 CREATE TABLE riscv_rollups (
     start_block_number BIGINT NOT NULL,
     end_block_number BIGINT NOT NULL,
@@ -75,7 +77,7 @@ COMMENT ON COLUMN riscv_rollups.final_shared_blob_carry_over_tail_bytes IS
 
 CREATE TABLE riscv_blobs (
     data_rolling_hash BYTEA PRIMARY KEY,
-    prev_data_rolling_hash BYTEA NOT NULL,
+    parent_data_rolling_hash BYTEA NOT NULL,
     chunk_hash BYTEA NOT NULL,
     blob_bytes BYTEA NOT NULL,
     created_epoch_milli BIGINT NOT NULL
@@ -83,7 +85,7 @@ CREATE TABLE riscv_blobs (
 
 COMMENT ON TABLE riscv_blobs IS 'RISC-V blobs, one row per blob, shared by the rollups that contain it';
 COMMENT ON COLUMN riscv_blobs.data_rolling_hash IS 'Data rolling hash after this blob; unique per blob in the stream';
-COMMENT ON COLUMN riscv_blobs.prev_data_rolling_hash IS 'Data rolling hash before this blob';
+COMMENT ON COLUMN riscv_blobs.parent_data_rolling_hash IS 'Data rolling hash after the previous blob, i.e. before this one';
 COMMENT ON COLUMN riscv_blobs.chunk_hash IS 'KZG versioned hash of the blob';
 COMMENT ON COLUMN riscv_blobs.blob_bytes IS 'Packed blob bytes';
 COMMENT ON COLUMN riscv_blobs.created_epoch_milli IS 'Timestamp (epoch millis) when the blob was first stored';
