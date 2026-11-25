@@ -188,7 +188,6 @@ pub const StubEngine = struct {
                 const logs: []const types.Log = if (tx_idx < block_logs.len) block_logs[tx_idx] else &.{};
                 try receipts.append(alloc, .{
                     .type = tx.type,
-                    .tx_hash = mpt.keccak256(ep.raw_transactions[tx_idx]),
                     .tx_index = @intCast(tx_idx),
                     .block_hash = ep.block_hash,
                     .block_number = ep.block_number,
