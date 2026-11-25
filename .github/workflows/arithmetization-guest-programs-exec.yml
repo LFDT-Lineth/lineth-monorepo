@@ -8,7 +8,7 @@ on:
       - 'arithmetization/**'
       - '.github/actions/setup-arithmetization-riscv/**'
       - '.github/actions/setup-zig/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-guest-programs-exec.yml'
   push:
     branches:
      - main
@@ -16,7 +16,7 @@ on:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/actions/setup-zig/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-guest-programs-exec.yml'
   workflow_call:
     inputs:
       zkc-ref:
