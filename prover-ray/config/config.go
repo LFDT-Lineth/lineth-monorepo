@@ -54,8 +54,8 @@ type Execution struct {
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
 }
 
-// Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
-// native runner or ELF).
+// Pipeline holds the rollup and aggregation pipeline settings. Their guests are
+// found in guests_dir; the native runner is an execution setting.
 type Pipeline struct {
 	ProverMode      string `mapstructure:"prover_mode"`
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
