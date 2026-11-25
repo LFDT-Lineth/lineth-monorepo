@@ -149,14 +149,12 @@ data class BlobRecord(
 /**
  * One sealed blob of a [RiscvRollupRecord].
  *
- * @property batchesCount conflations whose frame ends in this blob
  * @property prevDataRollingHash rolling hash before this blob
  * @property dataRollingHash rolling hash after this blob
  */
 data class BlobData(
   val chunkHash: ByteArray,
   val blobBytes: ByteArray,
-  val batchesCount: UInt,
   val prevDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
 ) {
@@ -168,7 +166,6 @@ data class BlobData(
 
     if (!chunkHash.contentEquals(other.chunkHash)) return false
     if (!blobBytes.contentEquals(other.blobBytes)) return false
-    if (batchesCount != other.batchesCount) return false
     if (!prevDataRollingHash.contentEquals(other.prevDataRollingHash)) return false
     if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
 
@@ -178,7 +175,6 @@ data class BlobData(
   override fun hashCode(): Int {
     var result = chunkHash.contentHashCode()
     result = 31 * result + blobBytes.contentHashCode()
-    result = 31 * result + batchesCount.hashCode()
     result = 31 * result + prevDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
     return result

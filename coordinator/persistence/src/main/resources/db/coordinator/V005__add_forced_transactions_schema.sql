@@ -75,7 +75,6 @@ CREATE TABLE riscv_blobs (
     prev_data_rolling_hash BYTEA NOT NULL,
     chunk_hash BYTEA NOT NULL,
     blob_bytes BYTEA NOT NULL,
-    batches_count INTEGER NOT NULL,
     created_epoch_milli BIGINT NOT NULL
 );
 
@@ -84,7 +83,6 @@ COMMENT ON COLUMN riscv_blobs.data_rolling_hash IS 'Data rolling hash after this
 COMMENT ON COLUMN riscv_blobs.prev_data_rolling_hash IS 'Data rolling hash before this blob';
 COMMENT ON COLUMN riscv_blobs.chunk_hash IS 'KZG versioned hash of the blob';
 COMMENT ON COLUMN riscv_blobs.blob_bytes IS 'Packed blob bytes';
-COMMENT ON COLUMN riscv_blobs.batches_count IS 'Number of conflation segments ending in this blob';
 COMMENT ON COLUMN riscv_blobs.created_epoch_milli IS 'Timestamp (epoch millis) when the blob was first stored';
 
 CREATE TABLE riscv_rollup_blobs (

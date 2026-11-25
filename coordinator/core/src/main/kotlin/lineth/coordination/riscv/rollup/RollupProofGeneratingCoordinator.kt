@@ -305,7 +305,6 @@ class RollupProofGeneratingCoordinator(
         BlobData(
           chunkHash = chunk.chunkHash,
           blobBytes = chunk.blobBytes,
-          batchesCount = 0u,
           prevDataRollingHash = chunk.parentDataRollingHash,
           dataRollingHash = chunkedData.chunks.getOrNull(i + 1)?.parentDataRollingHash ?: chunkedData.dataRollingHash,
         )

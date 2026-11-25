@@ -52,10 +52,10 @@ class RiscvRollupsPostgresDao(
     """
       with inserted_blobs as (
         insert into $BlobsTableName
-        (data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, batches_count, created_epoch_milli)
-        select data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, batches_count, $1
-        from unnest($13::bytea[], $14::bytea[], $15::bytea[], $16::bytea[], $17::integer[])
-          as b(data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, batches_count)
+        (data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, created_epoch_milli)
+        select data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes, $1
+        from unnest($13::bytea[], $14::bytea[], $15::bytea[], $16::bytea[])
+          as b(data_rolling_hash, prev_data_rolling_hash, chunk_hash, blob_bytes)
         on conflict (data_rolling_hash) do nothing
       ),
       inserted_references as (
@@ -145,7 +145,6 @@ class RiscvRollupsPostgresDao(
       blobs.map { Buffer.buffer(it.prevDataRollingHash) }.toTypedArray(),
       blobs.map { Buffer.buffer(it.chunkHash) }.toTypedArray(),
       blobs.map { Buffer.buffer(it.blobBytes) }.toTypedArray(),
-      blobs.map { it.batchesCount.toInt() }.toTypedArray(),
     )
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
@@ -229,7 +228,6 @@ class RiscvRollupsPostgresDao(
     BlobData(
       chunkHash = row.getBuffer("chunk_hash").bytes,
       blobBytes = row.getBuffer("blob_bytes").bytes,
-      batchesCount = row.getInteger("batches_count").toUInt(),
       prevDataRollingHash = row.getBuffer("prev_data_rolling_hash").bytes,
       dataRollingHash = row.getBuffer("data_rolling_hash").bytes,
     )

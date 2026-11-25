@@ -11,12 +11,10 @@ fun createBlobData(
   dataRollingHash: ByteArray = Random.nextBytes(32),
   blobBytes: ByteArray = Random.nextBytes(32),
   chunkHash: ByteArray = Random.nextBytes(32),
-  batchesCount: UInt = 1U,
 ): BlobData =
   BlobData(
     chunkHash = chunkHash,
     blobBytes = blobBytes,
-    batchesCount = batchesCount,
     prevDataRollingHash = prevDataRollingHash,
     dataRollingHash = dataRollingHash,
   )
