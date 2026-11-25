@@ -1,10 +1,10 @@
 package lineth.coordination.riscv.rollup
 
 import linea.clients.dummyRollupProofResponse
-import linea.domain.BlobRecordV2
 import linea.domain.BlockIntervalProofIndex
-import linea.domain.createBlobRecordV2
-import lineth.persistence.BlobsRepositoryV2
+import linea.domain.RiscvRollupRecord
+import linea.domain.createRiscvRollupRecord
+import lineth.persistence.RiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -17,12 +17,12 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
 
 class RollupProofPersistenceHandlerTest {
-  private val blobsRepository = mock<BlobsRepositoryV2> {
-    on { saveNewBlob(any()) }.thenReturn(SafeFuture.completedFuture(Unit))
+  private val rollupsDao = mock<RiscvRollupsDao> {
+    on { saveRollupWithBlobs(any()) }.thenReturn(SafeFuture.completedFuture(Unit))
   }
-  private val handler = RollupProofPersistenceHandler(blobsRepository)
+  private val handler = RollupProofPersistenceHandler(rollupsDao)
 
-  private val record = createBlobRecordV2(
+  private val record = createRiscvRollupRecord(
     startBlockNumber = 1UL,
     endBlockNumber = 10UL,
     parentSharedBlobCarryOverTailBytes = 100u,
@@ -65,8 +65,8 @@ class RollupProofPersistenceHandlerTest {
   fun `a proof matching the request is persisted as the rollup row`() {
     handler.acceptNewRollupProof(proof(), context).get()
 
-    val saved = argumentCaptor<BlobRecordV2>()
-    verify(blobsRepository).saveNewBlob(saved.capture())
+    val saved = argumentCaptor<RiscvRollupRecord>()
+    verify(rollupsDao).saveRollupWithBlobs(saved.capture())
     assertThat(saved.firstValue).isEqualTo(record)
   }
 
@@ -77,6 +77,6 @@ class RollupProofPersistenceHandlerTest {
     assertThatThrownBy { handler.acceptNewRollupProof(proof(finalSharedBlobCarryOverTailBytes = 0), context).get() }
       .hasMessageContaining("finalSharedBlobCarryOverTailBytes=0 expected=200")
 
-    verify(blobsRepository, never()).saveNewBlob(any())
+    verify(rollupsDao, never()).saveRollupWithBlobs(any())
   }
 }

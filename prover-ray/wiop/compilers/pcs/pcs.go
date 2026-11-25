@@ -1055,6 +1055,28 @@ func committedStateKey(roundID int) string {
 	return fmt.Sprintf("pcs/committedState/%d", roundID)
 }
 
+// CommittedState returns the FRI committer state the PCS stored on the
+// runtime when it committed the round, while proving: the state an opening
+// prover adds to its openings. The opening prover action releases it. It is
+// for opening provers written outside the package, such as tests' cheating
+// provers.
+func CommittedState(rt *wiop.Runtime, roundID int) (*fri.CommitterState, bool) {
+	v, ok := rt.GetState(committedStateKey(roundID))
+	if !ok || v == nil {
+		return nil, false
+	}
+	st, ok := v.(*fri.CommitterState)
+	return st, ok
+}
+
+// IsOpeningProverAction reports whether a is the PCS's opening prover action,
+// which the last round of a compiled System runs: for callers replacing it
+// with another opening prover.
+func IsOpeningProverAction(a wiop.ProverAction) bool {
+	_, ok := a.(*openingProverAction)
+	return ok
+}
+
 // =============================================================================
 // Layout / commitment helpers
 // =============================================================================

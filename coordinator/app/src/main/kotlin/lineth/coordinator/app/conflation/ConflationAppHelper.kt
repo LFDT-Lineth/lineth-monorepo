@@ -10,7 +10,7 @@ import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
-import lineth.persistence.BlobsRepositoryV2
+import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 object ConflationAppHelper {
@@ -100,7 +100,7 @@ object ConflationAppHelper {
   fun getLastRiscvProcessedBlocks(
     lastFinalizedBlock: ULong,
     batchesRepository: BatchesRepository,
-    blobsRepository: BlobsRepositoryV2,
+    rollupsDao: RiscvRollupsDao,
     l2EthClient: EthApiClient,
   ): SafeFuture<RiscvLastProcessedBlocks> {
     val lastConflatedBlock = batchesRepository
@@ -109,7 +109,7 @@ object ConflationAppHelper {
         l2EthClient.ethGetBlockByNumberTxHashes((highestEnd?.toULong() ?: lastFinalizedBlock).toBlockParameter())
       }
     val lastAggregatedBlock = l2EthClient.ethGetBlockByNumberTxHashes(lastFinalizedBlock.toBlockParameter())
-    val lastRollupEndBlockNumber = resumeRiscvRollupFrom(blobsRepository, lastFinalizedBlock)
+    val lastRollupEndBlockNumber = resumeRiscvRollupFrom(rollupsDao, lastFinalizedBlock)
     return SafeFuture.collectAll(lastConflatedBlock, lastAggregatedBlock)
       .thenCombine(lastRollupEndBlockNumber) { blocks, lastRollupEnd ->
         RiscvLastProcessedBlocks(
@@ -125,10 +125,10 @@ object ConflationAppHelper {
    * if there is none.
    */
   internal fun resumeRiscvRollupFrom(
-    blobsRepository: BlobsRepositoryV2,
+    rollupsDao: RiscvRollupsDao,
     lastFinalizedBlock: ULong,
   ): SafeFuture<ULong> {
-    return blobsRepository
+    return rollupsDao
       .findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
       .thenApply { it ?: lastFinalizedBlock }
   }
@@ -142,7 +142,7 @@ object ConflationAppHelper {
     lastRollupEndBlockNumber: ULong,
     lastAggregatedBlockNumber: ULong,
     batchesRepository: BatchesRepository,
-    blobsRepository: BlobsRepositoryV2,
+    rollupsDao: RiscvRollupsDao,
     aggregationsRepository: AggregationsRepository,
   ): SafeFuture<*> {
     if (lastRollupEndBlockNumber > lastConflatedBlockNumber) {
@@ -155,7 +155,7 @@ object ConflationAppHelper {
     }
     return SafeFuture.allOf(
       batchesRepository.deleteBatchesAfterBlockNumber((lastConflatedBlockNumber + 1UL).toLong()),
-      blobsRepository.deleteBlobsAfterBlockNumber(lastRollupEndBlockNumber + 1UL),
+      rollupsDao.deleteRollupsAfterBlockNumber(lastRollupEndBlockNumber + 1UL),
       aggregationsRepository.deleteAggregationsAfterBlockNumber((lastAggregatedBlockNumber + 1UL).toLong()),
     )
   }
