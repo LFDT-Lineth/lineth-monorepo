@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
@@ -872,6 +873,28 @@ func TestClassifyInstruction(t *testing.T) {
 			t.Fatalf("%s: classifyInstruction(type=%d, op=%#x, f3=%#x, f7=%#x, imm=%#x, rd=%d) = %d, want %d",
 				tv.name, tv.typ, tv.opcode, tv.funct3, tv.funct7, tv.imm12, tv.rd, got, tv.want)
 		}
+	}
+}
+
+// TestBitsPerRowOfModuleDecoded checks that the columns of the compiled
+// "decoded" module sum to BitsPerRowOfModuleDecoded.
+func TestBitsPerRowOfModuleDecoded(t *testing.T) {
+	compiled, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		t.Fatalf("get compiled R5 arithmetizaton: %v", err)
+	}
+	pg := compiled.ExecutionProgram()
+	m, ok := pg.HasModule(DecodedInput)
+	if !ok {
+		t.Fatalf("compiled R5 arithmetization has no %q input", DecodedInput)
+	}
+	var sumLength uint
+	for _, o := range pg.Module(m).Outputs() {
+		sumLength += o.Bitwidth().Unwrap()
+	}
+	if sumLength != BitsPerRowOfModuleDecoded {
+		t.Fatalf("bits-per-row mismatch for module %q, expected %d got %d",
+			DecodedInput, BitsPerRowOfModuleDecoded, sumLength)
 	}
 }
 
