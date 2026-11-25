@@ -72,6 +72,16 @@ allprojects {
   apply plugin: 'java' // do not add kotlin plugin here, it will add unnecessary Kotlin runtime dependencies
   apply plugin: 'jacoco'
 
+  // Stall diagnostics for the test JVMs: a JUnit Platform listener found through the ServiceLoader, it dumps the
+  // threads of tests running longer than expected. See jvm-libs/linea/testing/test-diagnostics.
+  if (path != ':jvm-libs:linea:testing:test-diagnostics') {
+    pluginManager.withPlugin('org.jetbrains.kotlin.jvm') {
+      dependencies {
+        testRuntimeOnly project(':jvm-libs:linea:testing:test-diagnostics')
+      }
+    }
+  }
+
   // Override JUnit version from Besu BOM to ensure Java 25 compatibility
   configurations.configureEach { cfg ->
     resolutionStrategy.eachDependency { details ->
@@ -195,6 +205,31 @@ allprojects {
         .withPathSensitivity(PathSensitivity.NONE)
         .withPropertyName("vertxTestOptions")
     systemProperty("vertx.parameter.filename", vertxTestOptionsFile.absolutePath)
+
+    // Diagnostics for timing-sensitive failures on CI runners, written to <project>/build/test-diagnostics/<task>/
+    // and uploaded by the CI testing workflows when they fail:
+    //  - gc-<pid>.log*: GC and safepoint log of each test JVM
+    //  - thread-dump-<pid>-<n>.txt: threads of a test running longer than expected, see
+    //    jvm-libs/linea/testing/test-diagnostics (Kotlin projects only)
+    // Passed as an argument provider so the machine specific paths are not task inputs and do not change the build
+    // cache key. Override the stall thresholds with -PtestStallThresholdsMs=<ms>[,<ms>...].
+    def diagnosticsDir = project.layout.buildDirectory.dir("test-diagnostics/${name}").get().asFile
+    def stallThresholdsMs = project.findProperty("testStallThresholdsMs")
+    doFirst {
+      // the JVM does not start when the -Xlog file cannot be opened, so the directory must exist beforehand
+      project.delete(diagnosticsDir)
+      diagnosticsDir.mkdirs()
+    }
+    jvmArgumentProviders.add({
+      def args = [
+        "-Xlog:gc*,safepoint:file=${diagnosticsDir}/gc-%p.log:uptime,time,level,tags:filecount=2,filesize=8m".toString(),
+        "-Dlineth.test.diagnostics.dir=${diagnosticsDir}".toString(),
+      ]
+      if (stallThresholdsMs != null) {
+        args << "-Dlineth.test.stallDump.thresholdsMs=${stallThresholdsMs}".toString()
+      }
+      return args
+    } as CommandLineArgumentProvider)
 
     systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true

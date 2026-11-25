@@ -40,6 +40,8 @@ jobs:
           submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
+      - name: Log runner resources
+        uses: ./.github/actions/log-runner-resources
       # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
       # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
       - name: Setup Besu in maven local
@@ -68,6 +70,17 @@ jobs:
           path: |
             maru/**/build/reports/tests/
             maru/**/build/integrationTest-logs/
+          if-no-files-found: ignore
+      # GC logs of every test JVM and thread dumps of tests that ran longer than expected,
+      # see jvm-libs/linea/testing/test-diagnostics
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-diagnostics-maru
+          path: |
+            **/build/test-diagnostics/**
+          retention-days: 7
           if-no-files-found: ignore
       - name: Upload Jacoco execution data
         if: always()

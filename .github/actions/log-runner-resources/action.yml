@@ -1,0 +1,32 @@
+name: 'Log runner resources'
+description: >-
+  Logs the CPUs and memory of the runner, its container limits and what the JVM sees of them, to correlate
+  timing-sensitive test failures with the size of the runner. Run it after the Java setup.
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Log runner resources
+      shell: bash
+      run: |
+        echo "runner: name=${RUNNER_NAME:-unknown} os=${RUNNER_OS:-unknown} arch=${RUNNER_ARCH:-unknown}"
+        echo "nproc: $(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown)"
+        lscpu 2>/dev/null | grep -E '^(Model name|CPU\(s\)|Thread\(s\) per core|Core\(s\) per socket|Socket\(s\)|NUMA node\(s\)):' || true
+        grep -E '^(MemTotal|MemAvailable|SwapTotal):' /proc/meminfo 2>/dev/null || true
+        echo "cgroup cpu.max: $(cat /sys/fs/cgroup/cpu.max 2>/dev/null || echo n/a)"
+        echo "cgroup memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo n/a)"
+        echo "load average: $(cat /proc/loadavg 2>/dev/null || echo n/a)"
+        if command -v java >/dev/null 2>&1; then
+          # Operating System Metrics: the container limits and the effective CPU count as the JVM computes them
+          java -XshowSettings:system -version 2>&1 || true
+          cat > "${RUNNER_TEMP:-/tmp}/LogJvmResources.java" <<'JAVA'
+        public class LogJvmResources {
+          public static void main(String[] args) {
+            Runtime runtime = Runtime.getRuntime();
+            System.out.println("jvm: availableProcessors=" + runtime.availableProcessors()
+                + " maxMemoryMB=" + runtime.maxMemory() / (1024 * 1024));
+          }
+        }
+        JAVA
+          java "${RUNNER_TEMP:-/tmp}/LogJvmResources.java" || true
+        fi
