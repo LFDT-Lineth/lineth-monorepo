@@ -112,6 +112,7 @@ func TestProveDevPartial(t *testing.T) {
 		assert.Equal(t, ResultStatusFailed, result.Status)
 		assert.ErrorContains(t, result.Err, "fixed head")
 	})
+	testProveRollup(t, ProverModeDevPartial)
 }
 
 func TestNew_DevPartialNeedsGuestsDir(t *testing.T) {
