@@ -71,32 +71,31 @@ class RiscvRollupsPostgresDao(
     """
       .trimIndent()
 
-  // The gap-free run of rollups starting at $1, as for the blobs table.
+  // The gap-free run of rollups starting at $1: rollups never overlap, so each next rollup starts right after the
+  // previous one ends, up to the first gap.
   private val selectConsecutiveSql =
     """
-      with previous_ends as (select *,
-        coalesce(max(end_block_number) over (order by start_block_number asc, end_block_number asc ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) as max_rollup_end
+      with ordered as (select *,
+          lag(end_block_number) over (order by start_block_number) as previous_end_block_number
         from $RollupsTableName
-        where start_block_number >= $1
-        order by start_block_number asc),
-      removed_old_rollups as (select *
-        from previous_ends
-        where end_block_number > max_rollup_end),
-      first_gapped_rollup as (select start_block_number
-        from removed_old_rollups
-        where start_block_number > $1 and start_block_number - 1 != max_rollup_end
-        limit 1)
+        where start_block_number >= $1),
+      first_gap as (select min(start_block_number) as start_block_number
+        from ordered
+        where start_block_number > $1 and start_block_number != previous_end_block_number + 1)
       select *
-      from previous_ends
-      where EXISTS (select 1 from $RollupsTableName where start_block_number = $1)
-        and (previous_ends.max_rollup_end = previous_ends.start_block_number - 1 or previous_ends.start_block_number = $1)
-        and ((select count(1) from first_gapped_rollup) = 0 or previous_ends.start_block_number < (select * from first_gapped_rollup))
+      from ordered
+      where exists (select 1 from ordered where start_block_number = $1)
+        and ((select start_block_number from first_gap) is null
+          or start_block_number < (select start_block_number from first_gap))
+      order by start_block_number
       limit ${config.maxRollupProofsToReturn}
     """
       .trimIndent()
 
   private val selectByStartBlockNumberSql = "select * from $RollupsTableName where start_block_number = $1 limit 1"
   private val selectByEndBlockNumberSql = "select * from $RollupsTableName where end_block_number = $1 limit 1"
+  private val existsSql =
+    "select 1 from $RollupsTableName where start_block_number = $1 and end_block_number = $2"
 
   private val selectRollupBlobsSql =
     """
@@ -121,6 +120,7 @@ class RiscvRollupsPostgresDao(
   private val selectConsecutiveQuery = connection.preparedQuery(selectConsecutiveSql)
   private val selectByStartBlockNumberQuery = connection.preparedQuery(selectByStartBlockNumberSql)
   private val selectByEndBlockNumberQuery = connection.preparedQuery(selectByEndBlockNumberSql)
+  private val existsQuery = connection.preparedQuery(existsSql)
   private val selectRollupBlobsQuery = connection.preparedQuery(selectRollupBlobsSql)
   private val deleteUpToQuery = connection.preparedQuery(deleteUpToSql)
   private val deleteAfterQuery = connection.preparedQuery(deleteAfterSql)
@@ -149,17 +149,28 @@ class RiscvRollupsPostgresDao(
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
       .map { }
-      .recover { th ->
-        if (isDuplicateKeyException(th)) {
-          Future.failedFuture(
-            DuplicatedRecordException("Rollup ${rollup.intervalString()} is already persisted!", th),
-          )
-        } else {
-          Future.failedFuture(th)
-        }
-      }
+      .recover { th -> if (isDuplicateKeyException(th)) duplicateOrConflict(rollup, th) else Future.failedFuture(th) }
       .toSafeFuture()
   }
+
+  /**
+   * A unique violation is a duplicate only if this rollup, by block range, is already stored. Otherwise the rollup
+   * overlaps a stored one (same start or end block), which is a bug: the Postgres error is returned as is, so callers
+   * do not ignore it and retries stop.
+   */
+  private fun duplicateOrConflict(rollup: RiscvRollupRecord, error: Throwable): Future<Unit> =
+    existsQuery
+      .execute(Tuple.of(rollup.startBlockNumber.toLong(), rollup.endBlockNumber.toLong()))
+      .compose { rows ->
+        if (rows.size() > 0) {
+          Future.failedFuture(
+            DuplicatedRecordException("Rollup ${rollup.intervalString()} is already persisted!", error),
+          )
+        } else {
+          log.error("rollup={} overlaps a stored rollup: {}", rollup.intervalString(), error.message)
+          Future.failedFuture(error)
+        }
+      }
 
   override fun getConsecutiveRollupsFromBlockNumber(
     startingBlockNumberInclusive: ULong,

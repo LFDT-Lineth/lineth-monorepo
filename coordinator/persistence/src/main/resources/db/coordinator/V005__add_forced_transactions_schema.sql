@@ -50,7 +50,10 @@ CREATE TABLE riscv_rollups (
     parent_shared_blob_carry_over_tail_bytes INTEGER NOT NULL,
     parent_blob_data_rolling_hash BYTEA,
     final_shared_blob_carry_over_tail_bytes INTEGER NOT NULL,
-    PRIMARY KEY (start_block_number, end_block_number)
+    PRIMARY KEY (start_block_number, end_block_number),
+    -- Rollups never overlap: no two share a start block or an end block.
+    CONSTRAINT riscv_rollups_start_block_number_key UNIQUE (start_block_number),
+    CONSTRAINT riscv_rollups_end_block_number_key UNIQUE (end_block_number)
 );
 
 COMMENT ON TABLE riscv_rollups IS 'RISC-V rollup proofs, one row per proven rollup';

@@ -127,6 +127,21 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
+  fun `saveRollupWithBlobs rejects a rollup that shares its start or end block with a stored one`() {
+    save(rollup(11UL, 20UL))
+
+    listOf(rollup(11UL, 25UL), rollup(5UL, 20UL)).forEach { conflicting ->
+      assertThrows<ExecutionException> { rollupsDao.saveRollupWithBlobs(conflicting).get() }
+        .also { error ->
+          assertThat(error.cause).isNotInstanceOf(DuplicatedRecordException::class.java)
+          assertThat(error.cause!!.message).contains("duplicate key value violates unique constraint")
+        }
+    }
+    assertThat(count(RiscvRollupsPostgresDao.RollupsTableName)).isEqualTo(1)
+    assertThat(count(RiscvRollupsPostgresDao.RollupBlobsTableName)).isEqualTo(1)
+  }
+
+  @Test
   fun `a rollup starting inside a shared blob round-trips with its tail fields`() {
     val rollup = createRiscvRollupRecord(
       startBlockNumber = 1UL,
@@ -173,6 +188,19 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
       .containsExactly(r3, r4, r5)
     assertThat(rollupsDao.getConsecutiveRollupsFromBlockNumber(61UL, r4.endBlockTimestamp.plus(1.seconds)).get())
       .containsExactly(r3, r4)
+  }
+
+  @Test
+  fun `getConsecutiveRollupsFromBlockNumber stops at the first gap whatever the insertion order`() {
+    val run = listOf(rollup(1UL, 10UL), rollup(11UL, 20UL), rollup(21UL, 30UL))
+    val afterFirstGap = listOf(rollup(32UL, 40UL), rollup(41UL, 50UL))
+    val afterSecondGap = listOf(rollup(60UL, 70UL), rollup(71UL, 80UL))
+    save(*(afterSecondGap + afterFirstGap.reversed() + run.reversed()).toTypedArray())
+
+    assertThat(rollupsDao.getConsecutiveRollupsFromBlockNumber(1UL, Instant.DISTANT_FUTURE).get())
+      .containsExactlyElementsOf(run)
+    assertThat(rollupsDao.getConsecutiveRollupsFromBlockNumber(32UL, Instant.DISTANT_FUTURE).get())
+      .containsExactlyElementsOf(afterFirstGap)
   }
 
   @Test
