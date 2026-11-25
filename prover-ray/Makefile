@@ -61,18 +61,17 @@ download-zkc-testdata: download-zkc-mod
 	# we don't compile binaries. They are compiled as-needed during integration tests (to be up-to-date)
 
 ##
-## Build the one prover-ray image (Go prover + native runner + guest ELF).
-## The native runner is built from riscv-guests, passed in as a build context.
+## Build the prover-ray image (Go prover only; guests are mounted at run time).
 ##
 docker-build:
 	$(DOCKER) build -f Dockerfile \
-		--build-context riscv-guests=$(REPO_ROOT)/riscv-guests \
 		--build-context licenses=$(REPO_ROOT) \
 		-t $(IMAGE_NAME):$(IMAGE_TAG) \
 		.
 
 ##
-## Smoke-test the built image: dev-mock request->response + dev-zkvm artifacts.
+## Smoke-test the built image. GUEST_ARTIFACTS: guest ELF dir (default: build from source).
 ##
+GUEST_ARTIFACTS ?=
 docker-smoke:
-	DOCKER="$(DOCKER)" ./scripts/docker-smoke.sh $(IMAGE_NAME):$(IMAGE_TAG)
+	DOCKER="$(DOCKER)" ./scripts/docker-smoke.sh $(IMAGE_NAME):$(IMAGE_TAG) $(GUEST_ARTIFACTS)

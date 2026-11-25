@@ -2,18 +2,38 @@
 
 ### 🚀 Features
 
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
+- *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
+- *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+- *(coordinator)* Rename the per-blob prevDataRollingHash to parentDataRollingHash (#4602)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
+## [2.4.0] - 2026-11-19
+
+### 🚀 Features
+
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+- *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
+- *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
 
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
+- *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 ## [2.3.0] - 2026-10-28
 
 ### 🚀 Features

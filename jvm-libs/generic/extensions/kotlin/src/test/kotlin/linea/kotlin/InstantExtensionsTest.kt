@@ -8,6 +8,12 @@ import kotlin.time.Instant
 class InstantExtensionsTest {
 
   @Test
+  fun `toInstantFromEpochSeconds converts seconds since the epoch`() {
+    assertThat(0UL.toInstantFromEpochSeconds()).isEqualTo(Instant.fromEpochSeconds(0))
+    assertThat(1_696_163_696UL.toInstantFromEpochSeconds()).isEqualTo(Instant.parse("2023-10-01T12:34:56Z"))
+  }
+
+  @Test
   fun `trimToMinutePrecision should trim to the start of the minute`() {
     val instant = Instant.parse("2023-10-01T12:34:56.789Z")
     val expected = Instant.parse("2023-10-01T12:34:00Z")

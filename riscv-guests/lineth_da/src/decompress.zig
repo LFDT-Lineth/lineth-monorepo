@@ -10,11 +10,12 @@
 
 const std = @import("std");
 
-const accelerators = @import("zesu_accelerators");
+const accelerators = @import("zkvm_accelerators");
 const blob_kzg = @import("encoding/blob_kzg.zig");
 const blob_payload = @import("encoding/blob_payload.zig");
 const rolling_hash = @import("encoding/rolling_hash.zig");
 const zstd_decoder = @import("zstd_decoder.zig");
+const ssz = @import("guest_common").ssz;
 
 const Allocator = std.mem.Allocator;
 
@@ -40,16 +41,16 @@ pub const Error = error{
     /// The batch verification of the blobs' EIP-4844 proofs fails: some blob's proof does not open
     /// its commitment to the blob.
     BlobKzgMismatch,
-    /// `boundary_prev_data_rolling_hash` is missing or opens a hash other than the parent hash.
-    BoundaryPreimageMismatch,
+    /// `parent_blob_data_rolling_hash` is missing or opens a hash other than the parent hash.
+    ParentBlobDataRollingHashMismatch,
 
     // Layout of the stream across the chunks.
 
     /// A blob followed by another blob holds less than a full payload.
     PartialBlobBeforeBlob,
-    /// A positive tail count with a calldata first chunk, or at least as long as the first blob's
-    /// payload.
-    InvalidTailTake,
+    /// A positive `parent_shared_blob_carry_over_tail_bytes` with a calldata first chunk, or at least
+    /// as long as the first blob's payload.
+    InvalidParentCarryOverTail,
     /// Fewer than four bytes remain for a segment's length prefix.
     MissingSegmentLength,
     /// A segment's length is zero or reaches past the end of the stream.
@@ -69,25 +70,29 @@ pub const Error = error{
     PayloadMismatch,
 };
 
-/// One chunk the proof touches, as the witness carries it.
+/// The longest calldata submission of a chunk: 16 MiB.
+pub const max_calldata_bytes: usize = 1 << 24;
+
+/// One chunk the proof touches, as the witness carries it. The byte lists are views of the
+/// witness's buffer.
 pub const Chunk = struct {
     /// The anchored hash: the blob's versioned hash, or keccak256 of the calldata submission.
     chunk_hash: Hash,
-    is_calldata: bool,
+    is_calldata: ssz.StrictBool,
     /// The 131072 physical bytes of a blob; empty for calldata.
-    blob_bytes: []const u8 = &.{},
+    blob_bytes: ssz.ByteList(blob_kzg.blob_len) = .{ .bytes = &.{} },
     /// The exact calldata submission; empty for a blob.
-    calldata_bytes: []const u8 = &.{},
+    calldata_bytes: ssz.ByteList(max_calldata_bytes) = .{ .bytes = &.{} },
     /// The 48-byte compressed G1 commitment of a blob; empty for calldata.
-    kzg_commitment: []const u8 = &.{},
+    kzg_commitment: ssz.ByteList(blob_kzg.commitment_len) = .{ .bytes = &.{} },
     /// The 48-byte EIP-4844 blob proof; empty for calldata.
-    kzg_proof: []const u8 = &.{},
+    kzg_proof: ssz.ByteList(blob_kzg.proof_len) = .{ .bytes = &.{} },
 };
 
 pub const Verified = struct {
     end_data_rolling_hash: Hash,
     /// The bytes left in the stream after the last segment.
-    final_data_tail_discard_bytes: u64,
+    final_shared_blob_carry_over_tail_bytes: u64,
 };
 
 /// Verifies the DA stream carried by `chunks`: one segment per entry of `canonical_payloads`.
@@ -98,14 +103,14 @@ pub const Verified = struct {
 ///   `chunk_hash`. Once every chunk is bound, the blobs' EIP-4844 proofs verify as one batch, each
 ///   opening its commitment to its blob.
 /// - Layout: a blob followed by another blob holds a full payload; a positive
-///   `parent_data_tail_take_bytes` requires a first blob with a longer payload, and the stream
-///   starts at the last `parent_data_tail_take_bytes` bytes of it; every chunk owns at least one
+///   `parent_shared_blob_carry_over_tail_bytes` requires a first blob with a longer payload, and the stream
+///   starts at the last `parent_shared_blob_carry_over_tail_bytes` bytes of it; every chunk owns at least one
 ///   byte inside the parsed segments; every calldata chunk ends at a segment boundary.
 /// - Every segment is one frame in the form the decoder accepts, declaring the length of its
 ///   conflation's canonical payload as its content size, and decompresses exactly to that payload.
 /// - The dataRollingHash folds the chunks onto `parent_data_rolling_hash`; a positive tail count
 ///   starts the range inside the first chunk, which the parent hash includes, so
-///   `boundary_prev_data_rolling_hash` has to open it.
+///   `parent_blob_data_rolling_hash` has to open it.
 ///
 /// `allocator` serves the working buffers, released before returning.
 pub fn verifyDaChunks(
@@ -114,14 +119,14 @@ pub fn verifyDaChunks(
     chunks: []const Chunk,
     canonical_payloads: []const []const u8,
     parent_data_rolling_hash: Hash,
-    parent_data_tail_take_bytes: u64,
-    boundary_prev_data_rolling_hash: ?Hash,
+    parent_shared_blob_carry_over_tail_bytes: u64,
+    parent_blob_data_rolling_hash: ?Hash,
 ) Error!Verified {
     if (chunks.len == 0) return error.NoChunks;
 
     var capacity: usize = 0;
     for (chunks) |chunk| {
-        capacity += if (chunk.is_calldata) chunk.calldata_bytes.len else blob_payload.payload_capacity;
+        capacity += if (chunk.is_calldata.value) chunk.calldata_bytes.bytes.len else blob_payload.payload_capacity;
     }
     const joined = try allocator.alloc(u8, capacity);
     defer allocator.free(joined);
@@ -140,7 +145,7 @@ pub fn verifyDaChunks(
 
     var blob_count: usize = 0;
     for (chunks) |chunk| {
-        if (!chunk.is_calldata) blob_count += 1;
+        if (!chunk.is_calldata.value) blob_count += 1;
     }
     if (blob_count > 0) {
         const blobs = try allocator.alloc([blob_kzg.blob_len]u8, blob_count);
@@ -151,26 +156,26 @@ pub fn verifyDaChunks(
         defer allocator.free(proofs);
         var next: usize = 0;
         for (chunks) |chunk| {
-            if (chunk.is_calldata) continue;
-            blobs[next] = chunk.blob_bytes[0..blob_kzg.blob_len].*;
-            commitments[next] = chunk.kzg_commitment[0..blob_kzg.commitment_len].*;
-            proofs[next] = chunk.kzg_proof[0..blob_kzg.proof_len].*;
+            if (chunk.is_calldata.value) continue;
+            blobs[next] = chunk.blob_bytes.bytes[0..blob_kzg.blob_len].*;
+            commitments[next] = chunk.kzg_commitment.bytes[0..blob_kzg.commitment_len].*;
+            proofs[next] = chunk.kzg_proof.bytes[0..blob_kzg.proof_len].*;
             next += 1;
         }
         if (!blob_kzg.verifyBatch(blobs, commitments, proofs)) return error.BlobKzgMismatch;
     }
 
     for (chunks[0 .. chunks.len - 1], chunks[1..], payload_lens[0 .. chunks.len - 1]) |chunk, following, payload_len| {
-        if (!chunk.is_calldata and !following.is_calldata and payload_len != blob_payload.payload_capacity) {
+        if (!chunk.is_calldata.value and !following.is_calldata.value and payload_len != blob_payload.payload_capacity) {
             return error.PartialBlobBeforeBlob;
         }
     }
 
     var stream: []const u8 = joined[0..joined_len];
     var take: usize = 0;
-    if (parent_data_tail_take_bytes > 0) {
-        if (chunks[0].is_calldata or parent_data_tail_take_bytes >= payload_lens[0]) return error.InvalidTailTake;
-        take = @intCast(parent_data_tail_take_bytes);
+    if (parent_shared_blob_carry_over_tail_bytes > 0) {
+        if (chunks[0].is_calldata.value or parent_shared_blob_carry_over_tail_bytes >= payload_lens[0]) return error.InvalidParentCarryOverTail;
+        take = @intCast(parent_shared_blob_carry_over_tail_bytes);
         stream = stream[payload_lens[0] - take ..];
         payload_lens[0] = take;
     }
@@ -183,7 +188,7 @@ pub fn verifyDaChunks(
     for (chunks, payload_lens) |chunk, payload_len| {
         const chunk_end = chunk_start + payload_len;
         if (chunk_start >= @min(chunk_end, consumed)) return error.ChunkOwnsNoBytes;
-        if (chunk.is_calldata and std.mem.indexOfScalar(usize, segment_ends, chunk_end) == null) {
+        if (chunk.is_calldata.value and std.mem.indexOfScalar(usize, segment_ends, chunk_end) == null) {
             return error.CalldataEndsMidSegment;
         }
         chunk_start = chunk_end;
@@ -193,28 +198,28 @@ pub fn verifyDaChunks(
     defer allocator.free(chunk_hashes);
     for (chunks, chunk_hashes) |chunk, *chunk_hash| chunk_hash.* = chunk.chunk_hash;
     return .{
-        .end_data_rolling_hash = try rolling_hash.fold(parent_data_rolling_hash, chunk_hashes, take, boundary_prev_data_rolling_hash),
-        .final_data_tail_discard_bytes = stream.len - consumed,
+        .end_data_rolling_hash = try rolling_hash.fold(parent_data_rolling_hash, chunk_hashes, take, parent_blob_data_rolling_hash),
+        .final_shared_blob_carry_over_tail_bytes = stream.len - consumed,
     };
 }
 
 /// Binds `chunk` to its hash and returns what it contributes to the stream. A blob's payload is
 /// written into `unpacked`.
 fn bindChunk(chunk: Chunk, unpacked: *[blob_payload.stream_len]u8) Error![]const u8 {
-    if (chunk.is_calldata) {
-        if (chunk.blob_bytes.len != 0 or chunk.kzg_commitment.len != 0 or chunk.kzg_proof.len != 0) return error.MalformedChunk;
+    if (chunk.is_calldata.value) {
+        if (chunk.blob_bytes.bytes.len != 0 or chunk.kzg_commitment.bytes.len != 0 or chunk.kzg_proof.bytes.len != 0) return error.MalformedChunk;
         var hash: Hash = undefined;
-        accelerators.keccak256(chunk.calldata_bytes, &hash);
+        accelerators.keccak256(chunk.calldata_bytes.bytes, &hash);
         if (!std.mem.eql(u8, &hash, &chunk.chunk_hash)) return error.ChunkHashMismatch;
-        return chunk.calldata_bytes;
+        return chunk.calldata_bytes.bytes;
     }
 
-    if (chunk.calldata_bytes.len != 0 or
-        chunk.kzg_commitment.len != blob_kzg.commitment_len or
-        chunk.kzg_proof.len != blob_kzg.proof_len or
-        chunk.blob_bytes.len != blob_kzg.blob_len) return error.MalformedChunk;
-    const payload = blob_payload.unpack(chunk.blob_bytes[0..blob_kzg.blob_len], unpacked) catch return error.NonCanonicalBlob;
-    if (!std.mem.eql(u8, &blob_kzg.versionedHash(chunk.kzg_commitment[0..blob_kzg.commitment_len]), &chunk.chunk_hash)) return error.ChunkHashMismatch;
+    if (chunk.calldata_bytes.bytes.len != 0 or
+        chunk.kzg_commitment.bytes.len != blob_kzg.commitment_len or
+        chunk.kzg_proof.bytes.len != blob_kzg.proof_len or
+        chunk.blob_bytes.bytes.len != blob_kzg.blob_len) return error.MalformedChunk;
+    const payload = blob_payload.unpack(chunk.blob_bytes.bytes[0..blob_kzg.blob_len], unpacked) catch return error.NonCanonicalBlob;
+    if (!std.mem.eql(u8, &blob_kzg.versionedHash(chunk.kzg_commitment.bytes[0..blob_kzg.commitment_len]), &chunk.chunk_hash)) return error.ChunkHashMismatch;
     return payload;
 }
 

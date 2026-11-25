@@ -10,6 +10,9 @@
         // Shared statically-linked-ELF link inputs, @embedFile-d by build.zig (installGuestElf).
         "start.s",
         "linker_script.ld",
+        "mem.s",
         "program_id.zig",
+        // The host module that runs a guest ELF under zkc.
+        "zkc.zig",
     },
 }

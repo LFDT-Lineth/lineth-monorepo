@@ -15,6 +15,11 @@
 - *(riscv-guest)* Added a build option to choose between crypto backe… (#4293)
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(riscv-guest)* Zesu update with some small breaking change (#4586)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
 ## [0.1.0-debug] - 2026-10-05
 
 ### 🚀 Features

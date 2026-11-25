@@ -1,9 +1,10 @@
 # BUILDER image
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 
 WORKDIR /opt/consensys/maru
 
-COPY --from=libs ./** ./
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/

@@ -48,6 +48,13 @@
 - *(misc)* Adding blob commitment and a proof to Rollup input (#4329)
 - *(maru)* Add support of self-calculating terminal total difficulty (#4295)
 - *(coordinator, maru, docker)* Let downstream images override the image labels and maru jar (#4393)
+- *(coordinator)* Add RISC-V DaStream interface and FakeDaStream (#4339)
+- *(coordinator)* Add RISC-V GlobalBlobCalculator (blob cut-offs) (#4377)
+- *(linea-besu)* Update to 26.11.1 (#4532)
+- *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
+- *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
+- *(maru)* Add and use native Engine API JSON-RPC client (#4397)
+- *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
 
 ### 🐛 Bug Fixes
 
@@ -112,6 +119,7 @@
 - *(coordinator)* Enforce end-block invariant in RollupAggregationProofResponseV1 (#4315)
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 - *(postman)* Optimize docker image (#4424)
+- *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
 
 ### 🚜 Refactor
 
@@ -126,10 +134,13 @@
 - *(coordinator)* Select batches insert query by DB schema version (#4145)
 - *(coordinator)* Move prover transport from per-proof-type to RiscvProverConfig (#4172)
 - *(coordinator)* Remove TracingModuleV2 and TracingModuleV4 support (#4180)
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
+- *(coordinator)* Rename the per-blob prevDataRollingHash to parentDataRollingHash (#4602)
 
 ### ⚡ Performance
 
 - *(prover)* Limitless prover performance optimization (#3362)
+- *(prover)* Remove heap allocations from native Poseidon2 MDHasher (#4574)
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -219,3 +230,7 @@
 - *(misc)* Ship license files and metadata in all published artifacts (#4336)
 - *(coordinator)* Review fixes — null safety, typos, concurrency and error handling (#2965) (#4421)
 - *(deps)* Bump Node.js to 24.22.3 (#4457)
+- *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
+- *(maru)* Remove noisy p2p connection stack trace (#4542)
+- *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)

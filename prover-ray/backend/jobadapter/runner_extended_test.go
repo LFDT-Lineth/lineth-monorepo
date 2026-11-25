@@ -24,9 +24,12 @@ var guestOutput = []byte("guest output")
 
 // extendedModes maps each mode to the proof bytes its prover returns.
 var extendedModes = map[backend.ProverMode][]byte{
-	backend.ProverModeDevZkVM:    backend.DevMarkerProof(backend.ProverModeDevZkVM),
-	backend.ProverModeDevPartial: []byte("devmode proof"),
+	backend.ProverModeDevZkVM:    []byte("dev-zkvm devmode proof"),
+	backend.ProverModeDevPartial: []byte("dev-partial devmode proof"),
 }
+
+// resultProgramVK stands in for the VK of the prover's proof.
+var resultProgramVK = filledHash(0x5a)
 
 // guestPublicInputs are the public inputs of a job of blockCount blocks ending
 // at endBlock.
@@ -48,6 +51,7 @@ func extendedProver(mode backend.ProverMode, output []byte, edit func(*backend.P
 			ProofBytes:   extendedModes[mode],
 			PublicInputs: pi,
 			GuestOutput:  output,
+			ProgramVK:    resultProgramVK,
 		}
 	}}
 }
@@ -109,7 +113,8 @@ func TestRunner_Extended_ResponseFromResult(t *testing.T) {
 				assert.Equal(t, uint64(len(req.Payloads)), resp.PublicInputs.BlockCount)
 				assert.Equal(t, hexHash([32]byte{0xee}), resp.PublicInputs.ParentBlockHash,
 					"the public inputs should come from the prover's result")
-				assert.Equal(t, guestProgramID, resp.ProgramVk)
+				assert.Equal(t, hexHash(resultProgramVK), resp.ProgramVk,
+					"programVk should be the VK of the prover's proof, not the guest program ID")
 			})
 		}
 	}

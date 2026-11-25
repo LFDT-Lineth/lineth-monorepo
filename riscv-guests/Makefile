@@ -22,7 +22,7 @@ ZIG    ?= zig
 PACKAGES := $(patsubst %/build.zig,%,$(wildcard */build.zig))
 FMT_EXCLUDES := $(foreach p,$(PACKAGES),--exclude $(p)/zig-pkg --exclude $(p)/zig-out --exclude $(p)/.zig-cache)
 
-.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset
+.PHONY: compile test fetch clean fmt fmt-check help install-constantine-deps release-check release-asset docker-artifacts
 
 # Each common target fans out to every guest's own Makefile.
 compile test fetch clean:
@@ -42,43 +42,80 @@ release-check:
 release-asset:
 	$(MAKE) -C $(GUEST_DIR) release-asset RELEASE_DIR="$(abspath $(RELEASE_DIR))" ZIG="$(ZIG)" RELEASE_VERSION="$(RELEASE_VERSION)"
 
+# release-asset in Docker (see Dockerfile), used by prover-ray CI and e2e.
+# sha256 of zig-x86_64-linux-<.zigversion>.tar.xz (minisign-verified); update with .zigversion.
+ZIG_LINUX_X64_SHA256 := 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+DOCKER ?= docker
+OUT ?= $(RELEASE_DIR)
+docker-artifacts:
+	@test -n "$(GUEST)" || { echo "GUEST is required (e.g. GUEST=l2-execution)" >&2; exit 1; }
+	$(DOCKER) buildx build --platform linux/amd64 --target artifacts \
+		--build-arg ZIG_VERSION="$$(cat $(CURDIR)/.zigversion)" \
+		--build-arg ZIG_SHA256="$(ZIG_LINUX_X64_SHA256)" \
+		--build-arg GUEST="$(GUEST)" \
+		--build-arg RELEASE_VERSION="$(or $(RELEASE_VERSION),0.0.0-dev)" \
+		--output type=local,dest="$(abspath $(OUT))" \
+		$(CURDIR)
+
 NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
 CHOOSENIM_LINUX_X64_SHA256 := 1034e03564b3e5b5321646f9ce290cc4d3cdff0cf0e9b523d43f0db8b9a45c74
+# The sha256 values of the Nim tarballs are the contents of the published nim-lang.org .sha256 files.
+NIM_LINUX_ARM64_SHA256 := cd86a6e2bcbf029c4870aa51df5c0169345dbf9959889112fd15d403c13ae33a
+NIM_MACOSX_ARM64_SHA256 := 9a3b012d0680d11d6163dd2f145470b090c1045f5e634f42daf119bea1cb2b5e
+NIM_MACOSX_X64_SHA256 := 35df59b9bbe9f5dfcdf40a82b41037e6ac499e2ec0be6688cd3dd0e55c8bc851
 
 # Toolchain for the freestanding Constantine build: Nim, nimble, and LLVM clang.
 install-constantine-deps:
 	@set -eu; \
+	mkdir -p "$$HOME/.local/bin"; \
+	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	install_nim_tarball() { \
+		tarball="nim-$(NIM_VERSION)-$$1.tar.xz"; \
+		nim_home="$$HOME/.local/nim-$(NIM_VERSION)"; \
+		curl --fail --location --silent --show-error \
+			"https://nim-lang.org/download/$$tarball" -o "$$tmp/$$tarball"; \
+		if command -v sha256sum >/dev/null 2>&1; then got=$$(sha256sum "$$tmp/$$tarball"); \
+		else got=$$(shasum -a 256 "$$tmp/$$tarball"); fi; \
+		got=$${got%% *}; \
+		[ "$$got" = "$$2" ] || { echo "sha256 mismatch for $$tarball: expected $$2, got $$got" >&2; exit 1; }; \
+		rm -rf "$$nim_home"; mkdir -p "$$nim_home"; \
+		tar -xJf "$$tmp/$$tarball" --strip-components=1 -C "$$nim_home"; \
+		ln -sf "$$nim_home/bin/nim" "$$HOME/.local/bin/nim"; \
+		ln -sf "$$nim_home/bin/nimble" "$$HOME/.local/bin/nimble"; \
+	}; \
 	if [ "$$(uname -s)" = "Darwin" ]; then \
 		command -v brew >/dev/null 2>&1 || { echo "Homebrew not found: https://brew.sh"; exit 1; }; \
-		brew list nim >/dev/null 2>&1 || brew install nim; \
 		brew list llvm >/dev/null 2>&1 || brew install llvm; \
 		export PATH="$$(brew --prefix llvm)/bin:$$PATH"; \
+		case "$$(uname -m)" in \
+			arm64) install_nim_tarball macosx_arm64 "$(NIM_MACOSX_ARM64_SHA256)" ;; \
+			x86_64) install_nim_tarball macosx_x64 "$(NIM_MACOSX_X64_SHA256)" ;; \
+			*) echo "unsupported architecture for nim: $$(uname -m)" >&2; exit 1 ;; \
+		esac; \
 	else \
 		sudo=$$(command -v sudo >/dev/null 2>&1 && echo sudo || echo ""); \
 		$$sudo apt-get update -qq; \
 		$$sudo apt-get install -y --no-install-recommends build-essential ca-certificates clang curl git llvm xz-utils; \
 		case "$$(uname -m)" in \
-			x86_64|amd64) ;; \
-			*) echo "unsupported architecture for choosenim: $$(uname -m)" >&2; exit 1 ;; \
+			x86_64|amd64) \
+				choosenim="choosenim-$(CHOOSENIM_VERSION)_linux_amd64"; \
+				curl --fail --location --silent --show-error \
+					"https://github.com/nim-lang/choosenim/releases/download/v$(CHOOSENIM_VERSION)/$$choosenim" \
+					-o "$$tmp/$$choosenim"; \
+				printf '%s  %s\n' "$(CHOOSENIM_LINUX_X64_SHA256)" "$$tmp/$$choosenim" | sha256sum --check --status; \
+				install -m 0755 "$$tmp/$$choosenim" "$$HOME/.local/bin/choosenim"; \
+				"$$HOME/.local/bin/choosenim" $(NIM_VERSION) -y \
+					--choosenimDir:"$$HOME/.choosenim" --nimbleDir:"$$HOME/.local"; \
+				;; \
+			aarch64|arm64) install_nim_tarball linux_arm64 "$(NIM_LINUX_ARM64_SHA256)" ;; \
+			*) echo "unsupported architecture for nim: $$(uname -m)" >&2; exit 1 ;; \
 		esac; \
-		mkdir -p "$$HOME/.local/bin"; \
-		tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
-		choosenim="choosenim-$(CHOOSENIM_VERSION)_linux_amd64"; \
-		curl --fail --location --silent --show-error \
-			"https://github.com/nim-lang/choosenim/releases/download/v$(CHOOSENIM_VERSION)/$$choosenim" \
-			-o "$$tmp/$$choosenim"; \
-		printf '%s  %s\n' "$(CHOOSENIM_LINUX_X64_SHA256)" "$$tmp/$$choosenim" | sha256sum --check --status; \
-		install -m 0755 "$$tmp/$$choosenim" "$$HOME/.local/bin/choosenim"; \
-		"$$HOME/.local/bin/choosenim" $(NIM_VERSION) -y \
-			--choosenimDir:"$$HOME/.choosenim" --nimbleDir:"$$HOME/.local"; \
-		export PATH="$$HOME/.local/bin:$$PATH"; \
 	fi; \
+	export PATH="$$HOME/.local/bin:$$PATH"; \
 	command -v nim >/dev/null; command -v nimble >/dev/null; command -v llvm-ar >/dev/null; \
 	nim_version=$$(nim --version | sed -n '1s/.*Version \([0-9][0-9.]*\).*/\1/p'); \
-	if [ "$$(uname -s)" = "Darwin" ]; then \
-		case "$$nim_version" in 2.2.*) ;; *) echo "Nim 2.2.x required, found $$nim_version" >&2; exit 1 ;; esac; \
-	elif [ "$$nim_version" != "$(NIM_VERSION)" ]; then \
+	if [ "$$nim_version" != "$(NIM_VERSION)" ]; then \
 		echo "Nim $(NIM_VERSION) required, found $$nim_version" >&2; exit 1; \
 	fi
 
@@ -101,4 +138,6 @@ help:
 	@echo "  make fmt         # format every package's Zig sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest_crypto_ctt build"
+	@echo "  make docker-artifacts GUEST=l2-execution [RELEASE_VERSION=x] [OUT=dir]"
+	@echo "                   # build the guest ELF in Docker, named for prover-ray's guests folder"
 	@echo ""

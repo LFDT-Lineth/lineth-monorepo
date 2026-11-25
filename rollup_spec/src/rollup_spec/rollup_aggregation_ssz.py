@@ -14,8 +14,8 @@ Inputs are framed as `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Outputs use `keccak256(schema_id || SSZ(public_inputs)) || schema_id ||
 SSZ(public_inputs)`. Two schema ids are defined, one per guest-facing message:
 
-  - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1002) — rollup-aggregation guest input
-  - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1802) — rollup-aggregation guest output
+  - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x0006) — rollup-aggregation guest input
+  - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x0007) — rollup-aggregation guest output
 
 The guest output container omits the `proof` field the logical
 `FinalizationSubmission` dataclass carries: a guest cannot attest its own
@@ -59,8 +59,8 @@ from .rollup_ssz import (
 )
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_AGGREGATION_INPUT_SCHEMA_ID = 0x1002
-ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID = 0x1802
+ROLLUP_AGGREGATION_INPUT_SCHEMA_ID = 0x0006
+ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID = 0x0007
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_L2_MESSAGING_BLOCKS_OFFSETS = 2**16        # L1 calldata offsets carried by the aggregation output
@@ -101,8 +101,8 @@ class SszFinalizationPublicInput(Container):
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
-    parent_data_tail_take_bytes: uint64
-    final_data_tail_discard_bytes: uint64
+    parent_shared_blob_carry_over_tail_bytes: uint64
+    final_shared_blob_carry_over_tail_bytes: uint64
     l2_l1_tree_depth: uint64
     l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
@@ -150,7 +150,7 @@ def _verifiable_rollup_proof_from_view(view: Any) -> VerifiableRollupProof:
 
 
 def encode_aggregation_input(agg_input: RollupAggregationProofPrivateInput) -> bytes:
-    """Encode a `RollupAggregationProofPrivateInput` into framed SSZ bytes (0x1002 schema id)."""
+    """Encode a `RollupAggregationProofPrivateInput` into framed SSZ bytes (0x0006 schema id)."""
     ssz_input = SszRollupAggregationProofPrivateInput(
         rollup_proofs=[_ssz_verifiable_rollup_proof(p) for p in agg_input.rollup_proofs],
     )
@@ -175,7 +175,7 @@ def decode_aggregation_input_ssz(data: bytes) -> RollupAggregationProofPrivateIn
 def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     """
     Encode the rollup-aggregation guest's own output into framed SSZ bytes
-    (0x1802 schema id). `submission.proof` is deliberately dropped — it is a
+    (0x0007 schema id). `submission.proof` is deliberately dropped — it is a
     prover-attached placeholder in `FinalizationSubmission`, never part of the
     guest-emitted bytes.
     """
@@ -222,7 +222,7 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
         "end_block_hash",
     ):
         fields[name] = Hash32(bytes(fields[name]))
-    for name in ("parent_data_tail_take_bytes", "final_data_tail_discard_bytes", "l2_l1_tree_depth"):
+    for name in ("parent_shared_blob_carry_over_tail_bytes", "final_shared_blob_carry_over_tail_bytes", "l2_l1_tree_depth"):
         fields[name] = int(fields[name])
     fields["l2_l1_roots"] = [Hash32(bytes(root)) for root in view.l2_l1_roots]
     fields["filtered_addresses"] = [Address(bytes(address)) for address in view.filtered_addresses]

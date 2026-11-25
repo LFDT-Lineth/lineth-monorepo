@@ -38,6 +38,7 @@ jobs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
+      sdk: ${{ steps.filter.outputs.sdk }}
       prover: ${{ steps.filter.outputs.prover }}
       prover-ray: ${{ steps.filter.outputs.prover-ray }}
       rollup-spec: ${{ steps.filter.outputs.rollup-spec }}
@@ -60,7 +61,6 @@ jobs:
       # E2E change detection
       has-changes-requiring-e2e-testing: ${{ steps.e2e.outputs.zkevm }}
       has-changes-requiring-riscv-e2e-testing: ${{ steps.e2e.outputs.riscv }}
-      riscv-prover-mode: ${{ steps.e2e.outputs.riscv-prover-mode }}
       # CodeQL
       codeql-languages: ${{ steps.codeql-languages.outputs.languages }}
     steps:
@@ -145,23 +145,17 @@ jobs:
     with:
       languages: ${{ needs.plan.outputs.codeql-languages }}
 
-  component-changelog-upload:
+  component-changelog-update:
     # Push-only: never run on manual dispatch, which could otherwise push
     # changelog commits to main via the release bot.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [plan]
-    uses: ./.github/workflows/component-changelog-upload.yml
-
-  component-changelog-commit:
-    # Skip when no component changed: there is nothing to commit.
-    if: >
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.component-changelog-upload.outputs.has_changes == 'true'
-    needs: [component-changelog-upload]
     permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/component-changelog-commit.yml
+      # GITHUB_TOKEN stays read-only: the changelog commit push authenticates
+      # as the release-bot GitHub App, whose token is minted inside the
+      # workflow only after the git-cliff generation phase has finished.
+      contents: read
+    uses: ./.github/workflows/component-changelog-update.yml
     secrets: inherit
 
   # Runs once before the JVM testing jobs: checks whether the Besu version pinned by
@@ -190,6 +184,8 @@ jobs:
       coordinator_changed: ${{ needs.plan.outputs.coordinator }}
       linea_sequencer_changed: ${{ needs.plan.outputs.linea-sequencer-plugin }}
       postman_changed: ${{ needs.plan.outputs.postman }}
+      # Manual main dispatch does not run sdk-testing, so Postman must retain sdk-viem tests there.
+      sdk_changed: ${{ github.event_name != 'workflow_dispatch' && needs.plan.outputs.sdk == 'true' }}
       prover_changed: ${{ needs.plan.outputs.prover }}
       prover_ray_changed: ${{ needs.plan.outputs.prover-ray }}
       rollup_spec_changed: ${{ needs.plan.outputs.rollup-spec }}
@@ -204,7 +200,8 @@ jobs:
     secrets: inherit
 
   manual-docker-build-and-e2e-tests:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: an approval gate with a single echo step.
+    runs-on: ubuntu-24.04
     needs: [plan, prepare-linea-besu-maven]
     if: >
       !cancelled() &&
@@ -270,7 +267,7 @@ jobs:
       has-changes-requiring-e2e-testing: ${{ needs.plan.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
-  # Not a required check. Prover-ray/guest changes run dev-zkvm with prover-ray built from this commit.
+  # Not a required check. Runs dev-zkvm with prover-ray and the guest built from this commit.
   run-riscv-e2e-tests:
     permissions:
       contents: read
@@ -294,7 +291,6 @@ jobs:
     with:
       image_tag: ${{ needs.plan.outputs.commit_tag }}
       stack: riscv
-      riscv_prover_mode: ${{ needs.plan.outputs.riscv-prover-mode }}
       linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
     secrets: inherit
@@ -343,7 +339,8 @@ jobs:
           needs.plan.result == 'success'
         )
       )
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    # GitHub-hosted: only calls the GitHub API.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       deployments: write

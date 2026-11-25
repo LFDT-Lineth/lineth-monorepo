@@ -66,6 +66,14 @@ const maxRSBlowup = 1 << field.MaxOrderRoot
 // defaultFRINumQueries is the production number of FRI query openings, obtained
 // from https://github.com/ethereum/soundcalc to match 128 bits of security at
 // [defaultRSBlowup].
+//
+// The 128 bits cover FRI soundness only; the Merkle hash also bounds the
+// security. [fri.MerkleHashKoalaBear] octuplet digests give about 2^124
+// collision resistance, [fri.MerkleHashBNPacked] keeps 240 bits of its BN254
+// digest and gives about 2^120 (birthday bound on 240 bits: the digest is
+// stored as 8 limbs of 30 bits, thus the 254-bit BN element does not
+// fit into a KoalaBear octuplet, so the top 14 of its 254 bits are dropped).
+// Raising the query count does not lift either bound.
 const defaultFRINumQueries = 229
 
 // maxMerkleCapHeight bounds [WithMerkleCapHeight]: no committed tree is taller
@@ -84,6 +92,12 @@ type compileOptions struct {
 	elisionEnabled bool
 	moduleGroups   bool
 	fixedFRIDomain bool
+	// merkleHash is the selected Merkle hash (see [WithMerkleHash]);
+	// [fri.MerkleHashKoalaBear] when unset.
+	merkleHash fri.MerkleHash
+	// merkleHashSet records an explicit [WithMerkleHash], so an explicit
+	// KoalaBear is told apart from the unset default.
+	merkleHashSet bool
 }
 
 // merkleCapMode tells how a System chose its Merkle cap height. The zero value
@@ -287,6 +301,21 @@ func WithFixedFRIDomain() Option {
 	return func(o *compileOptions) { o.fixedFRIDomain = true }
 }
 
+// WithMerkleHash selects the hash of every committed Merkle tree, FRI layer
+// tree and their openings (see [fri.MerkleHash]). The default is
+// [fri.MerkleHashKoalaBear]. [fri.MerkleHashBNPacked] makes the proof much
+// cheaper to verify in a BN254 gnark circuit, at a higher native proving cost;
+// the transcript keeps KoalaBear Poseidon2 either way.
+//
+// The in-circuit KoalaBear recursion verifies KoalaBear trees only, so a
+// System whose proof is verified by the recursion must keep the default.
+func WithMerkleHash(hash fri.MerkleHash) Option {
+	if hash.Validate() != nil {
+		utils.Panic("unknown Merkle hash %v", hash)
+	}
+	return func(o *compileOptions) { o.merkleHash, o.merkleHashSet = hash, true }
+}
+
 // WithSizeOblivious makes the proof's structure independent of the dynamic
 // module sizes, as a size-oblivious recursive verifier needs (#4246): it is
 // [WithModuleGroups] and [WithFixedFRIDomain] together. Only the heights at
@@ -345,7 +374,20 @@ func merge(sys *wiop.System, opts []Option) (compileOptions, error) {
 	}
 	cfg.elisionEnabled = cfg.elisionEnabled || pre.elisionEnabled
 	cfg.moduleGroups = cfg.moduleGroups || pre.moduleGroups
+	if cfg.merkleHashSet && cfg.merkleHash != pre.merkleHash {
+		if state.consumed {
+			return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with the consumed compile with %v",
+				cfg.merkleHash, pre.merkleHash)
+		}
+		if pre.merkleHashSet {
+			return cfg, fmt.Errorf("pcs: WithMerkleHash(%v) conflicts with preconfigured %v",
+				cfg.merkleHash, pre.merkleHash)
+		}
+	}
 	cfg.fixedFRIDomain = cfg.fixedFRIDomain || pre.fixedFRIDomain
+	if !cfg.merkleHashSet {
+		cfg.merkleHash, cfg.merkleHashSet = pre.merkleHash, pre.merkleHashSet
+	}
 	if cfg.moduleGroups && cfg.elisionEnabled {
 		return cfg, fmt.Errorf("pcs: WithModuleGroups conflicts with WithColumnElision")
 	}
@@ -497,12 +539,23 @@ func FRIFixedDomain(sys *wiop.System) bool {
 	return state.consumed && state.fixedFRIDomain
 }
 
+// MerkleHash returns the Merkle hash [Compile] configured for sys
+// ([fri.MerkleHashKoalaBear] when sys has no PCS opening).
+func MerkleHash(sys *wiop.System) fri.MerkleHash {
+	state := configOf(sys)
+	if !state.consumed {
+		return fri.MerkleHashKoalaBear
+	}
+	return state.merkleHash
+}
+
 // FRIStaticParams returns the FRI envelope parameters of sys (sized to
 // [FRIMaxCommittableSizeLog2] at sys's blowup, at the production query count).
 // sys may open fewer queries; see [FRINumQueries]. It panics when sys has no
 // PCS opening.
 func FRIStaticParams(sys *wiop.System) fri.Params {
 	params, _ := staticFRI(compiledLogRSBlowup(sys))
+	params.MerkleHash = MerkleHash(sys)
 	return params
 }
 
@@ -517,6 +570,7 @@ func (c *compiled) newPCS() *fri.PCS {
 	params, encoders := staticFRI(c.logRSBlowup)
 	params.NumQueries = uint(c.friNumQueries)
 	params.MerkleCapHeight = c.merkleCapHeight
+	params.MerkleHash = c.merkleHash
 	pcs, err := fri.NewPCS(params, encoders)
 	if err != nil {
 		utils.Panic("pcs: newPCS: %v", err)
@@ -608,7 +662,9 @@ type compiled struct {
 	friNumQueries      int
 	// merkleCapHeight is the resolved [fri.Params.MerkleCapHeight].
 	merkleCapHeight uint8
-	logRSBlowup     uint8
+	// merkleHash is the hash of every committed tree (see [WithMerkleHash]).
+	merkleHash  fri.MerkleHash
+	logRSBlowup uint8
 	// maxSizeLog2 is the largest committable padded column size (log2) at
 	// logRSBlowup; see [maxCommittableSizeLog2].
 	maxSizeLog2 uint8
@@ -659,6 +715,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 		fixedFRIDomain:  cfg.fixedFRIDomain,
 		friNumQueries:   cfg.friNumQueries,
 		merkleCapHeight: cfg.merkleCap.resolve(cfg.friNumQueries),
+		merkleHash:      cfg.merkleHash,
 		logRSBlowup:     logBlowup,
 		maxSizeLog2:     maxCommittableSizeLog2(logBlowup),
 	}
@@ -998,6 +1055,28 @@ func committedStateKey(roundID int) string {
 	return fmt.Sprintf("pcs/committedState/%d", roundID)
 }
 
+// CommittedState returns the FRI committer state the PCS stored on the
+// runtime when it committed the round, while proving: the state an opening
+// prover adds to its openings. The opening prover action releases it. It is
+// for opening provers written outside the package, such as tests' cheating
+// provers.
+func CommittedState(rt *wiop.Runtime, roundID int) (*fri.CommitterState, bool) {
+	v, ok := rt.GetState(committedStateKey(roundID))
+	if !ok || v == nil {
+		return nil, false
+	}
+	st, ok := v.(*fri.CommitterState)
+	return st, ok
+}
+
+// IsOpeningProverAction reports whether a is the PCS's opening prover action,
+// which the last round of a compiled System runs: for callers replacing it
+// with another opening prover.
+func IsOpeningProverAction(a wiop.ProverAction) bool {
+	_, ok := a.(*openingProverAction)
+	return ok
+}
+
 // =============================================================================
 // Layout / commitment helpers
 // =============================================================================
@@ -1059,6 +1138,12 @@ func (c *compiled) commitVectors(
 
 	order, shape := committedLayout(round, sizeOf, manifest, c.moduleGroups)
 
+	// Each column goes to the Base or the Ext list of its size, so the
+	// interleaving of base and extension columns in round.Columns is not kept:
+	// the leaves hash all base values before all extension values. That is
+	// sound because the column order never comes from the proof: prover and
+	// verifier both derive every column's location from committedLayout (see
+	// GetLayout), so one root has one reading. See fri's writeRowElements.
 	sortedColumns := make(fri.MultiSizeTable, len(shape))
 	for _, i := range order {
 		v := &vectors[i]
@@ -1076,7 +1161,8 @@ func (c *compiled) commitVectors(
 		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
 			round.ID, maxSizeIndex, c.maxSizeLog2, 1<<c.logRSBlowup)
 	}
-	committerState := fri.Commit(roundEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	encoders := roundEncoders(c.logRSBlowup, uint8(maxSizeIndex))
+	committerState := fri.CommitWithHash(c.merkleHash, encoders, sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 

@@ -1,7 +1,6 @@
 package lineth.persistence.conflation
 
 import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
 import linea.persistence.db.PersistenceRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
@@ -47,8 +46,3 @@ class RetryingBlobsPostgresDao(
   private val delegate: BlobsDao,
   private val persistenceRetryer: PersistenceRetryer,
 ) : RetryingBlobsPostgresDaoG<BlobRecord>(delegate, persistenceRetryer), BlobsDao
-
-class RetryingBlobsPostgresDaoV2(
-  private val delegate: BlobsDaoV2,
-  private val persistenceRetryer: PersistenceRetryer,
-) : RetryingBlobsPostgresDaoG<BlobRecordV2>(delegate, persistenceRetryer), BlobsDaoV2

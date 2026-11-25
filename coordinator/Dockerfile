@@ -1,15 +1,16 @@
 # BUILDER image
-FROM eclipse-temurin:25-jdk-noble AS builder
+FROM eclipse-temurin:25-jdk-noble@sha256:4ddc1a8bdaf283421df5487411aff10b797ccf1e06a339041005114c8f489b5c AS builder
 
 RUN mkdir -p /libs
-COPY --from=libs ./** /libs
+# Keep the libs tree so downstream builds can ship nested layouts.
+COPY --from=libs . /libs
 WORKDIR /libs
 
 RUN mkdir -p unpacked-blob-compressor unpacked-blob-shnarf-calculator
-RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
-    bscJar=$(set -- blob-shnarf-calculator*.jar; echo $1) && \
-    cd unpacked-blob-compressor/ && jar -xf ../$bcJar && cd .. && \
-    cd unpacked-blob-shnarf-calculator/ && jar -xf ../$bscJar && cd .. && \
+RUN bcJar=$(find /libs -name 'blob-compressor*.jar') && \
+    bscJar=$(find /libs -name 'blob-shnarf-calculator*.jar') && \
+    cd unpacked-blob-compressor/ && jar -xf $bcJar && cd .. && \
+    cd unpacked-blob-shnarf-calculator/ && jar -xf $bscJar && cd .. && \
     rm -rf unpacked-blob-compressor/darwin-** unpacked-blob-shnarf-calculator/darwin-** && \
     case $(uname -m) in \
     x86_64) \
@@ -26,13 +27,13 @@ RUN bcJar=$(set -- blob-compressor*.jar; echo $1) && \
 RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 
 # FINAL image
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 
 WORKDIR /opt/consensys/linea/coordinator
 
 RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
-COPY --from=builder /libs/** libs/
+COPY --from=builder /libs/ libs/
 # The glob lets downstream builds whose context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY LICENSE-* /licenses/

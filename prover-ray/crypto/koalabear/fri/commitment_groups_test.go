@@ -103,7 +103,7 @@ func newGroupedPCSFixture(t *testing.T, numBatches int) pcsOpenVerifyFixture {
 // written out from the leaf format: header, then both rows.
 func referenceGroupDigest(group SizedTable, j int) field.Octuplet {
 	h := poseidon2.NewMDHasher()
-	absorbLeafHeader(h, len(group.Base), len(group.Ext))
+	absorbLeafHeader(koalaLeafHasher{h}, len(group.Base), len(group.Ext))
 	for _, row := range []int{2 * j, 2*j + 1} {
 		for _, col := range group.Base {
 			h.WriteElements(col[row])
@@ -123,7 +123,7 @@ func referenceGroupDigest(group SizedTable, j int) field.Octuplet {
 func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	witness := groupedWitness(rand.New(utils.NewRandSource(5)))
 	encoded := witness.Encode(makeEncoders(4, 2))
-	tree := encoded.Merkleize()
+	tree := encoded.Merkleize(MerkleHashKoalaBear)
 
 	bottom := encoded[len(encoded)-1]
 	leaves := make([]field.Octuplet, bottom.Size()/2)
@@ -145,7 +145,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 			injections[level] = append(injections[level], digests)
 		}
 	}
-	want := allocTree(len(leaves))
+	want := allocTree(MerkleHashKoalaBear, len(leaves))
 	copy(want.Nodes[len(leaves)-1:], leaves)
 	want.buildLevels(injections)
 	require.Equal(t, want.Root(), tree.Root(), "grouped root must inject one digest per group")
@@ -155,7 +155,7 @@ func TestMerkleizeInjectsEachGroup(t *testing.T) {
 	for i := range encoded {
 		flat[i] = SizedTable{Base: encoded[i].Base, Ext: encoded[i].Ext}
 	}
-	require.NotEqual(t, flat.Merkleize().Root(), tree.Root(), "the grouping must change the commitment")
+	require.NotEqual(t, flat.Merkleize(MerkleHashKoalaBear).Root(), tree.Root(), "the grouping must change the commitment")
 }
 
 // TestPCSVerifyGroupedCommitment opens a grouped commitment through both the

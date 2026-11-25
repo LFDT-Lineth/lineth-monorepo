@@ -187,6 +187,15 @@ allprojects {
     systemProperty("L1_GENESIS", "docker/config/l1-node/el/genesis.json")
     systemProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis-PoA-besu.json")
 
+    // Shared Vert.x options for every test JVM, picked up by vertx-junit5's VertxExtension
+    // (VertxExtension-injected Vertx instances only; code calling Vertx.vertx() directly is unaffected).
+    // The file is a tracked input (content only) so editing it invalidates cached/up-to-date test results.
+    def vertxTestOptionsFile = rootProject.file("gradle/vertx-test-options.json")
+    inputs.file(vertxTestOptionsFile)
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("vertxTestOptions")
+    systemProperty("vertx.parameter.filename", vertxTestOptionsFile.absolutePath)
+
     systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"

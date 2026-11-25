@@ -9,21 +9,29 @@
 //! ELF, through one context.
 
 const std = @import("std");
+const builtin = @import("builtin");
 
-extern fn ctt_eth_evm_bls12381_g1add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_g2add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_g1msm(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_g2msm(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_pairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_map_fp_to_g1(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bls12381_map_fp2_to_g2(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bn254_g1add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bn254_g1mul(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_evm_bn254_ecpairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_zkvm_secp256k1_verify(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-extern fn ctt_eth_zkvm_secp256k1_ecrecover(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+/// Constantine's own declarations, translated from its headers.
+const c = @import("constantine_c");
 
-const OK: c_int = 0; // cttEVM_Success
+fn returnType(comptime function: anytype) type {
+    return @typeInfo(@TypeOf(function)).@"fn".return_type.?;
+}
+
+comptime {
+    // The statuses are packed enums of one byte, which is how the archive returns them.
+    std.debug.assert(@sizeOf(c.ctt_evm_status) == 1);
+    std.debug.assert(@sizeOf(c.ctt_eth_kzg_status) == 1);
+    std.debug.assert(@sizeOf(c.ctt_eth_trusted_setup_status) == 1);
+    std.debug.assert(returnType(c.ctt_eth_evm_bn254_g1add) == c.ctt_evm_status);
+    std.debug.assert(returnType(c.ctt_eth_evm_kzg_point_evaluation) == c.ctt_evm_status);
+    std.debug.assert(returnType(c.ctt_eth_kzg_verify_blob_kzg_proof_batch) == c.ctt_eth_kzg_status);
+    std.debug.assert(returnType(c.ctt_eth_kzg_context_new_embedded) == c.ctt_eth_trusted_setup_status);
+    // The byte arrays of the callers have the layouts of Constantine's structs.
+    std.debug.assert(@sizeOf(c.ctt_eth_kzg_blob) == 131072);
+    std.debug.assert(@sizeOf(c.ctt_eth_kzg_commitment) == 48);
+    std.debug.assert(@sizeOf(c.ctt_eth_kzg_proof) == 48);
+}
 
 /// Recovers the raw 64-byte x‖y public key from a pre-hash and compact big-endian r‖s signature.
 /// `recid` selects the y parity as 0/1 or Ethereum's 27/28.
@@ -37,7 +45,7 @@ pub fn ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64
     @memcpy(in[0..32], msg);
     in[32] = recid_norm;
     @memcpy(in[33..97], sig);
-    return ctt_eth_zkvm_secp256k1_ecrecover(output, 64, &in, 97) == OK;
+    return c.ctt_eth_zkvm_secp256k1_ecrecover(output, 64, &in, 97) == c.cttEVM_Success;
 }
 
 /// Verifies a compact big-endian r‖s signature against a pre-hash and raw 64-byte x‖y key.
@@ -47,7 +55,7 @@ pub fn secp256k1Verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [6
     @memcpy(in[32..96], pubkey);
     @memcpy(in[96..160], sig);
     var out: [1]u8 = .{0};
-    verified.* = ctt_eth_zkvm_secp256k1_verify(&out, 1, &in, 160) == OK and out[0] == 1;
+    verified.* = c.ctt_eth_zkvm_secp256k1_verify(&out, 1, &in, 160) == c.cttEVM_Success and out[0] == 1;
 }
 
 // Copy 48-byte limbs into 64-byte slots with 16 bytes of left padding.
@@ -73,7 +81,7 @@ pub fn g1Add(p1: *const [96]u8, p2: *const [96]u8, result: *[96]u8) bool {
     padLimbs(&in, p1, 2);
     padLimbs(in[128..].ptr, p2, 2);
     var out: [128]u8 = undefined;
-    if (ctt_eth_evm_bls12381_g1add(&out, 128, &in, 256) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_g1add(&out, 128, &in, 256) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 2);
     return true;
 }
@@ -83,7 +91,7 @@ pub fn g2Add(p1: *const [192]u8, p2: *const [192]u8, result: *[192]u8) bool {
     padLimbs(&in, p1, 4);
     padLimbs(in[256..].ptr, p2, 4);
     var out: [256]u8 = undefined;
-    if (ctt_eth_evm_bls12381_g2add(&out, 256, &in, 512) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_g2add(&out, 256, &in, 512) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 4);
     return true;
 }
@@ -100,7 +108,7 @@ pub fn g1Msm(pairs: anytype, result: *[96]u8) bool {
         @memcpy(in[i * 160 + 128 ..][0..32], (raw + i * 128 + 96)[0..32]); // scalar
     }
     var out: [128]u8 = undefined;
-    if (ctt_eth_evm_bls12381_g1msm(&out, 128, &in, n * 160) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_g1msm(&out, 128, &in, n * 160) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 2);
     return true;
 }
@@ -117,7 +125,7 @@ pub fn g2Msm(pairs: anytype, result: *[192]u8) bool {
         @memcpy(in[i * 288 + 256 ..][0..32], (raw + i * 224 + 192)[0..32]); // scalar
     }
     var out: [256]u8 = undefined;
-    if (ctt_eth_evm_bls12381_g2msm(&out, 256, &in, n * 288) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_g2msm(&out, 256, &in, n * 288) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 4);
     return true;
 }
@@ -139,7 +147,7 @@ pub fn pairingCheck(pairs: anytype, verified: *bool) bool {
         padLimbs(in[i * 384 + 128 ..].ptr, raw + i * 288 + 96, 4); // g2: 4 limbs
     }
     var out: [32]u8 = undefined;
-    if (ctt_eth_evm_bls12381_pairingcheck(&out, 32, &in, n * 384) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_pairingcheck(&out, 32, &in, n * 384) != c.cttEVM_Success) return false;
     verified.* = (out[31] == 1); // 32-byte big-endian 0/1
     return true;
 }
@@ -148,7 +156,7 @@ pub fn mapFpToG1(field_element: *const [48]u8, result: *[96]u8) bool {
     var in: [64]u8 = undefined;
     padLimbs(&in, field_element, 1);
     var out: [128]u8 = undefined;
-    if (ctt_eth_evm_bls12381_map_fp_to_g1(&out, 128, &in, 64) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_map_fp_to_g1(&out, 128, &in, 64) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 2);
     return true;
 }
@@ -157,7 +165,7 @@ pub fn mapFp2ToG2(field_element: *const [96]u8, result: *[192]u8) bool {
     var in: [128]u8 = undefined;
     padLimbs(&in, field_element, 2);
     var out: [256]u8 = undefined;
-    if (ctt_eth_evm_bls12381_map_fp2_to_g2(&out, 256, &in, 128) != OK) return false;
+    if (c.ctt_eth_evm_bls12381_map_fp2_to_g2(&out, 256, &in, 128) != c.cttEVM_Success) return false;
     unpadLimbs(result, &out, 4);
     return true;
 }
@@ -167,14 +175,14 @@ pub fn bn254G1Add(p1: *const [64]u8, p2: *const [64]u8, result: *[64]u8) bool {
     var in: [128]u8 = undefined;
     @memcpy(in[0..64], p1);
     @memcpy(in[64..128], p2);
-    return ctt_eth_evm_bn254_g1add(result, 64, &in, 128) == OK;
+    return c.ctt_eth_evm_bn254_g1add(result, 64, &in, 128) == c.cttEVM_Success;
 }
 
 pub fn bn254G1Mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) bool {
     var in: [96]u8 = undefined;
     @memcpy(in[0..64], point);
     @memcpy(in[64..96], scalar);
-    return ctt_eth_evm_bn254_g1mul(result, 64, &in, 96) == OK;
+    return c.ctt_eth_evm_bn254_g1mul(result, 64, &in, 96) == c.cttEVM_Success;
 }
 
 pub fn bn254PairingCheck(pairs: anytype, verified: *bool) bool {
@@ -186,7 +194,7 @@ pub fn bn254PairingCheck(pairs: anytype, verified: *bool) bool {
     }
     const raw = pairBytes(pairs, 64 + 128); // g1 = 64, g2 = 128
     var out: [32]u8 = undefined;
-    if (ctt_eth_evm_bn254_ecpairingcheck(&out, 32, raw, n * 192) != OK) return false;
+    if (c.ctt_eth_evm_bn254_ecpairingcheck(&out, 32, raw, n * 192) != c.cttEVM_Success) return false;
     verified.* = (out[31] == 1); // 32-byte big-endian 0/1
     return true;
 }
@@ -207,7 +215,7 @@ pub fn kzgPointEvalVerify(
     @memcpy(in[96..144], commitment);
     @memcpy(in[144..192], proof);
     var out: [64]u8 = undefined;
-    return ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == OK;
+    return c.ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == c.cttEVM_Success;
 }
 
 /// Whether every proof opens its commitment to its blob, as the consensus specs'
@@ -218,36 +226,56 @@ pub fn kzgVerifyBlobBatch(blobs: []const [131072]u8, commitments: []const [48]u8
     if (blobs.len != commitments.len or blobs.len != proofs.len) return false;
     const ctx = kzgContext() orelse return false;
     const zero_bytes: [32]u8 = @splat(0);
-    return ctt_eth_kzg_verify_blob_kzg_proof_batch(ctx, blobs.ptr, commitments.ptr, proofs.ptr, blobs.len, &zero_bytes) == 0; // cttEthKzg_Success
+    return c.ctt_eth_kzg_verify_blob_kzg_proof_batch(
+        ctx,
+        @ptrCast(blobs.ptr),
+        @ptrCast(commitments.ptr),
+        @ptrCast(proofs.ptr),
+        blobs.len,
+        &zero_bytes,
+    ) == c.cttEthKzg_Success;
 }
 
-const CttKzgContext = opaque {};
-
-extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*CttKzgContext) c_int;
-extern fn ctt_eth_kzg_verify_blob_kzg_proof_batch(
-    ctx: ?*const CttKzgContext,
-    blobs: [*]const [131072]u8,
-    commitments: [*]const [48]u8,
-    proofs: [*]const [48]u8,
-    n: usize,
-    secure_random_bytes: *const [32]u8,
-) u8;
-extern fn ctt_eth_evm_kzg_point_evaluation(
-    ctx: ?*const CttKzgContext,
-    r: [*]u8,
-    r_len: usize,
-    inputs: [*]const u8,
-    inputs_len: usize,
-) c_int;
-
-var kzg_ctx: ?*CttKzgContext = null;
+var kzg_ctx: ?*c.ctt_eth_kzg_context = null;
 var kzg_ctx_failed = false;
+var kzg_lock: Lock = .{};
 
-/// Lazily builds the KZG trusted-setup context once.
-fn kzgContext() ?*CttKzgContext {
-    if (kzg_ctx) |c| return c;
+/// Serializes the creation of the KZG context between threads. A freestanding guest has one thread
+/// and no pthreads.
+const Lock = if (builtin.os.tag == .freestanding) struct {
+    fn lock(_: *Lock) void {}
+    fn unlock(_: *Lock) void {}
+} else struct {
+    mutex: std.c.pthread_mutex_t = std.c.PTHREAD_MUTEX_INITIALIZER,
+
+    fn lock(self: *Lock) void {
+        _ = std.c.pthread_mutex_lock(&self.mutex);
+    }
+
+    fn unlock(self: *Lock) void {
+        _ = std.c.pthread_mutex_unlock(&self.mutex);
+    }
+};
+
+/// Builds the KZG trusted-setup context ahead of its first use. False when the heap the C allocator
+/// draws on refuses it.
+pub fn initKzgContext() bool {
+    return kzgContext() != null;
+}
+
+/// Whether the KZG trusted-setup context exists.
+pub fn kzgContextBuilt() bool {
+    return kzg_ctx != null;
+}
+
+/// The KZG trusted-setup context, built by the first call and shared by every thread afterwards;
+/// null when the heap refuses it, which no later call retries.
+pub fn kzgContext() ?*const c.ctt_eth_kzg_context {
+    kzg_lock.lock();
+    defer kzg_lock.unlock();
+    if (kzg_ctx) |ctx| return ctx;
     if (kzg_ctx_failed) return null;
-    if (ctt_eth_kzg_context_new_embedded(&kzg_ctx) != 0) { // tsSuccess == 0
+    if (c.ctt_eth_kzg_context_new_embedded(&kzg_ctx) != c.cttEthTS_Success) {
         kzg_ctx_failed = true;
         return null;
     }

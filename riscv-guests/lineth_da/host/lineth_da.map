@@ -1,0 +1,6 @@
+{
+  global:
+    lineth_da_*;
+  local:
+    *;
+};

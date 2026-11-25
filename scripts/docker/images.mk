@@ -117,7 +117,6 @@ docker-build-prover-ray:
 		--image-name consensys/lineth-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
-		--build-context riscv-guests=riscv-guests/ \
 		--build-context licenses=.
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml

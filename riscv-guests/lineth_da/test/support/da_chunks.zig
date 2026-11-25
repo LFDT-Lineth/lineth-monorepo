@@ -62,15 +62,15 @@ pub fn chunkOf(a: Allocator, blob: *const [blob_payload.blob_len]u8, commitment:
     proof_bytes.* = proof;
     return .{
         .chunk_hash = da_stream.versionedHash(commitment_bytes),
-        .is_calldata = false,
-        .blob_bytes = blob,
-        .kzg_commitment = commitment_bytes,
-        .kzg_proof = proof_bytes,
+        .is_calldata = .{ .value = false },
+        .blob_bytes = .{ .bytes = blob },
+        .kzg_commitment = .{ .bytes = commitment_bytes },
+        .kzg_proof = .{ .bytes = proof_bytes },
     };
 }
 
 pub fn calldataChunk(bytes: []const u8) Chunk {
-    return .{ .chunk_hash = keccak(bytes), .is_calldata = true, .calldata_bytes = bytes };
+    return .{ .chunk_hash = keccak(bytes), .is_calldata = .{ .value = true }, .calldata_bytes = .{ .bytes = bytes } };
 }
 
 /// The dataRollingHash after folding `chunks` onto `from`.
@@ -83,25 +83,25 @@ pub fn foldOnto(from: Hash, chunks: []const Chunk) Hash {
 pub const Start = struct {
     parent: Hash = parent,
     take: u64 = 0,
-    boundary: ?Hash = null,
+    parent_blob: ?Hash = null,
 };
 
 /// The start of a range inside the first chunk, which the parent hash already folds.
 pub fn insideFirstChunk(chunks: []const Chunk, take: u64) Start {
-    return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .boundary = before_first_chunk };
+    return .{ .parent = foldOnto(before_first_chunk, chunks[0..1]), .take = take, .parent_blob = before_first_chunk };
 }
 
 /// Verifies the stream under the package dictionary.
 pub fn verify(chunks: []const Chunk, payloads: []const []const u8, start: Start) !decompress.Verified {
     const decoder = try zstd_decoder.Decoder.init(gpa, dictionary);
     defer decoder.deinit();
-    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.boundary);
+    return decompress.verifyDaChunks(gpa, decoder, chunks, payloads, start.parent, start.take, start.parent_blob);
 }
 
 pub fn expectAccepted(chunks: []const Chunk, payloads: []const []const u8, start: Start, end_hash: Hash, discard: u64) !void {
     const outcome = try verify(chunks, payloads, start);
     try std.testing.expectEqualSlices(u8, &end_hash, &outcome.end_data_rolling_hash);
-    try std.testing.expectEqual(discard, outcome.final_data_tail_discard_bytes);
+    try std.testing.expectEqual(discard, outcome.final_shared_blob_carry_over_tail_bytes);
 }
 
 pub fn expectRejected(expected: anyerror, chunks: []const Chunk, payloads: []const []const u8, start: Start) !void {

@@ -5,6 +5,7 @@ import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
+import linea.da.DaConstants
 import linea.domain.BlobData
 import linea.domain.Block
 import linea.domain.BlockIntervalProofIndex
@@ -89,7 +90,6 @@ class RollupProofGeneratingCoordinator(
     val dataRollingHash: ByteArray,
   ) {
     val parentDataRollingHash: ByteArray get() = chunks.first().parentDataRollingHash
-    val endOffset: Int get() = chunks.last().endOffset
 
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
@@ -301,12 +301,20 @@ class RollupProofGeneratingCoordinator(
   ) {
     rollupProofPoller.addProofInProgress(
       proofIndex = proofIndex,
-      blobsData = chunkedData.chunks.map {
-        BlobData(chunkHash = it.chunkHash, blobBytes = it.blobBytes, batchesCount = 0u)
+      blobsData = chunkedData.chunks.mapIndexed { i, chunk ->
+        BlobData(
+          chunkHash = chunk.chunkHash,
+          blobBytes = chunk.blobBytes,
+          parentDataRollingHash = chunk.parentDataRollingHash,
+          dataRollingHash = chunkedData.chunks.getOrNull(i + 1)?.parentDataRollingHash ?: chunkedData.dataRollingHash,
+        )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
       dataRollingHash = chunkedData.dataRollingHash,
-      endOffset = chunkedData.endOffset,
+      // Every proof window closes its own last chunk, so no bytes are shared with the next window.
+      parentSharedBlobCarryOverTailBytes = 0u,
+      parentBlobDataRollingHash = null,
+      finalSharedBlobCarryOverTailBytes = 0u,
       startBlockTimestamp = windowPending.first().startBlockTimestamp,
       endBlockTimestamp = windowPending.last().endBlockTimestamp,
       totalBatchesCount = windowPending.size,
@@ -330,14 +338,14 @@ class RollupProofGeneratingCoordinator(
           isCalldata = false,
           blobBytes = it.blobBytes,
           calldataBytes = ByteArray(0),
-          kzgCommitment = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
-          kzgProof = ByteArray(ChunkWitness.KZG_POINT_BYTES_LENGTH),
+          kzgCommitment = ByteArray(DaConstants.KZG_POINT_BYTES),
+          kzgProof = ByteArray(DaConstants.KZG_POINT_BYTES),
         )
       },
       parentDataRollingHash = chunkedData.parentDataRollingHash,
-      // Proof windows always start at a chunk boundary; the guest derives finalDataTailDiscardBytes itself.
-      parentDataTailTakeBytes = 0,
-      boundaryPrevDataRollingHash = null,
+      // Proof windows always start at a chunk boundary; the guest derives finalSharedBlobCarryOverTailBytes itself.
+      parentSharedBlobCarryOverTailBytes = 0u,
+      parentBlobDataRollingHash = null,
     )
   }
 }

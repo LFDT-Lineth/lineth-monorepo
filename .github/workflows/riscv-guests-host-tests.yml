@@ -24,18 +24,8 @@ jobs:
         with:
           submodules: false
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup-riscv-guests
-        with:
-          needs-zkevm-fixtures: 'true'
-
-      - name: Check Zig formatting
-        run: make fmt-check
-        working-directory: riscv-guests
-
-      - name: Run native unit tests for all guests
-        run: make test
-        working-directory: riscv-guests
+      - name: Run guest host tests
+        uses: ./.github/actions/run-riscv-guests-host-tests
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
@@ -47,11 +37,5 @@ jobs:
         with:
           submodules: false
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup-riscv-guests
-        with:
-          needs-zkevm-fixtures: 'true'
-
-      - name: Run extended-guest reference-test guards
-        run: make reference-test
-        working-directory: riscv-guests/l2_execution
+      - name: Run guest reference tests
+        uses: ./.github/actions/run-riscv-guests-reference-tests
