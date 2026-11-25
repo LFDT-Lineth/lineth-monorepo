@@ -16,6 +16,7 @@ riscv-l2-execution:
   - 'riscv-guests/.dockerignore'
 riscv-rollup:
   - 'riscv-guests/rollup/**'
+  - 'riscv-guests/lineth_da/**'
   - 'riscv-guests/guest_common/**'
   - 'riscv-guests/build_common/**'
   - 'riscv-guests/release/**'
@@ -24,6 +25,14 @@ riscv-rollup:
   - 'riscv-guests/Makefile'
   - 'riscv-guests/Dockerfile'
   - 'riscv-guests/.dockerignore'
+riscv-lineth-da:
+  - 'riscv-guests/lineth_da/**'
+  - 'riscv-guests/guest_common/**'
+  - 'riscv-guests/build_common/**'
+  - 'riscv-guests/lineth_accelerators/**'
+  - 'riscv-guests/guest_crypto_ctt/**'
+  - 'riscv-guests/.zigversion'
+  - 'riscv-guests/Makefile'
 maru:
   - 'maru/**'
 postman:
