@@ -6,7 +6,7 @@ import linea.da.RollupResumePoint
 import linea.domain.RiscvRollupRecord
 import linea.domain.createBlobData
 import linea.domain.createRiscvRollupRecord
-import lineth.persistence.RiscvRollupsDao
+import lineth.persistence.FakeRiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -19,48 +19,13 @@ import kotlin.time.Instant
 class RiscvRollupsResumePointProviderTest {
   private val cutover = Instant.parse("2026-10-01T00:00:00Z")
   private val genesisDataRollingHash = ByteArray(32) { 0x11 }
-  private val rows = mutableMapOf<ULong, RiscvRollupRecord>()
+  private val rollupsDao = FakeRiscvRollupsDao()
   private lateinit var provider: RiscvRollupsResumePointProvider
-
-  private inner class FakeRollupsDao : RiscvRollupsDao {
-    override fun findRollupByEndBlockNumber(endBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
-      SafeFuture.completedFuture(rows[endBlockNumber])
-
-    override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
-      startingBlockNumberInclusive: ULong,
-    ): SafeFuture<ULong?> {
-      var next = startingBlockNumberInclusive
-      var lastEnd: ULong? = null
-      while (true) {
-        val row = rows.values.find { it.startBlockNumber == next } ?: break
-        lastEnd = row.endBlockNumber
-        next = row.endBlockNumber + 1UL
-      }
-      return SafeFuture.completedFuture(lastEnd)
-    }
-
-    override fun saveRollupWithBlobs(rollup: RiscvRollupRecord): SafeFuture<Unit> =
-      throw UnsupportedOperationException()
-
-    override fun getConsecutiveRollupsFromBlockNumber(
-      startingBlockNumberInclusive: ULong,
-      endBlockCreatedBefore: Instant,
-    ): SafeFuture<List<RiscvRollupRecord>> = throw UnsupportedOperationException()
-
-    override fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
-      throw UnsupportedOperationException()
-
-    override fun deleteRollupsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> =
-      throw UnsupportedOperationException()
-
-    override fun deleteRollupsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int> =
-      throw UnsupportedOperationException()
-  }
 
   @BeforeEach
   fun setUp() {
     provider = RiscvRollupsResumePointProvider(
-      rollupsDao = FakeRollupsDao(),
+      rollupsDao = rollupsDao,
       riscvCutoverTimestamp = cutover,
       genesisDataRollingHashProvider = { SafeFuture.completedFuture(genesisDataRollingHash) },
     )
@@ -81,7 +46,7 @@ class RiscvRollupsResumePointProviderTest {
     } else {
       createRiscvRollupRecord(startBlockNumber = start, endBlockNumber = end)
     }
-    rows[end] = record
+    rollupsDao.saveRollupWithBlobs(record).get()
     return record
   }
 
@@ -142,11 +107,18 @@ class RiscvRollupsResumePointProviderTest {
   }
 
   @Test
-  fun `after the cutover a missing row at the finalized block is an error`() {
-    addRow(101UL, 110UL)
-
+  fun `after the cutover with no rows following the finalized block a missing row at it is an error`() {
     assertThatThrownBy { resume(100UL, cutover) }
       .hasCauseInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("L1 finalized block 100 is past the RISC-V cutover but no rollup row ends at it")
+  }
+
+  @Test
+  fun `after the cutover rows following the finalized block are used without reading the row at it`() {
+    addRow(101UL, 110UL)
+    val last = addRow(111UL, 120UL)
+
+    assertThat(resume(100UL, cutover))
+      .isEqualTo(RollupResumePoint(120UL, DaStreamPosition.fresh(last.dataRollingHash)))
   }
 }
