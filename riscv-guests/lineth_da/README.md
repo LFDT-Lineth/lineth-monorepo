@@ -112,7 +112,7 @@ defer stream.freeSealed(allocator, sealed);
 | `host-lib` | the library and the header |
 | `host-lib-check` | on Linux, fails unless `nm -D` lists `lineth_da_*` symbols alone and the newest `GLIBC_x.y` of `objdump -T` is at most 2.39; elsewhere skipped |
 | `host-lib-asset RELEASE_VERSION=<semver> RELEASE_DIR=<dir>` | builds the library and writes it as `lineth_da_v<version>_<os>_<arch>.<so\|dylib>` into `RELEASE_DIR`, where `<os>_<arch>` is `linux_x86_64`, `linux_arm64` or `darwin_arm64` |
-| `host-lib-bundle RELEASE_VERSION=<semver> RELEASE_DIR=<dir> [LICENSE_DIR=<dir>]` | fails unless the libraries of the three platforms are in `RELEASE_DIR`, and writes `lineth-da-libs-v<version>.zip` with them and the licenses |
+| `host-lib-bundle RELEASE_VERSION=<semver> RELEASE_DIR=<dir> [LICENSE_DIR=<dir>]` | fails unless the libraries of the three platforms are in `RELEASE_DIR`, and writes `lineth-da-libs-v<version>.zip` with them, the dictionaries of `dictionaries/` and the licenses |
 
 ## Dictionary
 
