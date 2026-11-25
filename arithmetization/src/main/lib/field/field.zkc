@@ -1,0 +1,277 @@
+include "../../common/constants.zkc"
+include "../../common/type.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+
+// ===================================================================================
+// Field accelerator (FIELD_OP_SYSCALL), see README.md.
+//
+// One constrained product (mulmod_384) per call, whatever the operation:
+//   MUL   out = a*b                     out is the product
+//   DIV   out = a/b (0 if b = 0)        checked as  out * b   = a
+//   SQRT  out = sqrt(a) or sqrt(-a)     checked as  out * out = a  or  -a
+// An inverse is DIV with a = 1. The hint out is unconstrained: it is pinned by
+// the product and checked below p, so every output is canonical.
+// ===================================================================================
+
+// Operations (a0 of FIELD_OP_SYSCALL).
+const FIELD_OP_MUL:u2 = 0
+const FIELD_OP_DIV:u2 = 1
+const FIELD_OP_SQRT:u2 = 2
+
+// Fields (a1 of FIELD_OP_SYSCALL): index into FIELD_MODULUS, carrying:
+//   - p:            field prime modulus (u384)
+//   - p_is_3_mod_4: 1 iff p = 3 mod 4 (fields where SQRT can report non-squares)
+//   - is_384:       0 for 256-bit (32-byte, 4-limb) fields, 1 for 384-bit (48-byte, 6-limb)
+// Unused ids (0 and 9..15) have p = 0, which fails both mulmod_384 and hint >= p.
+static FIELD_MODULUS(field:u4) -> (p:u384, p_is_3_mod_4:u1, is_384:u1) {
+    (0, 0, 0),
+    // 1: secp256k1 Fp
+    (0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f, 1, 0),
+    // 2: secp256k1 Fr
+    (0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141, 0, 0),
+    // 3: secp256r1 Fp
+    (0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 1, 0),
+    // 4: secp256r1 Fr
+    (0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551, 0, 0),
+    // 5: BN254 Fp
+    (0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47, 1, 0),
+    // 6: BN254 Fr
+    (0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001, 0, 0),
+    // 7: BLS12-381 Fr
+    (0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001, 0, 0),
+    // 8: BLS12-381 Fp
+    (0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab, 1, 1),
+    (0, 0, 0),
+    (0, 0, 0),
+    (0, 0, 0),
+    (0, 0, 0),
+    (0, 0, 0),
+    (0, 0, 0),
+    (0, 0, 0)
+}
+
+// field_op performs `op` in `field` on the little-endian operands at a_addr
+// (and b_addr for MUL and DIV; b_addr is still read on SQRT) — 32 bytes for
+// fields 1..7 and 48 bytes for field 8 — and writes the canonical (< p) result
+// of the same byte width to out_addr. The destination may alias a source.
+// status is 1 when there is no mathematical result (x/0 -> out = 0, or a
+// non-square for SQRT when p = 3 mod 4 -> out = sqrt(-a)) and 0 otherwise.
+fn field_op<ram>(op:u2, field:u4, out_addr:Address, a_addr:Address, b_addr:Address) -> (status:u1) {
+    var a:u384, b:u384
+    var x:u384, y:u384
+    var p:u384
+    var hint:u384
+    var want:u384
+    var prod:u384
+    // Holds when SQRT finds that a is not a square (hint is then sqrt(-a)).
+    var non_square:u1
+    // Holds when p = 3 mod 4, so exactly one of a and -a is a square (a != 0).
+    var p_is_3_mod_4:u1
+    var is_384:u1
+    // Load operands and hint.
+    p, p_is_3_mod_4, is_384 = FIELD_MODULUS[field]
+    a = field_load(a_addr, p, is_384)
+    b = field_load(b_addr, p, is_384)
+    hint, non_square = hint_field_op_384(op, field, a, b)
+    // Rearrange operands into one checked product: x * y = want (mod p).
+    x, y, want, status = rearrange_field_op(op, a, b, hint, p, p_is_3_mod_4 * non_square)
+    // Apply rearranged operation. The ignored second output is the quotient,
+    // which mulmod_384 returns only so that it exists in the trace for
+    // prover-ray's NonNative gadget.
+    prod, _ = mulmod_384(x, y, p)
+    // Write back result.
+    field_write(out_addr, hint, is_384)
+    // ASSERT: hint < p && prod == want, as two checks to avoid an OR.
+    if hint >= p {
+        fail "field_op: hint >= p"
+    }
+    if prod != want {
+        fail "field_op: invalid field operation"
+    }
+}
+
+// rearrange_field_op rearranges an operation into the form `lhs * rhs = res`
+// and sets status = 1 for a non-mathematical result (e.g. divide-by-zero).
+// Specifically:
+//
+// - MUL (a * b == hint). No rearrangement required.
+//
+// - DIV (a / b == hint). Rearrange to (a == hint * b) if b != 0. Otherwise,
+//   rearrange to (hint == 0) with a non-mathematical result.
+//
+// - SQRT (√a == hint). Rearrange to (a == hint * hint) if neg == 0. Otherwise,
+//   rearrange to (p - a == hint * hint) with a non-mathematical result.
+//
+// NOTE: for the latter when a = 0, res = p is unreachable since mulmod_384
+//       enforces prod < p.
+#[inline]
+fn rearrange_field_op(op:u2, a:u384, b:u384, hint:u384, p:u384, neg:u1) -> (lhs:u384, rhs:u384, res:u384, status:u1) {
+    var op_hi:u1, op_lo:u1
+    op_hi::op_lo = op
+    // ASSERT: op != 3
+    if (op_hi == 1) && (op_lo == 1) {
+        fail "field_op: unknown operation 3"
+    }
+    // Holds when op != FIELD_OP_MUL
+    var not_mul:u1 = op_hi + op_lo
+    // Holds when op == FIELD_OP_DIV && b == 0
+    var div_by_zero:u1 = (op_lo == 1) && (b == 0) ? 1:0
+    // Holds when op == FIELD_OP_SQRT && neg == 1
+    var sqrt_neg:u1 = (op_hi == 1) && (neg == 1) ? 1:0
+    status = div_by_zero + sqrt_neg
+    lhs = not_mul == 0 ? a:hint
+    rhs = op_hi == 1 ? hint:(div_by_zero == 1 ? 1:b)
+    res = not_mul == 0 ? hint:(div_by_zero == 1 ? 0:(sqrt_neg == 1 ? p - a:a))
+}
+
+// field_load reads the operand at addr (32 bytes / four little-endian u64 limbs
+// when is_384 == 0, or 48 bytes / six u64 limbs when is_384 == 1) and reduces
+// it below p with one subtraction, whose borrow tells whether it already is.
+// The operand must be below 2p, as every 256-bit value is when p > 2^255 (the
+// secp256k1 and secp256r1 fields); a larger one is not reduced below p, and the
+// result of the call is then unspecified.
+// NOTE: field_load is intentionally NOT marked #[inline]. field_op calls it
+// twice (a and b); keeping it as a shared module pays its split columns once
+// across all loads rather than duplicating them twice inside field_op.
+fn field_load<ram>(addr:Address, p:u384, is_384:u1) -> (r:u384) {
+    var l0:u64 = read_64(addr)
+    var l1:u64 = read_64((addr + 8) as Address)
+    var l2:u64 = read_64((addr + 16) as Address)
+    var l3:u64 = read_64((addr + 24) as Address)
+    var l4:u64
+    var l5:u64
+    if is_384 == 1 {
+        l4 = read_64((addr + 32) as Address)
+        l5 = read_64((addr + 40) as Address)
+    } else {
+        l4 = 0
+        l5 = 0
+    }
+    var v:u384 = l5::l4::l3::l2::l1::l0
+    var v_lt_p:u1
+    var v_minus_p:u384
+    v_lt_p::v_minus_p = (v - p) as u385
+    r = v_lt_p == 1 ? v:v_minus_p
+}
+
+// field_write is called once in field_op and writes four u64 limbs (32 bytes)
+// for 256-bit fields or six u64 limbs (48 bytes) for 384-bit fields; inlining
+// it avoids a separate module and call lookup.
+#[inline]
+fn field_write<ram>(addr:Address, v:u384, is_384:u1) {
+    var l5:u64
+    var l4:u64
+    var l3:u64
+    var l2:u64
+    var l1:u64
+    var l0:u64
+    l5::l4::l3::l2::l1::l0 = v
+    write_64(addr, l0)
+    write_64((addr + 8) as Address, l1)
+    write_64((addr + 16) as Address, l2)
+    write_64((addr + 24) as Address, l3)
+    if is_384 == 1 {
+        write_64((addr + 32) as Address, l4)
+        write_64((addr + 40) as Address, l5)
+    }
+}
+
+// mulmod_384 is proven by prover-ray's NonNative gadget, which finds its
+// columns (`lhsL`, `rhsL`, `modL`, `remainder`, `quotient`) by register name in
+// `prover-ray/zkcdriver/native_modules.go`. Returning `quotient` as a second
+// output keeps `quotient'0..23` in the native module's schema/trace (zkc only
+// exports inputs and outputs of `#[native]` functions) without adding columns
+// or lookup terms when ignored via `_` by callers.
+#[native]
+fn mulmod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384, quotient:u384) {
+    if modL == 0 {
+        fail
+    }
+    var product:u768 = (lhsL as u768) * (rhsL as u768)
+    var overflow:u384
+    overflow::quotient = product / (modL as u768)
+    if overflow != 0 {
+        fail
+    }
+    var overflow2:u384
+    overflow2::remainder = product - ((quotient as u768) * (modL as u768))
+    if overflow2 != 0 {
+        fail
+    }
+}
+
+// hint_field_op_384 computes the unconstrained witness `(res, non_square)` that
+// field_op verifies with a single constrained mulmod_384:
+//   MUL   (a * b) mod p                      non_square = 0
+//   DIV   (a * b^(p - 2)) mod p (0 if b = 0) non_square = 0
+//   SQRT  a^((p + 1) / 4) mod p              non_square = (res^2 mod p != a)
+//
+// Notes:
+//   1. Why `#[native]`: prover-ray treats any `#[native]` module prefixed
+//      `hint_` as an unconstrained witness table (`native_modules.go`).
+//   2. Passing `field:u4` instead of `p:u384` saves 23 committed columns and
+//      23 lookup terms.
+//   3. Loop instead of recursion: zkc prohibits function calls (including
+//      recursion) inside `#[native]` bodies.
+//   4. Single `u768 %` site: `TransformForTracing` still runs `Vectorize`,
+//      `LowerDivisions`, `SplitRegisters`, and `AllocateRegisters` on
+//      `#[native]` functions. Keeping a single `u768 %` site and avoiding
+//      short-circuit `||` / `if-else` diamonds prevents `Vectorize` from
+//      cloning the 48-limb division across CFG edges (~49k split registers ->
+//      quadratic liveness blowup at compile time).
+#[native]
+fn hint_field_op_384(op:u2, field:u4, a:u384, b:u384) -> (res:u384, non_square:u1) {
+    var p:u384
+    p, _, _ = FIELD_MODULUS[field]
+    if p == 0 {
+        fail
+    }
+    // Initialize `acc * base^exp mod p`:
+    //   MUL: a * b^1   |   DIV: a * b^(p-2) (or 0 if b == 0)   |   SQRT: 1 * a^((p+1)/4)
+    var quarter:u382, low:u2
+    quarter::low = p
+    var is_mul:u1 = op == FIELD_OP_MUL ? 1:0
+    var is_div:u1 = op == FIELD_OP_DIV ? 1:0
+    var is_sqrt:u1 = op == FIELD_OP_SQRT ? 1:0
+    var b_is_zero:u1 = b == 0 ? 1:0
+    var div_zero:u1 = is_div * b_is_zero
+    var acc:u384 = is_sqrt == 1 ? 1:(div_zero == 1 ? 0:a)
+    var base:u384 = is_sqrt == 1 ? a:b
+    var exp:u384 = is_mul == 1 ? 1:(is_div == 1 ? (b_is_zero == 1 ? 0:p - 2):(quarter as u384) + 1)
+    // SQRT runs one extra step at exp == 0 to compute acc^2 mod p and set non_square.
+    var check_sq:u1 = is_sqrt
+    var init_nz:u1 = exp != 0 ? 1:0
+    var cont:u1 = ((init_nz as u2) + (check_sq as u2)) != 0 ? 1:0
+    non_square = 0
+
+    while cont == 1 {
+        var exp_zero:u1 = exp == 0 ? 1:0
+        var half:u383
+        var bit:u1
+        half::bit = exp
+
+        // Pick product operands:
+        //   exp > 0, bit == 1 -> acc * base   (fold odd bit into acc, clear low bit)
+        //   exp > 0, bit == 0 -> base * base  (square base, halve exp)
+        //   exp == 0          -> acc * acc    (SQRT post-check against a)
+        var use_acc:u1 = ((exp_zero as u2) + (bit as u2)) != 0 ? 1:0
+        var x:u384 = use_acc == 1 ? acc:base
+        var y:u384 = exp_zero == 1 ? acc:base
+        var prod:u384 = (((x as u768) * (y as u768)) % (p as u768)) as u384
+
+        // Update state for whichever of the three step kinds just ran.
+        var sq_ne_a:u1 = prod != a ? 1:0
+        non_square = exp_zero == 1 ? sq_ne_a:non_square
+        check_sq = exp_zero == 1 ? 0:check_sq
+        var do_mul:u1 = (1 - exp_zero) * bit
+        var do_sq:u1 = (1 - exp_zero) * (1 - bit)
+        acc = do_mul == 1 ? prod:acc
+        base = do_sq == 1 ? prod:base
+        exp = exp_zero == 1 ? 0:(bit == 1 ? exp - 1:(half as u384))
+        var next_nz:u1 = exp != 0 ? 1:0
+        cont = ((next_nz as u2) + (check_sq as u2)) != 0 ? 1:0
+    }
+    res = acc
+}

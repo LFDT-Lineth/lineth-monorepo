@@ -193,26 +193,30 @@ pub const CryptoOptions = struct {
     /// Keccak provider: the arithmetization wrapper (prover-accelerated custom op) or standard zig keccak.
     keccak_accel: bool = false,
     secp256k1_backend: Secp256k1Backend = .constantine,
+    /// Constantine delegates field operations to the field accelerator (guest only).
+    ctt_field_accel: bool = true,
 
     pub fn parse(b: *std.Build) CryptoOptions {
         return parseIfSet(b) orelse .{};
     }
 
-    /// The options with an unset one at its default; null when neither is set.
+    /// The options with an unset one at its default; null when none is set.
     pub fn parseIfSet(b: *std.Build) ?CryptoOptions {
         const default: CryptoOptions = .{};
         const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: unaccelerated)");
         const secp256k1_backend = b.option(Secp256k1Backend, "secp256k1-backend", "secp256k1 ecrecover/verify provider: constantine (default) or std");
-        if (keccak_accel == null and secp256k1_backend == null) return null;
+        const ctt_field_accel = b.option(bool, "ctt-field-accel", "Delegate Constantine field operations to the field accelerator, guest only (default: true)");
+        if (keccak_accel == null and secp256k1_backend == null and ctt_field_accel == null) return null;
         return .{
             .keccak_accel = keccak_accel orelse default.keccak_accel,
             .secp256k1_backend = secp256k1_backend orelse default.secp256k1_backend,
+            .ctt_field_accel = ctt_field_accel orelse default.ctt_field_accel,
         };
     }
 
-    /// The options of a native build: the arithmetization keccak wrapper exists on the guest target only.
+    /// The options of a native build: the arithmetization keccak wrapper and the field accelerator exist on the guest target only.
     pub fn native(crypto: CryptoOptions) CryptoOptions {
-        return .{ .keccak_accel = false, .secp256k1_backend = crypto.secp256k1_backend };
+        return .{ .keccak_accel = false, .secp256k1_backend = crypto.secp256k1_backend, .ctt_field_accel = false };
     }
 };
 
@@ -230,6 +234,7 @@ pub fn acceleratorsDependency(
         .@"zkvm-provide" = true,
         .@"keccak-accel" = crypto.keccak_accel,
         .@"secp256k1-backend" = crypto.secp256k1_backend,
+        .@"ctt-field-accel" = crypto.ctt_field_accel,
     });
 }
 
