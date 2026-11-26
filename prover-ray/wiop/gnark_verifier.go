@@ -157,7 +157,7 @@ func AllocateVerifierCircuit(sys *System) *VerifierCircuit {
 // AssignVerifierCircuit returns the witness assignment of the circuit for
 // (proof, pub). It panics if the proof does not have the circuit's shape: a
 // missing cell, a cell value without its declared field tag, a missing
-// commitment, or an opening proof of another geometry.
+// commitment, a dynamic module size, or an opening proof of another geometry.
 func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *VerifierCircuit {
 	sys := c.spec
 	if len(pub) != len(sys.PublicInputs) {
@@ -199,6 +199,12 @@ func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *V
 	if len(proof.Commitments) != len(c.layout.commitments) {
 		panic(fmt.Sprintf("wiop: VerifierCircuit: proof has %d commitments, want %d",
 			len(proof.Commitments), len(c.layout.commitments)))
+	}
+	// The circuit's System is static (see checkCircuitSupport), so, as for
+	// System.Verify, any dynamic module size in the proof is foreign to it.
+	if len(proof.DynamicSizes) != 0 {
+		panic(fmt.Sprintf("wiop: VerifierCircuit: unexpected %d dynamic module sizes on a static system",
+			len(proof.DynamicSizes)))
 	}
 
 	if c.layout.hasPCS != (proof.PCSOpeningProof != nil) {

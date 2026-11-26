@@ -396,6 +396,26 @@ func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 		"the native verifier must refuse the retagged proof too")
 }
 
+// TestAssignVerifierCircuit_RejectsDynamicSizes: the circuit's System is
+// static, so a proof claiming a dynamic module size is not one of its proofs,
+// as System.Verify also decides.
+func TestAssignVerifierCircuit_RejectsDynamicSizes(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
+	require.Empty(t, proof.DynamicSizes, "a static system's proof carries no dynamic sizes")
+	circ := wiop.AllocateVerifierCircuit(sys)
+	circ.AssignVerifierCircuit(proof, pub) // the honest proof is accepted
+
+	bad := cloneProof(proof)
+	bad.DynamicSizes[0] = 8
+	require.PanicsWithValue(t,
+		"wiop: VerifierCircuit: unexpected 1 dynamic module sizes on a static system",
+		func() { circ.AssignVerifierCircuit(bad, pub) },
+		"a proof carrying dynamic module sizes must be rejected")
+	require.ErrorContains(t, sys.Verify(bad, pub), "dynamic module does not exist in the system",
+		"the native verifier must refuse it too")
+}
+
 func hasDynamicModule(sys *wiop.System) bool {
 	for _, m := range sys.Modules {
 		if m.IsDynamic() {
