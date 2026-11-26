@@ -32,7 +32,7 @@ type VerifierPlan struct {
 	Trees []PlanTree
 
 	// What Verify derives from the shapes and shifts, kept for
-	// [VerifierPlan.VerifyGnark] and [VerifierPlan.OpeningProofShape] so that
+	// [VerifierPlan.VerifyGnark] and [VerifierPlan.GnarkOpeningProofShape] so that
 	// neither derives it again.
 	pcs               *PCS // restricted to the largest opened size
 	shapes            []Shape

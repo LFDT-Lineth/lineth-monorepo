@@ -131,13 +131,13 @@ func allPresentManifests(batches []BatchRef) []ColumnManifest {
 }
 
 // OpeningProofShape implements [wiop.GnarkOpeningProofAllocator]: it returns
-// an opening proof with the geometry of every honest proof of sys, derived from
-// the System alone through [OpeningVerifierAction.Static] and
-// [fri.VerifierPlan.OpeningProofShape].
+// an unassigned opening proof with the geometry of every honest proof of sys,
+// derived from the System alone through [OpeningVerifierAction.Static] and
+// [fri.VerifierPlan.GnarkOpeningProofShape].
 //
 // It panics on a system compiled with column elision: the manifests, and with
 // them the batch shapes, are then chosen by the prover per proof.
-func (a *OpeningVerifierAction) OpeningProofShape(sys *wiop.System) fri.OpeningProof {
+func (a *OpeningVerifierAction) OpeningProofShape(sys *wiop.System) fri.GnarkOpeningProof {
 	if a.c.elisionEnabled {
 		panic("pcs: OpeningProofShape: all-Present manifests only: compile without WithColumnElision")
 	}
@@ -145,7 +145,7 @@ func (a *OpeningVerifierAction) OpeningProofShape(sys *wiop.System) fri.OpeningP
 	if err != nil {
 		panic(fmt.Sprintf("pcs: OpeningProofShape: %v", err))
 	}
-	return st.Plan.OpeningProofShape()
+	return st.Plan.GnarkOpeningProofShape()
 }
 
 var _ wiop.GnarkOpeningProofAllocator = (*OpeningVerifierAction)(nil)

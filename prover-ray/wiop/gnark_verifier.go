@@ -75,11 +75,12 @@ type verifierLayout struct {
 	cells       map[ObjectID]cellSlot
 	commitments []int // round IDs carrying a commitment, in order
 	hasPCS      bool
-	// pcsShape is a proof with the opening geometry of the System (values
-	// meaningless), kept apart from the circuit fields: frontend.Compile writes
-	// its variables into the circuit struct, which then no longer describes the
-	// geometry alone.
-	pcsShape fri.OpeningProof
+	// pcsShape is the unassigned opening proof of the System's geometry,
+	// computed once at allocation and compared against every assigned proof.
+	// It is a copy apart from the circuit's own PCSOpeningProof:
+	// frontend.Compile writes its variables into the circuit struct, which then
+	// no longer describes the geometry alone.
+	pcsShape fri.GnarkOpeningProof
 }
 
 // cellSlot locates one cell in the witness: the (isBase, isPublic) pair picks
@@ -97,12 +98,12 @@ type cellSlot struct {
 }
 
 // GnarkOpeningProofAllocator is implemented by the verifier action that checks
-// the PCS opening proof (the PCS compiler's opening action). It returns an
-// opening proof with the geometry every honest proof of sys has, derived from
-// the System alone; its values are meaningless. [AllocateVerifierCircuit] calls
-// it; a System without such an action carries no PCS opening proof.
+// the PCS opening proof (the PCS compiler's opening action). It returns a
+// fresh unassigned opening proof with the geometry every honest proof of sys
+// has, derived from the System alone. [AllocateVerifierCircuit] calls it; a
+// System without such an action carries no PCS opening proof.
 type GnarkOpeningProofAllocator interface {
-	OpeningProofShape(sys *System) fri.OpeningProof
+	OpeningProofShape(sys *System) fri.GnarkOpeningProof
 }
 
 // AllocateVerifierCircuit builds the unassigned circuit for sys from the System
@@ -145,8 +146,10 @@ func AllocateVerifierCircuit(sys *System) *VerifierCircuit {
 	}
 	if allocator != nil {
 		layout.hasPCS = true
+		// Two fresh results: the circuit's is written by frontend.Compile, the
+		// layout's must keep describing the geometry alone.
 		layout.pcsShape = allocator.OpeningProofShape(sys)
-		c.PCSOpeningProof = fri.AllocateGnarkOpeningProof(layout.pcsShape)
+		c.PCSOpeningProof = allocator.OpeningProofShape(sys)
 	}
 	return c
 }
@@ -202,9 +205,8 @@ func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *V
 		panic("wiop: VerifierCircuit: proof and circuit disagree on the presence of a PCS opening proof")
 	}
 	if c.layout.hasPCS {
-		// Compared on fresh unassigned structs, which keep exactly the geometry.
-		if !reflect.DeepEqual(fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof),
-			fri.AllocateGnarkOpeningProof(c.layout.pcsShape)) {
+		// Compared as unassigned structs, which keep exactly the geometry.
+		if !reflect.DeepEqual(fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof), c.layout.pcsShape) {
 			panic("wiop: VerifierCircuit: the PCS opening proof does not have the circuit's geometry")
 		}
 		a.PCSOpeningProof = fri.NewGnarkOpeningProof(*proof.PCSOpeningProof)
