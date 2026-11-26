@@ -841,7 +841,8 @@ func executableSpan(firstAddress, maxEnd, maxRecords uint64) (base, records uint
 	records = (alignedEnd - base) / 4
 	if records > maxRecords {
 		return 0, 0, fmt.Errorf(
-			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous",
+			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous; "+
+				"override the cap with WithMaxDecodedRecords",
 			records,
 			maxRecords,
 			base,
