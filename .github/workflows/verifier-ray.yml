@@ -56,7 +56,7 @@ jobs:
           submodules: false
 
       # Keep this aligned with .github/actions/setup-arithmetization-riscv, but use
-      # newer Go because verifier-ray/prover-ray modules declare go 1.27.1.
+      # newer Go because verifier-ray/prover-ray modules declare go 1.27.4.
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
