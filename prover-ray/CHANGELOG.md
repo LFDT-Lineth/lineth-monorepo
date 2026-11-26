@@ -1,8 +1,9 @@
-## [unreleased]
+## [1.0.0] - 2026-11-26
 
 ### 🚀 Features
 
 - *(prover-ray)* Decode the rollup guest output by job type (#4572)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 ## [0.5.0] - 2026-11-24
 
 ### 🚀 Features
