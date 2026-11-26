@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestShapeOpeningProofMatchesHonestProof checks that the zero-data proof has
+// TestOpeningProofShapeMatchesHonestProof checks that the zero-data proof has
 // the geometry of an honest proof, field by field, across every fixture family:
 // plain and grouped commitments, pair leaves, twin batches, every cap height and
 // a fixed FRI domain. The comparison runs on the unassigned circuit structs,
 // which keep exactly the geometry (lengths, absent levels, row widths, revealed
 // table sizes) and drop the values.
-func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
+func TestOpeningProofShapeMatchesHonestProof(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"open-verify":  newPCSOpenVerifyFixture,
 		"twin-batches": newTwinBatchesFixture,
@@ -50,7 +50,7 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 	for name, build := range fixtures {
 		t.Run(name, func(t *testing.T) {
 			fx := build(t)
-			shaped, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+			shaped, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 			require.NoError(t, err)
 			require.Equal(t, AllocateGnarkOpeningProof(fx.proof), AllocateGnarkOpeningProof(shaped),
 				"zero-data proof must have the honest proof's geometry")
@@ -58,8 +58,8 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 	}
 }
 
-// TestShapeOpeningProofIndependentOfQueryPositions checks the assumption
-// ShapeOpeningProof rests on: query positions select values, never shapes.
+// TestOpeningProofShapeIndependentOfQueryPositions checks the assumption
+// OpeningProofShape rests on: query positions select values, never shapes.
 // The shape is built with every query at position 0 (all queries colliding),
 // whereas real positions are pseudo-random and mostly distinct. Each fixture's
 // real committed data is reopened under random fold challenges and random query
@@ -67,7 +67,7 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 // it), and the geometry must match the zero-position shape every time. A prover
 // optimisation that deduplicates queries or shares Merkle path nodes between
 // them would break this test before it broke the gnark verifier circuit.
-func TestShapeOpeningProofIndependentOfQueryPositions(t *testing.T) {
+func TestOpeningProofShapeIndependentOfQueryPositions(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"twin-batches": newTwinBatchesFixture,
 		"grouped/3": func(t *testing.T) pcsOpenVerifyFixture {
@@ -94,7 +94,7 @@ func TestShapeOpeningProofIndependentOfQueryPositions(t *testing.T) {
 	for name, build := range fixtures {
 		t.Run(name, func(t *testing.T) {
 			fx := build(t)
-			shaped, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+			shaped, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 			require.NoError(t, err)
 			want := AllocateGnarkOpeningProof(shaped)
 
@@ -148,30 +148,40 @@ func reopenAtRandomPositions(t *testing.T, fx pcsOpenVerifyFixture, seed uint64,
 	return pcs.Open(state, positions), positions
 }
 
-// TestShapeOpeningProofComparisonIsSensitive guards the test above against
+// TestOpeningProofShapeComparisonIsSensitive guards the test above against
 // passing vacuously: geometries that differ only in cap height must compare
 // unequal.
-func TestShapeOpeningProofComparisonIsSensitive(t *testing.T) {
+func TestOpeningProofShapeComparisonIsSensitive(t *testing.T) {
 	low, high := newPCSCircuitFixture(t, 0), newPCSCircuitFixture(t, 2)
-	shaped, err := low.pcs.ShapeOpeningProof(low.input.Shapes, low.input.Shifts)
+	shaped, err := shapeOpeningProof(low.pcs, low.input.Shapes, low.input.Shifts)
 	require.NoError(t, err)
 	require.NotEqual(t, AllocateGnarkOpeningProof(high.proof), AllocateGnarkOpeningProof(shaped))
 }
 
-// TestShapeOpeningProofLeavesPCSUntouched checks that the receiver keeps its
+// TestOpeningProofShapeLeavesPCSUntouched checks that the receiver keeps its
 // registered openings: allocating a circuit must not disturb a prover that
 // shares the PCS.
-func TestShapeOpeningProofLeavesPCSUntouched(t *testing.T) {
+func TestOpeningProofShapeLeavesPCSUntouched(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
 	before := *fx.pcs
-	_, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+	_, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 	require.NoError(t, err)
 	require.Equal(t, before.openings, fx.pcs.openings)
 	require.Equal(t, before.zeta, fx.pcs.zeta)
 }
 
-func TestShapeOpeningProofRejectsMismatchedInputs(t *testing.T) {
+func TestOpeningProofShapeRejectsMismatchedInputs(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
-	_, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts[:len(fx.input.Shifts)-1])
+	_, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts[:len(fx.input.Shifts)-1])
 	require.ErrorContains(t, err, "shapes")
+}
+
+// shapeOpeningProof is the path the circuit allocation takes: the verifier
+// plan of the opening, then its proof geometry.
+func shapeOpeningProof(pcs *PCS, shapes []Shape, shifts []BatchShifts) (OpeningProof, error) {
+	plan, err := pcs.VerifierPlan(shapes, shifts)
+	if err != nil {
+		return OpeningProof{}, err
+	}
+	return plan.OpeningProofShape(), nil
 }

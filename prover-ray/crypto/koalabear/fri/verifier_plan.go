@@ -30,6 +30,17 @@ type VerifierPlan struct {
 	Levels []PlanLevel
 	// Trees are the input trees, in the order of an [InputQuery]'s openings.
 	Trees []PlanTree
+
+	// What Verify derives from the shapes and shifts, kept for
+	// [VerifierPlan.VerifyGnark] and [VerifierPlan.OpeningProofShape] so that
+	// neither derives it again.
+	pcs               *PCS // restricted to the largest opened size
+	shapes            []Shape
+	shifts            []BatchShifts
+	layout            layout
+	orders            [][]int
+	inputIndexByBatch []int          // tree of each batch, −1 for none
+	capInfos          []inputCapInfo // per tree
 }
 
 // PlanLevel is one DEEP level: the opened columns of one size, joining FRI
@@ -85,6 +96,11 @@ func (pcs *PCS) VerifierPlan(shapes []Shape, shifts []BatchShifts) (VerifierPlan
 	}
 	p := restricted.Params
 	plan := VerifierPlan{
+		pcs:              &PCS{Params: p, Encoders: restricted.Encoders},
+		shapes:           shapes,
+		shifts:           shifts,
+		layout:           layout,
+		orders:           batchOrders(layout),
 		Params:           p,
 		NumRounds:        int(p.numRounds()),
 		LogCodewordSize:  int(p.LogCodewordSize),
@@ -120,7 +136,8 @@ func (pcs *PCS) VerifierPlan(shapes []Shape, shifts []BatchShifts) (VerifierPlan
 		}
 		plan.Levels = append(plan.Levels, level)
 	}
-	_, treeOf := inputOpeningRoots(layout, batchOrders(layout), make([]field.Octuplet, len(shapes)))
+	_, treeOf := inputOpeningRoots(layout, plan.orders, make([]field.Octuplet, len(shapes)))
+	plan.inputIndexByBatch = treeOf
 	plan.Trees = make([]PlanTree, 0, len(shapes))
 	for b, t := range treeOf {
 		if t < 0 {
@@ -132,7 +149,9 @@ func (pcs *PCS) VerifierPlan(shapes []Shape, shifts []BatchShifts) (VerifierPlan
 		}
 		for len(plan.Trees) <= t {
 			plan.Trees = append(plan.Trees, PlanTree{})
+			plan.capInfos = append(plan.capInfos, inputCapInfo{})
 		}
+		plan.capInfos[t] = info
 		plan.Trees[t] = PlanTree{Batch: b, Height: info.height, CapDepth: info.depth, Grouped: info.grouped, Shape: shapes[b]}
 	}
 	return plan, nil

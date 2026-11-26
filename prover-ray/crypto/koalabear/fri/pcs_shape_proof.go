@@ -1,93 +1,150 @@
 package fri
 
 import (
-	"fmt"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// ShapeOpeningProof returns an [OpeningProof] with exactly the geometry an
-// honest prover emits for batches of the given shapes, opened with the given
-// shifts: every slice length, every present or absent auxiliary level and every
-// row width. Its values are meaningless.
+// OpeningProofShape returns an [OpeningProof] with exactly the geometry an
+// honest prover emits for the plan's opening: every slice length, every
+// present or absent auxiliary level and every row width. Its values are zero
+// and meaningless.
 //
 // It lets a verifier circuit be allocated from the protocol description alone,
 // before any proof exists (see [AllocateGnarkOpeningProof]). The geometry is a
-// function of the parameters, shapes and shifts only: input trees are never
-// merged (one per opened batch), and query positions, zeta and fold challenges
-// select values, never shapes. To keep it in lockstep with the real prover, it
-// is not derived by hand: the native prover runs on all-zero tables of the
-// requested shapes, at a fixed out-of-domain zeta and fixed challenges.
-//
-// The receiver is not modified. The cost is one commit and open of zero data at
-// the given sizes; it is meant to run once, at circuit setup.
-func (pcs *PCS) ShapeOpeningProof(shapes []Shape, shifts []BatchShifts) (OpeningProof, error) {
-	if len(shapes) != len(shifts) {
-		return OpeningProof{}, fmt.Errorf("fri: ShapeOpeningProof: got %d shapes, %d shifts", len(shapes), len(shifts))
+// function of the plan only: input trees are never merged (one per opened
+// batch, [VerifierPlan.Trees]), and query positions, zeta and fold challenges
+// select values, never shapes. It mirrors [PCS.Open] through the helpers that
+// Open and Verify share (the plan's input cap infos, merkleCapDepth), without
+// committing or folding anything.
+func (plan VerifierPlan) OpeningProofShape() OpeningProof {
+	p := plan.Params
+	numQueries := int(p.NumQueries)
+	res := OpeningProof{
+		InputQueries: make([]InputQuery, numQueries),
+		InputCaps:    make([]InputCap, len(plan.Trees)),
 	}
-	scratch := *pcs
-	scratch.openings = nil
-	scratch.zeta = field.Ext{}
 
-	// An element with a non-zero extension coordinate is outside every
-	// base-field evaluation domain, so the opening is well-formed at any size.
-	zeta := field.UintsToExt(3, 1, 0, 0, 0, 0)
-	for i, shape := range shapes {
-		committed := scratch.Commit(zeroTable(shape))
-		if err := scratch.AddOpening(committed, zeta, shifts[i], zeroClaims(shifts[i])); err != nil {
-			return OpeningProof{}, fmt.Errorf("fri: ShapeOpeningProof: batch %d: %w", i, err)
+	openings := make([]InputTreeOpening, len(plan.Trees))
+	for t, tree := range plan.Trees {
+		info := plan.capInfos[t]
+		openings[t] = inputTreeOpeningShape(tree.Shape, info)
+		res.InputCaps[t] = inputCapShape(p, tree.Shape, info)
+	}
+	for k := range res.InputQueries {
+		res.InputQueries[k] = make(InputQuery, len(openings))
+		for t, o := range openings {
+			res.InputQueries[k][t] = cloneInputTreeOpening(o)
 		}
 	}
-	state, err := scratch.NewProverState()
-	if err != nil {
-		return OpeningProof{}, fmt.Errorf("fri: ShapeOpeningProof: %w", err)
-	}
-	alpha := field.UintsToExt(5, 0, 1, 0, 0, 0)
-	for state.HasNext() {
-		state.Fold(alpha)
-	}
-	return scratch.Open(state, make([]int, scratch.Params.NumQueries)), nil
-}
 
-// zeroTable returns an all-zero table of the given shape: each present size
-// holds BaseWidth base rows and ExtWidth extension rows of 2^sizeLog2 entries.
-func zeroTable(shape Shape) MultiSizeTable {
-	table := make(MultiSizeTable, len(shape))
-	for sizeLog2, sized := range shape {
-		n := 1 << sizeLog2
-		table[sizeLog2].Groups = sized.Groups
-		if sized.BaseWidth > 0 {
-			table[sizeLog2].Base = make([][]field.Element, sized.BaseWidth)
-			for k := range table[sizeLog2].Base {
-				table[sizeLog2].Base[k] = make([]field.Element, n)
+	res.FRIProof = Proof{
+		FinalPoly:      make([]field.Ext, 1<<p.logFinalPolySize),
+		RunningQueries: make([]RunningQuery, numQueries),
+	}
+	numRounds := p.numRounds()
+	if numRounds > 1 {
+		res.FRIProof.RoundRoots = make([]field.Octuplet, numRounds-1)
+		res.FRIProof.RoundCaps = make([]MerkleCap, numRounds-1)
+		for j := uint8(1); j < numRounds; j++ {
+			// Running layer j is a plain binary tree over 2^(LogCodewordSize−j)
+			// leaves, with no injections (see buildTreeExt).
+			depth := p.merkleCapDepth(int(p.LogCodewordSize - j))
+			if depth > 0 {
+				res.FRIProof.RoundCaps[j-1] = MerkleCap{
+					Nodes: make([]field.Octuplet, 1<<depth),
+					Aux:   make([]*field.Octuplet, 1<<depth-1),
+				}
 			}
 		}
-		if sized.ExtWidth > 0 {
-			table[sizeLog2].Ext = make([][]field.Ext, sized.ExtWidth)
-			for k := range table[sizeLog2].Ext {
-				table[sizeLog2].Ext[k] = make([]field.Ext, n)
+		for k := range res.FRIProof.RunningQueries {
+			q := make(RunningQuery, numRounds-1)
+			for j := uint8(1); j < numRounds; j++ {
+				height := int(p.LogCodewordSize - j)
+				n := height - p.merkleCapDepth(height)
+				q[j-1] = Branch{Siblings: make([]field.Octuplet, n), AuxSiblings: make([][]field.Octuplet, n)}
+			}
+			res.FRIProof.RunningQueries[k] = q
+		}
+	}
+	return res
+}
+
+// inputTreeOpeningShape mirrors openInputTreeOpeningToDepth: the bottom level
+// always carries its pair, the auxiliary levels at or below the cap carry
+// theirs, and the bottom sibling is derived rather than sent unless the leaves
+// digest row pairs.
+func inputTreeOpeningShape(shape Shape, info inputCapInfo) InputTreeOpening {
+	numSiblings := info.treeHeight() - info.depth
+	if !info.grouped {
+		numSiblings--
+	}
+	res := InputTreeOpening{
+		Siblings: make([]field.Octuplet, numSiblings),
+		Leaves:   make([]*RowPair, info.height),
+	}
+	bottom := len(shape) - 1
+	for bottom >= 0 && shape[bottom].BaseWidth+shape[bottom].ExtWidth == 0 {
+		bottom--
+	}
+	res.Leaves[info.height-1] = rowPairShape(shape[bottom])
+	for sizeLog2, sized := range shape[:bottom] {
+		if sized.BaseWidth+sized.ExtWidth == 0 {
+			continue
+		}
+		auxDepth, isAux := inputAuxDepth(info.rateLog, sizeLog2, bottom)
+		if isAux && auxDepth >= info.depth {
+			res.Leaves[auxDepth] = rowPairShape(sized)
+		}
+	}
+	return res
+}
+
+// inputCapShape mirrors openInputCaps: no cap at depth zero, else the
+// frontier and every revealed table in full.
+func inputCapShape(p Params, shape Shape, info inputCapInfo) InputCap {
+	if info.depth == 0 {
+		return InputCap{}
+	}
+	res := InputCap{
+		Nodes:  make([]field.Octuplet, 1<<info.depth),
+		Tables: make([]InputCapTable, len(info.revealed)),
+	}
+	rateLog := int(p.LogCodewordSize) - int(p.LogPlainTextSize)
+	for i, sizeLog2 := range info.revealed {
+		rows := make([]RowOpening, 1<<(sizeLog2+rateLog))
+		for r := range rows {
+			rows[r] = rowShape(shape[sizeLog2])
+		}
+		res.Tables[i] = InputCapTable{SizeLog2: uint8(sizeLog2), Rows: rows}
+	}
+	return res
+}
+
+func rowShape(sized SizedShape) RowOpening {
+	return RowOpening{
+		Base: make([]field.Element, sized.BaseWidth),
+		Ext:  make([]field.Ext, sized.ExtWidth),
+	}
+}
+
+func rowPairShape(sized SizedShape) *RowPair {
+	return &RowPair{rowShape(sized), rowShape(sized)}
+}
+
+// cloneInputTreeOpening deep-copies o, so that the queries of a shaped proof
+// share no backing arrays.
+func cloneInputTreeOpening(o InputTreeOpening) InputTreeOpening {
+	res := InputTreeOpening{
+		Siblings: make([]field.Octuplet, len(o.Siblings)),
+		Leaves:   make([]*RowPair, len(o.Leaves)),
+	}
+	for i, pair := range o.Leaves {
+		if pair != nil {
+			res.Leaves[i] = &RowPair{
+				{Base: make([]field.Element, len(pair[0].Base)), Ext: make([]field.Ext, len(pair[0].Ext))},
+				{Base: make([]field.Element, len(pair[1].Base)), Ext: make([]field.Ext, len(pair[1].Ext))},
 			}
 		}
 	}
-	return table
-}
-
-// zeroClaims returns the claimed values of an all-zero table: one zero per
-// opened (row, shift), laid out like shifts.
-func zeroClaims(shifts BatchShifts) BatchClaimedValues {
-	zeros := func(rows [][]int) [][]field.Ext {
-		if rows == nil {
-			return nil
-		}
-		res := make([][]field.Ext, len(rows))
-		for k, row := range rows {
-			res[k] = make([]field.Ext, len(row))
-		}
-		return res
-	}
-	claims := make(BatchClaimedValues, len(shifts))
-	for sizeLog2, sized := range shifts {
-		claims[sizeLog2] = SizedClaimedValues{Base: zeros(sized.Base), Ext: zeros(sized.Ext)}
-	}
-	return claims
+	return res
 }
