@@ -218,9 +218,12 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 }
 
 // TestGnarkVerifier_NonNativeScenarios is the non-native counterpart of
-// [TestGnarkVerifier_LocalVanishingScenarios].
+// [TestGnarkVerifier_LocalVanishingScenarios]. It runs the edge-case fixtures
+// only: the width fixtures' verifier circuits are the largest (28M to 63M
+// constraints) and add no in-circuit check the edge cases miss. The nonnative
+// package's native tests keep every fixture.
 func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
-	for i, build := range wioptest.NonNativeScenarios() {
+	for i, build := range wioptest.NonNativeEdgeCaseScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileGnarkPipeline(t, sc.Sys)
