@@ -21,11 +21,11 @@ class RetryingRiscvRollupsPostgresDao(
       delegate.getConsecutiveRollupsFromBlockNumber(startingBlockNumberInclusive, endBlockCreatedBefore)
     })
 
-  override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
+  override fun findHighestConsecutiveRollupFromBlockNumber(
     startingBlockNumberInclusive: ULong,
-  ): SafeFuture<ULong?> =
+  ): SafeFuture<RiscvRollupRecord?> =
     persistenceRetryer.retryQuery({
-      delegate.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive)
+      delegate.findHighestConsecutiveRollupFromBlockNumber(startingBlockNumberInclusive)
     })
 
   override fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
