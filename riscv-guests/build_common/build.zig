@@ -56,12 +56,22 @@ pub fn createPackageModule(
     optimize: std.builtin.OptimizeMode,
     imports: []const std.Build.Module.Import,
 ) *std.Build.Module {
-    return b.createModule(.{
+    return b.createModule(packageModuleOptions(b, target, optimize, imports));
+}
+
+/// What the package module is created from, for a package that publishes it with `addModule`.
+pub fn packageModuleOptions(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    imports: []const std.Build.Module.Import,
+) std.Build.Module.CreateOptions {
+    return .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .imports = imports,
-    });
+    };
 }
 
 pub const GuestOptions = struct {
