@@ -5,6 +5,7 @@ import (
 	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -46,6 +47,15 @@ func (v *Verifier) size(mod *wiop.Module) int {
 		return d.n
 	}
 	return v.scalarInt(mod.Size())
+}
+
+// logSize returns the cell of a module's log size ℓ, of its size padded to a
+// power of two: the input of a dynamic module, a constant for a sized one.
+func (v *Verifier) logSize(mod *wiop.Module) int {
+	if d := v.dyn(mod); d != nil {
+		return d.log
+	}
+	return v.scalarInt(bits.Len(uint(utils.NextPowerOfTwo(mod.Size()) - 1)))
 }
 
 // dyn returns the size of a dynamic module, nil for a sized one.

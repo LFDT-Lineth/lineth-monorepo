@@ -3,7 +3,6 @@ package recursion
 import (
 	"fmt"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
@@ -28,8 +27,10 @@ import (
 //
 // Dynamic modules are supported (see verifier_sizes.go): the sizes are
 // inputs, so one verifier checks the proofs of every size. The PCS opening is
-// checked in the machine too (see verifier_pcs.go), for the PCS's default
-// configuration and sized modules only.
+// checked in the machine too: for the PCS's default configuration and sized
+// modules (see verifier_pcs.go), and for a size-oblivious opening
+// (pcs.WithSizeOblivious), which dynamic modules need (see
+// verifier_pcs_oblivious.go).
 type Verifier struct {
 	m   *Machine
 	sys *wiop.System
@@ -40,7 +41,7 @@ type Verifier struct {
 	commitments map[int]int  // round ID → digest cell
 	public      []int        // the public inputs' cells, in sys.PublicInputs order
 	t           *transcript  // the inner transcript, after the replay of the rounds
-	pcs         *pcsVerifier // the PCS opening, nil if skipped
+	pcs         openingCheck // the PCS opening, nil if skipped
 
 	sizes      map[int]*dynSize // module index → the dynamic module's size
 	sizeOrder  []int            // the dynamic modules' indices, in module order
@@ -63,7 +64,7 @@ type verifierInput struct {
 	pub    int          // the cell's index in sys.PublicInputs, -1 if it is not a public input
 	// pcs reads the value from the opening proof, whose shape Inputs checks
 	// first.
-	pcs func(*fri.OpeningProof) Cell
+	pcs func(*pcsInput) Cell
 }
 
 // NewVerifier builds in m the verifier of sys's proofs. sys must be compiled
@@ -223,21 +224,23 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 	if len(pub) != len(v.sys.PublicInputs) {
 		return nil, fmt.Errorf("recursion: %d public inputs, want %d", len(pub), len(v.sys.PublicInputs))
 	}
-	if v.pcs != nil {
-		if err := v.pcs.checkOpeningShape(proof.PCSOpeningProof); err != nil {
-			return nil, fmt.Errorf("recursion: PCS opening: %w", err)
-		}
-	}
 	res := make([]Cell, len(v.inputs))
 	if err := v.sizeInputs(proof.DynamicSizes, res); err != nil {
 		return nil, err
+	}
+	var opening *pcsInput
+	if v.pcs != nil {
+		var err error
+		if opening, err = v.pcs.prepare(proof); err != nil {
+			return nil, fmt.Errorf("recursion: PCS opening: %w", err)
+		}
 	}
 	for k, in := range v.inputs {
 		if in.module != nil {
 			continue // set by sizeInputs
 		}
 		if in.pcs != nil {
-			res[k] = in.pcs(proof.PCSOpeningProof)
+			res[k] = in.pcs(opening)
 			continue
 		}
 		if in.cell == nil {

@@ -36,24 +36,51 @@ import (
 //     conjugate must be equal.
 //
 // Not supported, and rejected when the verifier is built: Merkle caps,
-// module groups (grouped commitments), column elision, a fixed FRI domain,
-// the BN-packed Merkle hash, a final polynomial of more than one coefficient,
-// and dynamic modules.
+// module groups (grouped commitments) or a fixed FRI domain alone, column
+// elision, the BN-packed Merkle hash, a final polynomial of more than one
+// coefficient, and dynamic modules. The two together, pcs.WithSizeOblivious,
+// are the size-oblivious opening (see verifier_pcs_oblivious.go), which
+// supports dynamic modules.
 
-// pcsVerifier is the in-machine PCS opening of one system, and the layout of
-// its proof inputs, which Inputs checks a proof against.
-type pcsVerifier struct {
-	v    *Verifier
-	op   *pcs.StaticOpening
-	plan fri.VerifierPlan
+// openingCheck is the in-machine PCS opening of a system: prepare checks an
+// opening proof's shape against the inputs the check allocated, and returns
+// what their values are read from.
+type openingCheck interface {
+	prepare(proof wiop.Proof) (*pcsInput, error)
+}
 
+// pcsInput is what the PCS opening's inputs read their values from: the
+// opening proof, and for a size-oblivious opening, its layout at the proof's
+// sizes.
+type pcsInput struct {
+	proof *fri.OpeningProof
+	ob    *obLayout
+}
+
+// pcsCommon is what the static and the size-oblivious openings share: the
+// transcript's values, and the helpers of the checks.
+type pcsCommon struct {
+	v         *Verifier
 	zero, one int
 	alphas    []int // fold challenges, one per round
 	roots     []int // the running layers' roots, rounds 1 … NumRounds − 1
 	final     int   // the final polynomial, a constant
-	treeRoots []int // the input trees' roots
-	levels    []pcsLevel
-	xTree     int // a tree of the largest size, whose path gives x⁻¹
+	treeRoots []int // the batches' roots
+}
+
+func newPCSCommon(v *Verifier) pcsCommon {
+	return pcsCommon{v: v, zero: v.scalar(field.Zero()), one: v.scalar(field.One())}
+}
+
+// pcsVerifier is the in-machine PCS opening of one system, and the layout of
+// its proof inputs, which Inputs checks a proof against.
+type pcsVerifier struct {
+	pcsCommon
+	op   *pcs.StaticOpening
+	plan fri.VerifierPlan
+
+	levels []pcsLevel
+	xTree  int // a tree of the largest size, whose path gives x⁻¹
 }
 
 // pcsLevel is the query-independent part of a level: its alphaDeep a, a^R,
@@ -75,22 +102,24 @@ type rowCells struct {
 }
 
 func (v *Verifier) checkPCS(a *pcs.OpeningVerifierAction) error {
+	if pcs.FRIFixedDomain(v.sys) {
+		return v.checkObliviousPCS(a)
+	}
 	op, err := a.Static(v.sys)
 	if err != nil {
 		return err
 	}
-	pv := &pcsVerifier{v: v, op: op, plan: op.Plan}
+	pv := &pcsVerifier{pcsCommon: newPCSCommon(v), op: op, plan: op.Plan}
 	if err := pv.supported(); err != nil {
 		return fmt.Errorf("PCS opening: %w", err)
 	}
-	pv.zero, pv.one = v.scalar(field.Zero()), v.scalar(field.One())
-	pv.claims()
-	zeta, err := pv.zeta()
+	pv.claims(op.Manifests, op.Duplicates)
+	zeta, err := pv.zeta(op.EvalPoints)
 	if err != nil {
 		return fmt.Errorf("PCS opening: %w", err)
 	}
-	pv.outOfDomain(zeta)
-	positions := pv.transcript()
+	pv.outOfDomain(zeta, pv.plan.LogCodewordSize)
+	positions := pv.transcript(pv.plan.NumRounds, op.NumQueries, op.Batches, op.PrecomputedRoot)
 	if err := pv.levelConstants(zeta); err != nil {
 		return fmt.Errorf("PCS opening: %w", err)
 	}
@@ -153,38 +182,38 @@ func (pv *pcsVerifier) supported() error {
 }
 
 // outOfDomain checks that ζ is not in the top codeword domain, as
-// checkClaimPointsOutOfDomain does: ζ^N − 1 ≠ 0, N = 2^LogCodewordSize, by
-// dividing one by it (Div binds d·q = 1, which no q satisfies for d = 0).
-// Every claim point ζ·ω_n^s then avoids every level's domain, a subgroup of
-// the top one, where z^N = ζ^N: the DEEP divisors x − z are nonzero, so their
-// quotients bound.
-func (pv *pcsVerifier) outOfDomain(zeta int) {
-	m := pv.v.m
+// checkClaimPointsOutOfDomain does: ζ^N − 1 ≠ 0, N = 2^logN the top
+// codeword's size, by dividing one by it (Div binds d·q = 1, which no q
+// satisfies for d = 0). Every claim point ζ·ω_n^s then avoids every level's
+// domain, a subgroup of the top one, where z^N = ζ^N: the DEEP divisors x − z
+// are nonzero, so their quotients bound.
+func (pc *pcsCommon) outOfDomain(zeta, logN int) {
+	m := pc.v.m
 	zN := zeta
-	for range pv.plan.LogCodewordSize {
+	for range logN {
 		zN = m.Mul(zN, zN)
 	}
-	m.Div(pv.one, m.Sub(zN, pv.one))
+	m.Div(pc.one, m.Sub(zN, pc.one))
 }
 
 // claims checks what RecoverBatchClaims checks: every manifest says Present
 // (no elision), and repeated openings of a column at a shift agree.
-func (pv *pcsVerifier) claims() {
-	v := pv.v
-	for _, c := range pv.op.Manifests {
-		v.assertEq(v.cell(c), pv.zero)
+func (pc *pcsCommon) claims(manifests []*wiop.Cell, duplicates [][2]*wiop.Cell) {
+	v := pc.v
+	for _, c := range manifests {
+		v.assertEq(v.cell(c), pc.zero)
 	}
-	for _, d := range pv.op.Duplicates {
+	for _, d := range duplicates {
 		v.assertEq(v.cell(d[0]), v.cell(d[1]))
 	}
 }
 
 // zeta returns ζ, the LagrangeEvals' evaluation point, and checks they share
 // it.
-func (pv *pcsVerifier) zeta() (int, error) {
-	ev := &evaluator{v: pv.v, r: -1, memo: map[wiop.Expression]int{}}
+func (pc *pcsCommon) zeta(points []wiop.Expression) (int, error) {
+	ev := &evaluator{v: pc.v, r: -1, memo: map[wiop.Expression]int{}}
 	res := -1
-	for _, p := range pv.op.EvalPoints {
+	for _, p := range points {
 		z, err := ev.eval(p)
 		if err != nil {
 			return 0, fmt.Errorf("evaluation point: %w", err)
@@ -192,50 +221,57 @@ func (pv *pcsVerifier) zeta() (int, error) {
 		if res < 0 {
 			res = z
 		} else if z != res {
-			pv.v.assertEq(z, res)
+			pc.v.assertEq(z, res)
 		}
 	}
 	return res, nil
 }
 
 // input allocates a proof input of the opening, whose value value reads from
-// the opening proof (checked against the plan's shape by Inputs first).
-func (pv *pcsVerifier) input(kind int, value func(*fri.OpeningProof) Cell) int {
-	a := pv.v.m.input(kind)
-	pv.v.inputs = append(pv.v.inputs, verifierInput{pub: -1, pcs: value})
+// the opening proof (checked against the expected shape by Inputs first).
+func (pc *pcsCommon) input(kind int, value func(*fri.OpeningProof) Cell) int {
+	return pc.inputFrom(kind, func(in *pcsInput) Cell { return value(in.proof) })
+}
+
+// inputFrom is input for a value that also depends on the proof's sizes.
+func (pc *pcsCommon) inputFrom(kind int, value func(*pcsInput) Cell) int {
+	a := pc.v.m.input(kind)
+	pc.v.inputs = append(pc.v.inputs, verifierInput{pub: -1, pcs: value})
 	return a
 }
 
 // transcript continues the inner system's transcript as compiled.verify
 // does, and returns the query positions' cells (lanes of challenges, not yet
-// reduced).
-func (pv *pcsVerifier) transcript() []int {
-	t, m, plan := pv.v.t, pv.v.m, pv.plan
-	for j := range plan.NumRounds {
-		pv.alphas = append(pv.alphas, m.Lanes(t.squeeze(), 0, KindE6))
-		if j == plan.NumRounds-1 {
+// reduced). It sets the batches' roots.
+func (pc *pcsCommon) transcript(
+	numRounds, numQueries int, batches []pcs.BatchRef, precomputedRoot field.Octuplet,
+) []int {
+	t, m := pc.v.t, pc.v.m
+	for j := range numRounds {
+		pc.alphas = append(pc.alphas, m.Lanes(t.squeeze(), 0, KindE6))
+		if j == numRounds-1 {
 			break
 		}
-		root := pv.input(KindDigest, func(p *fri.OpeningProof) Cell { return Cell(p.FRIProof.RoundRoots[j]) })
-		pv.roots = append(pv.roots, root)
+		root := pc.input(KindDigest, func(p *fri.OpeningProof) Cell { return Cell(p.FRIProof.RoundRoots[j]) })
+		pc.roots = append(pc.roots, root)
 		t.absorb(root, KindDigest)
 	}
-	pv.final = pv.input(KindE6, func(p *fri.OpeningProof) Cell { return E6Cell(p.FRIProof.FinalPoly[0]) })
-	t.absorb(pv.final, KindE6)
+	pc.final = pc.input(KindE6, func(p *fri.OpeningProof) Cell { return E6Cell(p.FRIProof.FinalPoly[0]) })
+	t.absorb(pc.final, KindE6)
 	// RandomManyIntegers: one challenge per 8 positions, a position per lane
-	positions := make([]int, 0, pv.op.NumQueries)
+	positions := make([]int, 0, numQueries)
 	var d int
-	for k := range pv.op.NumQueries {
+	for k := range numQueries {
 		if k%CellWidth == 0 {
 			d = t.squeeze()
 		}
 		positions = append(positions, m.Lanes(d, k%CellWidth, KindScalar))
 	}
-	for _, b := range pv.op.Batches {
+	for _, b := range batches {
 		if b.IsPrecomp {
-			pv.treeRoots = append(pv.treeRoots, m.Const(Cell(pv.op.PrecomputedRoot)))
+			pc.treeRoots = append(pc.treeRoots, m.Const(Cell(precomputedRoot)))
 		} else {
-			pv.treeRoots = append(pv.treeRoots, pv.v.commitments[b.Round.ID])
+			pc.treeRoots = append(pc.treeRoots, pc.v.commitments[b.Round.ID])
 		}
 	}
 	return positions
@@ -310,15 +346,15 @@ func (pv *pcsVerifier) claim(sizeLog2 int, e fri.PlanEntry, k int) *wiop.Cell {
 }
 
 // pow returns a^n, by squarings.
-func (pv *pcsVerifier) pow(a, n int) int {
-	res, started := pv.one, false
+func (pc *pcsCommon) pow(a, n int) int {
+	res, started := pc.one, false
 	for i := 62; i >= 0; i-- {
 		if started {
-			res = pv.v.m.Mul(res, res)
+			res = pc.v.m.Mul(res, res)
 		}
 		if n>>i&1 == 1 {
 			if started {
-				res = pv.v.m.Mul(res, a)
+				res = pc.v.m.Mul(res, a)
 			} else {
 				res, started = a, true
 			}
@@ -377,12 +413,12 @@ func (pv *pcsVerifier) rowInputs(q, t, level, side int, shape fri.SizedShape) ro
 // leafItems returns the items fri hashes a leaf of rows of the given shape
 // from (its header, then every row's base values and extension values), and
 // their kinds.
-func (pv *pcsVerifier) leafItems(shape fri.SizedShape, rows ...rowCells) (items, kinds []int) {
+func (pc *pcsCommon) leafItems(shape fri.SizedShape, rows ...rowCells) (items, kinds []int) {
 	var hdr Cell
 	hdr[0].SetUint64(fri.LeafDomainTag)
 	hdr[1].SetUint64(uint64(shape.BaseWidth))
 	hdr[2].SetUint64(uint64(shape.ExtWidth))
-	items, kinds = []int{pv.v.m.Const(hdr)}, []int{3}
+	items, kinds = []int{pc.v.m.Const(hdr)}, []int{3}
 	for _, r := range rows {
 		for k, c := range r.base {
 			items = append(items, c)
@@ -396,9 +432,9 @@ func (pv *pcsVerifier) leafItems(shape fri.SizedShape, rows ...rowCells) (items,
 	return items, kinds
 }
 
-func (pv *pcsVerifier) hashLeaf(shape fri.SizedShape, rows ...rowCells) int {
-	items, kinds := pv.leafItems(shape, rows...)
-	return pv.v.m.MDHash(pv.v.m.Pack(items, kinds))
+func (pc *pcsCommon) hashLeaf(shape fri.SizedShape, rows ...rowCells) int {
+	items, kinds := pc.leafItems(shape, rows...)
+	return pc.v.m.MDHash(pc.v.m.Pack(items, kinds))
 }
 
 // query checks one FRI query, at the position in the lane cell pos.
@@ -451,29 +487,7 @@ func (pv *pcsVerifier) query(q, pos int) {
 		}
 	}
 
-	// running layers: running[j] = (value at the query point, at its
-	// conjugate), 1 ≤ j < NumRounds; none at round 0 nor at the boundary
-	// round NumRounds
-	running := make([][2]int, plan.NumRounds+1)
-	for j := 1; j < plan.NumRounds; j++ {
-		self := pv.input(KindE6, func(p *fri.OpeningProof) Cell {
-			return Cell(p.FRIProof.RunningQueries[q][j-1].Leaf)
-		})
-		height := plan.LogCodewordSize - j
-		siblings := make([]int, height)
-		for i := range height {
-			// Siblings are root first: the leaf level's is the last
-			kind := KindDigest
-			if i == 0 {
-				kind = KindE6
-			}
-			siblings[i] = pv.input(kind, func(p *fri.OpeningProof) Cell {
-				return Cell(p.FRIProof.RunningQueries[q][j-1].Siblings[height-1-i])
-			})
-		}
-		m.MerklePath(self, siblings, bits.Shr[j], pv.roots[j-1])
-		running[j] = [2]int{self, siblings[0]}
-	}
+	running := pv.runningLayers(q, bits, plan.NumRounds, plan.LogCodewordSize)
 
 	// the query point x_j at every round with a level, x_0 = 1/x⁻¹
 	xs := []int{m.Div(pv.one, xInv)}
@@ -514,14 +528,42 @@ func (pv *pcsVerifier) query(q, pos int) {
 	m.FoldChain(xInv, rounds)
 }
 
+// runningLayers checks a query's running layers, and returns running[j] =
+// (the layer's value at the query point, at its conjugate), 1 ≤ j <
+// numRounds; none at round 0 nor at the boundary round numRounds.
+func (pc *pcsCommon) runningLayers(q int, bits Bits, numRounds, logCodewordSize int) [][2]int {
+	m := pc.v.m
+	running := make([][2]int, numRounds+1)
+	for j := 1; j < numRounds; j++ {
+		self := pc.input(KindE6, func(p *fri.OpeningProof) Cell {
+			return Cell(p.FRIProof.RunningQueries[q][j-1].Leaf)
+		})
+		height := logCodewordSize - j
+		siblings := make([]int, height)
+		for i := range height {
+			// Siblings are root first: the leaf level's is the last
+			kind := KindDigest
+			if i == 0 {
+				kind = KindE6
+			}
+			siblings[i] = pc.input(kind, func(p *fri.OpeningProof) Cell {
+				return Cell(p.FRIProof.RunningQueries[q][j-1].Siblings[height-1-i])
+			})
+		}
+		m.MerklePath(self, siblings, bits.Shr[j], pc.roots[j-1])
+		running[j] = [2]int{self, siblings[0]}
+	}
+	return running
+}
+
 // selectRow returns, cell by cell, a if bit else b.
-func (pv *pcsVerifier) selectRow(bit int, a, b rowCells) rowCells {
+func (pc *pcsCommon) selectRow(bit int, a, b rowCells) rowCells {
 	var res rowCells
 	for k := range a.base {
-		res.base = append(res.base, pv.v.m.Select(bit, a.base[k], b.base[k]))
+		res.base = append(res.base, pc.v.m.Select(bit, a.base[k], b.base[k]))
 	}
 	for k := range a.ext {
-		res.ext = append(res.ext, pv.v.m.Select(bit, a.ext[k], b.ext[k]))
+		res.ext = append(res.ext, pc.v.m.Select(bit, a.ext[k], b.ext[k]))
 	}
 	return res
 }
@@ -541,30 +583,13 @@ func (pv *pcsVerifier) levelValue(i int, rows []map[int][2]rowCells, side, x, ru
 		res = m.Mul(lv.aR, running)
 	}
 	for k, s := range lv.shifts {
-		var chain []DeepRow
+		var items []deepItem
 		for _, idx := range lv.order[lv.top[k]:] {
 			e := l.Entries[idx]
-			sel := uint8(0)
-			if slices.Contains(e.Shifts, s) {
-				sel = 1
-			}
 			rc := rows[e.Batch][l.SizeLog2][side]
-			if e.IsExt {
-				chain = append(chain, DeepRow{Cell: rc.ext[e.Row], Ext: true, Act: 1, Sel: sel})
-				continue
-			}
-			cell, lane := rc.base[e.Row/CellWidth], e.Row%CellWidth
-			// extend the previous row if this value is its cell's next lane
-			// down: a base row steps through its lanes from the highest
-			if n := len(chain); n > 0 && !chain[n-1].Ext && chain[n-1].Cell == cell &&
-				chain[n-1].Act&(1<<(lane+1)) != 0 && chain[n-1].Act&(1<<(lane+1)-1) == 0 {
-				chain[n-1].Act |= 1 << lane
-				chain[n-1].Sel |= sel << lane
-				continue
-			}
-			chain = append(chain, DeepRow{Cell: cell, Act: 1 << lane, Sel: sel << lane})
+			items = append(items, rc.item(e.Row, e.IsExt, slices.Contains(e.Shifts, s)))
 		}
-		term := m.Div(m.Sub(m.DeepHorner(lv.a, chain), lv.vz[k]), m.Sub(x, lv.z[k]))
+		term := m.Div(m.Sub(m.DeepHorner(lv.a, deepChain(items)), lv.vz[k]), m.Sub(x, lv.z[k]))
 		if res < 0 {
 			res = term
 		} else {
@@ -574,37 +599,62 @@ func (pv *pcsVerifier) levelValue(i int, rows []map[int][2]rowCells, side, x, ru
 	return res
 }
 
+// prepare checks the opening proof's shape (see checkOpeningShape).
+func (pv *pcsVerifier) prepare(proof wiop.Proof) (*pcsInput, error) {
+	if err := pv.checkOpeningShape(proof.PCSOpeningProof); err != nil {
+		return nil, err
+	}
+	return &pcsInput{proof: proof.PCSOpeningProof}, nil
+}
+
+// deepItem is one value of a DEEP Horner chain: lane lane of the cell (a base
+// value) or the E6 cell, and whether it is added (sel).
+type deepItem struct {
+	cell, lane int
+	ext, sel   bool
+}
+
+// item returns the deepItem of the row-th base or extension value of a row.
+func (rc rowCells) item(row int, isExt, sel bool) deepItem {
+	if isExt {
+		return deepItem{cell: rc.ext[row], ext: true, sel: sel}
+	}
+	return deepItem{cell: rc.base[row/CellWidth], lane: row % CellWidth, sel: sel}
+}
+
+// deepChain returns the DeepHorner rows of values given by decreasing power:
+// a base row steps through its cell's lanes from the highest, so a value in
+// its cell's next lane down extends the previous row.
+func deepChain(items []deepItem) []DeepRow {
+	var chain []DeepRow
+	for _, it := range items {
+		sel := uint8(0)
+		if it.sel {
+			sel = 1
+		}
+		if it.ext {
+			chain = append(chain, DeepRow{Cell: it.cell, Ext: true, Act: 1, Sel: sel})
+			continue
+		}
+		lane := it.lane
+		if n := len(chain); n > 0 && !chain[n-1].Ext && chain[n-1].Cell == it.cell &&
+			chain[n-1].Act&(1<<(lane+1)) != 0 && chain[n-1].Act&(1<<(lane+1)-1) == 0 {
+			chain[n-1].Act |= 1 << lane
+			chain[n-1].Sel |= sel << lane
+			continue
+		}
+		chain = append(chain, DeepRow{Cell: it.cell, Act: 1 << lane, Sel: sel << lane})
+	}
+	return chain
+}
+
 // checkOpeningShape checks an opening proof has the shape the machine
 // verifies, as fri.PCS.Verify checks it before reading it, so that the
 // inputs' values can be read from it.
 func (pv *pcsVerifier) checkOpeningShape(p *fri.OpeningProof) error {
 	plan := pv.plan
-	if p == nil {
-		return fmt.Errorf("no PCS opening proof")
-	}
-	f := p.FRIProof
-	if len(f.RoundRoots) != plan.NumRounds-1 || len(f.RoundCaps) != plan.NumRounds-1 {
-		return fmt.Errorf("%d round roots and %d caps, want %d", len(f.RoundRoots), len(f.RoundCaps), plan.NumRounds-1)
-	}
-	for j, c := range f.RoundCaps {
-		if len(c.Nodes) != 0 || len(c.Aux) != 0 {
-			return fmt.Errorf("round %d: a Merkle cap", j+1)
-		}
-	}
-	if len(f.FinalPoly) != 1<<plan.LogFinalPolySize {
-		return fmt.Errorf("a final polynomial of %d coefficients, want %d", len(f.FinalPoly), 1<<plan.LogFinalPolySize)
-	}
-	if len(f.RunningQueries) != pv.op.NumQueries || len(p.InputQueries) != pv.op.NumQueries {
-		return fmt.Errorf("%d running and %d input queries, want %d",
-			len(f.RunningQueries), len(p.InputQueries), pv.op.NumQueries)
-	}
-	if len(p.InputCaps) != len(plan.Trees) {
-		return fmt.Errorf("%d input caps, want %d", len(p.InputCaps), len(plan.Trees))
-	}
-	for t, c := range p.InputCaps {
-		if len(c.Nodes) != 0 || len(c.Tables) != 0 {
-			return fmt.Errorf("input tree %d: a Merkle cap", t)
-		}
+	if err := checkFRIShape(p, plan.NumRounds, pv.op.NumQueries, len(plan.Trees)); err != nil {
+		return err
 	}
 	for q := range pv.op.NumQueries {
 		if err := pv.checkQueryShape(p, q); err != nil {
@@ -644,11 +694,51 @@ func (pv *pcsVerifier) checkQueryShape(p *fri.OpeningProof, q int) error {
 			}
 		}
 	}
-	if len(p.FRIProof.RunningQueries[q]) != plan.NumRounds-1 {
-		return fmt.Errorf("%d running layers, want %d", len(p.FRIProof.RunningQueries[q]), plan.NumRounds-1)
+	return checkRunningShape(p, q, plan.NumRounds, plan.LogCodewordSize)
+}
+
+// checkFRIShape checks what an opening proof holds besides its
+// queries' openings: a root per intermediate round, a final polynomial of one
+// coefficient, the queries, and no Merkle cap.
+func checkFRIShape(p *fri.OpeningProof, numRounds, numQueries, numTrees int) error {
+	if p == nil {
+		return fmt.Errorf("no PCS opening proof")
+	}
+	f := p.FRIProof
+	if len(f.RoundRoots) != numRounds-1 || len(f.RoundCaps) != numRounds-1 {
+		return fmt.Errorf("%d round roots and %d caps, want %d", len(f.RoundRoots), len(f.RoundCaps), numRounds-1)
+	}
+	for j, c := range f.RoundCaps {
+		if len(c.Nodes) != 0 || len(c.Aux) != 0 {
+			return fmt.Errorf("round %d: a Merkle cap", j+1)
+		}
+	}
+	if len(f.FinalPoly) != 1 {
+		return fmt.Errorf("a final polynomial of %d coefficients, want 1", len(f.FinalPoly))
+	}
+	if len(f.RunningQueries) != numQueries || len(p.InputQueries) != numQueries {
+		return fmt.Errorf("%d running and %d input queries, want %d",
+			len(f.RunningQueries), len(p.InputQueries), numQueries)
+	}
+	if len(p.InputCaps) != numTrees {
+		return fmt.Errorf("%d input caps, want %d", len(p.InputCaps), numTrees)
+	}
+	for t, c := range p.InputCaps {
+		if len(c.Nodes) != 0 || len(c.Tables) != 0 {
+			return fmt.Errorf("input tree %d: a Merkle cap", t)
+		}
+	}
+	return nil
+}
+
+// checkRunningShape checks the running layers of a query: one per round but
+// the first, uncapped, of extension leaves.
+func checkRunningShape(p *fri.OpeningProof, q, numRounds, logCodewordSize int) error {
+	if len(p.FRIProof.RunningQueries[q]) != numRounds-1 {
+		return fmt.Errorf("%d running layers, want %d", len(p.FRIProof.RunningQueries[q]), numRounds-1)
 	}
 	for i, b := range p.FRIProof.RunningQueries[q] {
-		height := plan.LogCodewordSize - i - 1
+		height := logCodewordSize - i - 1
 		if len(b.Siblings) != height || len(b.AuxSiblings) != height {
 			return fmt.Errorf("round %d: %d siblings, want %d", i+1, len(b.Siblings), height)
 		}

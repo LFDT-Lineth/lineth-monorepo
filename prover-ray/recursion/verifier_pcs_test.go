@@ -166,21 +166,37 @@ func (a assignColumn) Run(rt *wiop.Runtime) {
 // cheatOpening replaces the PCS opening prover action of sys by a cheating
 // one: compiled.open, but sending a constant final polynomial (zero) when the
 // folded codeword is not constant, where the honest prover gives up.
+//
+// It replaces the action in place: a caller proving the system again
+// restores the round's actions.
 func cheatOpening(t *testing.T, sys *wiop.System) {
 	t.Helper()
-	op, err := actionOf[*pcs.OpeningVerifierAction](sys).Static(sys)
-	require.NoError(t, err, "the opening's static structure")
+	action := actionOf[*pcs.OpeningVerifierAction](sys)
+	cheat := cheatingOpening{precomputed: action.PrecomputedState()}
+	if pcs.FRIFixedDomain(sys) {
+		cheat.fixed = true
+		cheat.queryRange = 1 << (int(pcs.FRIMaxCommittableSizeLog2(sys)) + bits.TrailingZeros(uint(pcs.RSBlowup(sys))))
+	} else {
+		op, err := action.Static(sys)
+		require.NoError(t, err, "the opening's static structure")
+		cheat.queryRange = op.QueryRange
+	}
 	last := sys.Rounds[len(sys.Rounds)-1]
 	for k, a := range last.ProverActions {
 		if pcs.IsOpeningProverAction(a) {
-			last.ProverActions[k] = cheatingOpening{op.QueryRange}
+			last.ProverActions = slices.Clone(last.ProverActions)
+			last.ProverActions[k] = cheat
 			return
 		}
 	}
 	t.Fatal("no PCS opening prover action")
 }
 
-type cheatingOpening struct{ queryRange int }
+type cheatingOpening struct {
+	queryRange  int
+	fixed       bool // a fixed FRI domain
+	precomputed *fri.CommitterState
+}
 
 func (a cheatingOpening) Run(rt *wiop.Runtime) {
 	sys := rt.System
@@ -205,9 +221,13 @@ func (a cheatingOpening) Run(rt *wiop.Runtime) {
 	if err != nil {
 		panic(err)
 	}
+	p.FixedDomain = a.fixed
 	for i, b := range batches {
 		st, ok := pcs.CommittedState(rt, b.Round.ID)
-		if b.IsPrecomp || !ok {
+		if b.IsPrecomp {
+			st, ok = a.precomputed, a.precomputed != nil
+		}
+		if !ok {
 			panic("cheatingOpening: no committed state")
 		}
 		if err := p.AddOpening(*st, zeta, shifts[i], claims[i]); err != nil {
@@ -250,7 +270,7 @@ func TestVerifierPCS_Unsupported(t *testing.T) {
 		{pcs.WithMerkleCapHeight(1), "the Merkle caps"},
 		{pcs.WithModuleGroups(), "grouped"},
 		{pcs.WithColumnElision(), "elision"},
-		{pcs.WithFixedFRIDomain(), "fixed FRI domain"},
+		{pcs.WithFixedFRIDomain(), "not size-oblivious"},
 		{pcs.WithMerkleHash(fri.MerkleHashBNPacked), "Merkle hash"},
 	} {
 		t.Run(tc.want, func(t *testing.T) {
