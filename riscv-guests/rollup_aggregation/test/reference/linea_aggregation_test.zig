@@ -39,7 +39,7 @@ const RequestSpec = struct {
     proofs: []const ProofSpec,
 };
 
-/// The requests in window order; their conflations cover the 150 blocks of the window.
+/// The requests in window order; their conflations cover the window.
 const requests = [_]RequestSpec{
     .{
         .program_vk = rollup_vk_a,
@@ -85,6 +85,12 @@ const requests = [_]RequestSpec{
 /// The rollup proofs of the window's requests: each runs the rollup statement over a request that
 /// continues the one before it, and carries a devmode proof of its output under its program VK.
 fn rollupProofs(a: Allocator, window: []const Fact) ![]rollup_proof.VerifiableRollupProof {
+    var covered: usize = 0;
+    for (requests) |spec| for (spec.blocks) |count| {
+        covered += count;
+    };
+    try std.testing.expectEqual(window.len, covered);
+
     const proofs = try a.alloc(rollup_proof.VerifiableRollupProof, requests.len);
     var next_block: usize = 0;
     var executions: usize = 0;
@@ -111,17 +117,6 @@ fn rollupProofs(a: Allocator, window: []const Fact) ![]rollup_proof.VerifiableRo
     }
     try scenario.prove(a, proofs);
     return proofs;
-}
-
-test "the requests cover the window" {
-    var covered: usize = 0;
-    for (requests) |spec| for (spec.blocks) |count| {
-        covered += count;
-    };
-
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    try std.testing.expectEqual((try rollup_scenario.lineaWindow(arena.allocator(), std.testing.io)).len, covered);
 }
 
 test "three adjacent rollup proofs of the Linea window finalize its range" {
