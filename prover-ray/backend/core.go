@@ -9,6 +9,8 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"sync/atomic"
+	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -26,6 +28,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
 )
 
 // ErrNotImplemented is returned by stubs that are not yet wired up.
@@ -42,12 +45,24 @@ const (
 	guestLogMemory    = "guest_log"
 )
 
-// Spec frame of the l2-execution guest output.
+// Spec frame of the guest output: schema id 0x0003 (l2-execution) or 0x0005 (rollup).
 const (
-	guestOutputSchemaID     = 0x0003
-	guestOutputSchemaIDSize = 2
-	guestOutputHashSize     = 32
+	l2ExecutionOutputSchemaID = 0x0003
+	rollupOutputSchemaID      = 0x0005
+	guestOutputSchemaIDSize   = 2
+	guestOutputHashSize       = 32
 )
+
+// outputSchemaID returns the schema id of the guest output for proof type t.
+func outputSchemaID(t ProofType) (uint16, error) {
+	switch t {
+	case ProofTypeL2Execution:
+		return l2ExecutionOutputSchemaID, nil
+	case ProofTypeRollup:
+		return rollupOutputSchemaID, nil
+	}
+	return 0, fmt.Errorf("no guest output format for proof type %q: %w", t, ErrNotImplemented)
+}
 
 // Core is the shared proving kernel. Initialize once via [New]; it is
 // safe for concurrent use after that; each [Prove] call gets its own
@@ -266,17 +281,22 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // public inputs except EndBlockNumber, which the coordinator needs to identify
 // the proven batch. It runs no guest and ignores Payload.
 func (c *Core) proveDevMock(job Job) Result {
-	return Result{
+	result := Result{
 		JobID:        job.ID,
 		Status:       ResultStatusOK,
 		ProofBytes:   DevMarkerProof(ProverModeDevMock),
 		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
+	if job.Type == ProofTypeRollup {
+		result.RollupPublicInputs.EndBlockNumber = job.EndBlock
+	}
+	return result
 }
 
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
 // decoded from its output, the output itself for the runner's native runner
-// check, and the dev-zkvm marker in place of a proof. Payload is the whole
+// check, and a devmode proof of the output hash, the same proof format as
+// dev-partial but with no trace check. Payload is the whole
 // extended (0x0002) input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
@@ -288,17 +308,22 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs, job.Type, c.cfg.GoGen)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+	proofBytes, err := devmodeProof(executedPublicInputs(out[:guestOutputHashSize]))
 	if err != nil {
 		return failResult(job.ID, err)
 	}
 
 	return Result{
-		JobID:        job.ID,
-		Status:       ResultStatusOK,
-		ProofBytes:   DevMarkerProof(ProverModeDevZkVM),
-		PublicInputs: pi,
-		GuestOutput:  out,
+		JobID:              job.ID,
+		Status:             ResultStatusOK,
+		ProofBytes:         proofBytes,
+		PublicInputs:       pi.execution,
+		RollupPublicInputs: pi.rollup,
+		GuestOutput:        out,
 	}
 }
 
@@ -318,7 +343,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 
 	// The lazy trace keeps no output, so Execute gives it. It also fails fast
 	// on a rejected block, before the trace.
-	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs)
+	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs, job.Type, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -332,26 +357,19 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	devSys, err := devmode.NewSystem()
-	if err != nil {
-		return failResult(job.ID, fmt.Errorf("building the devmode system: %w", err))
-	}
-	proof, pub, err := devmode.Prove(devSys, pub)
+	proofBytes, err := devmodeProof(pub)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmode.Encode(devSys, proof, pub, devmode.GuestBase)
-	if err != nil {
-		return failResult(job.ID, fmt.Errorf("encoding the devmode proof: %w", err))
-	}
 
 	return Result{
-		JobID:        job.ID,
-		Status:       ResultStatusOK,
-		ProofBytes:   proofBytes,
-		PublicInputs: pi,
-		GuestOutput:  out,
-		ProgramVK:    c.programVK(root.Pub),
+		JobID:              job.ID,
+		Status:             ResultStatusOK,
+		ProofBytes:         proofBytes,
+		PublicInputs:       pi.execution,
+		RollupPublicInputs: pi.rollup,
+		GuestOutput:        out,
+		ProgramVK:          c.programVK(root.Pub),
 	}
 }
 
@@ -394,42 +412,91 @@ func (c *Core) devmodePublicInputs(pub wiop.PublicInput, hash []byte) (wiop.Publ
 	return out, nil
 }
 
+// executedPublicInputs returns the public inputs of the devmode proof of a run
+// with no trace: the guest output hash, then a zero program VK.
+func executedPublicInputs(hash []byte) wiop.PublicInput {
+	out := make(wiop.PublicInput, devmode.NumPublicInputs)
+	for i := range out {
+		var e field.Element
+		if i < len(hash) {
+			e.SetUint64(uint64(hash[i]))
+		}
+		out[i] = field.ElemFromBase(e)
+	}
+	return out
+}
+
+// devmodeProof returns the image of a devmode proof of pub, for the guest base.
+func devmodeProof(pub wiop.PublicInput) ([]byte, error) {
+	sys, err := devmode.NewSystem()
+	if err != nil {
+		return nil, fmt.Errorf("building the devmode system: %w", err)
+	}
+	proof, pub, err := devmode.Prove(sys, pub)
+	if err != nil {
+		return nil, err
+	}
+	img, err := devmode.Encode(sys, proof, pub, devmode.GuestBase)
+	if err != nil {
+		return nil, fmt.Errorf("encoding the devmode proof: %w", err)
+	}
+	return img, nil
+}
+
 // programVK returns the program VK in the public inputs pub of a proof over the
 // trace system, in the response layout of [Result.ProgramVK].
 func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 	return field.OctupletToBytes(risc5.GetProgramVK(c.sys, pub))
 }
 
-// executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
-// its validated 0x0003 output.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) (bit.Array, error) {
-	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG)
-	return classifyGuestOutput(output, errs)
+// executeGuest runs the guest under zkc Execute (the no-trace path), with gogen
+// or the interpreter, and returns its validated output, framed with schema.
+func executeGuest(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, schema uint16, gogen bool,
+) (bit.Array, error) {
+	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))
+	return classifyGuestOutput(output, errs, schema)
 }
 
-// executeGuestPublicInputs runs the guest under ZkC Execute and returns its
-// 0x0003 output (hash || frame) and the public inputs decoded from it.
-func executeGuestPublicInputs(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array) ([]byte, PublicInputs, error) {
-	guestOutput, err := executeGuest(binf, inputs)
+// guestPublicInputs holds the l2-execution or the rollup public inputs, by proof type.
+type guestPublicInputs struct {
+	execution PublicInputs
+	rollup    RollupPublicInputs
+}
+
+// executeGuestPublicInputs runs the guest under zkc Execute and returns its
+// output (hash || frame) and the public inputs of proof type t.
+func executeGuestPublicInputs(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, t ProofType, gogen bool,
+) (out []byte, pi guestPublicInputs, err error) {
+	schema, err := outputSchemaID(t)
 	if err != nil {
-		return nil, PublicInputs{}, err
+		return nil, pi, err
 	}
-	out := guestOutput.Bytes()
-	pi, err := decodeGuestPublicInputs(out[guestOutputHashSize:])
+	guestOutput, err := executeGuest(binf, inputs, schema, gogen)
 	if err != nil {
-		return nil, PublicInputs{}, fmt.Errorf("decoding the guest public inputs: %w", err)
+		return nil, pi, err
+	}
+	out = guestOutput.Bytes()
+	if schema == rollupOutputSchemaID {
+		pi.rollup, err = decodeRollupPublicInputs(out[guestOutputHashSize:])
+	} else {
+		pi.execution, err = decodeGuestPublicInputs(out[guestOutputHashSize:])
+	}
+	if err != nil {
+		return nil, pi, fmt.Errorf("decoding the guest public inputs: %w", err)
 	}
 	return out, pi, nil
 }
 
 // classifyGuestOutput turns a ZkC Execute result into either the guest's
-// validated 0x0003 output or an error that distinguishes a guest block rejection
-// (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
-// internal VM failure (a prover-side bug). A guest that rejects the block writes
-// no output, so a missing guest_output is also a rejection. The guest_output
-// must be exactly the hash, the only bytes the proof binds, and the guest_log
-// the schema id and public inputs it commits to.
-func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
+// validated output, framed with schema, or an error that distinguishes a guest
+// block rejection (a recognized [vm.Failure], the guest's own exit on an
+// invalid block) from an internal VM failure (a prover-side bug). A guest that
+// rejects the block writes no output, so a missing guest_output is also a
+// rejection. The guest_output must be exactly the hash, the only bytes the
+// proof binds, and the guest_log the schema id and public inputs it commits to.
+func classifyGuestOutput(output map[string]bit.Array, errs []error, schema uint16) (res bit.Array, err error) {
 	if len(errs) > 0 {
 		return res, guestError(errors.Join(errs...))
 	}
@@ -445,7 +512,7 @@ func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Arr
 	if !ok {
 		return res, fmt.Errorf("guest wrote the hash but no %s (schema id and public inputs)", guestLogMemory)
 	}
-	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes()); err != nil {
+	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes(), schema); err != nil {
 		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
 	frame := slices.Concat(out.Bytes(), log.Bytes())
@@ -464,20 +531,38 @@ func guestError(err error) error {
 }
 
 // checkGuestOutputFrame checks the spec frame of the guest output: hash is
-// keccak256(0x0003 || public inputs) and framed is 0x0003 || public inputs. The
+// keccak256(schema || public inputs) and framed is schema || public inputs. The
 // public inputs are bound by the hash, which dev-partial checks against the
 // trace; the native runner check, when set, compares the whole output.
-func checkGuestOutputFrame(hash, framed []byte) error {
+func checkGuestOutputFrame(hash, framed []byte, schema uint16) error {
 	if len(framed) < guestOutputSchemaIDSize {
 		return fmt.Errorf("%d bytes after the hash, shorter than the schema id", len(framed))
 	}
 	if !bytes.Equal(hash, keccak256(framed)) {
-		return errors.New("hash does not match keccak256(0x0003 || public inputs)")
+		return errors.New("hash does not match keccak256(schema id || public inputs)")
 	}
-	if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
-		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
+	if got := binary.BigEndian.Uint16(framed); got != schema {
+		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, schema)
 	}
 	return nil
+}
+
+// GuestOutputPublicInputs returns the SSZ public inputs of guest output out
+// (hash || schema id || public inputs), after it checks the hash and that the
+// schema id is the output schema of proof type t.
+func GuestOutputPublicInputs(out []byte, t ProofType) ([]byte, error) {
+	schema, err := outputSchemaID(t)
+	if err != nil {
+		return nil, err
+	}
+	if len(out) < guestOutputHashSize {
+		return nil, fmt.Errorf("guest output is %d bytes, shorter than the hash", len(out))
+	}
+	hash, framed := out[:guestOutputHashSize], out[guestOutputHashSize:]
+	if err := checkGuestOutputFrame(hash, framed, schema); err != nil {
+		return nil, err
+	}
+	return framed[guestOutputSchemaIDSize:], nil
 }
 
 func keccak256(b []byte) []byte {
@@ -573,12 +658,13 @@ func sanityCheckJobs(job Job, shardSize uint64) error {
 }
 
 // runProve lazily traces the inputs, proves and verifies the shards of
-// shardIndexes (all of them if empty) one at a time, so that a single shard is
-// materialised at any moment rather than the whole trace, and conglomerates
-// the shard proofs as they arrive. It returns the resulting node and the
-// trace's shard count; the node is the root, and has passed the root checks,
-// iff it covers every shard. Without sharding, the single shard's proof is
-// returned as is: the in-shard message-bus check already applies.
+// shardIndexes (all of them if empty) [Config.ShardWorkers] at a time, so that
+// only those shards are materialised at any moment rather than the whole
+// trace, and conglomerates the shard proofs as they arrive. It returns the
+// resulting node and the trace's shard count; the node is the root, and has
+// passed the root checks, iff it covers every shard. Without sharding, the
+// single shard's proof is returned as is: the in-shard message-bus check
+// already applies.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
@@ -627,38 +713,15 @@ func (c *Core) runProve(
 	if needsMerger {
 		reducer = conglomeration.NewReducer(c.merger, conglomeration.DefaultMaxInFlightMerges)
 	}
-	for k, i := range indexes {
-		if err := ctx.Err(); err != nil {
-			return conglomeration.Node{}, 0, fmt.Errorf("before shard %d: %w", i, err)
-		}
-		shard, err := traceShard(lazyTrace, i)
+	if reducer == nil {
+		node, err := c.proveOneShard(ctx, lazyTrace, indexes[0])
 		if err != nil {
 			return conglomeration.Node{}, 0, err
 		}
-		// Assigning a module over the limit would panic in a worker goroutine,
-		// which no recover here can catch.
-		if err := c.driver.CheckShardFits(shard, wiop.ColumnSizeMaxSupported); err != nil {
-			return conglomeration.Node{}, 0, fmt.Errorf("shard %d does not fit in a column (%s): %w",
-				i, c.shardSizeHint(i), err)
-		}
-		// Once the last shard is traced, drop the lazy trace so that its
-		// checkpoints can be garbage collected before that shard is proved.
-		if k == len(indexes)-1 {
-			lazyTrace = zkcdriver.LazyTrace{}
-		}
-		proof, pub, err := c.proveShard(shard)
-		if err != nil {
-			return conglomeration.Node{}, 0, fmt.Errorf("shard %d: %w", i, err)
-		}
-		node := conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}
-		if reducer == nil {
-			return node, numShards, nil
-		}
-		// Add reports a merge that failed meanwhile: stop rather than prove
-		// shards whose result is already lost.
-		if err := reducer.Add(node); err != nil {
-			return conglomeration.Node{}, 0, fmt.Errorf("merging after shard %d: %w", i, err)
-		}
+		return node, numShards, nil
+	}
+	if err := c.proveShards(ctx, lazyTrace, indexes, reducer); err != nil {
+		return conglomeration.Node{}, 0, err
 	}
 	// The last merge is the root merge when every shard is covered.
 	var last func([]conglomeration.Node) (conglomeration.Node, error)
@@ -691,6 +754,67 @@ func (c *Core) shardSizeHint(i uint) string {
 	default:
 		return "use a smaller shard_size; it does not help for blobs_data, which follows the block input"
 	}
+}
+
+// proveShards traces and proves the shards of indexes, [Config.ShardWorkers]
+// at a time, and gives each to reducer when it is done. The first error
+// cancels the other shards and is returned.
+func (c *Core) proveShards(
+	ctx context.Context, lazyTrace zkcdriver.LazyTrace, indexes []uint, reducer *conglomeration.Reducer,
+) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("before shard %d: %w", indexes[0], err)
+	}
+	// shards runs each shard in a goroutine, at most ShardWorkers at a time.
+	// Its ctx is cancelled at the first error, which shards.Wait returns.
+	shards, ctx := errgroup.WithContext(ctx)
+	shards.SetLimit(max(c.cfg.ShardWorkers, 1))
+	var done atomic.Int64
+	for _, i := range indexes {
+		shards.Go(func() error {
+			start := time.Now()
+			node, err := c.proveOneShard(ctx, lazyTrace, i)
+			if err != nil {
+				return err
+			}
+			// The job failed or was cancelled meanwhile: nobody needs the merge,
+			// and the error makes sure the job does not succeed without this shard.
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("after shard %d: %w", i, err)
+			}
+			// Add reports a merge that failed meanwhile: stop rather than
+			// prove shards whose result is already lost.
+			if err := reducer.Add(node); err != nil {
+				return fmt.Errorf("merging after shard %d: %w", i, err)
+			}
+			logrus.Infof("Shard %d done in %s: %d of %d",
+				i, time.Since(start).Round(100*time.Millisecond), done.Add(1), len(indexes))
+			return nil
+		})
+	}
+	return shards.Wait()
+}
+
+// proveOneShard traces and proves the ith shard of the lazy trace.
+func (c *Core) proveOneShard(ctx context.Context, lazyTrace zkcdriver.LazyTrace, i uint) (conglomeration.Node, error) {
+	if err := ctx.Err(); err != nil {
+		return conglomeration.Node{}, fmt.Errorf("before shard %d: %w", i, err)
+	}
+	shard, err := traceShard(lazyTrace, i)
+	if err != nil {
+		return conglomeration.Node{}, err
+	}
+	// Assigning a module over the limit would panic in a worker goroutine,
+	// which no recover here can catch.
+	if err := c.driver.CheckShardFits(shard, wiop.ColumnSizeMaxSupported); err != nil {
+		return conglomeration.Node{}, fmt.Errorf("shard %d does not fit in a column (%s): %w",
+			i, c.shardSizeHint(i), err)
+	}
+	proof, pub, err := c.proveShard(shard)
+	if err != nil {
+		return conglomeration.Node{}, fmt.Errorf("shard %d: %w", i, err)
+	}
+	return conglomeration.Node{Coverage: []uint{i}, Proof: proof, Pub: pub}, nil
 }
 
 // traceShard traces and expands the ith shard of the lazy trace.

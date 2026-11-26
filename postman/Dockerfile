@@ -1,12 +1,31 @@
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the digest-pinned node:trixie-slim base image; pinning would break
+# the build on base refresh for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=24.22.3
+# Digest of node:${NODE_VERSION}-trixie-slim, kept in sync with .nvmrc. If you
+# override NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
+# trixie-slim (Debian 13) matches the distroless debian13 production stage, so
+# native code is built against the same glibc major it runs on. Note that
+# node:*-slim is still bookworm (Debian 12) — a different image.
+ARG NODE_IMAGE_DIGEST=sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0
 
-FROM node:${NODE_VERSION}-trixie-slim AS base
+FROM node:${NODE_VERSION}-trixie-slim@${NODE_IMAGE_DIGEST} AS base
+
+# Fail the build if NODE_VERSION and NODE_IMAGE_DIGEST drift: CI passes
+# NODE_VERSION from .nvmrc but not the digest, and with tag@digest only the
+# digest selects content — a .nvmrc bump alone would silently build the old
+# Node under a new label.
+ARG NODE_VERSION
+RUN [ "$(node --version)" = "v${NODE_VERSION}" ]
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Temp fix for the corepack issue described in https://github.com/pnpm/pnpm/issues/9029
-RUN npm i -g corepack@latest
+# Use `npm install` (not the `i` alias): KICS only whitelists the literal word `install`.
+# Version pinned to 0.35.0; bump deliberately.
+RUN npm install -g corepack@0.35.0
 
 RUN corepack enable
 
@@ -35,6 +54,9 @@ COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/pack
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
 # Use cache mount for faster rebuilds and prefer offline to use cache
+# kics-scan ignore-line
+# Versions are pinned by pnpm-lock.yaml (--frozen-lockfile); this is a workspace
+# install from the lockfile, not a single-package add. KICS: NPM Install Without Pinned Version.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 # Copy source code for building
@@ -62,6 +84,11 @@ WORKDIR /usr/src/app
 # Copy only production dependencies and built files
 COPY --from=builder --chown=nonroot:nonroot /usr/src/app/prod/postman ./postman
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
+
+# The :nonroot tag already sets USER 65532; re-assert it (numerically —
+# Kubernetes cannot verify runAsNonRoot against the named "nonroot" user) so
+# the non-root invariant is explicit here and survives a tag-variant change.
+USER 65532:65532
 
 # The image entrypoint is the node binary.
 CMD ["./postman/dist/src/main.js"]

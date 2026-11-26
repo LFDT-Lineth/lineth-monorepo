@@ -155,7 +155,7 @@ jobs:
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.ts-coverage-download.outcome == 'success' }}
+        if: ${{ steps.ts-coverage-download.outcome == 'success' && hashFiles('ci-ts-coverage/**/sdk-viem-lcov.info') != '' }}
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/ci-ts-coverage/**/sdk-viem-lcov.info
@@ -223,7 +223,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        if: ${{ steps.lido-coverage-download.outcome == 'success' }}
+        if: ${{ steps.lido-coverage-download.outcome == 'success' && hashFiles('ci-lido-coverage/**/shared-utils-lcov.info') != '' }}
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/ci-lido-coverage/**/shared-utils-lcov.info

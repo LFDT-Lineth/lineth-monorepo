@@ -3,15 +3,16 @@ package jobadapter
 import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 
 // rollupResponse is the getZkRollupProofV1 success body. programVk is the VK
-// of the proof, from the result, not the request's guestProgramId. The public
-// inputs and proof are placeholders until the rollup guest and proof
-// serialization land.
+// of the proof, from the result, not the request's guestProgramId.
 type rollupResponse struct {
 	ProverVersion    string                     `json:"proverVersion"`
 	ProgramVk        string                     `json:"programVk"`
 	ProofHex         string                     `json:"proof"`
 	StartBlockNumber uint64                     `json:"startBlockNumber"`
 	PublicInputs     rollupResponsePublicInputs `json:"publicInputs"`
+	// GuestOutput is the guest output (hash || frame) of the result as hex, 0x
+	// when the result has none.
+	GuestOutput string `json:"guestOutput"`
 }
 
 // rollupResponsePublicInputs is the rollup PI tuple.
@@ -29,8 +30,8 @@ type rollupResponsePublicInputs struct {
 	EndDataRollingHash                    string   `json:"endDataRollingHash"`
 	ParentBlockHash                       string   `json:"parentBlockHash"`
 	EndBlockHash                          string   `json:"endBlockHash"`
-	ParentDataTailTakeBytes               uint64   `json:"parentDataTailTakeBytes"`
-	FinalDataTailDiscardBytes             uint64   `json:"finalDataTailDiscardBytes"`
+	ParentSharedBlobCarryOverTailBytes    uint64   `json:"parentSharedBlobCarryOverTailBytes"`
+	FinalSharedBlobCarryOverTailBytes     uint64   `json:"finalSharedBlobCarryOverTailBytes"`
 	FilteredAddresses                     []string `json:"filteredAddresses"`
 	ProgramVks                            []string `json:"programVks"`
 	BlockCount                            uint64   `json:"blockCount"`
@@ -44,26 +45,33 @@ func newRollupResponse(result backend.Result, startBlockNumber uint64, proverVer
 		ProgramVk:        hexHash(result.ProgramVK),
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
-		PublicInputs:     placeholderRollupPublicInputs(),
+		PublicInputs:     rollupPublicInputs(result.RollupPublicInputs),
+		GuestOutput:      hexBytes(result.GuestOutput),
 	}
 }
 
-// placeholderRollupPublicInputs is a zero-valued but schema-valid rollup PI.
-// Populated from backend.Result once rollup public-input extraction exists.
-func placeholderRollupPublicInputs() rollupResponsePublicInputs {
-	zero := hexHash([32]byte{})
+func rollupPublicInputs(pi backend.RollupPublicInputs) rollupResponsePublicInputs {
 	return rollupResponsePublicInputs{
-		EndL1L2BridgeRollingHash: zero,
-		DynamicChainConfigHash:   zero,
-		ParentFtxRollingHash:     zero,
-		EndFtxRollingHash:        zero,
-		ParentDataRollingHash:    zero,
-		EndDataRollingHash:       zero,
-		ParentBlockHash:          zero,
-		EndBlockHash:             zero,
-		FilteredAddresses:        []string{},
-		ProgramVks:               []string{},
-		L2MessagingBlocksOffsets: []uint16{},
-		L2L1Messages:             []string{},
+		EndBlockNumber:                        pi.EndBlockNumber,
+		EndBlockTimestamp:                     pi.EndBlockTimestamp,
+		EndL1L2BridgeRollingHash:              hexHash(pi.EndL1L2BridgeRollingHash),
+		EndL1L2BridgeRollingHashMessageNumber: pi.EndL1L2BridgeRollingHashMessageNumber,
+		DynamicChainConfigHash:                hexHash(pi.DynamicChainConfigHash),
+		ParentFtxRollingHash:                  hexHash(pi.ParentFtxRollingHash),
+		ParentFtxNumber:                       pi.ParentFtxNumber,
+		EndFtxRollingHash:                     hexHash(pi.EndFtxRollingHash),
+		EndProcessedFtxNumber:                 pi.EndProcessedFtxNumber,
+		ParentDataRollingHash:                 hexHash(pi.ParentDataRollingHash),
+		EndDataRollingHash:                    hexHash(pi.EndDataRollingHash),
+		ParentBlockHash:                       hexHash(pi.ParentBlockHash),
+		EndBlockHash:                          hexHash(pi.EndBlockHash),
+		ParentSharedBlobCarryOverTailBytes:    pi.ParentSharedBlobCarryOverTailBytes,
+		FinalSharedBlobCarryOverTailBytes:     pi.FinalSharedBlobCarryOverTailBytes,
+		FilteredAddresses:                     hexAddressList(pi.FilteredAddresses),
+		ProgramVks:                            hexHashList(pi.ProgramVks),
+		BlockCount:                            pi.BlockCount,
+		// non-nil so an empty list marshals to [] not null.
+		L2MessagingBlocksOffsets: append([]uint16{}, pi.L2MessagingBlocksOffsets...),
+		L2L1Messages:             hexHashList(pi.L2L1Messages),
 	}
 }

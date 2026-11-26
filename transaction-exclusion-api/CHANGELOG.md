@@ -1,3 +1,12 @@
+## [2.0.0] - 2026-11-26
+
+### 🚀 Features
+
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 ## [1.0.1] - 2026-11-19
 
 ### 🚜 Refactor

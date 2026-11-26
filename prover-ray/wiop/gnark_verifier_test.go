@@ -379,6 +379,22 @@ func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
 		"a verifier action without CheckGnark must be rejected instead of dropped")
 }
 
+// TestAllocateVerifierCircuit_RejectsUnreducedQuery checks that building the
+// circuit panics on a query no compiler pass reduced, instead of dropping it.
+func TestAllocateVerifierCircuit_RejectsUnreducedQuery(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	// Declared after compilation, so no pass reduces it and no verifier action
+	// checks it.
+	col.Module.NewVanishing(sys.Context.Childf("unreduced"), col.View())
+
+	require.PanicsWithValue(t,
+		`wiop: VerifierCircuit: query "gnark-pcs/unreduced" (and 0 more) was not reduced by any compiler pass; `+
+			"the predicate it states would be silently dropped",
+		func() { wiop.AllocateVerifierCircuit(sys) })
+}
+
+// TestAssignVerifierCircuit_RejectsShapeMismatch checks that assigning a proof
+// whose cell field tags differ from the circuit's template panics.
 func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 	sys, col, le := newPCSOnlySystem()
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
@@ -394,6 +410,26 @@ func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 		"a proof whose cell field tags differ from the declarations must be rejected")
 	require.ErrorContains(t, sys.Verify(bad, pub), "does not carry its declared field tag",
 		"the native verifier must refuse the retagged proof too")
+}
+
+// TestAssignVerifierCircuit_RejectsDynamicSizes: the circuit's System is
+// static, so a proof claiming a dynamic module size is not one of its proofs,
+// as System.Verify also decides.
+func TestAssignVerifierCircuit_RejectsDynamicSizes(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
+	require.Empty(t, proof.DynamicSizes, "a static system's proof carries no dynamic sizes")
+	circ := wiop.AllocateVerifierCircuit(sys)
+	circ.AssignVerifierCircuit(proof, pub) // the honest proof is accepted
+
+	bad := cloneProof(proof)
+	bad.DynamicSizes[0] = 8
+	require.PanicsWithValue(t,
+		"wiop: VerifierCircuit: unexpected 1 dynamic module sizes on a static system",
+		func() { circ.AssignVerifierCircuit(bad, pub) },
+		"a proof carrying dynamic module sizes must be rejected")
+	require.ErrorContains(t, sys.Verify(bad, pub), "dynamic module does not exist in the system",
+		"the native verifier must refuse it too")
 }
 
 func hasDynamicModule(sys *wiop.System) bool {
@@ -422,77 +458,6 @@ func cloneProof(p wiop.Proof) wiop.Proof {
 		res.Commitments[k] = v
 	}
 	return res
-}
-
-// TestVerifierCircuit_FixedDynamicSizes covers the terminal-layer recipe for
-// dynamic modules: pin every dynamic module to a fixed size before compiling
-// ([wiop.System.FixDynamicSizes]), which makes the proof shape, and so the
-// circuit, independent of the trace. Each dynamic vanishing scenario is fixed at
-// its natural size, where the honest proof must be accepted natively and
-// in-circuit and an invalid witness rejected by both.
-//
-// At twice the natural size the data no longer fills the module and padding
-// rows appear. Padding is only sound for constraints that hold on padding rows,
-// which is already what a dynamic module requires whenever its trace length is
-// not a power of two. Fixing the size does not change that requirement:
-//   - DynamicQuadratic (col² = col, zero padding) is padding-safe and must pass
-//     end to end;
-//   - DynamicFibonacci and LeftPadDynamic exactly fill size 8 and their
-//     recurrences break at the first padding row, so the honest witness must be
-//     rejected natively.
-func TestVerifierCircuit_FixedDynamicSizes(t *testing.T) {
-	paddingSafe := map[string]bool{"DynamicQuadratic": true}
-	ran := 0
-	for _, build := range wioptest.VanishingScenarios() {
-		probe := build()
-		if !hasDynamicModule(probe.Sys) {
-			continue
-		}
-		// Prove the dynamic system once to learn the sizes its data needs.
-		global.Compile(probe.Sys)
-		pcs.Compile(probe.Sys, testPCSOptions()...)
-		probeProof, _ := probe.Sys.Prove(probe.AssignHonest)
-		natural := probeProof.DynamicSizes
-		require.NotEmpty(t, natural, "%s: a dynamic proof must carry its sizes", probe.Name)
-
-		for _, factor := range []int{1, 2} {
-			sizes := make(map[int]int, len(natural))
-			for k, v := range natural {
-				sizes[k] = v * factor
-			}
-			fixed := func() *wioptest.VanishingScenario {
-				sc := build()
-				require.NoError(t, sc.Sys.FixDynamicSizes(sizes))
-				require.False(t, hasDynamicModule(sc.Sys), "every dynamic module must be fixed")
-				global.Compile(sc.Sys)
-				pcs.Compile(sc.Sys, testPCSOptions()...)
-				return sc
-			}
-			padded := factor > 1
-			t.Run(fmt.Sprintf("%s/x%d", probe.Name, factor), func(t *testing.T) {
-				ran++
-				sc := fixed()
-				proof, pub := sc.Sys.Prove(sc.AssignHonest)
-				require.Empty(t, proof.DynamicSizes, "a fixed system carries no dynamic sizes")
-				if padded && !paddingSafe[probe.Name] {
-					require.ErrorContains(t, sc.Sys.Verify(proof, pub), "global quotient check failed",
-						"constraints that fail on padding rows must reject the padded witness")
-					return
-				}
-				require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
-
-				invalid := fixed()
-				badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
-				require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
-
-				cv := compileVerifierCircuit(t, sc.Sys)
-				require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
-				t.Logf("sizes %v: %d constraints", sizes, cv.ccs.GetNbConstraints())
-				require.Error(t, cv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
-			})
-		}
-	}
-	require.Equal(t, 6, ran, "expected three dynamic scenarios at two sizes each")
 }
 
 // TestVerifierCircuit_CompiledBeforeAnyProof is the point of allocating from

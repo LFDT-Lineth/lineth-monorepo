@@ -16,24 +16,24 @@ import kotlin.time.Instant
 /**
  * Domain request of a rollup proof (rollup_spec §2.2, `RollupProofPrivateInput`).
  *
- * [parentDataTailTakeBytes] is 0 at a chunk boundary. A positive value means the proof starts mid-chunk: it takes the
- * last N bytes of the first chunk's unpacked payload and requires [boundaryPrevDataRollingHash] (§3.4).
+ * [parentSharedBlobCarryOverTailBytes] is 0 at a chunk boundary. A positive value means the proof starts mid-chunk: it
+ * carries over the last N bytes of the first chunk's unpacked payload and requires [parentBlobDataRollingHash] (§3.4).
  */
 data class RollupProofRequestV1(
   val conflations: List<ConflationWitness>,
   val l2Executions: List<BlockIntervalProofIndex>,
   val chunks: List<ChunkWitness>,
   val parentDataRollingHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
-  val boundaryPrevDataRollingHash: ByteArray? = null,
+  val parentSharedBlobCarryOverTailBytes: UInt,
+  val parentBlobDataRollingHash: ByteArray? = null,
 ) : BlockInterval, StartBlockTimestampProvider {
   init {
     assertConsecutiveIntervals(l2Executions)
-    require(parentDataTailTakeBytes in 0..MAX_TAIL_BYTES) {
-      "parentDataTailTakeBytes=$parentDataTailTakeBytes must be in 0..$MAX_TAIL_BYTES"
+    require(parentSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES) {
+      "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES"
     }
-    require(parentDataTailTakeBytes == 0 || boundaryPrevDataRollingHash != null) {
-      "boundaryPrevDataRollingHash is required when parentDataTailTakeBytes > 0"
+    require(parentSharedBlobCarryOverTailBytes == 0u || parentBlobDataRollingHash != null) {
+      "parentBlobDataRollingHash is required when parentSharedBlobCarryOverTailBytes > 0"
     }
   }
 
@@ -57,8 +57,8 @@ data class RollupProofRequestV1(
     if (l2Executions != other.l2Executions) return false
     if (chunks != other.chunks) return false
     if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (!boundaryPrevDataRollingHash.contentEquals(other.boundaryPrevDataRollingHash)) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (!parentBlobDataRollingHash.contentEquals(other.parentBlobDataRollingHash)) return false
 
     return true
   }
@@ -71,16 +71,16 @@ data class RollupProofRequestV1(
     result = 31 * result + l2Executions.hashCode()
     result = 31 * result + chunks.hashCode()
     result = 31 * result + parentDataRollingHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
-    result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
+    result = 31 * result + parentSharedBlobCarryOverTailBytes.hashCode()
+    result = 31 * result + (parentBlobDataRollingHash?.contentHashCode() ?: 0)
     return result
   }
 
   override fun toString(): String {
     return "RollupProofRequestV1(conflations=$conflations, l2Executions=$l2Executions, " +
       "chunks=$chunks, parentDataRollingHash=${parentDataRollingHash.encodeHex()}, " +
-      "parentDataTailTakeBytes=$parentDataTailTakeBytes, " +
-      "boundaryPrevDataRollingHash=${boundaryPrevDataRollingHash?.encodeHex()})"
+      "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes, " +
+      "parentBlobDataRollingHash=${parentBlobDataRollingHash?.encodeHex()})"
   }
 }
 
@@ -198,8 +198,8 @@ data class RollupProofPublicInputs(
   val endDataRollingHash: ByteArray,
   val parentBlockHash: ByteArray,
   val endBlockHash: ByteArray,
-  val parentDataTailTakeBytes: Int,
-  val finalDataTailDiscardBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: Int,
+  val finalSharedBlobCarryOverTailBytes: Int,
   val l2L1Messages: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
   val programVks: List<ByteArray>,
@@ -225,8 +225,8 @@ data class RollupProofPublicInputs(
     if (!endDataRollingHash.contentEquals(other.endDataRollingHash)) return false
     if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
     if (!endBlockHash.contentEquals(other.endBlockHash)) return false
-    if (parentDataTailTakeBytes != other.parentDataTailTakeBytes) return false
-    if (finalDataTailDiscardBytes != other.finalDataTailDiscardBytes) return false
+    if (parentSharedBlobCarryOverTailBytes != other.parentSharedBlobCarryOverTailBytes) return false
+    if (finalSharedBlobCarryOverTailBytes != other.finalSharedBlobCarryOverTailBytes) return false
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
     if (!programVks.byteArrayListEquals(other.programVks)) return false
@@ -250,8 +250,8 @@ data class RollupProofPublicInputs(
     result = 31 * result + endDataRollingHash.contentHashCode()
     result = 31 * result + parentBlockHash.contentHashCode()
     result = 31 * result + endBlockHash.contentHashCode()
-    result = 31 * result + parentDataTailTakeBytes
-    result = 31 * result + finalDataTailDiscardBytes
+    result = 31 * result + parentSharedBlobCarryOverTailBytes
+    result = 31 * result + finalSharedBlobCarryOverTailBytes
     result = 31 * result + l2L1Messages.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
     result = 31 * result + programVks.byteArrayListHashCode()

@@ -1,7 +1,6 @@
 package lineth.persistence
 
 import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
@@ -23,4 +22,3 @@ interface BlobsRepositoryG<T> {
 }
 
 interface BlobsRepository : BlobsRepositoryG<BlobRecord>
-interface BlobsRepositoryV2 : BlobsRepositoryG<BlobRecordV2>

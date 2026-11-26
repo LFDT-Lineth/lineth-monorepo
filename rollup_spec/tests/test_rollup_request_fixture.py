@@ -25,11 +25,11 @@ def test_blob_chunk_is_a_valid_stream_of_the_canonical_payloads():
         kzg_commitment=bytes.fromhex(fields["kzgCommitment"][2:]),
         kzg_proof=bytes.fromhex(fields["kzgProof"][2:]),
     )
-    boundary = keccak256(b"dataRollingHash before the blob")
-    parent = data_rolling_hash_after(boundary, [chunk])
+    parent_blob = keccak256(b"dataRollingHash before the blob")
+    parent = data_rolling_hash_after(parent_blob, [chunk])
 
     end_hash, discard = verify_da_chunks(
-        [chunk], list(CANONICAL_PAYLOADS), parent, proof_request["parentDataTailTakeBytes"], boundary,
+        [chunk], list(CANONICAL_PAYLOADS), parent, proof_request["parentSharedBlobCarryOverTailBytes"], parent_blob,
     )
 
     assert (end_hash, discard) == (parent, 0)

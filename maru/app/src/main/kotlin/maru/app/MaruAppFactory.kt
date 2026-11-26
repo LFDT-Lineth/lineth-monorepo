@@ -18,7 +18,6 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
-import linea.teku.Web3JClient
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.timer.VertxTimerFactory
@@ -42,8 +41,8 @@ import maru.consensus.state.InstantFinalizationProvider
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
-import maru.executionlayer.ExecutionLayerFactory.buildExecutionEngineClient
-import maru.executionlayer.manager.JsonRpcExecutionLayerManager
+import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
+import maru.executionlayer.client.EngineApiEndpoint
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.BesuMetricsCategoryAdapter
 import maru.metrics.BesuMetricsSystemAdapter
@@ -254,28 +253,29 @@ class MaruAppFactory(
     val qbftFork = beaconGenesisConfig.getForkByConfigType(QbftConsensusConfig::class)
     val qbftConfig = qbftFork.configuration as QbftConsensusConfig
 
-    val engineApiWeb3jClient: Web3JClient? =
+    val validatorEngineApiEndpoint: EngineApiEndpoint? =
       config.validatorElNode?.let {
-        Helpers.createWeb3jClient(
+        Helpers.createEngineApiEndpoint(
+          vertx = vertx,
+          metricsFacade = metricsFacade,
           apiEndpointConfig = it.engineApiEndpoint,
           log = LogManager.getLogger("maru.clients.el.engineapi"),
         )
       }
+    val followerEngineApiEndpoints: Map<String, EngineApiEndpoint> =
+      config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
+        Helpers.createEngineApiEndpoint(
+          vertx = vertx,
+          metricsFacade = metricsFacade,
+          apiEndpointConfig = apiEndpointConfig,
+          log = LogManager.getLogger("maru.clients.follower.$followerLabel"),
+        )
+      }
 
     val elManagerMap =
-      if (engineApiWeb3jClient != null) {
-        ElFork.entries.associateWith {
-          val engineApiClient =
-            buildExecutionEngineClient(
-              web3JEngineApiClient = engineApiWeb3jClient,
-              elFork = it,
-              metricsFacade = metricsFacade,
-            )
-          JsonRpcExecutionLayerManager(engineApiClient)
-        }
-      } else {
-        emptyMap()
-      }
+      validatorEngineApiEndpoint
+        ?.let { endpoint -> ElFork.entries.associateWith { buildExecutionLayerManager(endpoint, it) } }
+        ?: emptyMap()
 
     // Because of the circular dependency between SyncStatusProvider, P2PNetwork and P2PPeersHeadBlockProvider
     var syncControllerImpl: SyncController? = null
@@ -306,18 +306,10 @@ class MaruAppFactory(
       overridingFinalizationProvider
         ?: setupFinalizationProvider(config, overridingLineaContractClient, vertx, timerFactory)
     syncControllerImpl = if (config.p2p != null) {
-      val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient> =
-        config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
-          Helpers.createWeb3jClient(
-            apiEndpointConfig = apiEndpointConfig,
-            log = LogManager.getLogger("maru.clients.follower.$followerLabel"),
-          )
-        }
       val elSyncBlockImportHandlers =
         Helpers.createForkAwareBlockImportHandlers(
           forksSchedule = beaconGenesisConfig,
-          metricsFacade = metricsFacade,
-          followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+          followerEngineApiEndpoints = followerEngineApiEndpoints,
           finalizationProvider = finalizationProvider,
         )
       // Validators manage EL sync through QBFT consensus itself.
@@ -325,7 +317,7 @@ class MaruAppFactory(
       val elSyncEnabled = config.qbft == null && config.syncing.elSyncStatusRefreshInterval != null
       val elSyncServiceFactory: ((ELSyncStatus) -> Unit) -> LongRunningService = { onStatusChange ->
         val refreshInterval = config.syncing.elSyncStatusRefreshInterval
-        if (elSyncEnabled && engineApiWeb3jClient != null) {
+        if (elSyncEnabled && validatorEngineApiEndpoint != null) {
           val validatorImportHandler =
             ElForkAwareBlockImporter(
               forksSchedule = beaconGenesisConfig,
@@ -382,14 +374,10 @@ class MaruAppFactory(
           chainDataProvider = ChainDataProviderImpl(kvDatabase),
           syncStatusProvider = syncControllerImpl,
           isElOnlineProvider = {
-            if (engineApiWeb3jClient != null) {
-              elManagerMap.values
-                .firstOrNull()
-                ?.isOnline()
-                ?.get() ?: true
-            } else {
-              true
-            }
+            elManagerMap.values
+              .firstOrNull()
+              ?.isOnline()
+              ?.get() ?: true
           },
         )
 
@@ -405,7 +393,8 @@ class MaruAppFactory(
       beaconChain = kvDatabase,
       metricsSystem = besuMetricsSystemAdapter,
       l2EthWeb3j = l2EthWeb3j,
-      validatorELNodeEngineApiWeb3JClient = engineApiWeb3jClient,
+      validatorEngineApiEndpoint = validatorEngineApiEndpoint,
+      followerEngineApiEndpoints = followerEngineApiEndpoints,
       apiServer = apiServer,
       syncControllerManager = syncControllerImpl,
       timerFactory = timerFactory,

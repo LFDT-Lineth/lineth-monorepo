@@ -9,6 +9,7 @@
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
@@ -16,6 +17,11 @@
 - *(riscv-guest)* Renaming the kebab-case dirs to sneak case, which is more conventional in Zig world (#4320)
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
+- *(riscv-guest)* Zesu update with some small breaking change (#4586)
+
+### 🚜 Refactor
+
+- *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)
 
 ### ⚙️ Miscellaneous Tasks
 

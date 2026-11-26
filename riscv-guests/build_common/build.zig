@@ -234,10 +234,12 @@ pub fn acceleratorsDependency(
 }
 
 /// The host build of the `zkvm_*` crypto providers, which native tests and tools link: the
-/// Constantine-backed provider module as an object, and the Constantine archive it needs.
+/// Constantine-backed provider module as an object, and the Constantine archive it needs, with
+/// Constantine's C declarations translated for the target for the modules that call the archive.
 pub const HostCrypto = struct {
     provider: *std.Build.Step.Compile,
     constantine: std.Build.LazyPath,
+    constantine_c: *std.Build.Module,
 
     /// The host crypto of `target`, built from the accelerator package with the native form of
     /// `crypto`. The provider is compiled optimized: the compiler's own linker crashes on a
@@ -248,13 +250,14 @@ pub const HostCrypto = struct {
 
     /// `accelerators` is the `lineth_accelerators` dependency built with `-Dzkvm-provide` for the
     /// native target, which publishes the Constantine archive of its provider as
-    /// `zkvm_provide_archive`. Null until that archive exists: it is fetched on demand and the build
-    /// reruns once it is.
+    /// `zkvm_provide_archive` and its declarations as `constantine_c`. Null until the archive exists:
+    /// it is fetched on demand and the build reruns once it is.
     pub fn init(b: *std.Build, accelerators: *std.Build.Dependency) ?HostCrypto {
         const constantine = accelerators.builder.named_lazy_paths.get("zkvm_provide_archive") orelse return null;
         return .{
             .provider = b.addObject(.{ .name = "zkvm_provide", .root_module = accelerators.module("zkvm_provide") }),
             .constantine = constantine,
+            .constantine_c = accelerators.module("constantine_c"),
         };
     }
 
@@ -303,6 +306,8 @@ fn clearFreestandingNativeLinkageInner(
 // *guest*, not here).
 const entry_stub_source = @embedFile("start.s");
 const linker_script_source = @embedFile("linker_script.ld");
+// Word-wise memcpy/memmove/memset replacing compiler_rt's ReleaseSmall byte loops (see mem.s).
+const mem_source = @embedFile("mem.s");
 
 /// Links a guest into its default deliverable: a **statically-linked rv64im ELF**, which is the
 /// zkvm-standards riscv-target artifact ("Object Format: ELF, statically linked"):
@@ -318,8 +323,10 @@ const linker_script_source = @embedFile("linker_script.ld");
 ///   • the entry stub (start.s: set sp from the linker script, then call main),
 ///   • the rv64im memory layout (linker_script.ld: stack @0, program @0x00800000, input @0x08800000,
 ///     heap @0x48800000 — kept in sync with arithmetization/src/test per PR #3332),
+///   • word-wise `memcpy` / `memmove` / `memset` (mem.s), overriding compiler_rt's weak ReleaseSmall
+///     byte loops (riscv64 guests only),
 ///   • dead-section GC, so the linked ELF drops unreferenced code.
-/// Zig links its own soft-float compiler_rt (`__udivti3` / `mem*`) automatically.
+/// Zig links its own soft-float compiler_rt (`__udivti3`, the other `mem*`) automatically.
 ///
 /// Installed by the DEFAULT build (`zig build` → zig-out/bin/<name>); also reachable via the `elf`
 /// step alias. NOTE: linker_script.ld's IN origin assumes the default `-Din-origin`
@@ -328,6 +335,9 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     const wf = b.addWriteFiles();
     const exe = b.addExecutable(.{ .name = guest_name, .root_module = root_module });
     exe.root_module.addAssemblyFile(wf.add("start.s", entry_stub_source));
+    if (root_module.resolved_target.?.result.cpu.arch == .riscv64) {
+        exe.root_module.addAssemblyFile(wf.add("mem.s", mem_source));
+    }
     exe.setLinkerScript(wf.add("linker_script.ld", linker_script_source));
     exe.link_gc_sections = true;
 

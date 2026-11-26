@@ -23,7 +23,9 @@ permissions:
 jobs:
   decode-all-words:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    # The 2^32 scan needs ~22 CPU-minutes; it parallelises across all cores.
+    # On the medium runner it took 25-30 min and sometimes hit the 50 min timeout.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     timeout-minutes: 60
     steps:
       - name: Checkout repository

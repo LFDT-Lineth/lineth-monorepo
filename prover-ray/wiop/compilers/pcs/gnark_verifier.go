@@ -13,10 +13,12 @@ import (
 // CheckGnark implements [wiop.GnarkVerifierAction]. It is the in-circuit
 // counterpart of [compiled.verify]: it replays the opening transcript on the
 // runtime's Fiat-Shamir state, gathers the claimed evaluations from the proof
-// cells and hands everything to [fri.PCS.VerifyGnark].
+// cells and hands everything to [fri.VerifierPlan.VerifyGnark].
 //
-// Only statically sized modules are supported: the batch shapes, and with
-// them the circuit geometry, are a function of the module sizes.
+// The opening's structure is [OpeningVerifierAction.Static]'s, shared with
+// the circuit's allocation ([OpeningVerifierAction.OpeningProofShape]), so
+// both agree on the geometry by construction. Only statically sized modules
+// and all-Present manifests are supported.
 func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRuntime) {
 	if run.PCSOpeningProof == nil {
 		panic("pcs: CheckGnark: the witness carries no PCS opening proof")
@@ -26,13 +28,13 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	if a.c.elisionEnabled {
 		panic("pcs: CheckGnark: all-Present manifests only: compile without WithColumnElision")
 	}
+	st, err := a.Static(run.System)
+	if err != nil {
+		panic(fmt.Sprintf("pcs: CheckGnark: %v", err))
+	}
 	proof := run.PCSOpeningProof
-	batches := CommittedBatches(run.System)
-	a.c.assertAllPresentGnark(run, batches)
-	manifests := allPresentManifests(batches)
-	shifts, claims, shapes, zeta := recoverBatchClaimsGnark(run, batches, manifests)
+	claims, zeta := staticClaimsGnark(run, st)
 
-	pcs := a.c.newPCS()
 	fs := run.FS()
 
 	// Same transcript as compiled.verify: one fold challenge per round, each
@@ -45,13 +47,10 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries),
-		a.c.effectiveNWith(staticSizeOf, batches, manifests))
+	queryPositions := fs.RandomManyIntegers(st.NumQueries, st.QueryRange)
 
-	pcs.VerifyGnark(api, fri.GnarkVerifyInputs{
-		Roots:          a.c.collectRootsGnark(run, batches),
-		Shapes:         shapes,
-		Shifts:         shifts,
+	st.Plan.VerifyGnark(api, fri.GnarkVerifyInputs{
+		Roots:          collectRootsGnark(run, st),
 		ClaimedValues:  claims,
 		Zeta:           zeta,
 		FoldAlphas:     foldAlphas,
@@ -61,13 +60,13 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 
 // collectRootsGnark mirrors [compiled.collectRoots]: transported roots from the
 // witness, the precomputed root as a circuit constant.
-func (c *compiled) collectRootsGnark(run *wiop.GnarkRuntime, batches []BatchRef) []circuit.Octuplet {
+func collectRootsGnark(run *wiop.GnarkRuntime, st *StaticOpening) []circuit.Octuplet {
 	api := run.API()
-	roots := make([]circuit.Octuplet, len(batches))
-	for i, b := range batches {
+	roots := make([]circuit.Octuplet, len(st.Batches))
+	for i, b := range st.Batches {
 		if b.IsPrecomp {
 			for j := range roots[i] {
-				roots[i][j] = api.ConstBig(c.precomputedRoot[j].BigInt(new(big.Int)))
+				roots[i][j] = api.ConstBig(st.PrecomputedRoot[j].BigInt(new(big.Int)))
 			}
 			continue
 		}
@@ -76,136 +75,50 @@ func (c *compiled) collectRootsGnark(run *wiop.GnarkRuntime, batches []BatchRef)
 	return roots
 }
 
-// openingSchedule is the structural part of [RecoverBatchClaims]: the batch
-// shapes and shift schedules, and where each LagrangeEval claim lands. It is a
-// function of the System alone (with all-Present manifests and static module
-// sizes), shared by the circuit and by the circuit's allocation, so that both
-// agree on the opening geometry by construction.
-type openingSchedule struct {
-	shapes []fri.Shape
-	shifts []fri.BatchShifts
-	// slots[e][k] places claim k of sys.LagrangeEvals[e].
-	slots [][]claimSlot
-}
+// staticClaimsGnark mirrors [RecoverBatchClaims] over circuit values. The
+// layout is st's; the checks the native version performs by comparison
+// (all-Present manifests, duplicate openings, shared evaluation point) become
+// equality constraints.
+func staticClaimsGnark(run *wiop.GnarkRuntime, st *StaticOpening) ([]fri.GnarkBatchClaimedValues, circuit.Ext) {
+	api := run.API()
 
-// claimSlot locates one claim in the batch claims. dup marks a claim that
-// repeats an earlier (batch, size, row, shift) opening: it is not opened again
-// but must equal the first one.
-type claimSlot struct {
-	key claimKey
-	dup bool
-}
-
-func newOpeningSchedule(sys *wiop.System, batches []BatchRef, manifests []ColumnManifest) openingSchedule {
-	var (
-		layouts = make([]map[wiop.ObjectID]ColumnLocation, len(batches))
-		sched   = openingSchedule{
-			shapes: make([]fri.Shape, len(batches)),
-			shifts: make([]fri.BatchShifts, len(batches)),
-			slots:  make([][]claimSlot, len(sys.LagrangeEvals)),
-		}
-		batchOf = make(map[*wiop.Round]int, len(batches))
-		seen    = make(map[claimKey]bool)
-	)
-	for i, b := range batches {
-		layouts[i], sched.shapes[i] = getLayoutWith(b.Round, staticSizeOf, manifests[i], configOf(sys).moduleGroups)
-		sched.shifts[i] = initializeBatchShift(sched.shapes[i])
-		batchOf[b.Round] = i
+	// The circuit's all-Present layout must be the one the transcript
+	// committed to.
+	for _, cell := range st.Manifests {
+		api.AssertIsEqualExt(run.GetCellValue(cell), api.ZeroExt())
 	}
-	for e, eval := range sys.LagrangeEvals {
-		sched.slots[e] = make([]claimSlot, len(eval.Polynomials))
-		for k, colView := range eval.Polynomials {
-			round := colView.Column.Round()
-			batchIdx, ok := batchOf[round]
-			if !ok {
-				panic(fmt.Sprintf("pcs: column %q is in a round that owns no committed batch",
-					colView.Column.Context.Path()))
-			}
-			loc := layouts[batchIdx][colView.Column.Context.ID]
-			size := 1 << loc.SizeID
-			shift := ((colView.ShiftingOffset % size) + size) % size
-			key := claimKey{batchIdx, loc.SizeID, loc.IsExt, loc.Position, shift}
-			sched.slots[e][k] = claimSlot{key: key, dup: seen[key]}
-			if seen[key] {
-				continue
-			}
-			seen[key] = true
-			sizedShift := &sched.shifts[batchIdx][loc.SizeID]
-			if loc.IsExt {
-				sizedShift.Ext[loc.Position] = append(sizedShift.Ext[loc.Position], shift)
-			} else {
-				sizedShift.Base[loc.Position] = append(sizedShift.Base[loc.Position], shift)
+
+	cellValues := func(rows [][]*wiop.Cell) [][]circuit.Ext {
+		res := make([][]circuit.Ext, len(rows))
+		for k, row := range rows {
+			for _, cell := range row {
+				res[k] = append(res[k], run.GetCellValue(cell))
 			}
 		}
+		return res
 	}
-	if len(sys.LagrangeEvals) == 0 {
-		panic("pcs: no LagrangeEval queries to open")
-	}
-	return sched
-}
-
-// recoverBatchClaimsGnark mirrors [RecoverBatchClaims] over circuit values.
-// The shift schedule and shapes are structural (see [openingSchedule]); the
-// claimed values are proof cells, and the consistency checks the native
-// version performs by comparison (shared evaluation point, duplicate openings)
-// become equality constraints.
-func recoverBatchClaimsGnark(run *wiop.GnarkRuntime, batches []BatchRef, manifests []ColumnManifest) (
-	[]fri.BatchShifts,
-	[]fri.GnarkBatchClaimedValues,
-	[]fri.Shape,
-	circuit.Ext,
-) {
-	var (
-		sys       = run.System
-		api       = run.API()
-		sched     = newOpeningSchedule(sys, batches, manifests)
-		claims    = make([]fri.GnarkBatchClaimedValues, len(batches))
-		first     = make(map[claimKey]circuit.Ext)
-		evalPoint *circuit.Ext
-		evalExpr  wiop.FieldPromise
-	)
-	for i := range batches {
-		claims[i] = initializeGnarkBatchClaims(sched.shapes[i])
-	}
-
-	for e, eval := range sys.LagrangeEvals {
-		// Every LagrangeEval opens at the same point. Sharing the same symbolic
-		// expression is the common case and needs no constraint; a distinct
-		// expression is constrained to evaluate to the same value.
-		if evalPoint == nil {
-			x := run.EvaluateSingle(eval.EvaluationPoint, nil)
-			evalPoint, evalExpr = &x, eval.EvaluationPoint
-		} else if eval.EvaluationPoint != evalExpr {
-			api.AssertIsEqualExt(*evalPoint, run.EvaluateSingle(eval.EvaluationPoint, nil))
-		}
-
-		for k, slot := range sched.slots[e] {
-			value := run.GetCellValue(eval.EvaluationClaims[k])
-			if slot.dup {
-				api.AssertIsEqualExt(first[slot.key], value)
-				continue
-			}
-			first[slot.key] = value
-			sizedClaim := &claims[slot.key.batch][slot.key.sizeID]
-			if slot.key.isExt {
-				sizedClaim.Ext[slot.key.position] = append(sizedClaim.Ext[slot.key.position], value)
-			} else {
-				sizedClaim.Base[slot.key.position] = append(sizedClaim.Base[slot.key.position], value)
-			}
+	claims := make([]fri.GnarkBatchClaimedValues, len(st.Claims))
+	for i, batch := range st.Claims {
+		claims[i] = make(fri.GnarkBatchClaimedValues, len(batch))
+		for s, sized := range batch {
+			claims[i][s] = fri.GnarkSizedClaimedValues{Base: cellValues(sized.Base), Ext: cellValues(sized.Ext)}
 		}
 	}
-	return sched.shifts, claims, sched.shapes, *evalPoint
-}
+	for _, dup := range st.Duplicates {
+		api.AssertIsEqualExt(run.GetCellValue(dup[0]), run.GetCellValue(dup[1]))
+	}
 
-func initializeGnarkBatchClaims(shape fri.Shape) fri.GnarkBatchClaimedValues {
-	batchClaims := make(fri.GnarkBatchClaimedValues, len(shape))
-	for i, sizedShape := range shape {
-		batchClaims[i] = fri.GnarkSizedClaimedValues{
-			Base: make([][]circuit.Ext, sizedShape.BaseWidth),
-			Ext:  make([][]circuit.Ext, sizedShape.ExtWidth),
+	// Every LagrangeEval opens at the same point. Sharing the same symbolic
+	// expression is the common case and needs no constraint; a distinct
+	// expression is constrained to evaluate to the same value.
+	first := st.EvalPoints[0]
+	zeta := run.EvaluateSingle(first, nil)
+	for _, point := range st.EvalPoints[1:] {
+		if point != first {
+			api.AssertIsEqualExt(zeta, run.EvaluateSingle(point, nil))
 		}
 	}
-	return batchClaims
+	return claims, zeta
 }
 
 // allPresentManifests returns an all-Present manifest for every batch.
@@ -217,39 +130,22 @@ func allPresentManifests(batches []BatchRef) []ColumnManifest {
 	return out
 }
 
-// assertAllPresentGnark constrains every transported manifest cell to
-// [ManifestPresent], so the circuit's all-Present layout is the one the
-// transcript committed to.
-func (c *compiled) assertAllPresentGnark(run *wiop.GnarkRuntime, batches []BatchRef) {
-	api := run.API()
-	for _, b := range batches {
-		if b.IsPrecomp {
-			continue
-		}
-		for _, cell := range c.manifestCells[b.Round.ID] {
-			api.AssertIsEqualExt(run.GetCellValue(cell), api.ZeroExt())
-		}
-	}
-}
-
 // OpeningProofShape implements [wiop.GnarkOpeningProofAllocator]: it returns
-// an opening proof with the geometry of every honest proof of sys, derived from
-// the System alone (batch shapes from the static module sizes, shifts from the
-// LagrangeEval queries) by [fri.PCS.ShapeOpeningProof].
+// an unassigned opening proof with the geometry of every honest proof of sys,
+// derived from the System alone through [OpeningVerifierAction.Static] and
+// [fri.VerifierPlan.GnarkOpeningProofShape].
 //
 // It panics on a system compiled with column elision: the manifests, and with
 // them the batch shapes, are then chosen by the prover per proof.
-func (a *OpeningVerifierAction) OpeningProofShape(sys *wiop.System) fri.OpeningProof {
+func (a *OpeningVerifierAction) OpeningProofShape(sys *wiop.System) fri.GnarkOpeningProof {
 	if a.c.elisionEnabled {
 		panic("pcs: OpeningProofShape: all-Present manifests only: compile without WithColumnElision")
 	}
-	batches := CommittedBatches(sys)
-	sched := newOpeningSchedule(sys, batches, allPresentManifests(batches))
-	proof, err := a.c.newPCS().ShapeOpeningProof(sched.shapes, sched.shifts)
+	st, err := a.Static(sys)
 	if err != nil {
 		panic(fmt.Sprintf("pcs: OpeningProofShape: %v", err))
 	}
-	return proof
+	return st.Plan.GnarkOpeningProofShape()
 }
 
 var _ wiop.GnarkOpeningProofAllocator = (*OpeningVerifierAction)(nil)

@@ -23,8 +23,8 @@ func decodeGuestPublicInputs(framed []byte) (PublicInputs, error) {
 	if len(framed) < guestOutputSchemaIDSize {
 		return PublicInputs{}, fmt.Errorf("%d bytes, shorter than the schema id", len(framed))
 	}
-	if id := binary.BigEndian.Uint16(framed); id != guestOutputSchemaID {
-		return PublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, guestOutputSchemaID)
+	if id := binary.BigEndian.Uint16(framed); id != l2ExecutionOutputSchemaID {
+		return PublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, l2ExecutionOutputSchemaID)
 	}
 	body := framed[guestOutputSchemaIDSize:]
 	if len(body) < publicInputsFixedSize {
@@ -75,6 +75,89 @@ func decodeGuestPublicInputs(framed []byte) (PublicInputs, error) {
 	if pi.L2MessagingBlocksOffsets, err = decodeList(body[blocksStart:], "l2MessagingBlocksOffsets", 2,
 		maxMessagingBlocks, binary.LittleEndian.Uint16); err != nil {
 		return PublicInputs{}, err
+	}
+	return pi, nil
+}
+
+// SSZ layout of the rollup public inputs (core_serde/rollup_proof.zig): a fixed
+// head with four list offsets. List bounds from rollup_spec/rollup_ssz.py.
+const (
+	rollupPublicInputsFixedSize = 336
+	maxRollupL2L1Messages       = 1 << 26
+	maxRollupFilteredAddresses  = 1 << 16
+	maxProgramVks               = 1 << 10
+	maxRollupMessagingBlocks    = 1 << 16
+)
+
+// decodeRollupPublicInputs decodes 0x0005 || SSZ(public inputs). It accepts only
+// the canonical encoding.
+func decodeRollupPublicInputs(framed []byte) (RollupPublicInputs, error) {
+	if len(framed) < guestOutputSchemaIDSize {
+		return RollupPublicInputs{}, fmt.Errorf("%d bytes, shorter than the schema id", len(framed))
+	}
+	if id := binary.BigEndian.Uint16(framed); id != rollupOutputSchemaID {
+		return RollupPublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, rollupOutputSchemaID)
+	}
+	body := framed[guestOutputSchemaIDSize:]
+	if len(body) < rollupPublicInputsFixedSize {
+		return RollupPublicInputs{}, fmt.Errorf("public inputs are %d bytes, shorter than the %d-byte fixed head",
+			len(body), rollupPublicInputsFixedSize)
+	}
+
+	var (
+		pi RollupPublicInputs
+		r  = sszReader{buf: body}
+	)
+	pi.EndBlockNumber = r.u64()
+	pi.EndBlockTimestamp = r.u64()
+	pi.EndL1L2BridgeRollingHash = r.hash()
+	pi.EndL1L2BridgeRollingHashMessageNumber = r.u64()
+	pi.DynamicChainConfigHash = r.hash()
+	pi.ParentFtxRollingHash = r.hash()
+	pi.ParentFtxNumber = r.u64()
+	pi.EndFtxRollingHash = r.hash()
+	pi.EndProcessedFtxNumber = r.u64()
+	pi.ParentDataRollingHash = r.hash()
+	pi.EndDataRollingHash = r.hash()
+	pi.ParentBlockHash = r.hash()
+	pi.EndBlockHash = r.hash()
+	pi.ParentSharedBlobCarryOverTailBytes = r.u64()
+	pi.FinalSharedBlobCarryOverTailBytes = r.u64()
+	messagesStart := r.offset()
+	filteredStart := r.offset()
+	programVksStart := r.offset()
+	pi.BlockCount = r.u64()
+	blocksStart := r.offset()
+
+	// The first list starts right after the fixed head and each list ends
+	// where the next one starts.
+	if messagesStart != rollupPublicInputsFixedSize {
+		return RollupPublicInputs{}, fmt.Errorf("l2L1Messages offset is %d, want %d",
+			messagesStart, rollupPublicInputsFixedSize)
+	}
+	if filteredStart < messagesStart || programVksStart < filteredStart || blocksStart < programVksStart ||
+		blocksStart > len(body) {
+		return RollupPublicInputs{}, fmt.Errorf("list offsets out of order or past the end: %d, %d, %d, %d in %d bytes",
+			messagesStart, filteredStart, programVksStart, blocksStart, len(body))
+	}
+
+	hash := func(b []byte) [32]byte { return [32]byte(b) }
+	var err error
+	if pi.L2L1Messages, err = decodeList(body[messagesStart:filteredStart], "l2L1Messages", 32,
+		maxRollupL2L1Messages, hash); err != nil {
+		return RollupPublicInputs{}, err
+	}
+	if pi.FilteredAddresses, err = decodeList(body[filteredStart:programVksStart], "filteredAddresses", 20,
+		maxRollupFilteredAddresses, func(b []byte) [20]byte { return [20]byte(b) }); err != nil {
+		return RollupPublicInputs{}, err
+	}
+	if pi.ProgramVks, err = decodeList(body[programVksStart:blocksStart], "programVks", 32,
+		maxProgramVks, hash); err != nil {
+		return RollupPublicInputs{}, err
+	}
+	if pi.L2MessagingBlocksOffsets, err = decodeList(body[blocksStart:], "l2MessagingBlocksOffsets", 2,
+		maxRollupMessagingBlocks, binary.LittleEndian.Uint16); err != nil {
+		return RollupPublicInputs{}, err
 	}
 	return pi, nil
 }

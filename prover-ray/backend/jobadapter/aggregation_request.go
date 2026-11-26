@@ -8,17 +8,20 @@ import (
 const (
 	decodeAggregationOp = "DecodeAggregationRequest"
 
-	rollupProofsKey              = "rollupProofs"
-	programVksKey                = "programVks"
-	finalDataTailDiscardBytesKey = "finalDataTailDiscardBytes"
+	rollupProofsKey                      = "rollupProofs"
+	programVksKey                        = "programVks"
+	finalSharedBlobCarryOverTailBytesKey = "finalSharedBlobCarryOverTailBytes"
 )
 
 // EmbeddedRollupProof is one rollupProof an aggregation request carries for the
 // guest to verify. ProgramVk is the rollup proof's own verifying-key hash.
+// GuestOutput is the rollup guest output (hash || frame) when the proof carries
+// guestOutput; otherwise PublicInputs holds its publicInputs.
 type EmbeddedRollupProof struct {
 	Proof            []byte
 	StartBlockNumber uint64
 	PublicInputs     RollupProofPublicInputs
+	GuestOutput      []byte
 	ProgramVk        []byte
 }
 
@@ -39,8 +42,8 @@ type RollupProofPublicInputs struct {
 	EndDataRollingHash                    [32]byte
 	ParentBlockHash                       [32]byte
 	EndBlockHash                          [32]byte
-	ParentDataTailTakeBytes               uint64
-	FinalDataTailDiscardBytes             uint64
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
 	L2L1Messages                          [][32]byte
 	FilteredAddresses                     [][20]byte
 	ProgramVks                            [][32]byte
@@ -108,13 +111,29 @@ func decodeEmbeddedRollupProof(raw json.RawMessage, op, ctx string) (EmbeddedRol
 	if err != nil {
 		return EmbeddedRollupProof{}, err
 	}
-	piObj, err := getObject(obj, publicInputsKey, op, ctx)
-	if err != nil {
-		return EmbeddedRollupProof{}, err
-	}
-	pi, err := decodeRollupProofPublicInputs(piObj, op, ctx+publicInputsKey+".")
-	if err != nil {
-		return EmbeddedRollupProof{}, err
+	// guestOutput is read when present, else publicInputs.
+	var (
+		guestOutput []byte
+		pi          RollupProofPublicInputs
+	)
+	_, hasGuestOutput := obj[guestOutputKey]
+	_, hasPublicInputs := obj[publicInputsKey]
+	switch {
+	case hasGuestOutput:
+		if guestOutput, err = getHexBytes(obj, guestOutputKey, op, ctx); err != nil {
+			return EmbeddedRollupProof{}, err
+		}
+	case hasPublicInputs:
+		var piObj map[string]json.RawMessage
+		if piObj, err = getObject(obj, publicInputsKey, op, ctx); err != nil {
+			return EmbeddedRollupProof{}, err
+		}
+		if pi, err = decodeRollupProofPublicInputs(piObj, op, ctx+publicInputsKey+"."); err != nil {
+			return EmbeddedRollupProof{}, err
+		}
+	default:
+		return EmbeddedRollupProof{}, decErrf(op, "missing %s%s or %s%s",
+			ctx, guestOutputKey, ctx, publicInputsKey)
 	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
@@ -124,6 +143,7 @@ func decodeEmbeddedRollupProof(raw json.RawMessage, op, ctx string) (EmbeddedRol
 		Proof:            proof,
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     pi,
+		GuestOutput:      guestOutput,
 		ProgramVk:        programVk,
 	}, nil
 }
@@ -162,8 +182,8 @@ func decodeRollupProofPublicInputs(
 	pi.EndDataRollingHash = h("endDataRollingHash")
 	pi.ParentBlockHash = h("parentBlockHash")
 	pi.EndBlockHash = h("endBlockHash")
-	pi.ParentDataTailTakeBytes = n(parentDataTailTakeBytesKey)
-	pi.FinalDataTailDiscardBytes = n(finalDataTailDiscardBytesKey)
+	pi.ParentSharedBlobCarryOverTailBytes = n(parentSharedBlobCarryOverTailBytesKey)
+	pi.FinalSharedBlobCarryOverTailBytes = n(finalSharedBlobCarryOverTailBytesKey)
 	pi.BlockCount = n(blockCountKey)
 	if err != nil {
 		return pi, err

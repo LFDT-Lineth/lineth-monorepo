@@ -15,6 +15,11 @@ spec:
       labels:
         {{- include "maru.labels" . | nindent 8 }}
     spec:
+      # The maru image runs as uid/gid 1000; fsGroup makes the data PVC writable.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -38,13 +43,13 @@ spec:
             - -jar
             - maru.jar
             - --maru-genesis-file
-            - /opt/consensys/maru/configs/genesis.json
+            - /opt/lineth/maru/configs/genesis.json
             - --config
             {{ if .Values.configFiles.configsDefaultsToml }}
-            - /opt/consensys/maru/configs/configs-defaults.toml
+            - /opt/lineth/maru/configs/configs-defaults.toml
             {{ end }}
             {{ if .Values.configFiles.configsToml }}
-            - /opt/consensys/maru/configs/configs.toml
+            - /opt/lineth/maru/configs/configs.toml
             {{ end }}
           {{- with .Values.resources }}
           resources:
@@ -52,9 +57,9 @@ spec:
           {{- end }}
           volumeMounts:
             - name: data
-              mountPath: /opt/consensys/maru/data
+              mountPath: /opt/lineth/maru/data
             - name: configs
-              mountPath: /opt/consensys/maru/configs
+              mountPath: /opt/lineth/maru/configs
           ports:
             {{- range .Values.service.ports }}
             - name: {{ .name }}

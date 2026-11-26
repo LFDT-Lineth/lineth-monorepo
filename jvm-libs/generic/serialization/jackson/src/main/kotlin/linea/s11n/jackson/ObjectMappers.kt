@@ -24,6 +24,11 @@ val ethByteAsHexSerialisersModule = SimpleModule().apply {
   this.addSerializer(ByteArray::class.java, ByteArrayToHexSerializer)
 }
 
+val ethNumberAsHexDeserialisersModule = SimpleModule().apply {
+  this.addDeserializer(ULong::class.java, ULongFromHexDeserializer)
+  this.addDeserializer(BigInteger::class.java, BigIntegerFromHexDeserializer)
+}
+
 val ethByteAsHexDeserialisersModule = SimpleModule().apply {
   this.addDeserializer(Byte::class.java, ByteToHexDeserializer)
   this.addDeserializer(UByte::class.java, UByteToHexDeserializer)

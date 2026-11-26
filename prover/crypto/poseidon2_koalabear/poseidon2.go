@@ -5,10 +5,8 @@ import (
 	"io"
 	"slices"
 
-	"github.com/consensys/gnark-crypto/hash"
 	"github.com/consensys/gnark/frontend"
 
-	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/maths/field/koalagnark"
@@ -19,8 +17,6 @@ const BlockSize = 8
 
 // MDHasher Merkle Damgard Hasher using Poseidon2 as compression function
 type MDHasher struct {
-	hash.StateStorer
-
 	// Sponge construction state
 	state field.Octuplet
 
@@ -31,13 +27,14 @@ type MDHasher struct {
 
 // NewMDHasher creates a new MDHasher with the given options.
 func NewMDHasher() *MDHasher {
-	h := &MDHasher{
-		StateStorer: gnarkposeidon2.NewMerkleDamgardHasher(),
-		state:       field.Octuplet{},
-	}
-
-	return h
+	return &MDHasher{}
 }
+
+// Size returns the digest size in bytes.
+func (d *MDHasher) Size() int { return BlockSize * field.Bytes }
+
+// BlockSize returns the size in bytes of a compression block.
+func (d *MDHasher) BlockSize() int { return BlockSize * field.Bytes }
 
 // HashBytes hashes an array of bytes and returns the result. It assumes the
 // bytes can be directly converted into blocks of octuplet after zero-padding.
@@ -65,6 +62,7 @@ func Compress(state, block field.Octuplet) field.Octuplet {
 
 // Reset clears the buffer, and reset state to iv
 func (d *MDHasher) Reset() {
+	d.buffer = d.buffer[:0]
 	d.bufferPosition = 0
 	d.state = field.Octuplet{}
 }
@@ -80,20 +78,7 @@ func (d *MDHasher) SetStateOctuplet(state field.Octuplet) {
 }
 
 func (d *MDHasher) GetStateOctuplet() field.Octuplet {
-	// State will flush the buffer, take the state and restore the initiat
-	// state of the hasher.
-	oldState := d.state
-	oldBuffer := slices.Clone(d.buffer)
-	oldBufferPosition := d.bufferPosition
-
-	_ = d.SumElement() // this flushes the hasher
-	res := slices.Clone(d.state[:])
-
-	d.state = oldState
-	d.buffer = oldBuffer
-	d.bufferPosition = oldBufferPosition
-
-	return field.Octuplet(res)
+	return absorb(d.state, d.buffer)
 }
 
 // WriteElements adds a slice of field elements to the running hash.
@@ -102,22 +87,27 @@ func (d *MDHasher) WriteElements(elmts ...field.Element) {
 }
 
 func (d *MDHasher) SumElement() field.Octuplet {
-	pos := 0
-	for pos < len(d.buffer) {
-		var buf [BlockSize]field.Element
-		remaining := len(d.buffer) - pos
-		if remaining < BlockSize {
-			copy(buf[BlockSize-remaining:], d.buffer[pos:])
-			pos = len(d.buffer)
-		} else {
-			copy(buf[:], d.buffer[pos:pos+BlockSize])
-			pos += BlockSize
-		}
-		d.state = vortex.CompressPoseidon2(d.state, buf)
-	}
-	// Reset length but preserve backing array capacity for reuse after Reset.
+	d.state = absorb(d.state, d.buffer)
+	// Truncate in place so the backing array is reused by subsequent writes.
 	d.buffer = d.buffer[:0]
 	return d.state
+}
+
+// absorb compresses the elements of buf into state block by block, left
+// padding the last incomplete block with zeroes. It does not allocate.
+func absorb(state field.Octuplet, buf []field.Element) field.Octuplet {
+	for len(buf) > 0 {
+		var block [BlockSize]field.Element
+		if len(buf) < BlockSize {
+			copy(block[BlockSize-len(buf):], buf)
+			buf = nil
+		} else {
+			copy(block[:], buf[:BlockSize])
+			buf = buf[BlockSize:]
+		}
+		state = vortex.CompressPoseidon2(state, block)
+	}
+	return state
 }
 
 // WriteElements adds a slice of field elements to the running hash.
@@ -128,18 +118,18 @@ func (d *MDHasher) Write(p []byte) (int, error) {
 	if len(p)%elemByteSize != 0 {
 		return 0, fmt.Errorf("input length is not a multiple of 4 byte size")
 	}
-	elems := make([]field.Element, 0, len(p)/elemByteSize)
-
+	// Decode directly into the buffer; on error, roll back to the previous
+	// length so a failed Write leaves the hasher unchanged.
+	oldLen := len(d.buffer)
+	d.buffer = slices.Grow(d.buffer, len(p)/elemByteSize)
 	for start := 0; start < len(p); start += elemByteSize {
-		chunk := p[start : start+elemByteSize]
 		var elem field.Element
-		if err := elem.SetBytesCanonical(chunk); err != nil {
+		if err := elem.SetBytesCanonical(p[start : start+elemByteSize]); err != nil {
+			d.buffer = d.buffer[:oldLen]
 			return 0, err
 		}
-		elems = append(elems, elem)
-
+		d.buffer = append(d.buffer, elem)
 	}
-	d.WriteElements(elems...)
 	return len(p), nil
 }
 func (h *MDHasher) State() [BlockSize]field.Element {
@@ -163,7 +153,5 @@ func GnarkBlockCompressionMekle(api frontend.API, oldState, block [BlockSize]koa
 
 // HashVec hashes a vector of field elements
 func HashVec(v ...field.Element) (h field.Octuplet) {
-	state := NewMDHasher()
-	state.WriteElements(v...)
-	return state.SumElement()
+	return absorb(field.Octuplet{}, v)
 }

@@ -24,28 +24,62 @@ guests_dir = "/data/guests"
 
 [execution]
 prover_mode = "dev-zkvm"
-requests_root_dir = "/opt/linea/prover-ray/requests"
-native_runner_bin = "/opt/linea/prover-ray/l2_execution_runner"
+requests_root_dir = "/opt/lineth/prover-ray/requests"
+native_runner_bin = "/opt/lineth/prover-ray/l2_execution_runner"
 `))
 	require.NoError(t, err)
 	assert.Equal(t, "0.0.0-riscv", cfg.Version)
 	assert.Equal(t, 4, cfg.LogLevel)
 	assert.Equal(t, "dev-zkvm", cfg.Execution.ProverMode)
-	assert.Equal(t, "/opt/linea/prover-ray/requests", cfg.Execution.RequestsRootDir)
-	assert.Equal(t, "/opt/linea/prover-ray/l2_execution_runner", cfg.Execution.NativeRunnerBin)
+	assert.Equal(t, "/opt/lineth/prover-ray/requests", cfg.Execution.RequestsRootDir)
+	assert.Equal(t, "/opt/lineth/prover-ray/l2_execution_runner", cfg.Execution.NativeRunnerBin)
 	assert.Equal(t, "/data/guests", cfg.GuestsDir)
 }
 
-func TestNewConfigFromFile_ShardSize(t *testing.T) {
-	cfg, err := NewConfigFromFile(writeConfig(t, `
+// TestNewConfigFromFile_Shards checks that shard_size and shard_workers are
+// top-level settings.
+func TestNewConfigFromFile_Shards(t *testing.T) {
+	const (
+		version   = "version = \"0.0.0-riscv\"\n"
+		shards    = "shard_size = 500000\nshard_workers = 10\n"
+		execution = "[execution]\nprover_mode = \"dev-partial\"\n"
+	)
+	cfg, err := NewConfigFromFile(writeConfig(t, version+shards+execution))
+	require.NoError(t, err)
+	assert.Equal(t, uint64(500000), cfg.ShardSize)
+	assert.Equal(t, 10, cfg.ShardWorkers)
+
+	_, err = NewConfigFromFile(writeConfig(t, version+execution+shards))
+	require.ErrorContains(t, err, "shard_size", "shard_size is not a pipeline setting")
+}
+
+// TestNewConfigFromFile_GoGen checks that gogen is a top-level setting, on by default.
+func TestNewConfigFromFile_GoGen(t *testing.T) {
+	const (
+		version   = "version = \"0.0.0-riscv\"\n"
+		execution = "[execution]\nprover_mode = \"dev-zkvm\"\n"
+	)
+	cfg, err := NewConfigFromFile(writeConfig(t, version+execution))
+	require.NoError(t, err)
+	assert.True(t, cfg.GoGen, "gogen should be on by default")
+
+	cfg, err = NewConfigFromFile(writeConfig(t, version+"gogen = false\n"+execution))
+	require.NoError(t, err)
+	assert.False(t, cfg.GoGen)
+
+	_, err = NewConfigFromFile(writeConfig(t, version+execution+"gogen = false\n"))
+	require.ErrorContains(t, err, "gogen", "gogen is not a pipeline setting")
+}
+
+func TestNewConfigFromFile_NegativeShardWorkers(t *testing.T) {
+	_, err := NewConfigFromFile(writeConfig(t, `
 version = "0.0.0-riscv"
+shard_workers = -1
 
 [execution]
 prover_mode = "dev-partial"
-shard_size = 500000
 `))
-	require.NoError(t, err)
-	assert.Equal(t, uint64(500000), cfg.Execution.ShardSize)
+	require.ErrorContains(t, err, "shard_workers must not be negative")
 }
 
 func TestNewConfigFromFile_GuestELFRejected(t *testing.T) {
@@ -54,7 +88,7 @@ version = "t"
 
 [execution]
 prover_mode = "dev-zkvm"
-guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
+guest_elf = "/opt/lineth/prover-ray/evm_execution_guest"
 `))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "guest_elf", "guest_elf is replaced by guests_dir and must not be silently ignored")
@@ -154,7 +188,7 @@ func TestNewConfigFromFile_MissingFile(t *testing.T) {
 
 // guestsMount is where every deployment mounts the guests folder, like
 // /opt/linea/prover/prover-assets for the legacy prover.
-const guestsMount = "/opt/linea/prover-ray/guests"
+const guestsMount = "/opt/lineth/prover-ray/guests"
 
 // shippedConfigs lists every prover-ray config shipped in the repository.
 func shippedConfigs(t *testing.T) []string {

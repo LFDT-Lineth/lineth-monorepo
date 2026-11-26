@@ -18,12 +18,6 @@ on:
         type: choice
         options: [zkevm, riscv]
         default: zkevm
-      riscv_prover_mode:
-        description: prover-ray mode for the RISC-V stack
-        required: false
-        type: choice
-        options: [dev-mock, dev-zkvm]
-        default: dev-mock
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -48,10 +42,6 @@ on:
         required: false
         type: string
         default: zkevm
-      riscv_prover_mode:
-        required: false
-        type: string
-        default: dev-mock
       linea_besu_package_tag:
         required: false
         type: string
@@ -107,7 +97,7 @@ jobs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     environment: dockerhub-pull
-    timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 360 }}
+    timeout-minutes: ${{ inputs.stack == 'riscv' && 75 || 60 }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -117,7 +107,6 @@ jobs:
         uses: ./.github/actions/run-e2e-tests
         with:
           stack: ${{ inputs.stack }}
-          riscv_prover_mode: ${{ inputs.riscv_prover_mode }}
           image_tag: ${{ inputs.image_tag }}
           linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
           coordinator_tag: ${{ inputs.coordinator_tag }}

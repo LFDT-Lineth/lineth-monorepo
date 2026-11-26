@@ -50,7 +50,7 @@ class FakeDaStream(
   /** The blob being filled. [capacity] is smaller than [BLOB_PAYLOAD_CAPACITY] only for a short (flushed) shared blob. */
   private class OpenBlob(
     val capacity: Int,
-    val prevDataRollingHash: ByteArray,
+    val parentDataRollingHash: ByteArray,
     val reproduce: Reproduction? = null,
   ) {
     val payload = ByteArray(capacity)
@@ -71,7 +71,7 @@ class FakeDaStream(
   private var closed = false
 
   init {
-    if (initialState.sharedBlobCarryOverTailBytes > 0) {
+    if (initialState.sharedBlobCarryOverTailBytes > 0u) {
       open = openInsideSharedBlob(initialState)
     }
   }
@@ -125,14 +125,17 @@ class FakeDaStream(
     closed = true
   }
 
-  private fun newBlob(): OpenBlob = OpenBlob(capacity = BLOB_PAYLOAD_CAPACITY, prevDataRollingHash = dataRollingHash)
+  private fun newBlob(): OpenBlob = OpenBlob(
+    capacity = BLOB_PAYLOAD_CAPACITY,
+    parentDataRollingHash = dataRollingHash,
+  )
 
   private fun seal(blob: OpenBlob): SealedBlob {
     val blobBytes = ByteArray(BLOB_BYTES)
     blob.payload.copyInto(blobBytes, endIndex = blob.used)
     blobBytes[blob.used] = BLOB_PAYLOAD_TERMINAL
     val chunkHash = chunkHasher(blobBytes)
-    val sealedDataRollingHash = dataRollingHashCalculator.fold(blob.prevDataRollingHash, chunkHash)
+    val sealedDataRollingHash = dataRollingHashCalculator.fold(blob.parentDataRollingHash, chunkHash)
     // Invariant: append checks every reproduced byte before writing it, so a re-sealed shared blob equals the original.
     blob.reproduce?.let { reproduction ->
       check(
@@ -147,13 +150,13 @@ class FakeDaStream(
       chunkHash = chunkHash,
       kzgCommitment = fakeKzgCommitment(blobBytes),
       kzgProof = fakeKzgProof(blobBytes),
-      prevDataRollingHash = blob.prevDataRollingHash,
+      parentDataRollingHash = blob.parentDataRollingHash,
       dataRollingHash = sealedDataRollingHash,
-      payloadBytes = blob.used,
+      payloadBytes = blob.used.toUInt(),
       segmentEnds = blob.segmentEnds.map { (endBlock, segmentEnd) ->
         SegmentEnd(
           endBlock,
-          unusedTailBytes = blob.used - segmentEnd,
+          unusedTailBytes = (blob.used - segmentEnd).toUInt(),
         )
       },
     )
@@ -175,19 +178,20 @@ class FakeDaStream(
 
   private fun openInsideSharedBlob(position: DaStreamPosition): OpenBlob {
     val sharedBlob = position.sharedBlob!!
-    val prevDataRollingHash = position.parentBlobDataRollingHash
+    val parentDataRollingHash = position.parentBlobDataRollingHash
     val payloadBytes = sharedBlob.indexOfLast { it != 0.toByte() }
     if (payloadBytes < 0 || sharedBlob[payloadBytes] != BLOB_PAYLOAD_TERMINAL) {
       throw DaStreamException(DaStreamErrorType.INVALID_ARGUMENT, "shared blob has no payload terminal")
     }
-    if (position.sharedBlobCarryOverTailBytes >= payloadBytes) {
+    val carryOver = position.sharedBlobCarryOverTailBytes.toInt()
+    if (carryOver >= payloadBytes) {
       throw DaStreamException(
         DaStreamErrorType.INVALID_ARGUMENT,
         "sharedBlobCarryOverTailBytes=${position.sharedBlobCarryOverTailBytes} must be less than the shared " +
           "blob's payload of $payloadBytes bytes",
       )
     }
-    val sharedDataRollingHash = dataRollingHashCalculator.fold(prevDataRollingHash, chunkHasher(sharedBlob))
+    val sharedDataRollingHash = dataRollingHashCalculator.fold(parentDataRollingHash, chunkHasher(sharedBlob))
     if (!sharedDataRollingHash.contentEquals(position.dataRollingHash)) {
       throw DaStreamException(
         DaStreamErrorType.INVALID_ARGUMENT,
@@ -196,10 +200,10 @@ class FakeDaStream(
     }
     return OpenBlob(
       capacity = payloadBytes,
-      prevDataRollingHash = prevDataRollingHash,
+      parentDataRollingHash = parentDataRollingHash,
       reproduce = Reproduction(sharedBlob = sharedBlob, dataRollingHash = position.dataRollingHash),
     ).also { blob ->
-      blob.used = payloadBytes - position.sharedBlobCarryOverTailBytes
+      blob.used = payloadBytes - carryOver
       sharedBlob.copyInto(blob.payload, endIndex = blob.used)
     }
   }

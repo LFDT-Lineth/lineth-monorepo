@@ -15,7 +15,6 @@ import (
 // This implementation uses circuit.Element and circuit.KoalaBearAPI, so KoalaBear
 // arithmetic is emulated in the circuit's field (e.g., BN254).
 type KoalagnarkMDHasher struct {
-	api      frontend.API
 	koalaAPI *circuit.KoalaBearAPI
 
 	// Sponge construction state
@@ -32,7 +31,6 @@ func NewKoalagnarkMDHasher(api frontend.API) *KoalagnarkMDHasher {
 	for i := 0; i < 8; i++ {
 		res.state[i] = koalaAPI.Zero()
 	}
-	res.api = api
 	res.koalaAPI = koalaAPI
 	return &res
 }

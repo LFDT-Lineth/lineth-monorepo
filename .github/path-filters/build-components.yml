@@ -37,6 +37,11 @@ postman:
   - '.github/workflows/main.yml'
   - '.github/path-filters/build-components.yml'
   - '.nvmrc'
+# Mirrors sdk-testing.yml triggers so Postman can skip duplicate sdk-viem tests when SDK CI is running.
+sdk:
+  - 'ts-libs/sdk/**'
+  - '.github/workflows/sdk-testing.yml'
+  - '.nvmrc'
 prover:
   - 'prover/**'
   - '.github/workflows/prover-testing.yml'
@@ -95,8 +100,11 @@ linea-sequencer-plugin:
 linea-besu:
   - 'linea-besu/besu/**'
 linea-besu-package:
+  - 'linea-besu/package/docker/**'
+  - 'linea-besu/package/linea-besu/**'
+  - 'linea-besu/package/scripts/**'
+  - 'linea-besu/package/Makefile'
   - 'linea-besu/package/versions.env'
-  - 'linea-besu/package/scripts/assemble-packages.sh'
 native-yield-automation-service:
   - 'operations/native-yield/automation-service/**'
   - 'ts-libs/linea-shared-utils/**'

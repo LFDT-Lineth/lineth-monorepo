@@ -113,6 +113,8 @@ func referenceFrame(t *testing.T) (hash, framed []byte) {
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
 }
 
+const errOffsetsOutOfOrder = "offsets out of order"
+
 // Positions of the three list offsets in the SSZ fixed head.
 const (
 	messagesOffsetPos = 80
@@ -135,7 +137,8 @@ func withOffset(framed []byte, pos int, v uint32) []byte {
 
 func TestDecodeGuestPublicInputs(t *testing.T) {
 	hash, framed := referenceFrame(t)
-	require.NoError(t, checkGuestOutputFrame(hash, framed), "the reference output should pass the frame check")
+	require.NoError(t, checkGuestOutputFrame(hash, framed, l2ExecutionOutputSchemaID),
+		"the reference output should pass the frame check")
 
 	got, err := decodeGuestPublicInputs(framed)
 	require.NoError(t, err)
@@ -179,9 +182,9 @@ func TestDecodeGuestPublicInputs_Rejects(t *testing.T) {
 		"first list not behind the head": {withOffset(framed, messagesOffsetPos, publicInputsFixedSize+1),
 			"l2L1Messages offset is 285, want 284"},
 		"lists out of order": {withOffset(framed, filteredOffsetPos, publicInputsFixedSize-1),
-			"offsets out of order"},
+			errOffsetsOutOfOrder},
 		"list past the end": {withOffset(framed, blocksOffsetPos, body+1),
-			"offsets out of order"},
+			errOffsetsOutOfOrder},
 		"partial message": {withOffset(framed, filteredOffsetPos, messagesStart+31),
 			"l2L1Messages is 31 bytes, not a multiple of 32"},
 		"partial filtered address": {withOffset(oneMoreByte, blocksOffsetPos, filteredStart+21),
@@ -194,6 +197,36 @@ func TestDecodeGuestPublicInputs_Rejects(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			_, err := decodeGuestPublicInputs(tc.framed)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+// TestGuestOutputPublicInputs checks that the public inputs of a guest output
+// are returned only when its hash and the schema id of the proof type match.
+func TestGuestOutputPublicInputs(t *testing.T) {
+	out, err := os.ReadFile(referenceGuestOutput)
+	require.NoError(t, err)
+
+	got, err := GuestOutputPublicInputs(out, ProofTypeL2Execution)
+	require.NoError(t, err)
+	assert.Equal(t, out[guestOutputHashSize+guestOutputSchemaIDSize:], got)
+
+	badHash := bytes.Clone(out)
+	badHash[0] ^= 1
+	for name, tc := range map[string]struct {
+		out     []byte
+		typ     ProofType
+		wantErr string
+	}{
+		"empty":        {nil, ProofTypeL2Execution, "shorter than the hash"},
+		"no schema id": {out[:guestOutputHashSize+1], ProofTypeL2Execution, "shorter than the schema id"},
+		"wrong hash":   {badHash, ProofTypeL2Execution, "hash does not match"},
+		"wrong schema": {out, ProofTypeRollup, "schema id is 0x0003, want 0x0005"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := GuestOutputPublicInputs(tc.out, tc.typ)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})

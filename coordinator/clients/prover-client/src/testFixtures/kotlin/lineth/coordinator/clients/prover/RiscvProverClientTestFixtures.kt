@@ -162,14 +162,14 @@ object RiscvProverClientTestFixtures {
     conflations: List<ConflationWitness> = emptyList(),
     parentDataRollingHash: ByteArray = ByteArray(32) { 0x19 },
     chunks: List<ChunkWitness> = listOf(blobChunkWitness()),
-    parentDataTailTakeBytes: Int = 0,
+    parentSharedBlobCarryOverTailBytes: UInt = 0u,
     l2Executions: List<BlockIntervalProofIndex> = listOf(blockIntervalProofIndex(1000501UL, 1000520UL)),
   ): RollupProofRequestV1 = RollupProofRequestV1(
     conflations = conflations,
     l2Executions = l2Executions,
     chunks = chunks,
     parentDataRollingHash = parentDataRollingHash,
-    parentDataTailTakeBytes = parentDataTailTakeBytes,
+    parentSharedBlobCarryOverTailBytes = parentSharedBlobCarryOverTailBytes,
   )
 
   fun rollupAggregationProofRequestV1(
@@ -225,8 +225,8 @@ object RiscvProverClientTestFixtures {
     endDataRollingHash = "0x1a",
     parentBlockHash = "0x1b",
     endBlockHash = "0x1c",
-    parentDataTailTakeBytes = 0,
-    finalDataTailDiscardBytes = 1000,
+    parentSharedBlobCarryOverTailBytes = 0,
+    finalSharedBlobCarryOverTailBytes = 1000,
     l2L1Messages = listOf("0xaa"),
     filteredAddresses = emptyList(),
     programVks = listOf(L2_EXECUTION_PROGRAM_ID),
@@ -261,8 +261,8 @@ object RiscvProverClientTestFixtures {
     endDataRollingHash = "0x1a",
     parentBlockHash = "0x1b",
     endBlockHash = "0x1c",
-    parentDataTailTakeBytes = 0,
-    finalDataTailDiscardBytes = 1000,
+    parentSharedBlobCarryOverTailBytes = 0,
+    finalSharedBlobCarryOverTailBytes = 1000,
     l2L1Roots = listOf("0xaa"),
     l2L1TreeDepth = 5,
     filteredAddresses = listOf("0xbb"),

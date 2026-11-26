@@ -38,9 +38,10 @@ import (
 //
 // Limitations of this first iteration, all enforced by
 // [AllocateVerifierCircuit] failing closed:
-//   - no dynamic-size modules (their sizes change the circuit shape): fix their
-//     sizes before compiling, see [System.FixDynamicSizes];
+//   - no dynamic-size modules (their sizes change the circuit shape): build
+//     the System with sized modules;
 //   - no column elision (the prover would choose the batch shapes);
+//   - every query must have been reduced by a compiler pass;
 //   - every verifier action must implement [GnarkVerifierAction].
 type VerifierCircuit struct {
 	// CellsBase holds every base-field proof cell, in round then declaration
@@ -75,11 +76,12 @@ type verifierLayout struct {
 	cells       map[ObjectID]cellSlot
 	commitments []int // round IDs carrying a commitment, in order
 	hasPCS      bool
-	// pcsShape is a proof with the opening geometry of the System (values
-	// meaningless), kept apart from the circuit fields: frontend.Compile writes
-	// its variables into the circuit struct, which then no longer describes the
-	// geometry alone.
-	pcsShape fri.OpeningProof
+	// pcsShape is the unassigned opening proof of the System's geometry,
+	// computed once at allocation and compared against every assigned proof.
+	// It is a copy apart from the circuit's own PCSOpeningProof:
+	// frontend.Compile writes its variables into the circuit struct, which then
+	// no longer describes the geometry alone.
+	pcsShape fri.GnarkOpeningProof
 }
 
 // cellSlot locates one cell in the witness: the (isBase, isPublic) pair picks
@@ -97,12 +99,12 @@ type cellSlot struct {
 }
 
 // GnarkOpeningProofAllocator is implemented by the verifier action that checks
-// the PCS opening proof (the PCS compiler's opening action). It returns an
-// opening proof with the geometry every honest proof of sys has, derived from
-// the System alone; its values are meaningless. [AllocateVerifierCircuit] calls
-// it; a System without such an action carries no PCS opening proof.
+// the PCS opening proof (the PCS compiler's opening action). It returns a
+// fresh unassigned opening proof with the geometry every honest proof of sys
+// has, derived from the System alone. [AllocateVerifierCircuit] calls it; a
+// System without such an action carries no PCS opening proof.
 type GnarkOpeningProofAllocator interface {
-	OpeningProofShape(sys *System) fri.OpeningProof
+	OpeningProofShape(sys *System) fri.GnarkOpeningProof
 }
 
 // AllocateVerifierCircuit builds the unassigned circuit for sys from the System
@@ -145,8 +147,10 @@ func AllocateVerifierCircuit(sys *System) *VerifierCircuit {
 	}
 	if allocator != nil {
 		layout.hasPCS = true
+		// Two fresh results: the circuit's is written by frontend.Compile, the
+		// layout's must keep describing the geometry alone.
 		layout.pcsShape = allocator.OpeningProofShape(sys)
-		c.PCSOpeningProof = fri.AllocateGnarkOpeningProof(layout.pcsShape)
+		c.PCSOpeningProof = allocator.OpeningProofShape(sys)
 	}
 	return c
 }
@@ -154,7 +158,7 @@ func AllocateVerifierCircuit(sys *System) *VerifierCircuit {
 // AssignVerifierCircuit returns the witness assignment of the circuit for
 // (proof, pub). It panics if the proof does not have the circuit's shape: a
 // missing cell, a cell value without its declared field tag, a missing
-// commitment, or an opening proof of another geometry.
+// commitment, a dynamic module size, or an opening proof of another geometry.
 func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *VerifierCircuit {
 	sys := c.spec
 	if len(pub) != len(sys.PublicInputs) {
@@ -197,14 +201,19 @@ func (c *VerifierCircuit) AssignVerifierCircuit(proof Proof, pub PublicInput) *V
 		panic(fmt.Sprintf("wiop: VerifierCircuit: proof has %d commitments, want %d",
 			len(proof.Commitments), len(c.layout.commitments)))
 	}
+	// The circuit's System is static (see checkCircuitSupport), so, as for
+	// System.Verify, any dynamic module size in the proof is foreign to it.
+	if len(proof.DynamicSizes) != 0 {
+		panic(fmt.Sprintf("wiop: VerifierCircuit: unexpected %d dynamic module sizes on a static system",
+			len(proof.DynamicSizes)))
+	}
 
 	if c.layout.hasPCS != (proof.PCSOpeningProof != nil) {
 		panic("wiop: VerifierCircuit: proof and circuit disagree on the presence of a PCS opening proof")
 	}
 	if c.layout.hasPCS {
-		// Compared on fresh unassigned structs, which keep exactly the geometry.
-		if !reflect.DeepEqual(fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof),
-			fri.AllocateGnarkOpeningProof(c.layout.pcsShape)) {
+		// Compared as unassigned structs, which keep exactly the geometry.
+		if !reflect.DeepEqual(fri.AllocateGnarkOpeningProof(*proof.PCSOpeningProof), c.layout.pcsShape) {
 			panic("wiop: VerifierCircuit: the PCS opening proof does not have the circuit's geometry")
 		}
 		a.PCSOpeningProof = fri.NewGnarkOpeningProof(*proof.PCSOpeningProof)
@@ -219,8 +228,17 @@ func checkCircuitSupport(sys *System) {
 	for _, m := range sys.Modules {
 		if m.IsDynamic() {
 			panic(fmt.Sprintf("wiop: VerifierCircuit: dynamic module %q is not supported; "+
-				"fix its size before compiling (see System.FixDynamicSizes)", m.Context.Path()))
+				"build the System with sized modules", m.Context.Path()))
 		}
+	}
+	// The circuit only runs verifier actions: a query no pass reduced would be
+	// a predicate nothing checks.
+	if unreduced := sys.UnreducedQueries(); len(unreduced) > 0 {
+		panic(fmt.Sprintf(
+			"wiop: VerifierCircuit: query %q (and %d more) was not reduced by any compiler pass; "+
+				"the predicate it states would be silently dropped",
+			unreduced[0].Context().Path(), len(unreduced)-1,
+		))
 	}
 	for _, r := range sys.Rounds {
 		for _, va := range r.VerifierActions {

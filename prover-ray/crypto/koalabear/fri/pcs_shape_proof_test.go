@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestShapeOpeningProofMatchesHonestProof checks that the zero-data proof has
+// TestOpeningProofShapeMatchesHonestProof checks that the zero-data proof has
 // the geometry of an honest proof, field by field, across every fixture family:
 // plain and grouped commitments, pair leaves, twin batches, every cap height and
 // a fixed FRI domain. The comparison runs on the unassigned circuit structs,
 // which keep exactly the geometry (lengths, absent levels, row widths, revealed
 // table sizes) and drop the values.
-func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
+func TestGnarkOpeningProofShapeMatchesHonestProof(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"open-verify":  newPCSOpenVerifyFixture,
 		"twin-batches": newTwinBatchesFixture,
@@ -50,16 +50,16 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 	for name, build := range fixtures {
 		t.Run(name, func(t *testing.T) {
 			fx := build(t)
-			shaped, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+			shaped, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 			require.NoError(t, err)
-			require.Equal(t, AllocateGnarkOpeningProof(fx.proof), AllocateGnarkOpeningProof(shaped),
+			require.Equal(t, AllocateGnarkOpeningProof(fx.proof), shaped,
 				"zero-data proof must have the honest proof's geometry")
 		})
 	}
 }
 
-// TestShapeOpeningProofIndependentOfQueryPositions checks the assumption
-// ShapeOpeningProof rests on: query positions select values, never shapes.
+// TestOpeningProofShapeIndependentOfQueryPositions checks the assumption
+// GnarkOpeningProofShape rests on: query positions select values, never shapes.
 // The shape is built with every query at position 0 (all queries colliding),
 // whereas real positions are pseudo-random and mostly distinct. Each fixture's
 // real committed data is reopened under random fold challenges and random query
@@ -67,7 +67,7 @@ func TestShapeOpeningProofMatchesHonestProof(t *testing.T) {
 // it), and the geometry must match the zero-position shape every time. A prover
 // optimisation that deduplicates queries or shares Merkle path nodes between
 // them would break this test before it broke the gnark verifier circuit.
-func TestShapeOpeningProofIndependentOfQueryPositions(t *testing.T) {
+func TestGnarkOpeningProofShapeIndependentOfQueryPositions(t *testing.T) {
 	fixtures := map[string]func(t *testing.T) pcsOpenVerifyFixture{
 		"twin-batches": newTwinBatchesFixture,
 		"grouped/3": func(t *testing.T) pcsOpenVerifyFixture {
@@ -94,9 +94,9 @@ func TestShapeOpeningProofIndependentOfQueryPositions(t *testing.T) {
 	for name, build := range fixtures {
 		t.Run(name, func(t *testing.T) {
 			fx := build(t)
-			shaped, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+			shaped, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 			require.NoError(t, err)
-			want := AllocateGnarkOpeningProof(shaped)
+			want := shaped
 
 			for seed := range uint64(numSeeds + 1) {
 				distinct := seed == numSeeds
@@ -148,30 +148,75 @@ func reopenAtRandomPositions(t *testing.T, fx pcsOpenVerifyFixture, seed uint64,
 	return pcs.Open(state, positions), positions
 }
 
-// TestShapeOpeningProofComparisonIsSensitive guards the test above against
+// TestOpeningProofShapeComparisonIsSensitive guards the test above against
 // passing vacuously: geometries that differ only in cap height must compare
 // unequal.
-func TestShapeOpeningProofComparisonIsSensitive(t *testing.T) {
+func TestGnarkOpeningProofShapeComparisonIsSensitive(t *testing.T) {
 	low, high := newPCSCircuitFixture(t, 0), newPCSCircuitFixture(t, 2)
-	shaped, err := low.pcs.ShapeOpeningProof(low.input.Shapes, low.input.Shifts)
+	shaped, err := shapeOpeningProof(low.pcs, low.input.Shapes, low.input.Shifts)
 	require.NoError(t, err)
-	require.NotEqual(t, AllocateGnarkOpeningProof(high.proof), AllocateGnarkOpeningProof(shaped))
+	require.NotEqual(t, AllocateGnarkOpeningProof(high.proof), shaped)
 }
 
-// TestShapeOpeningProofLeavesPCSUntouched checks that the receiver keeps its
+// TestOpeningProofShapeLeavesPCSUntouched checks that the receiver keeps its
 // registered openings: allocating a circuit must not disturb a prover that
 // shares the PCS.
-func TestShapeOpeningProofLeavesPCSUntouched(t *testing.T) {
+func TestGnarkOpeningProofShapeLeavesPCSUntouched(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
 	before := *fx.pcs
-	_, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts)
+	_, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts)
 	require.NoError(t, err)
 	require.Equal(t, before.openings, fx.pcs.openings)
 	require.Equal(t, before.zeta, fx.pcs.zeta)
 }
 
-func TestShapeOpeningProofRejectsMismatchedInputs(t *testing.T) {
+func TestGnarkOpeningProofShapeRejectsMismatchedInputs(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
-	_, err := fx.pcs.ShapeOpeningProof(fx.input.Shapes, fx.input.Shifts[:len(fx.input.Shifts)-1])
+	_, err := shapeOpeningProof(fx.pcs, fx.input.Shapes, fx.input.Shifts[:len(fx.input.Shifts)-1])
 	require.ErrorContains(t, err, "shapes")
+}
+
+// shapeOpeningProof is the path the circuit allocation takes: the verifier
+// plan of the opening, then its proof geometry.
+func shapeOpeningProof(pcs *PCS, shapes []Shape, shifts []BatchShifts) (GnarkOpeningProof, error) {
+	plan, err := pcs.VerifierPlan(shapes, shifts)
+	if err != nil {
+		return GnarkOpeningProof{}, err
+	}
+	return plan.GnarkOpeningProofShape(), nil
+}
+
+// TestGnarkOpeningProofShapeSharesNoMemory: frontend.Compile writes one
+// variable per slot of the circuit struct, so two slots backed by the same
+// array would silently become one variable. Every query, tree and row of the
+// shape, and every call's result, must own its memory.
+func TestGnarkOpeningProofShapeSharesNoMemory(t *testing.T) {
+	fx := newPCSCircuitFixture(t, 0)
+	plan, err := fx.pcs.VerifierPlan(fx.input.Shapes, fx.input.Shifts)
+	require.NoError(t, err)
+	shaped, other := plan.GnarkOpeningProofShape(), plan.GnarkOpeningProofShape()
+	require.GreaterOrEqual(t, len(shaped.InputQueries), 2, "the test needs two queries")
+
+	q0, q1 := shaped.InputQueries[0][0], shaped.InputQueries[1][0]
+	bottom := len(q0.Leaves) - 1
+	requireOwnArray(t, q0.Siblings, q1.Siblings, "queries share input siblings")
+	requireOwnArray(t, q0.Leaves, q1.Leaves, "queries share input levels")
+	if len(q0.Leaves[bottom][0].Base) > 0 {
+		requireOwnArray(t, q0.Leaves[bottom][0].Base, q1.Leaves[bottom][0].Base, "queries share input rows")
+		requireOwnArray(t, q0.Leaves[bottom][0].Base, q0.Leaves[bottom][1].Base, "a pair shares its rows")
+	} else {
+		requireOwnArray(t, q0.Leaves[bottom][0].Ext, q1.Leaves[bottom][0].Ext, "queries share input rows")
+		requireOwnArray(t, q0.Leaves[bottom][0].Ext, q0.Leaves[bottom][1].Ext, "a pair shares its rows")
+	}
+	requireOwnArray(t, shaped.FRIProof.RunningQueries[0][0].Siblings, shaped.FRIProof.RunningQueries[1][0].Siblings,
+		"queries share running siblings")
+	requireOwnArray(t, shaped.InputQueries[0][0].Siblings, other.InputQueries[0][0].Siblings, "calls share memory")
+}
+
+// requireOwnArray fails if the non-empty slices a and b share a backing array.
+func requireOwnArray[T any](t *testing.T, a, b []T, msg string) {
+	t.Helper()
+	require.NotEmpty(t, a, "%s: nothing to compare", msg)
+	require.NotEmpty(t, b, "%s: nothing to compare", msg)
+	require.NotSame(t, &a[0], &b[0], msg)
 }

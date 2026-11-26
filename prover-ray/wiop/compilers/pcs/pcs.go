@@ -771,7 +771,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 	// before the opening squeezes alpha_DEEP.
 	openingRound := sys.NewRound()
 	openingRound.RegisterAction(&openingProverAction{c: c})
-	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
+	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c, sys: sys})
 }
 
 // checkStaticSizes panics when a statically sized committed column exceeds the
@@ -899,7 +899,16 @@ func (c *compiled) releaseCommittedStates(rt *wiop.Runtime) {
 }
 
 // OpeningVerifierAction replays the opening transcript and checks the proof.
-type OpeningVerifierAction struct{ c *compiled }
+type OpeningVerifierAction struct {
+	c *compiled
+	// sys is the System the action verifies, the only one Static accepts.
+	sys *wiop.System
+
+	// The memoized [OpeningVerifierAction.Static].
+	staticOnce sync.Once
+	static     *StaticOpening
+	staticErr  error
+}
 
 func (a *OpeningVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.c.verify(rt, *rt.PCSOpeningProof)
@@ -1053,6 +1062,28 @@ func (c *compiled) collectRoots(rt *wiop.Runtime, batches []BatchRef) []field.Oc
 
 func committedStateKey(roundID int) string {
 	return fmt.Sprintf("pcs/committedState/%d", roundID)
+}
+
+// CommittedState returns the FRI committer state the PCS stored on the
+// runtime when it committed the round, while proving: the state an opening
+// prover adds to its openings. The opening prover action releases it. It is
+// for opening provers written outside the package, such as tests' cheating
+// provers.
+func CommittedState(rt *wiop.Runtime, roundID int) (*fri.CommitterState, bool) {
+	v, ok := rt.GetState(committedStateKey(roundID))
+	if !ok || v == nil {
+		return nil, false
+	}
+	st, ok := v.(*fri.CommitterState)
+	return st, ok
+}
+
+// IsOpeningProverAction reports whether a is the PCS's opening prover action,
+// which the last round of a compiled System runs: for callers replacing it
+// with another opening prover.
+func IsOpeningProverAction(a wiop.ProverAction) bool {
+	_, ok := a.(*openingProverAction)
+	return ok
 }
 
 // =============================================================================

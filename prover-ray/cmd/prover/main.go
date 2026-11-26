@@ -73,6 +73,8 @@ type pipeline struct {
 	requestsRootDir string
 	nativeRunnerBin string
 	shardSize       uint64
+	shardWorkers    int
+	gogen           bool
 	guestsDir       string
 	priority        int
 }
@@ -93,7 +95,9 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
-			shardSize:       cfg.Execution.ShardSize,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
+			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        0,
 		}, true
@@ -104,6 +108,9 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Rollup.ProverMode),
 			requestsRootDir: cfg.Rollup.RequestsRootDir,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
+			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        1,
 		}, true
@@ -114,6 +121,9 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Aggregation.ProverMode),
 			requestsRootDir: cfg.Aggregation.RequestsRootDir,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
+			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        2,
 		}, true
@@ -124,7 +134,9 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 // buildRunner builds the request-to-response runner for one pipeline, backed by an
 // in-process Core.
 func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize})
+	core, err := backend.New(backend.Config{
+		Mode: p.mode, GuestsDir: p.guestsDir, ShardSize: p.shardSize, ShardWorkers: p.shardWorkers, GoGen: p.gogen,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}

@@ -96,27 +96,55 @@ type PublicInputs struct {
 	L2L1Messages                          [][32]byte
 }
 
+// RollupPublicInputs are the rollup guest's public inputs (0x0005 output), named
+// as in the getZkRollupProofV1 response, in SSZ order.
+type RollupPublicInputs struct {
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	ParentDataRollingHash                 [32]byte
+	EndDataRollingHash                    [32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
+	L2L1Messages                          [][32]byte
+	FilteredAddresses                     [][20]byte
+	ProgramVks                            [][32]byte
+	BlockCount                            uint64
+	L2MessagingBlocksOffsets              []uint16
+}
+
 // Result is the backend's response for a completed [Job].
 type Result struct {
 	JobID  string
 	Status ResultStatus
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
-	// wiop.Proof (wire format not yet decided); for dev-partial it is the image of
-	// a devmode proof of the guest output hash; for dev-mock and dev-zkvm it is
-	// the mode's marker. nil when Status is not ResultStatusOK.
+	// wiop.Proof (wire format not yet decided); for dev-zkvm and dev-partial it
+	// is the image of a devmode proof of the guest output hash; for dev-mock it
+	// is the mode's marker. nil when Status is not ResultStatusOK.
 	ProofBytes []byte
 
-	PublicInputs PublicInputs
+	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job.
+	PublicInputs       PublicInputs
+	RollupPublicInputs RollupPublicInputs
 
-	// GuestOutput is the guest's 0x0003 output (hash || frame) in dev-zkvm and
-	// dev-partial, for the runner's native runner check. nil in the other modes.
+	// GuestOutput is the guest's output (hash || frame) in dev-zkvm and
+	// dev-partial, for the response and the runner's native runner check. nil
+	// in the other modes.
 	GuestOutput []byte
 
 	// ProgramVK is the program VK in the statement of the proof, the response's
 	// programVk: 8 KoalaBear limbs, 4 big-endian canonical bytes each. It is
-	// zero in the dev modes: the devmode proof of dev-partial commits nothing,
-	// and dev-mock and dev-zkvm have no proof.
+	// zero in the dev modes: the devmode proofs of dev-zkvm and dev-partial
+	// commit nothing, and dev-mock has no proof.
 	ProgramVK [32]byte
 
 	// Node is the non-root conglomeration node when Status is

@@ -309,11 +309,21 @@ func TestPipelineFor_GuestsDir(t *testing.T) {
 	}
 }
 
-func TestPipelineFor_ShardSize(t *testing.T) {
-	cfg := &config.Config{Execution: config.Execution{ProverMode: "dev-partial", ShardSize: 500000}}
-	p, ok := pipelineFor(cfg, backend.ProofTypeL2Execution)
-	require.True(t, ok)
-	assert.Equal(t, uint64(500000), p.shardSize, "the execution pipeline must shard its trace as configured")
+// TestPipelineFor_Shards checks that the top-level shard settings reach every pipeline.
+func TestPipelineFor_Shards(t *testing.T) {
+	cfg := &config.Config{
+		ShardSize:    500000,
+		ShardWorkers: 10,
+		Execution:    config.Execution{ProverMode: string(backend.ProverModeDevPartial)},
+		Rollup:       config.Pipeline{ProverMode: string(backend.ProverModeDevMock)},
+		Aggregation:  config.Pipeline{ProverMode: string(backend.ProverModeDevMock)},
+	}
+	for _, typ := range proofTypes {
+		p, ok := pipelineFor(cfg, typ)
+		require.True(t, ok, "%s should be configured", typ)
+		assert.Equal(t, uint64(500000), p.shardSize, "%s should use the top-level shard_size", typ)
+		assert.Equal(t, 10, p.shardWorkers, "%s should use the top-level shard_workers", typ)
+	}
 }
 
 func TestRunProve_DevZkVMRequiresGuestsDir(t *testing.T) {
