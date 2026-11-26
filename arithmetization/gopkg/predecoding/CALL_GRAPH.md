@@ -1,186 +1,117 @@
-# predecoding call graph
+# Predecoding call graph
 
-Internal call graph of the production code in `decode.go` and `mapping.go`.
-Edges point from caller to callee. Calls to the standard library and to
-`zkc` (`bit.NewArray`, `maps.Copy`, `binary`, `elf`) are not drawn.
+Overview of how the production code of this package fits together.
+
+It is a simplified map, not a complete call graph (small helpers are  
+left out so that the main flow stays readable), to help see the entry points
+
+of the predecoding script. Edges point from caller to  
+callee. Calls to the standard library and to `zkc` are not drawn.
+
+## decode.go
+
+Turns a loaded program into the `instruction_base` and `decoded` inputs.
+
+- `PrepareInputs` is the one-call entry point: it loads the ELF, predecodes it,
+maps the input data and encodes all the inputs.
+- `Predecode` is the predecoding step alone. `executableImage` lays the
+executable blobs out as one byte image, and `decodeImage` emits one record
+per four-byte word of that image.
+- `decodeInstruction` builds one record: `classifyInstruction` gives the compute
+op, `unifiedOperands` the immediate and the registers, and `writeBits` packs
+them.
+
+The box groups the `mapping.go` functions called from here; their own calls are
+in the second diagram. Not drawn: the options (`WithMaxDecodedRecords`,
+`WithIncludeExecutable`, `WithSectionsWriter`) and the helpers called by
+`executableImage`, `decodeITypeSemantic` and the `assemble...` functions.
 
 ```mermaid
 flowchart TD
-    classDef done fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20;
+  classDef done fill:#c8f7c5,stroke:#2e7d32,color:#000
 
-    subgraph API["Public entry points"]
-        PrepareInputs
-        Predecode
-        Load
-        NewData
-        EncodeInputsMapping["EncodeInputs (mapping)"]
-        DecodedEncodeInputs["DecodedProgram.EncodeInputs"]
-    end
+  subgraph mapping.go
+    Load
+    NewData
+    encodeInputs
+    BitArrayFromBytes
+  end
 
-    subgraph DECODE["decode.go"]
-        prepareInputs
-        applyOptions
-        predecode
-        executableBlobs
-        executableSpanEnd
-        executableSpan
-        executableImage
-        decodeImage
-        decodeInstruction
-        extractFields
-        instructionTypeFromOpcode
-        classifyInstruction
-        checkNoOp
-        unifiedOperands
-        writeBits["bitWriter.writeBits"]
-        decodeITypeSemantic
-        decodeRTypeSemantic
-        decodeSTypeSemantic
-        decodeBTypeSemantic
-        decodeJTypeSemantic
-        decodeUTypeSemantic
-        imm12Funct6
-        imm12Funct7
-        imm12Uimm6
-        imm12Uimm5
-        assembleITypeImm
-        assembleSTypeImm
-        assembleBTypeImm
-        assembleJTypeImm
-        assembleUTypeImm
-        signExtend12
-        signExtend13
-        signExtend21
-        encodeInstructionBase
-        encodeDecodedRows
-        WithMaxDecodedRecords
-        WithIncludeExecutable
-        WithSectionsWriter
-    end
+  PrepareInputs --> prepareInputs
+  prepareInputs --> applyOptions
+  prepareInputs --> Load
+  prepareInputs --> predecode
+  prepareInputs --> NewData
+  prepareInputs --> encodeInputs
+  prepareInputs --> DPEncode["DecodedProgram.EncodeInputs"]
+  DPEncode --> encodeInstructionBase
+  DPEncode --> encodeDecodedRows
+  encodeInstructionBase --> BitArrayFromBytes
 
-    subgraph MAPPING["mapping.go"]
-        loadableSegments
-        segmentEnd
-        sectionEnd
-        isWithin
-        isLoadableSection
-        extractBlobs
-        sortBlobsByAddress
-        readSection
-        buildBlob
-        applyDataOptions
-        rawBlobs
-        lengthPrefixedBlobs
-        newBlob
-        payloadAddress
-        lengthPrefix
-        suffixedName
-        WithName
-        WithLengthPrefix
-        applyInputOptions
-        encodeInputs
-        mergeAndSortBlobs
-        validateBlobsRanges
-        writeSectionsIfRequested
-        writeSections
-        u32Layout
-        addressSpace32
-        blobDataSize
-        encodeExecutableBits
-        encodeEntryAndCount
-        encodeBlobTables
-        buildInputs
-        BitArrayFromBytes
-    end
+  Predecode --> applyOptions
+  Predecode --> predecode
 
-    %% Predecoding pipeline
-    PrepareInputs --> prepareInputs
-    prepareInputs --> applyOptions
-    prepareInputs --> Load
-    prepareInputs --> predecode
-    prepareInputs --> NewData
-    prepareInputs --> encodeInputs
-    prepareInputs --> DecodedEncodeInputs
-    Predecode --> applyOptions
-    Predecode --> predecode
-    predecode --> executableImage
-    predecode --> decodeImage
+  predecode --> executableImage
+  predecode --> decodeImage
 
-    %% Executable image
-    executableImage --> executableBlobs
-    executableImage --> executableSpanEnd
-    executableImage --> executableSpan
-    decodeImage --> decodeInstruction
+  decodeImage --> decodeInstruction
+  decodeInstruction --> extractFields
+  decodeInstruction --> instructionTypeFromOpcode
+  decodeInstruction --> classifyInstruction
+  decodeInstruction --> unifiedOperands
+  decodeInstruction --> writeBits
 
-    %% Instruction decoding
-    decodeInstruction --> extractFields
-    decodeInstruction --> instructionTypeFromOpcode
-    decodeInstruction --> classifyInstruction
-    decodeInstruction --> unifiedOperands
-    decodeInstruction --> writeBits
-    classifyInstruction --> decodeITypeSemantic
-    classifyInstruction --> decodeRTypeSemantic
-    classifyInstruction --> decodeSTypeSemantic
-    classifyInstruction --> decodeBTypeSemantic
-    classifyInstruction --> decodeJTypeSemantic
-    classifyInstruction --> decodeUTypeSemantic
-    classifyInstruction --> checkNoOp
-    decodeITypeSemantic --> imm12Funct6
-    decodeITypeSemantic --> imm12Funct7
-    decodeITypeSemantic --> imm12Uimm6
-    decodeITypeSemantic --> imm12Uimm5
-    unifiedOperands --> decodeITypeSemantic
-    unifiedOperands --> assembleITypeImm
-    unifiedOperands --> assembleSTypeImm
-    unifiedOperands --> assembleBTypeImm
-    unifiedOperands --> assembleJTypeImm
-    unifiedOperands --> assembleUTypeImm
-    assembleITypeImm --> signExtend12
-    assembleSTypeImm --> signExtend12
-    assembleBTypeImm --> signExtend13
-    assembleJTypeImm --> signExtend21
+  classifyInstruction --> decodeITypeSemantic
+  classifyInstruction --> decodeRTypeSemantic
+  classifyInstruction --> decodeSTypeSemantic
+  classifyInstruction --> decodeBTypeSemantic
+  classifyInstruction --> decodeJTypeSemantic
+  classifyInstruction --> decodeUTypeSemantic
+  classifyInstruction --> checkNoOp
 
-    %% Decoded program inputs
-    DecodedEncodeInputs --> encodeInstructionBase
-    DecodedEncodeInputs --> encodeDecodedRows
-    encodeInstructionBase --> BitArrayFromBytes
+  unifiedOperands --> decodeITypeSemantic
+  unifiedOperands --> assembleITypeImm
+  unifiedOperands --> assembleSTypeImm
+  unifiedOperands --> assembleBTypeImm
+  unifiedOperands --> assembleJTypeImm
+  unifiedOperands --> assembleUTypeImm
 
-    %% Mapping: ELF to blobs
-    Load --> extractBlobs
-    extractBlobs --> loadableSegments
-    extractBlobs --> segmentEnd
-    extractBlobs --> isLoadableSection
-    extractBlobs --> sectionEnd
-    extractBlobs --> isWithin
-    extractBlobs --> readSection
-    extractBlobs --> buildBlob
-    extractBlobs --> sortBlobsByAddress
+  class Load,NewData,encodeInputs,BitArrayFromBytes done
+  class PrepareInputs,prepareInputs,DPEncode,encodeInstructionBase,encodeDecodedRows done
+  class Predecode,applyOptions,predecode,executableImage,decodeImage done
+  class decodeInstruction,extractFields,instructionTypeFromOpcode,classifyInstruction,unifiedOperands,writeBits done
+  class decodeITypeSemantic,decodeRTypeSemantic,decodeSTypeSemantic,decodeBTypeSemantic,decodeJTypeSemantic,decodeUTypeSemantic,checkNoOp done
+  class assembleITypeImm,assembleSTypeImm,assembleBTypeImm,assembleJTypeImm,assembleUTypeImm done
+```
 
-    %% Mapping: data blobs
-    NewData --> applyDataOptions
-    NewData --> rawBlobs
-    NewData --> lengthPrefixedBlobs
-    lengthPrefixedBlobs --> payloadAddress
-    lengthPrefixedBlobs --> newBlob
-    lengthPrefixedBlobs --> lengthPrefix
-    newBlob --> suffixedName
+## mapping.go
 
-    %% Mapping: encoding inputs
-    EncodeInputsMapping --> applyInputOptions
-    EncodeInputsMapping --> encodeInputs
-    encodeInputs --> mergeAndSortBlobs
-    encodeInputs --> validateBlobsRanges
-    encodeInputs --> writeSectionsIfRequested
-    encodeInputs --> u32Layout
-    encodeInputs --> encodeEntryAndCount
-    encodeInputs --> encodeBlobTables
-    encodeInputs --> buildInputs
-    encodeInputs --> encodeExecutableBits
-    encodeInputs --> BitArrayFromBytes
-    writeSectionsIfRequested --> writeSections
-    u32Layout --> addressSpace32
-    u32Layout --> blobDataSize
-    buildInputs --> BitArrayFromBytes
+Turns an ELF and the guest input data into memory blobs, then into the mapping
+inputs.
 
-    class PrepareInputs,Predecode,Load,NewData,EncodeInputsMapping,DecodedEncodeInputs,prepareInputs,applyOptions,predecode,executableBlobs,executableSpanEnd,executableSpan,executableImage,decodeImage,decodeInstruction,extractFields,instructionTypeFromOpcode,classifyInstruction,checkNoOp,unifiedOperands,writeBits,decodeITypeSemantic,decodeRTypeSemantic,decodeSTypeSemantic,decodeBTypeSemantic,decodeJTypeSemantic,decodeUTypeSemantic,imm12Funct6,imm12Funct7,imm12Uimm6,imm12Uimm5,assembleITypeImm,assembleSTypeImm,assembleBTypeImm,assembleJTypeImm,assembleUTypeImm,signExtend12,signExtend13,signExtend21,encodeInstructionBase,encodeDecodedRows,WithMaxDecodedRecords,WithIncludeExecutable,WithSectionsWriter,loadableSegments,segmentEnd,sectionEnd,isWithin,isLoadableSection,extractBlobs,sortBlobsByAddress,readSection,buildBlob,applyDataOptions,rawBlobs,lengthPrefixedBlobs,newBlob,payloadAddress,lengthPrefix,suffixedName,WithName,WithLengthPrefix,applyInputOptions,encodeInputs,mergeAndSortBlobs,validateBlobsRanges,writeSectionsIfRequested,writeSections,u32Layout,addressSpace32,blobDataSize,encodeExecutableBits,encodeEntryAndCount,encodeBlobTables,buildInputs,BitArrayFromBytes done
+- `Load` reads the loadable sections of the ELF into blobs.
+- `NewData` maps the input data as blobs. The dotted edges are its options.
+- `EncodeInputs` encodes a program and additional blobs into the inputs.
+
+Not drawn: the helpers called by `extractBlobs`, `lengthPrefixedBlobs` and
+`encodeInputs`.
+
+```mermaid
+flowchart TD
+  classDef done fill:#c8f7c5,stroke:#2e7d32,color:#000
+
+  Load --> extractBlobs
+
+  NewData --> applyDataOptions
+  NewData --> rawBlobs
+  NewData --> lengthPrefixedBlobs
+  applyDataOptions -.-> WithName
+  applyDataOptions -.-> WithLengthPrefix
+
+  EncodeInputs --> applyInputOptions
+  EncodeInputs --> encodeInputs
+
+  class Load,extractBlobs done
+  class NewData,applyDataOptions,rawBlobs,lengthPrefixedBlobs,WithName,WithLengthPrefix done
+  class EncodeInputs,applyInputOptions,encodeInputs done
 ```
