@@ -166,6 +166,29 @@ allprojects {
     }
   }
 
+  // By default the JaCoCo agent instruments every class a test JVM loads from the classpath, libraries included
+  // (kotlin-reflect, Jackson, Vert.x, Netty, log4j, ...): 97% of the instrumented classes in the test JVMs measured,
+  // while jacocoTestReport and jacocoRootReport only map the execution data onto the project's own classes, so the
+  // coverage of the libraries is never read. Instrumenting them costs CPU at class load, under the class loading lock,
+  // which slows the cold start of every test JVM and, on a CPU starved CI runner, leaves the test threads waiting for
+  // a starved lock holder (see thread dumps of the stalled StateManagerV1JsonRpcClientTest).
+  //
+  // Keep this list in sync with the top-level packages of the projects' sources: the coverage of a class outside of
+  // it is lost. tracer is not restricted, it configures JaCoCo on its own (tracer/gradle/tests.gradle).
+  if (!isTracerProject) {
+    tasks.withType(Test).configureEach {
+      jacoco {
+        includes = [
+          'lineth.*',
+          'maru.*',
+          'linea.*',
+          'net.consensys.*',
+          'chaos.*'
+        ]
+      }
+    }
+  }
+
   tasks.withType(Test).configureEach {
     testLogging {
       events = [
@@ -186,6 +209,15 @@ allprojects {
     systemProperty("L2_RPC_URL", "http://localhost:8545")
     systemProperty("L1_GENESIS", "docker/config/l1-node/el/genesis.json")
     systemProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis-PoA-besu.json")
+
+    // Shared Vert.x options for every test JVM, picked up by vertx-junit5's VertxExtension
+    // (VertxExtension-injected Vertx instances only; code calling Vertx.vertx() directly is unaffected).
+    // The file is a tracked input (content only) so editing it invalidates cached/up-to-date test results.
+    def vertxTestOptionsFile = rootProject.file("gradle/vertx-test-options.json")
+    inputs.file(vertxTestOptionsFile)
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("vertxTestOptions")
+    systemProperty("vertx.parameter.filename", vertxTestOptionsFile.absolutePath)
 
     systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true

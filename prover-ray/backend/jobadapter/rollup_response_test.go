@@ -1,6 +1,7 @@
 package jobadapter
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
@@ -8,9 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewRollupResponse_MatchesReferenceShape verifies the placeholder rollup
-// response has the exact V1 field shape (including the PI) and carries the
-// programVk of the result. Values stay placeholder until the guest lands.
+// TestNewRollupResponse_MatchesReferenceShape verifies that the response of a
+// result with no public inputs has the exact V1 field shape, with empty lists,
+// and carries the programVk of the result.
 func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	result := backend.Result{ProofBytes: []byte{0xde, 0xad}, ProgramVK: filledHash(0xbb)}
 	resp := newRollupResponse(result, 1000501, "test-version")
@@ -27,14 +28,32 @@ func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
 	want := unmarshalObject(t, readSpecFixture(t, referenceRollupResponse))
+	want["guestOutput"] = ""
 	assertJSONShape(t, want, raw, "rollupResponse")
 	assert.NotContains(t, raw, "status")
 	assert.NotContains(t, raw, "jobId")
 }
 
-// TestNewRollupResponse_MatchesReferenceValues is the target test for the fully
-// wired rollup response. It stays skipped until the rollup guest emits real
-// public inputs / revealed arrays and proof serialization lands.
+// TestNewRollupResponse_MatchesReferenceValues checks that a result holding the
+// public inputs of the spec's reference response gives that response.
 func TestNewRollupResponse_MatchesReferenceValues(t *testing.T) {
-	t.Skip("enable after rollup public-input extraction, revealed arrays, and proof serialization are wired")
+	reference := readSpecFixture(t, referenceRollupResponse)
+	var env, piObj map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(reference, &env))
+	require.NoError(t, json.Unmarshal(env[publicInputsKey], &piObj))
+	pi, err := decodeRollupProofPublicInputs(piObj, decodeAggregationOp, "")
+	require.NoError(t, err)
+
+	want := unmarshalObject(t, reference)
+	result := backend.Result{
+		ProofBytes:         mustHex(t, want[proofKey].(string)),
+		ProgramVK:          [32]byte(mustHex(t, want[programVkKey].(string))),
+		RollupPublicInputs: backend.RollupPublicInputs(pi),
+	}
+	resp := newRollupResponse(result, uint64(want[startBlockNumberKey].(float64)), want["proverVersion"].(string))
+
+	got, err := jsonMarshalObject(resp)
+	require.NoError(t, err)
+	want["guestOutput"] = "0x"
+	assert.Equal(t, want, got)
 }

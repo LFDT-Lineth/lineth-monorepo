@@ -1,6 +1,10 @@
 package wiop
 
-import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+import (
+	"fmt"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+)
 
 // Cell is a scalar-valued symbolic object representing a single field element
 // that the prover assigns at runtime. It is the scalar counterpart to [Column]:
@@ -44,9 +48,33 @@ func (c *Cell) Round() *Round { return c.round }
 // not bound to any module.
 func (c *Cell) Module() *Module { return nil }
 
-// IsExtension implements [Expression]. Reports whether this cell is associated
-// with an extended domain.
+// IsExtension implements [Expression]. Reports whether this cell is declared
+// as an extension-field value. The declaration is binding: the runtime stores
+// every value of the cell with this field tag (see [Cell.canonical]), so the
+// tag of a proof value, and with it the number of field elements the cell
+// absorbs into the transcript, is a property of the System, not of the prover.
 func (c *Cell) IsExtension() bool { return c.isExtensionCached }
+
+// canonical returns v tagged with the cell's declared field. A base value
+// assigned to an extension cell is lifted, which is lossless. An extension
+// value assigned to a base cell is an error, even if its extension
+// coordinates happen to be zero: the declaration is wrong, or the value is.
+func (c *Cell) canonical(v field.Gen) (field.Gen, error) {
+	if c.isExtensionCached {
+		if v.IsBase() {
+			return field.ElemFromExt(v.AsExt()), nil
+		}
+		return v, nil
+	}
+	if !v.IsBase() {
+		return v, fmt.Errorf("wiop: cell %q is declared base-field but holds an extension-field value",
+			c.Context.Path())
+	}
+	return v, nil
+}
+
+// hasDeclaredTag reports whether v carries the field tag the cell declares.
+func (c *Cell) hasDeclaredTag(v field.Gen) bool { return v.IsBase() != c.isExtensionCached }
 
 // IsMultiValued implements [Expression]. Always returns false: a cell is
 // always scalar.

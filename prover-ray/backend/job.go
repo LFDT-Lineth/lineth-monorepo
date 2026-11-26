@@ -137,7 +137,8 @@ type Result struct {
 	RollupPublicInputs RollupPublicInputs
 
 	// GuestOutput is the guest's output (hash || frame) in dev-zkvm and
-	// dev-partial, for the runner's native runner check. nil in the other modes.
+	// dev-partial, for the response and the runner's native runner check. nil
+	// in the other modes.
 	GuestOutput []byte
 
 	// ProgramVK is the program VK in the statement of the proof, the response's

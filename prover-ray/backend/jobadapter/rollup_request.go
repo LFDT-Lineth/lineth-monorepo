@@ -36,6 +36,7 @@ const (
 	proofKey                    = "proof"
 	startBlockNumberKey         = "startBlockNumber"
 	publicInputsKey             = "publicInputs"
+	guestOutputKey              = "guestOutput"
 	l2L1MessagesKey             = "l2L1Messages"
 	filteredAddressesKey        = "filteredAddresses"
 	endBlockNumberKey           = "endBlockNumber"
@@ -50,11 +51,14 @@ type (
 )
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
-// the guest to verify. ProgramVk is its verifying-key hash.
+// the guest to verify. ProgramVk is its verifying-key hash. GuestOutput is the
+// l2-execution guest output (hash || frame), non-nil when the proof carries
+// guestOutput; otherwise PublicInputs holds its publicInputs.
 type EmbeddedL2ExecutionProof struct {
 	Proof            []byte
 	StartBlockNumber uint64
 	PublicInputs     backend.PublicInputs
+	GuestOutput      []byte
 	ProgramVk        []byte
 }
 
@@ -139,7 +143,8 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 		return nil, err
 	}
 
-	// parentBlobDataRollingHash is optional.
+	// parentBlobDataRollingHash is optional, but required when carry-over bytes
+	// come from the parent blob.
 	var parentBlob *[32]byte
 	if raw, ok := proofRequest[parentBlobDataRollingHashKey]; ok {
 		h, err := hash32Of(raw, op, "proofRequest."+parentBlobDataRollingHashKey)
@@ -147,6 +152,9 @@ func DecodeRollupRequest(data []byte) (*RollupRequest, error) {
 			return nil, err
 		}
 		parentBlob = &h
+	} else if parentSharedBlobCarryOverTailBytes > 0 {
+		return nil, decErrf(op, "proofRequest.%s is required when proofRequest.%s > 0",
+			parentBlobDataRollingHashKey, parentSharedBlobCarryOverTailBytesKey)
 	}
 
 	conflations := make([]ConflationWitness, len(conflationsRaw))
@@ -292,13 +300,29 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 	if err != nil {
 		return EmbeddedL2ExecutionProof{}, err
 	}
-	piObj, err := getObject(obj, publicInputsKey, op, ctx)
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
-	}
-	pi, err := decodeEmbeddedPublicInputs(piObj, op, ctx+publicInputsKey+".")
-	if err != nil {
-		return EmbeddedL2ExecutionProof{}, err
+	// guestOutput is read when present, else publicInputs.
+	var (
+		guestOutput []byte
+		pi          backend.PublicInputs
+	)
+	_, hasGuestOutput := obj[guestOutputKey]
+	_, hasPublicInputs := obj[publicInputsKey]
+	switch {
+	case hasGuestOutput:
+		if guestOutput, err = getHexBytes(obj, guestOutputKey, op, ctx); err != nil {
+			return EmbeddedL2ExecutionProof{}, err
+		}
+	case hasPublicInputs:
+		var piObj map[string]json.RawMessage
+		if piObj, err = getObject(obj, publicInputsKey, op, ctx); err != nil {
+			return EmbeddedL2ExecutionProof{}, err
+		}
+		if pi, err = decodeEmbeddedPublicInputs(piObj, op, ctx+publicInputsKey+"."); err != nil {
+			return EmbeddedL2ExecutionProof{}, err
+		}
+	default:
+		return EmbeddedL2ExecutionProof{}, decErrf(op, "missing %s%s or %s%s",
+			ctx, guestOutputKey, ctx, publicInputsKey)
 	}
 	programVk, err := getFixedHex(obj, programVkKey, op, ctx, programVkByteSize)
 	if err != nil {
@@ -308,6 +332,7 @@ func decodeEmbeddedL2ExecutionProof(raw json.RawMessage, op, ctx string) (Embedd
 		Proof:            proof,
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     pi,
+		GuestOutput:      guestOutput,
 		ProgramVk:        programVk,
 	}, nil
 }
