@@ -124,7 +124,7 @@ func checkNoOp(instrType, op, rd uint32) uint32 {
 		}
 	case rType:
 		switch op {
-		case computeInvalid, rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
+		case computeInvalid, rtypeOpKeccak, rtypeOpPoseidon2:
 			return op
 		default:
 			return computeNoOp
@@ -172,37 +172,36 @@ const (
 // R-type semantic compute_op values. These are the unified ComputeOp codes and
 // MUST match constants.zkc.
 const (
-	rtypeOpAddWB       = 25
-	rtypeOpSubWB       = 26
-	rtypeOpSllWB       = 27
-	rtypeOpSltWB       = 28
-	rtypeOpSltuWB      = 29
-	rtypeOpXorWB       = 30
-	rtypeOpSrlWB       = 31
-	rtypeOpSraWB       = 32
-	rtypeOpOrWB        = 33
-	rtypeOpAndWB       = 34
-	rtypeOpMulWB       = 35
-	rtypeOpMulhWB      = 36
-	rtypeOpMulhsuWB    = 37
-	rtypeOpMulhuWB     = 38
-	rtypeOpDivWB       = 39
-	rtypeOpDivuWB      = 40
-	rtypeOpRemWB       = 41
-	rtypeOpRemuWB      = 42
-	rtypeOpAddwWB      = 43
-	rtypeOpSubwWB      = 44
-	rtypeOpSllwWB      = 45
-	rtypeOpSrlwWB      = 46
-	rtypeOpSrawWB      = 47
-	rtypeOpMulwWB      = 48
-	rtypeOpDivwWB      = 49
-	rtypeOpDivuwWB     = 50
-	rtypeOpRemwWB      = 51
-	rtypeOpRemuwWB     = 52
-	rtypeOpKeccak      = 53
-	rtypeOpPoseidon2   = 54
-	rtypeOpWriteOutput = 55
+	rtypeOpAddWB     = 25
+	rtypeOpSubWB     = 26
+	rtypeOpSllWB     = 27
+	rtypeOpSltWB     = 28
+	rtypeOpSltuWB    = 29
+	rtypeOpXorWB     = 30
+	rtypeOpSrlWB     = 31
+	rtypeOpSraWB     = 32
+	rtypeOpOrWB      = 33
+	rtypeOpAndWB     = 34
+	rtypeOpMulWB     = 35
+	rtypeOpMulhWB    = 36
+	rtypeOpMulhsuWB  = 37
+	rtypeOpMulhuWB   = 38
+	rtypeOpDivWB     = 39
+	rtypeOpDivuWB    = 40
+	rtypeOpRemWB     = 41
+	rtypeOpRemuWB    = 42
+	rtypeOpAddwWB    = 43
+	rtypeOpSubwWB    = 44
+	rtypeOpSllwWB    = 45
+	rtypeOpSrlwWB    = 46
+	rtypeOpSrawWB    = 47
+	rtypeOpMulwWB    = 48
+	rtypeOpDivwWB    = 49
+	rtypeOpDivuwWB   = 50
+	rtypeOpRemwWB    = 51
+	rtypeOpRemuwWB   = 52
+	rtypeOpKeccak    = 53
+	rtypeOpPoseidon2 = 54
 )
 
 // S-type semantic compute_op values. These are the unified ComputeOp codes and

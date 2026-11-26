@@ -766,7 +766,6 @@ var checkNoOpRdZeroVectors = []struct {
 	// R-type Custom-1 precompiles: kept (memory side effects).
 	{"keccak", rType, rtypeOpKeccak, rtypeOpKeccak},
 	{"poseidon2", rType, rtypeOpPoseidon2, rtypeOpPoseidon2},
-	{"write_output", rType, rtypeOpWriteOutput, rtypeOpWriteOutput},
 	{"rtype invalid", rType, computeInvalid, computeInvalid},
 
 	// S-type stores: side effects, kept.
