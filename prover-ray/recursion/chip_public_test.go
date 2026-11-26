@@ -125,10 +125,14 @@ func TestPublic_KindPanics(t *testing.T) {
 // rejects a forged E6 public input in E6Check's CheckGnark, the only check
 // binding it to the proof.
 func TestPublic_Gnark(t *testing.T) {
+	// One honest run and one forged run, each on a freshly compiled program,
+	// since forging patches the system's assigner.
 	for _, forge := range []bool{false, true} {
 		m, _ := publicProgram()
 		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
+		// Forge Y through its cell's assigner, so the transcript absorbs the
+		// forged value and only E6Check can tell it from the lanes.
 		if forge {
 			cell, _ := p.Sys.LookupPublicInputByTag("Y", 0)
 			honest := cell.Assigner
@@ -138,6 +142,10 @@ func TestPublic_Gnark(t *testing.T) {
 		require.NoError(t, err)
 		proof, pub := p.Prove(r)
 
+		// The circuit comes from the system alone; the proof only fills the
+		// assignment. A separate allocation is solved, since solving writes
+		// into the circuit. The test engine is used over a compiled constraint
+		// system because its errors carry the stack of the failing assertion.
 		assignment := wiop.AllocateVerifierCircuit(p.Sys).AssignVerifierCircuit(proof, pub)
 		err = test.IsSolved(wiop.AllocateVerifierCircuit(p.Sys), assignment, ecc.BN254.ScalarField())
 		if !forge {
@@ -145,6 +153,8 @@ func TestPublic_Gnark(t *testing.T) {
 			continue
 		}
 		require.Error(t, err, "a forged E6 public input should not satisfy the circuit")
+		// The failing assertion must be E6Check's, not some other check that
+		// happens to reject the proof.
 		require.Contains(t, err.Error(), "recursion.(*E6Check).CheckGnark", "it should be rejected by E6Check")
 	}
 }
