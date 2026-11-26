@@ -581,13 +581,15 @@ func (b *mAssignmentBatch) Run(rt *wiop.Runtime) {
 // extHash folds the six base-field coordinates of an extension element into a
 // 32-bit hash with a ×31 multiply/XOR mix. It is used only to bucket rows for
 // the hash join; the low bits select the bucket and exact equality resolves
-// matches within a bucket, so a weak hash costs at most performance.
+// matches within a bucket, so a weak hash costs at most performance. It mixes
+// the raw Montgomery words: equal elements have equal words, and leaving out
+// the six reductions to canonical form makes it cheaper.
 func extHash(v *field.Ext) uint32 {
-	h := v.B0.A0.Uint64()
-	h = (h * 31) ^ v.B0.A1.Uint64()
-	h = (h * 31) ^ v.B1.A0.Uint64()
-	h = (h * 31) ^ v.B1.A1.Uint64()
-	h = (h * 31) ^ v.B2.A0.Uint64()
-	h = (h * 31) ^ v.B2.A1.Uint64()
-	return uint32(h)
+	h := v.B0.A0[0]
+	h = (h * 31) ^ v.B0.A1[0]
+	h = (h * 31) ^ v.B1.A0[0]
+	h = (h * 31) ^ v.B1.A1[0]
+	h = (h * 31) ^ v.B2.A0[0]
+	h = (h * 31) ^ v.B2.A1[0]
+	return h
 }
