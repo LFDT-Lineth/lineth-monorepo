@@ -218,7 +218,7 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(context.finalSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(context.parentSharedBlobCarryOverTailBytes).isEqualTo(0u)
     assertThat(context.parentBlobDataRollingHash).isNull()
-    assertThat(context.blobsData.single().prevDataRollingHash).isEqualTo(genesisDataRollingHash)
+    assertThat(context.blobsData.single().parentDataRollingHash).isEqualTo(genesisDataRollingHash)
     assertThat(context.blobsData.single().dataRollingHash).isEqualTo(context.dataRollingHash)
     assertThat(context.startBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(12))
     assertThat(context.endBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(6L * 12))

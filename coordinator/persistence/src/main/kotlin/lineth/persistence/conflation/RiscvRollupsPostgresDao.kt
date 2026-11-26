@@ -151,7 +151,7 @@ class RiscvRollupsPostgresDao(
       rollup.parentBlobDataRollingHash?.let(Buffer::buffer),
       rollup.finalSharedBlobCarryOverTailBytes.toInt(),
       blobs.map { Buffer.buffer(it.dataRollingHash) }.toTypedArray(),
-      blobs.map { Buffer.buffer(it.prevDataRollingHash) }.toTypedArray(),
+      blobs.map { Buffer.buffer(it.parentDataRollingHash) }.toTypedArray(),
       blobs.map { Buffer.buffer(it.chunkHash) }.toTypedArray(),
       blobs.map { Buffer.buffer(it.blobBytes) }.toTypedArray(),
     )
@@ -251,7 +251,7 @@ class RiscvRollupsPostgresDao(
     BlobData(
       chunkHash = row.getBuffer("chunk_hash").bytes,
       blobBytes = row.getBuffer("blob_bytes").bytes,
-      prevDataRollingHash = row.getBuffer("parent_data_rolling_hash").bytes,
+      parentDataRollingHash = row.getBuffer("parent_data_rolling_hash").bytes,
       dataRollingHash = row.getBuffer("data_rolling_hash").bytes,
     )
 

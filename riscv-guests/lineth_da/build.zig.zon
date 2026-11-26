@@ -38,6 +38,8 @@
         "build.zig.zon",
         "src", // production code (compiled into the rv64im object/ELF) and the freestanding C headers
         "dictionaries", // zstd dictionaries embedded by the guests
+        "host", // host-only: the compressor, the zstd encoder and the DA stream behind the C ABI of the shared library
+        "include", // host-only: the C header of that library
         "test", // unit tests and test support (host)
     },
 }

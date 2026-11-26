@@ -1,12 +1,14 @@
-# syntax=docker/dockerfile:1
-# Required to use the --build-context flag
+# kics-scan disable=d3499f6d-1651-41bb-a9a7-de925fea487b
+# Unpinned Package Version in Apk Add: apk packages intentionally track the
+# digest-pinned alpine base; version pinning would break the build on base
+# refresh for negligible security gain on top of apk's --no-cache.
 
 ###############################
 #
 # G O + R U S T   B U I L D E R
 #
 ###############################
-FROM golang:1.25.7-alpine AS go-builder
+FROM golang:1.25.7-alpine@sha256:f6751d823c26342f9506c03797d2527668d095b0a15f1862cddb4d927a7a4ced AS go-builder
 
 RUN apk add --no-cache rust cargo bash make
 
@@ -26,7 +28,7 @@ RUN make bin/controller
 # F I N A L   I M A G E
 #
 #######################
-FROM alpine:3
+FROM alpine:3@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 
 RUN apk add --no-cache bash musl-dev libgcc
 RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
@@ -43,6 +45,14 @@ COPY --from=go-builder /usr/src/prover/bin/controller /opt/linea/prover/controll
 
 # Initilize the dirs that will contain the configuration files and the setup
 RUN mkdir -p /opt/linea/prover/config
+
+# Run as a dedicated non-root user (uid 1000). The config dir is typically
+# volume-mounted at runtime — make sure it is readable by uid 1000.
+RUN adduser -D -u 1000 prover && \
+    chown -R prover:prover /opt/linea/prover /app/logs
+
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 # Useful ENV variables that you may want to pass at runtime
 ENV GOMEMLIMIT=340GiB
