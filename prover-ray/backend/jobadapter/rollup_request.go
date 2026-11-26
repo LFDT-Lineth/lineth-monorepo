@@ -52,8 +52,8 @@ type (
 
 // EmbeddedL2ExecutionProof is one l2ExecutionProof a rollup request carries for
 // the guest to verify. ProgramVk is its verifying-key hash. GuestOutput is the
-// l2-execution guest output (hash || frame) when the proof carries guestOutput;
-// otherwise PublicInputs holds its publicInputs.
+// l2-execution guest output (hash || frame), non-nil when the proof carries
+// guestOutput; otherwise PublicInputs holds its publicInputs.
 type EmbeddedL2ExecutionProof struct {
 	Proof            []byte
 	StartBlockNumber uint64

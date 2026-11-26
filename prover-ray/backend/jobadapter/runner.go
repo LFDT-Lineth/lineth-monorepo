@@ -197,7 +197,11 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 	// modes get none.
 	var payload []byte
 	if r.mode == backend.ProverModeDevZkVM || r.mode == backend.ProverModeDevPartial {
-		if payload, err = ssz.EncodeRollupInput(buildRollupInput(req)); err != nil {
+		in, err := buildRollupInput(req)
+		if err == nil {
+			payload, err = ssz.EncodeRollupInput(in)
+		}
+		if err != nil {
 			return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
 		}
 	}
@@ -318,7 +322,9 @@ func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
 }
 
 // buildRollupInput assembles the ssz.RollupInput from a decoded rollup request.
-func buildRollupInput(req *RollupRequest) ssz.RollupInput {
+// The guestOutput of an embedded proof must be an l2-execution guest output;
+// its public inputs are passed as they are.
+func buildRollupInput(req *RollupRequest) (ssz.RollupInput, error) {
 	proofs := make([]ssz.L2ExecutionProof, len(req.L2ExecutionProofs))
 	for i, p := range req.L2ExecutionProofs {
 		proofs[i] = ssz.L2ExecutionProof{
@@ -326,6 +332,13 @@ func buildRollupInput(req *RollupRequest) ssz.RollupInput {
 			StartBlockNumber: p.StartBlockNumber,
 			Proof:            p.Proof,
 			ProgramVk:        [32]byte(p.ProgramVk),
+		}
+		if p.GuestOutput != nil {
+			pi, err := backend.GuestOutputPublicInputs(p.GuestOutput, backend.ProofTypeL2Execution)
+			if err != nil {
+				return ssz.RollupInput{}, fmt.Errorf("%s[%d].%s: %w", l2ExecutionProofsKey, i, guestOutputKey, err)
+			}
+			proofs[i].PublicInputsSSZ = pi
 		}
 	}
 	return ssz.RollupInput{
@@ -336,7 +349,7 @@ func buildRollupInput(req *RollupRequest) ssz.RollupInput {
 		Chunks:                             req.Chunks,
 		L2ExecutionProofs:                  proofs,
 		ParentBlobDataRollingHash:          req.ParentBlobDataRollingHash,
-	}
+	}, nil
 }
 
 // proverFailure maps a non-OK prover result to a failed run. A guestProgramId
