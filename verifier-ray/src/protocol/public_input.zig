@@ -149,6 +149,10 @@ pub fn bindRoundMessagesInto(
                 proof_cell_index += 1;
             }
 
+            // Soundness-critical: the wire tag decides how the cell is absorbed
+            // into the transcript (1 or 6 elements), so it must match the
+            // declared field. Without this check a prover could re-send a base
+            // value in extension form and choose between transcripts.
             if ((value == .ext) != cellIsExt(spec, flat_index)) return error.CellFieldMismatch;
             bound.*.cell_storage[flat_index] = value;
         }
