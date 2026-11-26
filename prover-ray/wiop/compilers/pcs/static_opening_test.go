@@ -166,6 +166,20 @@ func TestStaticOpening_OtherSystem(t *testing.T) {
 	require.ErrorContains(t, err, "System other than the action's", "another System, once memoized")
 }
 
+// TestStaticOpening_PanicMemoizedAsError: a panic while computing the opening
+// is reported as an error, on the first call and on every later one, instead
+// of leaving the memo empty with no error. The action without a compiled PCS
+// configuration panics on its first field access.
+func TestStaticOpening_PanicMemoizedAsError(t *testing.T) {
+	s := newStaticTestSystem()
+	broken := &OpeningVerifierAction{sys: s.sys}
+	for call := range 2 {
+		op, err := broken.Static(s.sys)
+		require.Nil(t, op, "call %d: no opening", call)
+		require.ErrorContains(t, err, "pcs: Static: ", "call %d: the panic, as an error", call)
+	}
+}
+
 func openingAction(sys *wiop.System) *OpeningVerifierAction {
 	for _, r := range sys.Rounds {
 		for _, a := range r.VerifierActions {
