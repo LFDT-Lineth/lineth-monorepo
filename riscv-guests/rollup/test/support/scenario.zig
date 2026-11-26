@@ -40,6 +40,18 @@ pub fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
+/// `keccak256(abi.encodePacked(address[]))`: each address left-padded to a 32-byte slot.
+fn hashAddressList(addresses: []const Address) Hash {
+    var hasher = std.crypto.hash.sha3.Keccak256.init(.{});
+    for (addresses) |address| {
+        hasher.update(&([_]u8{0} ** 12));
+        hasher.update(&address);
+    }
+    var hash: Hash = undefined;
+    hasher.final(&hash);
+    return hash;
+}
+
 fn keccakPair(left: Hash, right: Hash) Hash {
     return keccak(&(left ++ right));
 }
@@ -591,7 +603,6 @@ pub fn ftxHash(index: usize) Hash {
 }
 
 fn proofOf(conflation: Conflation, index: usize, spec: ProofSpec, chain_config_hash: Hash) l2_execution_proof.VerifiableL2ExecutionProof {
-    const senders = std.mem.sliceAsBytes(conflation.senders);
     return .{
         .program_vk = spec.program_vk,
         .proof = .{
@@ -609,7 +620,7 @@ fn proofOf(conflation: Conflation, index: usize, spec: ProofSpec, chain_config_h
                 .end_ftx_rolling_hash = ftxHash(index + 1),
                 .end_processed_ftx_number = 12 + 2 * index,
                 .filtered_addresses = .{ .items = spec.filtered_addresses },
-                .tx_froms_hash = keccak(senders),
+                .tx_froms_hash = hashAddressList(conflation.senders),
                 .block_count = conflation.block_rlps.len,
                 .l2_messaging_blocks_offsets = .{ .items = spec.messaging_offsets },
             },

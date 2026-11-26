@@ -18,8 +18,8 @@ pub const Address = truncation.Address;
 pub const Error = truncation.Error || error{
     /// The conflation has no block, or its block count differs from its proof's range.
     BlockCountMismatch,
-    /// keccak256 of the senders of the conflation's transactions differs from the proof's
-    /// `tx_froms_hash`.
+    /// keccak256(abi.encodePacked(address[])) of the senders of the conflation's transactions
+    /// differs from the proof's `tx_froms_hash`.
     SendersHashMismatch,
 };
 
@@ -57,11 +57,15 @@ pub fn derive(
         sender_count += block.froms.len;
     }
 
-    const senders = try allocator.alloc(Address, sender_count);
+    // `abi.encodePacked(address[])`: each sender left-padded to a 32-byte slot.
+    const senders = try allocator.alloc([32]u8, sender_count);
+    @memset(std.mem.sliceAsBytes(senders), 0);
     var next: usize = 0;
     for (truncated) |block| {
-        @memcpy(senders[next..][0..block.froms.len], block.froms);
-        next += block.froms.len;
+        for (block.froms) |from| {
+            @memcpy(senders[next][12..], &from);
+            next += 1;
+        }
     }
     var senders_hash: Hash = undefined;
     zkvm_accelerators.keccak256(std.mem.sliceAsBytes(senders), &senders_hash);

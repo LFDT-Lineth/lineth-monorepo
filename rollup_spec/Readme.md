@@ -147,7 +147,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `endFtxRollingHash` | Forced-transaction rolling hash at the end of this range |
 | `endProcessedFtxNumber` | Sequence number of the last forced transaction handled in this range |
 | `filteredAddresses` | Addresses named by the forced transactions refused in this range (§6.5) — the recovered sender (`fromAddress = recover_sender(signedTxRlp, chainID)`) for `FILTERED_ADDRESS_FROM`, the decoded recipient (`toAddress`) for `FILTERED_ADDRESS_TO` — encoded as a distinct list sorted ascending by byte value; empty if none |
-| `txFromsHash` | keccak256 of the flat ordered list of sender addresses for all transactions in this range, in block-then-transaction order |
+| `txFromsHash` | `keccak256(abi.encodePacked(address[]))` of the ordered sender addresses for all transactions in this range, in block-then-transaction order (each address left-padded to 32 bytes) |
 | `blockCount` | Number of execution-validated blocks covered by this proof |
 | `l2MessagingBlocksOffsets` | Strictly increasing uint16 offsets of blocks with matching validated L2MessageService receipt logs, relative to the parent block (first = 1) |
 
@@ -252,7 +252,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
    ```
    keccak256(froms_e[0] ‖ … ‖ froms_e[last]) == PI_Eᵢ.txFromsHash
    ```
-   where each `froms_e[j]` is a 20-byte address and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
+   where each `froms_e[j]` is a 20-byte address left-padded to 32 bytes, matching the L1 contract's `abi.encodePacked(address[])`, and the empty list hashes as `keccak256(b"")`. The same full block RLPs supply the canonical truncated blocks and block hashes checked in steps 2 and 5, binding these sender hashes to the verified DA stream and execution-proof chain.
 
 4. **Verify the l2-execution proofs.** Recursively verify each `Eᵢ` against `PI_Eᵢ`, using `programVk_e` (private input, above) as the recursive verifier's verifying key for proof `Eᵢ`.
 
