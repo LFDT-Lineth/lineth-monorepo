@@ -1547,7 +1547,8 @@ func TestPredecodeInternal(t *testing.T) {
 // ------------------------------------------------------------
 
 // TestWithMaxDecodedRecords checks that the returned option sets the cap in the
-// config, replacing what was there, and returns no error.
+// config, replacing what was there, marks the cap as set, and returns no error.
+// A cap of zero is marked as set too.
 func TestWithMaxDecodedRecords(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -1564,8 +1565,9 @@ func TestWithMaxDecodedRecords(t *testing.T) {
 		if err := tt.option(&cfg); err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
-		if cfg.maxDecodedRecords != tt.want {
-			t.Fatalf("%s: maxDecodedRecords = %d, want %d", tt.name, cfg.maxDecodedRecords, tt.want)
+		if cfg.maxDecodedRecords != tt.want || !cfg.maxDecodedRecordsSet {
+			t.Fatalf("%s: config = %+v, want maxDecodedRecords=%d and maxDecodedRecordsSet=true",
+				tt.name, cfg, tt.want)
 		}
 	}
 }
@@ -1586,7 +1588,7 @@ func TestWithIncludeExecutable(t *testing.T) {
 		if err := WithIncludeExecutable()(&cfg); err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
-		if !cfg.includeExecutable || cfg.maxDecodedRecords != 7 || cfg.sectionsWriter != nil {
+		if !cfg.includeExecutable || cfg.maxDecodedRecords != 7 || cfg.maxDecodedRecordsSet || cfg.sectionsWriter != nil {
 			t.Fatalf("%s: config = %+v, want includeExecutable=true and other fields unchanged", tt.name, cfg)
 		}
 	}
@@ -1611,7 +1613,7 @@ func TestWithSectionsWriter(t *testing.T) {
 		if (err != nil) != tt.wantErr {
 			t.Fatalf("%s: err = %v, wantErr = %v", tt.name, err, tt.wantErr)
 		}
-		if cfg.sectionsWriter != tt.want || cfg.maxDecodedRecords != 7 || cfg.includeExecutable {
+		if cfg.sectionsWriter != tt.want || cfg.maxDecodedRecords != 7 || cfg.maxDecodedRecordsSet || cfg.includeExecutable {
 			t.Fatalf("%s: config = %+v, want sectionsWriter=%v and other fields unchanged",
 				tt.name, cfg, tt.want)
 		}
@@ -1633,7 +1635,7 @@ func TestApplyOptions(t *testing.T) {
 		{name: "no options", want: config{maxDecodedRecords: DefaultMaxDecodedRecords}},
 		{name: "all options", options: []Option{
 			WithMaxDecodedRecords(5), WithIncludeExecutable(), WithSectionsWriter(&buf),
-		}, want: config{maxDecodedRecords: 5, includeExecutable: true, sectionsWriter: &buf}},
+		}, want: config{maxDecodedRecords: 5, maxDecodedRecordsSet: true, includeExecutable: true, sectionsWriter: &buf}},
 		{name: "nil option", options: []Option{WithIncludeExecutable(), nil},
 			wantErr: "applying predecoding option: nil option"},
 		{name: "option error", options: []Option{WithIncludeExecutable(), WithSectionsWriter(nil)},

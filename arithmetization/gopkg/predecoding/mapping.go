@@ -319,7 +319,7 @@ func suffixedName(name, suffix string) string {
 
 // EncodeInputs encodes a program and additional memory blobs into raw R5
 // public-input bytes. It does not mutate either input and returned byte slices
-// do not alias blob data. The options are the mapping options
+// do not alias blob data. The options are the mapping options which are
 // [WithIncludeExecutable] and [WithSectionsWriter].
 func EncodeInputs(
 	program Program,
@@ -344,6 +344,10 @@ func applyInputOptions(options []Option) (config, error) {
 		if err := option(&cfg); err != nil {
 			return config{}, fmt.Errorf("applying input option: %w", err)
 		}
+	}
+	if cfg.maxDecodedRecordsSet {
+		return config{}, fmt.Errorf(
+			"applying input option: WithMaxDecodedRecords does not apply to EncodeInputs; pass it to Predecode")
 	}
 	return cfg, nil
 }

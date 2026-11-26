@@ -492,7 +492,8 @@ func decodeSTypeSemantic(funct3 uint32) (computeOp uint32) {
 	}
 }
 
-// decodeBTypeSemantic returns the branch funct3 when valid, otherwise BTYPE_INVALID.
+// decodeBTypeSemantic maps a branch funct3 to its unified compute op, or to
+// COMPUTE_INVALID when the funct3 is not a branch.
 func decodeBTypeSemantic(funct3 uint32) uint32 {
 	switch funct3 {
 	case 0b000:
@@ -638,18 +639,23 @@ func (w *bitWriter) writeBits(val uint64, width int) {
 
 type config struct {
 	maxDecodedRecords uint64
-	includeExecutable bool
-	sectionsWriter    io.Writer
+	// maxDecodedRecordsSet is true when WithMaxDecodedRecords was given. Zero
+	// is a valid cap, so the value alone cannot tell.
+	maxDecodedRecordsSet bool
+	includeExecutable    bool
+	sectionsWriter       io.Writer
 }
 
 // Option configures predecoding.
 type Option func(*config) error
 
 // WithMaxDecodedRecords limits the aligned executable span decoded by
-// [Predecode]. A zero limit rejects every non-empty executable program.
+// [Predecode] and [PrepareInputs]. A zero limit rejects every non-empty
+// executable program.
 func WithMaxDecodedRecords(maximum uint64) Option {
 	return func(cfg *config) error {
 		cfg.maxDecodedRecords = maximum
+		cfg.maxDecodedRecordsSet = true
 		return nil
 	}
 }
@@ -843,7 +849,7 @@ func executableSpan(firstAddress, maxEnd, maxRecords uint64) (base, records uint
 	if records > maxRecords {
 		return 0, 0, fmt.Errorf(
 			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous; "+
-				"override the cap with WithMaxDecodedRecords",
+				"override the cap with WithMaxDecodedRecords, or with ELF2JSON_MAX_DECODED_RECORDS for elf_to_json",
 			records,
 			maxRecords,
 			base,
@@ -943,7 +949,7 @@ func decodeInstruction(decoded *bitWriter, instruction uint32) {
 
 	// Classify the instruction and get the compute op.
 	instructionType := instructionTypeFromOpcode(opcode)
-	compute_op := classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)
+	computeOp := classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)
 
 	// Get the operands depending on the instruction type.
 	imm, operandRS1, operandRS2, operandRD := unifiedOperands(
@@ -958,7 +964,7 @@ func decodeInstruction(decoded *bitWriter, instruction uint32) {
 	)
 
 	// Write to the bitWriter
-	decoded.writeBits(uint64(compute_op), 8)
+	decoded.writeBits(uint64(computeOp), 8)
 	decoded.writeBits(imm, 64)
 	decoded.writeBits(operandRS1, 5)
 	decoded.writeBits(operandRS2, 5)
@@ -982,7 +988,8 @@ func classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd uint
 		op = decodeJTypeSemantic(opcode)
 	case uType:
 		op = decodeUTypeSemantic(opcode)
-	case undefinedType:
+	default:
+		// undefinedType, and any type this switch does not handle.
 		op = computeInvalid
 	}
 	return checkNoOp(instructionType, op, rd)

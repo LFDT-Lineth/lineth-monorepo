@@ -885,7 +885,7 @@ func TestWriteSectionsIfRequested(t *testing.T) {
 
 // TestU32Layout checks the u32 entry point, addresses and data size of a valid
 // layout, and that an entry point or blob outside the 32-bit address space is
-// an error. The blobs at the edge are an accepted blob ending at 4 GiB and an
+// an error. The last address is an accepted entry point. The blobs at the edge are an accepted blob ending at 4 GiB and an
 // empty blob at the last address, and the rejected ones are an empty blob
 // above 4 GiB and a blob crossing it. The blob count limit is not tested, because it needs more than 4
 // billion blobs. The data size limit uses 4096 blobs sharing one 1 MiB slice,
@@ -915,6 +915,7 @@ func TestU32Layout(t *testing.T) {
 			wantEntry: 0x800000, wantAddresses: []uint32{0xfffffffc}, wantSize: 4},
 		{name: "empty blob at the last address", entryPoint: 0x800000, blobs: []Blob{blob(1<<32-1, 0)},
 			wantEntry: 0x800000, wantAddresses: []uint32{0xffffffff}},
+		{name: "entry point at the last address", entryPoint: 1<<32 - 1, wantEntry: 0xffffffff},
 		{name: "entry point outside 32 bits", entryPoint: 1 << 32,
 			wantErr: "entry point 0x100000000 is outside the 32-bit address space"},
 		{name: "blob outside 32 bits", entryPoint: 0x800000, blobs: []Blob{blob(1<<32, 4)},
@@ -1032,6 +1033,36 @@ func TestBuildInputs(t *testing.T) {
 	}
 }
 
+// TestEncodeExecutableBits checks that each blob gets one bit, set when the
+// blob is executable, with blob 0 in the top bit of the first byte. The bitmap
+// has one byte per eight blobs, rounded up: 8 blobs fit in one byte, 9 need
+// two, and 16 still need two.
+func TestEncodeExecutableBits(t *testing.T) {
+	tests := []struct {
+		name       string
+		count      int   // number of blobs
+		executable []int // indexes of the executable blobs
+		want       []byte
+	}{
+		{name: "no blobs"},
+		{name: "one data blob", count: 1, want: []byte{0x00}},
+		{name: "one executable blob", count: 1, executable: []int{0}, want: []byte{0x80}},
+		{name: "last of 8 blobs", count: 8, executable: []int{7}, want: []byte{0x01}},
+		{name: "first and last of 9 blobs", count: 9, executable: []int{0, 8}, want: []byte{0x80, 0x80}},
+		{name: "ninth and last of 16 blobs", count: 16, executable: []int{8, 15}, want: []byte{0x00, 0x81}},
+	}
+	for _, tt := range tests {
+		blobs := make([]Blob, tt.count)
+		for _, i := range tt.executable {
+			blobs[i].Executable = true
+		}
+		got := encodeExecutableBits(blobs)
+		if !bytes.Equal(got, tt.want) {
+			t.Fatalf("%s: bits = %x, want %x", tt.name, got, tt.want)
+		}
+	}
+}
+
 // TestEncodeInputsInternal checks the inputs of a program blob at 0x800000 and an extra
 // blob at 0x1000, which sorts first. The executable input is present only with
 // includeExecutable, and the blob names do not change the inputs. Each failing
@@ -1107,7 +1138,8 @@ func TestEncodeInputsInternal(t *testing.T) {
 // ------------------------------------------------------------
 
 // TestApplyInputOptions checks that the options set the encoding config, and
-// that a nil option or a failing option is an error.
+// that a nil option or a failing option is an error. WithMaxDecodedRecords is
+// an error too, whatever its value, because encoding does not have this option.
 func TestApplyInputOptions(t *testing.T) {
 	buf := &bytes.Buffer{}
 	tests := []struct {
@@ -1126,6 +1158,10 @@ func TestApplyInputOptions(t *testing.T) {
 		{name: "nil option", options: []Option{nil}, wantErr: "applying input option: nil option"},
 		{name: "failing option", options: []Option{WithSectionsWriter(nil)},
 			wantErr: "applying input option: sections writer is nil"},
+		{name: "record cap", options: []Option{WithMaxDecodedRecords(5)},
+			wantErr: "applying input option: WithMaxDecodedRecords does not apply to EncodeInputs"},
+		{name: "record cap of zero", options: []Option{WithIncludeExecutable(), WithMaxDecodedRecords(0)},
+			wantErr: "applying input option: WithMaxDecodedRecords does not apply to EncodeInputs"},
 	}
 	for _, tt := range tests {
 		got, err := applyInputOptions(tt.options)

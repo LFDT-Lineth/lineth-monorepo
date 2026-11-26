@@ -227,7 +227,7 @@ fn verifyBucket(
     // that bucket into straight-line code. On the real RISC-V arithmetization
     // that produced 85 instantiations totalling ~6.0 MiB of the ~7.9 MiB
     // .text — enough to push the guest's executable span past elf_to_json's
-    // 2,000,000-record pre-decoding cap and to dominate the interpreted
+    // 16,000,000-record pre-decoding cap and to dominate the interpreted
     // instruction-fetch cost in zkc.
     //
     // Nothing here needs bucket to be comptime: Bucket/Vanishing are plain data
