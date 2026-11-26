@@ -980,7 +980,8 @@ func classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd uint
 		op = decodeJTypeSemantic(opcode)
 	case uType:
 		op = decodeUTypeSemantic(opcode)
-	case undefinedType:
+	default:
+		// undefinedType, and any type this switch does not handle.
 		op = computeInvalid
 	}
 	return checkNoOp(instructionType, op, rd)

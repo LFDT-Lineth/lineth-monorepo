@@ -863,6 +863,10 @@ var classifyInstructionVectors = []struct {
 	// An undefined opcode is invalid, whatever rd is.
 	{"undefined", undefinedType, 0, 0, 0, 0, 0, computeInvalid},
 	{"undefined rd set", undefinedType, opcodeOPIMM, 0b000, 0, 1, 5, computeInvalid},
+
+	// A type the switch does not handle is invalid too, never NO_OP.
+	{"unhandled type", 8, opcodeOPIMM, 0b000, 0, 1, 5, computeInvalid},
+	{"unhandled type x0", 8, opcodeOPIMM, 0b000, 0, 1, 0, computeInvalid},
 }
 
 func TestClassifyInstruction(t *testing.T) {
