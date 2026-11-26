@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-`.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace zkc-smoke-trace-external link-zkevm-fixtures clean compile exec debug require-input require-elf
+.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace zkc-smoke-trace-external link-zkevm-fixtures clean compile exec debug require-input require-elf
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
