@@ -82,6 +82,13 @@ const requests = [_]RequestSpec{
     },
 };
 
+/// The L2-to-L1 messages of the requests in window order.
+const window_messages = [_]Hash{ message_a, message_b, message_c, message_c, message_a };
+
+/// The blocks of the window that carry a message, counted from one: every messaging offset of the
+/// requests, moved by the blocks of the conflations before its own.
+const window_messaging_blocks = [_]u16{ 1, 30, 30 + 2, 50 + 5, 50 + 40, 90 + 3 };
+
 /// The rollup proofs of the window's requests: each runs the rollup statement over a request that
 /// continues the one before it, and carries a devmode proof of its output under its program VK.
 fn rollupProofs(a: Allocator, window: []const Fact) ![]rollup_proof.VerifiableRollupProof {
@@ -152,17 +159,8 @@ test "three adjacent rollup proofs of the Linea window finalize its range" {
     try std.testing.expectEqualSlices(u8, &last_bridge.bridge_rolling_hash, &pi.end_l1_l2_bridge_rolling_hash);
     try std.testing.expectEqual(last_bridge.bridge_message_number, pi.end_l1_l2_bridge_rolling_hash_message_number);
 
-    var all_messages: std.ArrayList(Hash) = .empty;
-    var all_offsets: std.ArrayList(u16) = .empty;
-    var blocks_before: u64 = 0;
-    for (proofs) |verifiable| {
-        const output = verifiable.proof.public_inputs;
-        try all_messages.appendSlice(a, output.l2_l1_messages.items);
-        for (output.l2_messaging_blocks_offsets.items) |offset| try all_offsets.append(a, @intCast(blocks_before + offset));
-        blocks_before += output.block_count;
-    }
-    try std.testing.expectEqualDeep(try l2_l1_roots.build(a, all_messages.items), pi.l2_l1_roots.items);
-    try std.testing.expectEqualDeep(all_offsets.items, pi.l2_messaging_blocks_offsets.items);
+    try std.testing.expectEqualDeep(try l2_l1_roots.build(a, &window_messages), pi.l2_l1_roots.items);
+    try std.testing.expectEqualDeep(&window_messaging_blocks, pi.l2_messaging_blocks_offsets.items);
 
     try std.testing.expectEqualDeep(&[_]Address{ address_a, address_b, address_c }, pi.filtered_addresses.items);
     try std.testing.expectEqualDeep(&[_]Hash{ execution_vk_a, execution_vk_b, rollup_vk_a, rollup_vk_b }, pi.program_ids.items);
