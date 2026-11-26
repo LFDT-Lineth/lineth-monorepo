@@ -10,7 +10,7 @@ services:
     environment:
       LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
     volumes:
-      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.stack.toml:ro
+      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/lineth/maru/configs/config.stack.toml:ro
 
   sequencer:
     command:
@@ -37,29 +37,21 @@ services:
     platform: linux/amd64
     profiles: ["riscv"]
     environment:
-      CONFIG_FILE: /opt/linea/prover-ray/config/config.toml
+      CONFIG_FILE: /opt/lineth/prover-ray/config/config.toml
       WORKER_ID: prover-ray-0
     volumes:
-      - ./config/prover/riscv/prover-ray-config.${RISCV_PROVER_MODE:-dev-mock}.toml:/opt/linea/prover-ray/config/config.toml:ro
+      - ./config/prover/riscv/prover-ray-config.${RISCV_PROVER_MODE:-dev-mock}.toml:/opt/lineth/prover-ray/config/config.toml:ro
       - ../tmp/local/prover/riscv:/data/prover/riscv
       # Guest ELFs by Program ID; dev-zkvm stages them (see start-env-with-riscv).
-      - ../tmp/local/prover-ray/guests:/opt/linea/prover-ray/guests:ro
+      - ../tmp/local/prover-ray/guests:/opt/lineth/prover-ray/guests:ro
     networks:
       - linea
 
   coordinator:
     # First release whose prover requests match prover-ray 0.2.0.
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.4.0-20261119-c5e1daa}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.4.0-rc1-20261118-c800dbe}
     # Started by start-env-with-riscv once the L1 contract is deployed.
     profiles: !override ["riscv"]
-    # The coordinator image has no curl, so the base healthcheck never passes.
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
-          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
-          grep -q "200 OK" <&3'
     depends_on: !override
       l2-genesis-initialization:
         condition: service_completed_successfully
@@ -73,4 +65,4 @@ services:
       COORDINATOR_CONFIG_FILES: config/coordinator-config.toml config/coordinator-config-riscv.toml
       config__override__prover__l2_execution__program_id: *riscv-execution-program-id
     volumes:
-      - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro
+      - ./config/coordinator/coordinator-config-riscv.toml:/opt/lineth/coordinator/config/coordinator-config-riscv.toml:ro

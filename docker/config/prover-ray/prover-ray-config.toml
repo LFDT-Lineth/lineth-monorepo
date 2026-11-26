@@ -11,7 +11,7 @@
 # guestProgramId names. Stage it with prover-ray/scripts/stage-guest.sh.
 version = "0.0.0-riscv"
 log_level = 4
-guests_dir = "/opt/linea/prover-ray/guests"
+guests_dir = "/opt/lineth/prover-ray/guests"
 
 [execution]
 prover_mode = "dev-zkvm"
