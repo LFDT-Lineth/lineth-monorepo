@@ -82,7 +82,7 @@ func TestGnarkVerifier_Combined(t *testing.T) {
 	proof, pub := sys.Prove(assign)
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
-	gv := compileGnarkVerifier(t, sys, proof, pub)
+	gv := compileGnarkVerifier(t, sys)
 	require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 	t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 

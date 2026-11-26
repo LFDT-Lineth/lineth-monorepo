@@ -55,6 +55,7 @@
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
@@ -235,3 +236,4 @@
 - *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 - *(maru)* Remove noisy p2p connection stack trace (#4542)
 - *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
+- *(linea-besu)* Update docker base image version digest for cve fix (#4617)

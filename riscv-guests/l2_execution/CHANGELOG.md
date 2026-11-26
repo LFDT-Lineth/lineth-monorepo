@@ -8,6 +8,7 @@
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
