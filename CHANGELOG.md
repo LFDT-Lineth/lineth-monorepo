@@ -236,3 +236,4 @@
 - *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 - *(maru)* Remove noisy p2p connection stack trace (#4542)
 - *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
+- *(linea-besu)* Update docker base image version digest for cve fix (#4617)

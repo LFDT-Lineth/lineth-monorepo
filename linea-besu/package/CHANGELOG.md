@@ -1,8 +1,13 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
+- *(linea-besu)* Update docker base image version digest for cve fix (#4617)
 ## [2.4.0] - 2026-11-19
 
 ### 🚀 Features
