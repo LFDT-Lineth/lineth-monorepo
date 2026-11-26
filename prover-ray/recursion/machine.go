@@ -319,6 +319,16 @@ func (m *Machine) exec(in instr, r *Run) error {
 	return fmt.Errorf("unknown instruction kind %d", in.kind)
 }
 
+// ChipRows returns the number of rows every chip of the program uses, before
+// padding to its module's height, by chip name.
+func (p *Program) ChipRows() map[string]int {
+	res := make(map[string]int, len(p.chips))
+	for _, c := range p.chips {
+		res[c.name()] = c.rows()
+	}
+	return res
+}
+
 // Prove proves an execution: it assigns every chip's witness columns (zero
 // where the trace left a column unset) and runs the compiled system's prover.
 func (p *Program) Prove(r *Run) (wiop.Proof, wiop.PublicInput) {

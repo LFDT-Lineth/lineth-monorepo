@@ -75,6 +75,9 @@ type rowCells struct {
 }
 
 func (v *Verifier) checkPCS(a *pcs.OpeningVerifierAction) error {
+	if pcs.IsSizeOblivious(v.sys) {
+		return v.checkPCSOblivious(a)
+	}
 	op, err := a.Static(v.sys)
 	if err != nil {
 		return err

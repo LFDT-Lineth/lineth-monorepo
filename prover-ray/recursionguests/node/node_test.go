@@ -172,16 +172,17 @@ func TestNew_Aggregates(t *testing.T) {
 	key := tr.internal.Key()
 	proof, pub, err := tr.internal.ProveChildren(key, leaves...)
 	require.NoError(t, err, "an internal node over leaves")
-	requirePubEqual(t, want(l, key, pubs(leaves)...), pub, "the internal node should combine the leaves")
+	box := tr.internal.Box()
+	requirePubEqual(t, want(l, box, pubs(leaves)...), pub, "the internal node should combine the leaves")
 	internal := node.Child{Proof: proof, Pub: pub}
 
 	children := append([]node.Child{internal}, leaves...)
 	_, pub, err = tr.internal.ProveChildren(key, children...)
 	require.NoError(t, err, "an internal node over an internal node and leaves")
-	requirePubEqual(t, want(l, key, pubs(children)...), pub, "the internal node should combine both kinds")
+	requirePubEqual(t, want(l, box, pubs(children)...), pub, "the internal node should combine both kinds")
 	got, err := node.KeyOf(pub)
 	require.NoError(t, err)
-	require.Equal(t, key, got, "the key box should be the internal key")
+	require.Equal(t, box, got, "the key box should be the internal program's")
 }
 
 // TestNew_SizeOblivious checks that the leaf and internal programs have the
@@ -279,7 +280,7 @@ func TestNew_Rejects(t *testing.T) {
 		require.True(t, product.IsOne(), "the root should expose a balanced bus")
 		got, err := node.KeyOf(pub)
 		require.NoError(t, err)
-		require.Equal(t, key, got, "the root should expose the internal key")
+		require.Equal(t, tr.internal.Box(), got, "the root should expose the internal program's box")
 	})
 }
 

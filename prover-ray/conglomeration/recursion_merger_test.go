@@ -36,7 +36,7 @@ func requireMerged(t *testing.T, merger *RecursionMerger, program *node.Program,
 	require.NoError(t, err)
 	want := field.Octuplet{}
 	if program != merger.leaf {
-		want = merger.internal.Key()
+		want = merger.internal.Box()
 	}
 	require.Equal(t, want, key, "the key box should be the program's")
 }
@@ -168,7 +168,7 @@ func TestRecursionMerger_Finalize(t *testing.T) {
 			requireElemEqual(t, elem(1), messagebus.GetProducts(sys, root.Pub)[0], "the root should expose a balanced bus")
 			key, err := node.KeyOf(root.Pub)
 			require.NoError(t, err)
-			require.Equal(t, merger.internal.Key(), key, "the root should expose the internal key")
+			require.Equal(t, merger.internal.Box(), key, "the root should expose the internal program's box")
 		})
 	}
 }
@@ -250,5 +250,5 @@ func TestRecursionMerger_Reduce(t *testing.T) {
 	require.Equal(t, gamma, messagebus.GetSharedRandomnessSeed(sys, root.Pub), "the seed should be propagated")
 	key, err := node.KeyOf(root.Pub)
 	require.NoError(t, err)
-	require.Equal(t, merger.internal.Key(), key, "the root should expose the internal key")
+	require.Equal(t, merger.internal.Box(), key, "the root should expose the internal program's box")
 }

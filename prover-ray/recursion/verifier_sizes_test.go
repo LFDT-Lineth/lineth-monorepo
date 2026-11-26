@@ -37,6 +37,12 @@ type dynamicSystem struct {
 
 func newDynamicSystem(t *testing.T, sizeRound int) dynamicSystem {
 	t.Helper()
+	return newDynamicSystemWith(t, sizeRound, compilers.ConfigurePCS(pcs.WithFRINumQueries(2)))
+}
+
+// newDynamicSystemWith is newDynamicSystem compiled with opts.
+func newDynamicSystemWith(t *testing.T, sizeRound int, opts ...compilers.Option) dynamicSystem {
+	t.Helper()
 	sys := wiop.NewSystemf("dynamic")
 	sys.DynamicSizeRound = sizeRound
 	r0, r1 := sys.NewRound(), sys.NewRound()
@@ -63,7 +69,7 @@ func newDynamicSystem(t *testing.T, sizeRound int) dynamicSystem {
 	d.q = sys.NewPermutation(ctx.Childf("perm"), []wiop.Table{wiop.NewTable(d.pa.View())}, []wiop.Table{wiop.NewTable(d.pb.View())})
 	r0.RegisterVerifierAction(&grandproduct.RowLimitAction{Query: d.q, Limit: dynLimit})
 
-	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))), "the dynamic system should compile")
+	require.NoError(t, compilers.CompileFull(sys, opts...), "the dynamic system should compile")
 	return d
 }
 
@@ -197,7 +203,7 @@ func TestVerifierDynamic_RowLimit(t *testing.T) {
 	d = newDynamicSystem(t, 0)
 	r0 := d.sys.Rounds[0]
 	r0.VerifierActions = append(r0.VerifierActions, &grandproduct.RowLimitAction{Query: d.q, Limit: 1})
-	_, err = newVerifier(&Machine{}, d.sys, true)
+	_, err = newVerifier(&Machine{}, d.sys, VerifierOptions{}, true)
 	require.ErrorContains(t, err, "at or above the limit 1", "a limit of 1 row")
 }
 

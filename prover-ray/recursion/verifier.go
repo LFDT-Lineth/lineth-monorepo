@@ -40,10 +40,14 @@ type Verifier struct {
 	commitments map[int]int  // round ID → digest cell
 	public      []int        // the public inputs' cells, in sys.PublicInputs order
 	t           *transcript  // the inner transcript, after the replay of the rounds
-	pcs         *pcsVerifier // the PCS opening, nil if skipped
+	pcs         *pcsVerifier // the PCS opening, nil if skipped or size-oblivious
+	obl         *oblVerifier // the size-oblivious PCS opening, nil otherwise
+	opts        VerifierOptions
 
-	sizes      map[int]*dynSize // module index → the dynamic module's size
-	sizeOrder  []int            // the dynamic modules' indices, in module order
+	sizes map[int]*dynSize // module index → the dynamic module's size
+	data  map[*wiop.Module]*dynSize
+
+	sizeOrder  []int // the dynamic modules' indices, in module order
 	sizeTables map[sizeTableKey]Table
 	sizeCells  map[sizeCellKey]int // the size constants looked up, per module
 	powTables  map[int]Table       // x's cell → the table of x^(2^i)
@@ -64,16 +68,44 @@ type verifierInput struct {
 	// pcs reads the value from the opening proof, whose shape Inputs checks
 	// first.
 	pcs func(*fri.OpeningProof) Cell
+	// obl reads the value from a proof laid out for the size-oblivious
+	// opening (see oblAssign).
+	obl func(*oblAssign) Cell
+	// free, for an obl input, tells whether the proof leaves the input's
+	// value free: a sibling above its tree's height.
+	free func(*oblAssign) bool
+}
+
+// VerifierOptions are the options of NewVerifierWith.
+type VerifierOptions struct {
+	// Key, if HasKey, is the digest cell holding the root of the inner
+	// system's precomputed batch, the key the proof is verified under: a
+	// constant of the inner system otherwise.
+	Key    int
+	HasKey bool
+	// Heights, if not nil, are scalar cells holding the log sizes of the
+	// inner system's sized modules, in module order: constants of the inner
+	// system otherwise. With them, the verifier checks the proofs of every
+	// system that has the inner system's structure, whatever the sizes of
+	// its modules (see InputsFor). The caller binds them to the key: a size
+	// is part of what a key verifies.
+	Heights []int
 }
 
 // NewVerifier builds in m the verifier of sys's proofs. sys must be compiled
 // (compilers.CompileFull). It allocates the machine inputs of a proof
 // contiguously: see Inputs for their values.
 func NewVerifier(m *Machine, sys *wiop.System) (*Verifier, error) {
-	return newVerifier(m, sys, false)
+	return newVerifier(m, sys, VerifierOptions{}, false)
 }
 
-func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) {
+// NewVerifierWith is NewVerifier with options: the key and the sizes of the
+// sized modules as cells.
+func NewVerifierWith(m *Machine, sys *wiop.System, opts VerifierOptions) (*Verifier, error) {
+	return newVerifier(m, sys, opts, false)
+}
+
+func newVerifier(m *Machine, sys *wiop.System, opts VerifierOptions, skipPCS bool) (*Verifier, error) {
 	// Fail closed on a system the verifier would check only in part: without
 	// a PCS, or with queries no compiler reduced, no verifier action binds the
 	// proof's values to the committed columns.
@@ -92,8 +124,20 @@ func newVerifier(m *Machine, sys *wiop.System, skipPCS bool) (*Verifier, error) 
 			return nil, fmt.Errorf("recursion: module %q has no size", mod.Context.Path())
 		}
 	}
+	if opts.Heights != nil {
+		n := 0
+		for _, mod := range sys.Modules {
+			if !mod.IsDynamic() {
+				n++
+			}
+		}
+		if len(opts.Heights) != n {
+			return nil, fmt.Errorf("recursion: %d height cells for %d sized modules", len(opts.Heights), n)
+		}
+	}
 	v := &Verifier{
-		m: m, sys: sys, skipPCS: skipPCS,
+		m: m, sys: sys, skipPCS: skipPCS, opts: opts,
+		data:        map[*wiop.Module]*dynSize{},
 		cells:       map[wiop.ObjectID]int{},
 		coins:       map[wiop.ObjectID]int{},
 		commitments: map[int]int{},
@@ -220,6 +264,20 @@ func (t *transcript) squeeze() int {
 // an extension value in a base cell, or a base value in an extension cell,
 // which the native transcript would absorb as one element instead of six.
 func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error) {
+	return v.InputsFor(v.sys, proof, pub)
+}
+
+// InputsFor is Inputs for a proof of sys, a system with the structure of the
+// verifier's (the same modules, columns, rounds and openings) whose sized
+// modules may have other sizes: a verifier built with VerifierOptions.Heights
+// verifies it, under sys's key and sizes.
+func (v *Verifier) InputsFor(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error) {
+	if len(sys.Modules) != len(v.sys.Modules) {
+		return nil, fmt.Errorf("recursion: a system of %d modules, want %d", len(sys.Modules), len(v.sys.Modules))
+	}
+	if sys != v.sys && v.opts.Heights == nil {
+		return nil, fmt.Errorf("recursion: the verifier is built for the sizes of %q only", v.sys.Context.Path())
+	}
 	if len(pub) != len(v.sys.PublicInputs) {
 		return nil, fmt.Errorf("recursion: %d public inputs, want %d", len(pub), len(v.sys.PublicInputs))
 	}
@@ -232,9 +290,20 @@ func (v *Verifier) Inputs(proof wiop.Proof, pub wiop.PublicInput) ([]Cell, error
 	if err := v.sizeInputs(proof.DynamicSizes, res); err != nil {
 		return nil, err
 	}
+	var oa *oblAssign
+	if v.obl != nil {
+		var err error
+		if oa, err = v.obl.assign(sys, proof); err != nil {
+			return nil, fmt.Errorf("recursion: PCS opening: %w", err)
+		}
+	}
 	for k, in := range v.inputs {
 		if in.module != nil {
 			continue // set by sizeInputs
+		}
+		if in.obl != nil {
+			res[k] = in.obl(oa)
+			continue
 		}
 		if in.pcs != nil {
 			res[k] = in.pcs(proof.PCSOpeningProof)
