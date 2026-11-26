@@ -547,6 +547,24 @@ func checkGuestOutputFrame(hash, framed []byte, schema uint16) error {
 	return nil
 }
 
+// GuestOutputPublicInputs returns the SSZ public inputs of guest output out
+// (hash || schema id || public inputs), after it checks the hash and that the
+// schema id is the output schema of proof type t.
+func GuestOutputPublicInputs(out []byte, t ProofType) ([]byte, error) {
+	schema, err := outputSchemaID(t)
+	if err != nil {
+		return nil, err
+	}
+	if len(out) < guestOutputHashSize {
+		return nil, fmt.Errorf("guest output is %d bytes, shorter than the hash", len(out))
+	}
+	hash, framed := out[:guestOutputHashSize], out[guestOutputHashSize:]
+	if err := checkGuestOutputFrame(hash, framed, schema); err != nil {
+		return nil, err
+	}
+	return framed[guestOutputSchemaIDSize:], nil
+}
+
 func keccak256(b []byte) []byte {
 	h := sha3.NewLegacyKeccak256()
 	h.Write(b)
