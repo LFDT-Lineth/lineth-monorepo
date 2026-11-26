@@ -39,43 +39,60 @@ const RequestSpec = struct {
     proofs: []const ProofSpec,
 };
 
+// The five conflations of the window in order: their blocks, the offsets of their blocks that carry
+// a message and their L2-to-L1 messages.
+const first_blocks = 30;
+const second_blocks = 20;
+const third_blocks = 40;
+const fourth_blocks = 35;
+const fifth_blocks = 25;
+
+const first_offsets = [_]u16{ 1, first_blocks };
+const second_offsets = [_]u16{2};
+const third_offsets = [_]u16{ 5, third_blocks };
+const fourth_offsets = [_]u16{3};
+
+const first_messages = [_]Hash{ message_a, message_b };
+const second_messages = [_]Hash{message_c};
+const fourth_messages = [_]Hash{ message_c, message_a };
+
 /// The requests in window order; their conflations cover the window.
 const requests = [_]RequestSpec{
     .{
         .program_vk = rollup_vk_a,
-        .blocks = &.{ 30, 20 },
+        .blocks = &.{ first_blocks, second_blocks },
         .proofs = &.{
             .{
                 .program_vk = execution_vk_a,
-                .l2_l1_messages = &.{ message_a, message_b },
+                .l2_l1_messages = &first_messages,
                 .filtered_addresses = &.{ address_b, address_a },
                 .bridge_rolling_hash = @splat(0xb1),
                 .bridge_message_number = 4,
-                .messaging_offsets = &.{ 1, 30 },
+                .messaging_offsets = &first_offsets,
             },
             .{
                 .program_vk = execution_vk_b,
-                .l2_l1_messages = &.{message_c},
+                .l2_l1_messages = &second_messages,
                 .filtered_addresses = &.{ address_a, address_c },
-                .messaging_offsets = &.{2},
+                .messaging_offsets = &second_offsets,
             },
         },
     },
     .{
         .program_vk = rollup_vk_b,
-        .blocks = &.{40},
-        .proofs = &.{.{ .program_vk = execution_vk_a, .messaging_offsets = &.{ 5, 40 } }},
+        .blocks = &.{third_blocks},
+        .proofs = &.{.{ .program_vk = execution_vk_a, .messaging_offsets = &third_offsets }},
     },
     .{
         .program_vk = rollup_vk_a,
-        .blocks = &.{ 35, 25 },
+        .blocks = &.{ fourth_blocks, fifth_blocks },
         .proofs = &.{
             .{
                 .program_vk = execution_vk_b,
-                .l2_l1_messages = &.{ message_c, message_a },
+                .l2_l1_messages = &fourth_messages,
                 .bridge_rolling_hash = @splat(0xb2),
                 .bridge_message_number = 9,
-                .messaging_offsets = &.{3},
+                .messaging_offsets = &fourth_offsets,
             },
             .{ .program_vk = execution_vk_a },
         },
@@ -83,11 +100,18 @@ const requests = [_]RequestSpec{
 };
 
 /// The L2-to-L1 messages of the requests in window order.
-const window_messages = [_]Hash{ message_a, message_b, message_c, message_c, message_a };
+const window_messages = first_messages ++ second_messages ++ fourth_messages;
 
 /// The blocks of the window that carry a message, counted from one: every messaging offset of the
 /// requests, moved by the blocks of the conflations before its own.
-const window_messaging_blocks = [_]u16{ 1, 30, 30 + 2, 50 + 5, 50 + 40, 90 + 3 };
+const window_messaging_blocks = [_]u16{
+    first_offsets[0],
+    first_offsets[1],
+    first_blocks + second_offsets[0],
+    first_blocks + second_blocks + third_offsets[0],
+    first_blocks + second_blocks + third_offsets[1],
+    first_blocks + second_blocks + third_blocks + fourth_offsets[0],
+};
 
 /// The rollup proofs of the window's requests: each runs the rollup statement over a request that
 /// continues the one before it, and carries a devmode proof of its output under its program VK.
