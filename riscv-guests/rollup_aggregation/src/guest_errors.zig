@@ -8,7 +8,7 @@
 //! needs no imports.
 
 /// Matches the width of the guest's exit primitive.
-pub const ExitCode = u64;
+pub const ExitCode = u32;
 
 pub const CODE_UNKNOWN: ExitCode = 1;
 /// The 2-byte schema id is missing or doesn't match `rollup_aggregation_ssz.INPUT_SCHEMA_ID`.

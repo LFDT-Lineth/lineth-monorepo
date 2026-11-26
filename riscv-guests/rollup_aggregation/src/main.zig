@@ -34,10 +34,10 @@ fn guestMain() callconv(.c) noreturn {
     const raw_input = buf_ptr[0..buf_size];
 
     const out = rollup_aggregation.runFramed(allocator, raw_input) catch |err| {
-        exit(guest_errors.exitCode(err));
+        zkvm_io.zkvm_exit(guest_errors.exitCode(err));
     };
     zkvm_io.write_output(out.ptr, out.len);
-    exit(0);
+    zkvm_io.zkvm_exit(0);
 }
 
 comptime {
@@ -48,19 +48,4 @@ comptime {
         // Pull in the precompile providers for the freestanding guest.
         _ = zkvm_provide;
     }
-}
-
-fn exit(code: u64) noreturn {
-    if (builtin.cpu.arch == .riscv64) {
-        asm volatile (
-            \\mv a0, %[code]
-            \\li a7, 93
-            \\ecall
-            :
-            : [code] "r" (code),
-            : .{ .x10 = true, .x17 = true });
-        unreachable;
-    }
-
-    std.debug.panic("guest exit({d})", .{code});
 }
