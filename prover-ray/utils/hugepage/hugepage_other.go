@@ -2,4 +2,6 @@
 
 package hugepage
 
-func advise(_, _ uintptr) {}
+import "unsafe"
+
+func advise(_ unsafe.Pointer, _ uintptr) {}
