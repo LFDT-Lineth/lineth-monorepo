@@ -1,6 +1,8 @@
 package fri
 
 import (
+	"runtime"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
@@ -63,71 +65,126 @@ func (l leafLayout) dpos(p int) int {
 	return p
 }
 
-// fillGroup fills the column-major matrix for the leaf group [g, g+16), laid out
-// matrix[pos*16+lane] as vortex.CompressPoseidon2x16Columns expects. In this
-// layout a column's 16 leaves are contiguous, so base columns are filled with a
-// single bulk copy of 16 consecutive leaf values (no per-element scatter), and
-// the kernel loads each rate coordinate instead of gathering.
-func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, g int) {
-	// Header: identical for every lane.
-	for i := range l.header {
-		base := l.dpos(i) * simdLanes
-		h := l.header[i]
-		for lane := range simdLanes {
-			matrix[base+lane] = h
+// maxPairedGroupsPerVisit is the most leaf groups a paired fill takes from a
+// column per visit: 4 groups of 16 pair leaves read 4 x 128 bytes, 8
+// consecutive cache lines, of each column at once.
+const maxPairedGroupsPerVisit = 4
+
+// pairedGroupsPerVisit is how many of the nbGroups leaf groups of a paired
+// size are filled per column visit. It stays at 1 when there are too few
+// groups to give every worker several visits, since the visit is the unit of
+// parallel work.
+func pairedGroupsPerVisit(nbGroups int) int {
+	return min(maxPairedGroupsPerVisit, max(1, nbGroups/runtime.GOMAXPROCS(0)))
+}
+
+// fillGroups fills mats[0:count] for the count consecutive leaf groups
+// starting at leaf j, group i into mats[i]. Each matrix is laid out
+// matrix[pos*16+lane] as vortex.CompressPoseidon2x16Columns expects: a
+// column's 16 leaves are contiguous, so the kernel loads each rate
+// coordinate instead of gathering. Unpaired fills take count = 1.
+func (l leafLayout) fillGroups(mats [][]field.Element, t SizedTable, j, count int) {
+	for _, matrix := range mats[:count] {
+		// Header: identical for every lane.
+		for i := range l.header {
+			base := l.dpos(i) * simdLanes
+			h := l.header[i]
+			for lane := range simdLanes {
+				matrix[base+lane] = h
+			}
 		}
 	}
-
-	// row(lane) = base + stride*lane. Non-bottom (paired) leaves digest two
-	// adjacent rows, so their 16 leaves are stride-2; the bottom level is
-	// stride-1 (contiguous), which enables the bulk-copy fast path.
 	if l.paired {
-		l.fillColumns(matrix, t, len(l.header), 2*g, 2)
-		off := len(l.header) + l.baseWidth + 6*l.extWidth
-		l.fillColumns(matrix, t, off, 2*g+1, 2)
-	} else {
-		l.fillColumns(matrix, t, len(l.header), g, 1)
+		l.fillPairedRows(mats, t, j, count)
+		return
+	}
+	for i := range count {
+		l.fillRows(mats[i], t, j+i*simdLanes)
 	}
 }
 
-// fillColumns writes one row's base then ext columns into the column-major
-// matrix, starting at stream offset off, reading source row base+stride*lane
-// for lane 0..15.
-func (l leafLayout) fillColumns(matrix []field.Element, t SizedTable, off, base, stride int) {
-	s := off
+// fillRows writes rows [row, row+16) of every base then ext column into the
+// matrix, one row per lane (bottom level, unpaired leaves).
+func (l leafLayout) fillRows(matrix []field.Element, t SizedTable, row int) {
+	s := len(l.header)
 	for k := range t.Base {
-		col := t.Base[k]
 		dp := l.dpos(s) * simdLanes
-		if stride == 1 {
-			// 16 consecutive leaves of this column land contiguously.
-			copy(matrix[dp:dp+simdLanes], col[base:base+simdLanes])
-		} else {
-			for lane := range simdLanes {
-				matrix[dp+lane] = col[base+stride*lane]
-			}
-		}
+		// 16 consecutive leaves of this column land contiguously.
+		copy(matrix[dp:dp+simdLanes], t.Base[k][row:row+simdLanes])
 		s++
 	}
 	for k := range t.Ext {
 		col := t.Ext[k]
-		// The 6 limbs are contiguous unless the pad gap falls inside this
-		// column (at most one column across the stream), so resolve each
-		// destination once, outside the lane loop.
-		var dp [6]int
-		for i := range dp {
-			dp[i] = l.dpos(s+i) * simdLanes
-		}
+		dp := l.extPositions(s)
 		for lane := range simdLanes {
-			e := &col[base+stride*lane]
-			matrix[dp[0]+lane] = e.B0.A0
-			matrix[dp[1]+lane] = e.B0.A1
-			matrix[dp[2]+lane] = e.B1.A0
-			matrix[dp[3]+lane] = e.B1.A1
-			matrix[dp[4]+lane] = e.B2.A0
-			matrix[dp[5]+lane] = e.B2.A1
+			writeExtLane(matrix, &dp, lane, &col[row+lane])
 		}
 		s += 6
 	}
+}
+
+// fillPairedRows writes the count groups of 16 pair leaves starting at leaf
+// j: leaf j+i digests rows 2(j+i) and 2(j+i)+1, the first row's columns at
+// one stream offset and the second row's after them.
+//
+// It reads each column once, rows [2j, 2j+32*count) in one run, and splits
+// even rows to the first row's position and odd rows to the second's. Filling
+// the two rows in separate passes over all columns reads every line twice,
+// and the second read misses: the columns are page-aligned slices, so the
+// same line of every column maps to the same L1 set, and the first pass has
+// evicted it by the time the second pass returns.
+func (l leafLayout) fillPairedRows(mats [][]field.Element, t SizedTable, j, count int) {
+	off0 := len(l.header)
+	off1 := off0 + l.baseWidth + 6*l.extWidth
+	r0, n := 2*j, 2*simdLanes*count
+	for k := range t.Base {
+		src := t.Base[k][r0 : r0+n]
+		dp0 := l.dpos(off0+k) * simdLanes
+		dp1 := l.dpos(off1+k) * simdLanes
+		for i, matrix := range mats[:count] {
+			rows := src[2*simdLanes*i:][:2*simdLanes]
+			d0 := matrix[dp0:][:simdLanes]
+			d1 := matrix[dp1:][:simdLanes]
+			for lane := range simdLanes {
+				d0[lane] = rows[2*lane]
+				d1[lane] = rows[2*lane+1]
+			}
+		}
+	}
+	for k := range t.Ext {
+		src := t.Ext[k][r0 : r0+n]
+		dp0 := l.extPositions(off0 + l.baseWidth + 6*k)
+		dp1 := l.extPositions(off1 + l.baseWidth + 6*k)
+		for i, matrix := range mats[:count] {
+			rows := src[2*simdLanes*i:][:2*simdLanes]
+			for lane := range simdLanes {
+				writeExtLane(matrix, &dp0, lane, &rows[2*lane])
+				writeExtLane(matrix, &dp1, lane, &rows[2*lane+1])
+			}
+		}
+	}
+}
+
+// extPositions returns the matrix offsets of the 6 limbs of an ext element at
+// stream offset s. The limbs are contiguous unless the pad gap falls inside
+// this element (at most one per stream), so they are resolved once, outside
+// the lane loops.
+func (l leafLayout) extPositions(s int) [6]int {
+	var dp [6]int
+	for i := range dp {
+		dp[i] = l.dpos(s+i) * simdLanes
+	}
+	return dp
+}
+
+// writeExtLane writes the 6 limbs of e to lane of the limb positions dp.
+func writeExtLane(matrix []field.Element, dp *[6]int, lane int, e *field.Ext) {
+	matrix[dp[0]+lane] = e.B0.A0
+	matrix[dp[1]+lane] = e.B0.A1
+	matrix[dp[2]+lane] = e.B1.A0
+	matrix[dp[3]+lane] = e.B1.A1
+	matrix[dp[4]+lane] = e.B2.A0
+	matrix[dp[5]+lane] = e.B2.A1
 }
 
 // hashLeafScalar reproduces the MDHasher path for a single leaf; used for the
@@ -173,14 +230,11 @@ func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Oct
 	// leaves a single scalar tail of nbLeaves%16 for the whole array.
 	nbGroups := nbLeaves / simdLanes
 	if nbGroups > 0 {
-		parallel.Execute(nbGroups, func(start, end int) {
-			matrix := make([]field.Element, simdLanes*l.colSize)
-			for g := start; g < end; g++ {
-				j := g * simdLanes
-				l.fillGroup(matrix, t, j)
-				vortex.CompressPoseidon2x16Columns(matrix, l.colSize, out[j:j+simdLanes])
-			}
-		})
+		perVisit := 1
+		if paired {
+			perVisit = pairedGroupsPerVisit(nbGroups)
+		}
+		hashLeafGroups(l, t, out[:nbGroups*simdLanes], perVisit)
 	}
 
 	// Scalar tail: the final nbLeaves%16 leaves that do not fill a group.
@@ -190,4 +244,27 @@ func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Oct
 			out[j] = l.hashLeafScalar(hasher, t, j)
 		}
 	}
+}
+
+// hashLeafGroups hashes the len(out)/16 full leaf groups of t into out with
+// the batched permutation, filling perVisit consecutive groups per column
+// visit (the last visit may take fewer). Visits are split across the workers.
+func hashLeafGroups(l leafLayout, t SizedTable, out []field.Octuplet, perVisit int) {
+	nbGroups := len(out) / simdLanes
+	nbVisits := (nbGroups + perVisit - 1) / perVisit
+	parallel.Execute(nbVisits, func(start, end int) {
+		mats := make([][]field.Element, perVisit)
+		for i := range mats {
+			mats[i] = make([]field.Element, simdLanes*l.colSize)
+		}
+		for v := start; v < end; v++ {
+			g0 := v * perVisit
+			count := min(perVisit, nbGroups-g0)
+			l.fillGroups(mats, t, g0*simdLanes, count)
+			for i := range count {
+				j := (g0 + i) * simdLanes
+				vortex.CompressPoseidon2x16Columns(mats[i], l.colSize, out[j:j+simdLanes])
+			}
+		}
+	})
 }
