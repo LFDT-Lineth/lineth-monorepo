@@ -1,10 +1,11 @@
-## [unreleased]
+## [3.0.0] - 2026-11-26
 
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
