@@ -23,23 +23,7 @@ pub fn main(init: std.process.Init) !void {
         std.process.exit(2);
     }
 
-    const messages = [_][32]u8{ @splat(0x71), @splat(0x72), @splat(0x73) };
-    const request = try scenario.request(alloc, &.{
-        .{
-            .messages = messages[0..2],
-            .offsets = &.{ 2, 7 },
-            .filtered_addresses = &.{@as([20]u8, @splat(0xa1))},
-            .bridge_rolling_hash = @splat(0xb1),
-            .bridge_message_number = 4,
-        },
-        .{
-            .block_count = 5,
-            .messages = messages[2..],
-            .offsets = &.{3},
-            .filtered_addresses = &.{ @as([20]u8, @splat(0xa1)), @as([20]u8, @splat(0xa2)) },
-            .program_vk = @splat(0x2b),
-        },
-    });
+    const request = try scenario.request(alloc, &scenario.sample);
     const encoded = try rollup_aggregation.rollup_aggregation_ssz.encodeInput(alloc, request);
     const output = try rollup_aggregation.rollup_aggregation.runFramed(alloc, encoded);
 

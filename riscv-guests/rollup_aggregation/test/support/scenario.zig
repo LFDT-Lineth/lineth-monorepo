@@ -11,6 +11,7 @@ const Allocator = std.mem.Allocator;
 const rollup_proof = core_serde.rollup_proof;
 
 pub const first_block: u64 = 1_000_501;
+pub const default_program_vk: [32]u8 = @splat(0x2a);
 
 /// What one proof of a chain is made of; every other field follows from its position in the chain.
 pub const Spec = struct {
@@ -19,7 +20,7 @@ pub const Spec = struct {
     offsets: []const u16 = &.{},
     filtered_addresses: []const [20]u8 = &.{},
     program_vks: []const [32]u8 = &.{},
-    program_vk: [32]u8 = @splat(0x2a),
+    program_vk: [32]u8 = default_program_vk,
     bridge_rolling_hash: [32]u8 = @splat(0),
     bridge_message_number: u64 = 0,
 };
@@ -45,6 +46,38 @@ pub fn ftxNumber(index: u64) u64 {
 
 pub const chain_config_hash: [32]u8 = @splat(0xc0);
 
+pub fn timestamp(block: u64) u64 {
+    return 1_763_000_000 + block;
+}
+
+/// The last block of the chain of `specs`.
+pub fn endBlock(specs: []const Spec) u64 {
+    var end = first_block - 1;
+    for (specs) |spec| end += spec.block_count;
+    return end;
+}
+
+const sample_messages = [_][32]u8{ @splat(0x71), @splat(0x72), @splat(0x73) };
+const sample_addresses = [_][20]u8{ @splat(0xa1), @splat(0xa2) };
+
+/// The chain of the committed sample request: two proofs with messages, offsets and addresses.
+pub const sample = [_]Spec{
+    .{
+        .messages = sample_messages[0..2],
+        .offsets = &.{ 2, 7 },
+        .filtered_addresses = sample_addresses[0..1],
+        .bridge_rolling_hash = @splat(0xb1),
+        .bridge_message_number = 4,
+    },
+    .{
+        .block_count = 5,
+        .messages = sample_messages[2..],
+        .offsets = &.{3},
+        .filtered_addresses = &sample_addresses,
+        .program_vk = @splat(0x2b),
+    },
+};
+
 /// The proofs of `specs`, in order, with empty proof bytes.
 pub fn build(a: Allocator, specs: []const Spec) ![]rollup_proof.VerifiableRollupProof {
     const proofs = try a.alloc(rollup_proof.VerifiableRollupProof, specs.len);
@@ -59,7 +92,7 @@ pub fn build(a: Allocator, specs: []const Spec) ![]rollup_proof.VerifiableRollup
                 .proof = .{ .bytes = &.{} },
                 .public_inputs = .{
                     .end_block_number = end,
-                    .end_block_timestamp = 1_763_000_000 + end,
+                    .end_block_timestamp = timestamp(end),
                     .end_l1_l2_bridge_rolling_hash = spec.bridge_rolling_hash,
                     .end_l1_l2_bridge_rolling_hash_message_number = spec.bridge_message_number,
                     .dynamic_chain_config_hash = chain_config_hash,
