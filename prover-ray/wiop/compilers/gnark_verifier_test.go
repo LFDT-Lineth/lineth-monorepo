@@ -149,11 +149,6 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 			wioptest.Mutator{Column: mCols[0], Row: 0, Tweak: wioptest.AddOne}.Compile(invalid.Sys)
 			compileGnarkPipeline(t, invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignWitness)
-			if invalid.Sys.Verify(badProof, badPub) == nil {
-				// The bumped row is masked by the table's filter, so the
-				// tampered M is still a valid multiplicity assignment.
-				t.Skip("tampered M row does not contribute to the lookup sum")
-			}
 			require.ErrorContains(t, invalid.Sys.Verify(badProof, badPub), "wiop/compilers/lookuptologderivsum: aggregated lookup result for query", "wrong multiplicity must fail natively")
 			gv.requireRejectedBy(t, badProof, badPub, "lookuptologderivsum.(*ResultIsZeroVerifierAction).CheckGnark")
 		})
