@@ -1,6 +1,6 @@
 version = "riscv-local"
 log_level = 4
-guests_dir = "/opt/linea/prover-ray/guests"
+guests_dir = "/opt/lineth/prover-ray/guests"
 
 [execution]
 prover_mode = "dev-zkvm"

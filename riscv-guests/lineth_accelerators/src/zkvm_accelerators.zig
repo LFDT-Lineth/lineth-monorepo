@@ -8,9 +8,9 @@ pub const blob_len = 131072;
 pub const commitment_len = 48;
 pub const proof_len = 48;
 
-extern fn zkvm_keccak256(data: [*]const u8, len: usize, output: *[32]u8) i32;
-extern fn zkvm_sha256(data: [*]const u8, len: usize, output: *[32]u8) i32;
-extern fn lineth_zkvm_kzg_verify_blob_batch(
+pub extern fn zkvm_keccak256(data: [*]const u8, len: usize, output: *[32]u8) i32;
+pub extern fn zkvm_sha256(data: [*]const u8, len: usize, output: *[32]u8) i32;
+pub extern fn lineth_zkvm_kzg_verify_blob_batch(
     blobs: [*]const [blob_len]u8,
     commitments: [*]const [commitment_len]u8,
     proofs: [*]const [proof_len]u8,

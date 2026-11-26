@@ -105,6 +105,8 @@ pub const Selection = struct {
     entries: std.EnumArray(Kind, Entry),
     /// A block with one blob transaction.
     blob_transaction: ef_blocks.Located,
+    /// The chain every selected block runs on.
+    chain_id: u64,
 
     /// Reads the selected blocks from `corpus_dir`, a directory of fixture files, absolute or
     /// relative to the working directory.
@@ -131,12 +133,24 @@ pub const Selection = struct {
             });
             _ = scratch.reset(.retain_capacity);
         }
+        const chain_id = entries.get(.legacy).chain_id;
+        for (std.enums.values(Kind)) |kind| {
+            if (entries.get(kind).chain_id != chain_id) return error.ChainsDiffer;
+        }
         const blob_transaction = try ef_blocks.locate(arena.allocator(), io, corpus_dir, blob_transaction_pick.path, blob_transaction_pick.case, blob_transaction_pick.block);
-        return .{ .arena = arena, .entries = entries, .blob_transaction = blob_transaction };
+        return .{ .arena = arena, .entries = entries, .blob_transaction = blob_transaction, .chain_id = chain_id };
     }
 
     pub fn deinit(self: *Selection) void {
         self.arena.deinit();
+    }
+
+    /// The RLPs of the blocks `kinds`, in that order; the caller owns the slice, whose items the
+    /// selection owns.
+    pub fn conflationRlps(self: Selection, allocator: Allocator, kinds: []const Kind) Allocator.Error![]const []const u8 {
+        const rlps = try allocator.alloc([]const u8, kinds.len);
+        for (kinds, rlps) |kind, *rlp| rlp.* = self.entries.get(kind).rlp;
+        return rlps;
     }
 
     /// The canonical payload of the conflation of the blocks `kinds`, in that order; the caller
@@ -150,8 +164,10 @@ pub const Selection = struct {
     }
 };
 
-/// The selection of `corpus_dir`, read once per process and kept.
+/// The selection of `corpus_dir`, read once per process and kept. An empty directory, which a build
+/// without the corpus gives, skips the test that asks.
 pub fn shared(io: std.Io, corpus_dir: []const u8) !*const Selection {
+    if (corpus_dir.len == 0) return error.SkipZigTest;
     if (cached == null) cached = try Selection.load(std.heap.page_allocator, io, corpus_dir);
     return &cached.?;
 }
