@@ -22,7 +22,7 @@ jobs:
       COMMIT_TAG: ${{ inputs.commit_tag }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # update to on demand runner to avoid mid run termination and flakiness
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl-od
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large-od
     environment: dockerhub-pull
     name: Coordinator tests
     steps:

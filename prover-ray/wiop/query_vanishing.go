@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/gnark/frontend"
 )
 
 // Vanishing is a [Query] asserting that an expression evaluates to zero. It
@@ -91,11 +90,6 @@ func (v *Vanishing) Check(rt *Runtime) error {
 		}
 	}
 	return nil
-}
-
-// CheckGnark implements [GnarkCheckableQuery].
-func (v *Vanishing) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
-	panic("wiop: Vanishing.CheckGnark not yet implemented")
 }
 
 // NewVanishing registers a new [Vanishing] constraint on the module. The

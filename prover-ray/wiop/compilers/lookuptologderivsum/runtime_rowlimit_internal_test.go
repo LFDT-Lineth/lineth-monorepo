@@ -62,6 +62,11 @@ func TestRowLimitVerifierAction_RuntimeRejectsOverLimitASide(t *testing.T) {
 
 	assert.Panics(t, func() { action.Run(rt) },
 		"prover must panic on an over-limit subgroup A side")
+
+	// The in-circuit check sees only static sizes (which equal the runtime
+	// ones here) and must refuse to build with the same error.
+	assert.PanicsWithError(t, err.Error(), func() { action.CheckGnark(nil, nil) },
+		"circuit build must panic on an over-limit subgroup A side")
 }
 
 // TestRowLimitVerifierAction_RuntimeRejectsOverLimitBSide is the B-side counterpart:
@@ -76,6 +81,11 @@ func TestRowLimitVerifierAction_RuntimeRejectsOverLimitBSide(t *testing.T) {
 
 	assert.Panics(t, func() { action.Run(rt) },
 		"prover must panic on an over-limit subgroup B side")
+
+	// The in-circuit check sees only static sizes (which equal the runtime
+	// ones here) and must refuse to build with the same error.
+	assert.PanicsWithError(t, err.Error(), func() { action.CheckGnark(nil, nil) },
+		"circuit build must panic on an over-limit subgroup B side")
 }
 
 // TestRowLimitVerifierAction_RuntimeAcceptsWithinLimit confirms the runtime check is
@@ -86,6 +96,7 @@ func TestRowLimitVerifierAction_RuntimeAcceptsWithinLimit(t *testing.T) {
 
 	require.NoError(t, action.Check(rt), "an in-budget subgroup must pass the verifier check")
 	assert.NotPanics(t, func() { action.Run(rt) }, "an in-budget subgroup must not panic the prover")
+	assert.NotPanics(t, func() { action.CheckGnark(nil, nil) }, "an in-budget subgroup must not panic the circuit build")
 }
 
 // TestRowLimitVerifierAction_RegisteredOnWitnessRound pins the wiring, which the

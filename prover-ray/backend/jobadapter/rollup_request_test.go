@@ -77,10 +77,11 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 }
 
 // TestDecodeRollupRequest_OptionalBoundaryHash verifies parentBlobDataRollingHash
-// is optional: absent, it decodes to nil with no cross-check.
+// is optional with no carry-over bytes: absent, it decodes to nil.
 func TestDecodeRollupRequest_OptionalBoundaryHash(t *testing.T) {
 	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 	pr := obj[proofRequestKey].(map[string]any)
+	pr[parentSharedBlobCarryOverTailBytesKey] = 0
 	delete(pr, parentBlobDataRollingHashKey)
 
 	req, err := DecodeRollupRequest(marshal(t, obj))
@@ -107,6 +108,33 @@ func TestDecodeRollupRequest_CalldataChunk(t *testing.T) {
 	assert.Empty(t, req.Chunks[0].BlobBytes)
 	assert.Empty(t, req.Chunks[0].KZGCommitment)
 	assert.Empty(t, req.Chunks[0].KZGProof)
+}
+
+// TestDecodeRollupRequest_GuestOutput checks that an embedded proof carrying
+// guestOutput decodes to its bytes, with no public inputs, also when it carries
+// publicInputs too.
+func TestDecodeRollupRequest_GuestOutput(t *testing.T) {
+	for name, keepPublicInputs := range map[string]bool{"guestOutput only": false, "both": true} {
+		t.Run(name, func(t *testing.T) {
+			obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+			proofs := obj[proofRequestKey].(map[string]any)[l2ExecutionProofsKey].([]any)
+			for _, p := range proofs {
+				if !keepPublicInputs {
+					delete(p.(map[string]any), publicInputsKey)
+				}
+				p.(map[string]any)[guestOutputKey] = "0xabcd"
+			}
+
+			req, err := DecodeRollupRequest(marshal(t, obj))
+			require.NoError(t, err)
+			require.Len(t, req.L2ExecutionProofs, len(proofs))
+			for i, p := range req.L2ExecutionProofs {
+				assert.Equal(t, []byte{0xab, 0xcd}, p.GuestOutput, "proof %d", i)
+				assert.Zero(t, p.PublicInputs, "proof %d", i)
+				assert.Equal(t, uint64(proofs[i].(map[string]any)[startBlockNumberKey].(float64)), p.StartBlockNumber)
+			}
+		})
+	}
 }
 
 func TestDecodeRollupRequest_InvalidJSON(t *testing.T) {
@@ -150,6 +178,8 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 			func(o map[string]any) { delete(pr(o), parentDataRollingHashKey) }, parentDataRollingHashKey},
 		{"MissingParentSharedBlobCarryOverTailBytes",
 			func(o map[string]any) { delete(pr(o), parentSharedBlobCarryOverTailBytesKey) }, parentSharedBlobCarryOverTailBytesKey},
+		{"MissingParentBlobDataRollingHashWithCarryOver",
+			func(o map[string]any) { delete(pr(o), parentBlobDataRollingHashKey) }, parentBlobDataRollingHashKey},
 		{"ConflationBlockRlpsEmpty",
 			func(o map[string]any) {
 				pr(o)[conflationsKey].([]any)[0].(map[string]any)[blockRlpsKey] = []any{}
@@ -204,6 +234,14 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 			func(o map[string]any) { delete(pi0(o), blockCountKey) }, blockCountKey},
 		{"ProofPublicInputsMissingOffsets",
 			func(o map[string]any) { delete(pi0(o), l2MessagingBlocksOffsetsKey) }, l2MessagingBlocksOffsetsKey},
+		{"ProofWithoutPublicInputsOrGuestOutput",
+			func(o map[string]any) { delete(proof0(o), publicInputsKey) }, guestOutputKey},
+		{"ProofGuestOutputNotHex",
+			func(o map[string]any) {
+				delete(proof0(o), publicInputsKey)
+				proof0(o)[guestOutputKey] = "0xzz"
+			},
+			guestOutputKey},
 	}
 
 	for _, tc := range cases {
