@@ -76,8 +76,7 @@ var modeSettings = map[backend.ProverMode]settings{
 	backend.ProverModeDevZkVM:    {nativeRunner: optional, shardSize: ignored, shardWorkers: ignored, gogen: optional},
 	backend.ProverModeDevPartial: {nativeRunner: optional, shardSize: optional, shardWorkers: optional, gogen: optional},
 	backend.ProverModeFull:       {nativeRunner: ignored, shardSize: optional, shardWorkers: optional, gogen: optional},
-	// Planned, not a mode yet. It runs on aggregation only, so the
-	// [execution] settings do not apply to it.
+	// Planned, not a mode yet. It runs on aggregation only.
 	// backend.ProverModeDevFullDummyWrap: {
 	// 	nativeRunner: ignored, shardSize: ignored, shardWorkers: ignored, gogen: ignored,
 	// },
