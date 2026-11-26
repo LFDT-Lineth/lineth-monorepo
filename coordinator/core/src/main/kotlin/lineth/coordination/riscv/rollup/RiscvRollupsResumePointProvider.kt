@@ -33,26 +33,24 @@ class RiscvRollupsResumePointProvider(
     lastFinalizedBlock: ULong,
     lastFinalizedBlockTimestamp: Instant,
   ): SafeFuture<RollupResumePoint> =
-    rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
-      .thenCompose { lastEnd ->
+    rollupsDao.findHighestConsecutiveRollupFromBlockNumber(lastFinalizedBlock + 1UL)
+      .thenCompose { lastRollup ->
         when {
-          lastEnd != null ->
-            findRow(lastEnd) { "no rollup row ends at block $lastEnd" }.thenApply(::resumePointAfter)
+          lastRollup != null -> SafeFuture.completedFuture(resumePointAfter(lastRollup))
 
           lastFinalizedBlockTimestamp < riscvCutoverTimestamp ->
             genesisDataRollingHashProvider.getGenesisDataRollingHash()
               .thenApply { RollupResumePoint(lastFinalizedBlock, DaStreamPosition.fresh(it)) }
 
-          else ->
-            findRow(lastFinalizedBlock) {
-              "L1 finalized block $lastFinalizedBlock is past the RISC-V cutover but no rollup row ends at it"
-            }.thenApply(::resumePointAfter)
+          else -> getRollupByEndBlockNumber(lastFinalizedBlock).thenApply(::resumePointAfter)
         }
       }
 
-  private fun findRow(endBlockNumber: ULong, missingMessage: () -> String): SafeFuture<RiscvRollupRecord> =
+  private fun getRollupByEndBlockNumber(endBlockNumber: ULong): SafeFuture<RiscvRollupRecord> =
     rollupsDao.findRollupByEndBlockNumber(endBlockNumber).thenApply {
-      it ?: throw IllegalStateException(missingMessage())
+      it ?: throw IllegalStateException(
+        "L1 finalized block $endBlockNumber is past the RISC-V cutover but no rollup row ends at it",
+      )
     }
 
   private fun resumePointAfter(row: RiscvRollupRecord): RollupResumePoint {
