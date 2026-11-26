@@ -215,6 +215,7 @@ test "verify rejects proof with wrong round count" {
     const systems = verifier.Systems{
         .public_input = .{ .round_cell_counts = &[_]usize{0} },
         .vanishing = vanishing.System{ .modules = &.{} },
+        .e6check = .{},
         .pcs = empty_pcs_system,
     };
     try std.testing.expectError(

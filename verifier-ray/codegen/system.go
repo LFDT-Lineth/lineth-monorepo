@@ -19,6 +19,7 @@ type CompiledSystem struct {
 	GrandProduct     GrandProductSystem
 	RowLimit         RowLimitSystem
 	SharedRandomness SharedRandomnessSystem
+	E6Check          E6CheckSystem
 	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
@@ -27,7 +28,8 @@ type CompiledSystem struct {
 
 // BuildCompiledSystem builds every sub-verifier system a compiled protocol
 // needs — coin routing, public-input layout, vanishing, log-derivative,
-// grand-product, row-limit, and PCS — from sys alone. PCS is mandatory in the
+// grand-product, row-limit, shared-randomness, E6-check and PCS — from sys
+// alone. PCS is mandatory in the
 // full verifier.verify path, so this errors if sys has no committed batches;
 // callers that legitimately emit the vanishing/logderiv systems standalone
 // should call the individual Build*System functions instead.
@@ -60,6 +62,10 @@ func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
 	if err != nil {
 		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
 	}
+	e6Check, err := BuildE6CheckSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
 	pcs, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
@@ -72,6 +78,7 @@ func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
 		GrandProduct:     grandProduct,
 		RowLimit:         rowLimit,
 		SharedRandomness: sharedRandomness,
+		E6Check:          e6Check,
 		Pcs:              &pcs,
 	}, nil
 }
@@ -101,6 +108,9 @@ type CompiledSystemZigOptions struct {
 	// SharedRandomnessImport is the import path used for the shared-randomness
 	// sub-verifier system, emitted unconditionally after the row-limit system.
 	SharedRandomnessImport string
+	// E6CheckImport is the import path used for the E6-check sub-verifier
+	// system, emitted unconditionally after the shared-randomness system.
+	E6CheckImport string
 }
 
 // WriteCompiledSystemZig writes the spec, vanishing system, and logderiv
@@ -157,6 +167,12 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 	if err := WriteSharedRandomnessSystemZigWithOptions(w, index, system.SharedRandomness, SharedRandomnessZigOptions{
 		EmitImport:             opts.EmitHeader,
 		SharedRandomnessImport: opts.SharedRandomnessImport,
+	}); err != nil {
+		return err
+	}
+	if err := WriteE6CheckSystemZigWithOptions(w, index, system.E6Check, E6CheckZigOptions{
+		EmitImport:    opts.EmitHeader,
+		E6CheckImport: opts.E6CheckImport,
 	}); err != nil {
 		return err
 	}
