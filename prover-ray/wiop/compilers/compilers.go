@@ -76,7 +76,6 @@ type options struct {
 	pcsOptions        []pcs.Option
 	messageBusOptions []messagebus.Option
 	withoutPCS        bool
-	fixedSizes        map[int]int
 	hooks             []hookRegistration
 }
 
@@ -113,26 +112,6 @@ func ConfigureMessageBus(opts ...messagebus.Option) Option {
 // [CompileFull] it leaves compiled columns uncommitted and skips both the PCS
 // pass and its hooks. It conflicts with [ConfigurePCS] and with a previously
 // configured PCS selection.
-// FixDynamicModuleSizes turns every dynamic module into a statically sized
-// one before any pass runs, via [wiop.System.FixDynamicSizes]: sizes maps each
-// dynamic module's index in sys.Modules to its fixed size. Use it to compile
-// the terminal recursion layer, whose gnark verifier circuit needs a proof
-// shape independent of the trace.
-func FixDynamicModuleSizes(sizes map[int]int) Option {
-	if len(sizes) == 0 {
-		utils.Panic("compilers: FixDynamicModuleSizes requires at least one size")
-	}
-	return func(o *options) {
-		if o.fixedSizes != nil {
-			utils.Panic("compilers: FixDynamicModuleSizes given twice")
-		}
-		o.fixedSizes = make(map[int]int, len(sizes))
-		for k, v := range sizes {
-			o.fixedSizes[k] = v
-		}
-	}
-}
-
 func WithoutPCS() Option { return func(o *options) { o.withoutPCS = true } }
 
 // WithPreHook runs hook immediately before pass, even if the pass is a no-op.
@@ -193,18 +172,8 @@ func resolve(opts []Option, allowHooks bool) (*options, *[PCS + 1]passHooks, err
 
 // apply records the resolved pass selections on sys. Every selection is
 // validated against the System's existing ones before any is written, so a
-// conflicting option set leaves the selections untouched. The one exception is
-// FixDynamicModuleSizes: it must run before the validators, which read module
-// sizes, so a later validation error leaves the modules pinned. Callers
-// discard the System on error rather than retrying on it.
+// conflicting option set leaves the System untouched.
 func (cfg *options) apply(sys *wiop.System) error {
-	// Fixing sizes comes first: the option validators and every pass read the
-	// module sizes.
-	if cfg.fixedSizes != nil {
-		if err := sys.FixDynamicSizes(cfg.fixedSizes); err != nil {
-			return fmt.Errorf("compilers: %w", err)
-		}
-	}
 	if len(cfg.pcsOptions) != 0 {
 		if err := pcs.Validate(sys, cfg.pcsOptions...); err != nil {
 			return fmt.Errorf("compilers: %w", err)
@@ -245,10 +214,7 @@ func (cfg *options) apply(sys *wiop.System) error {
 // passes, and a later [CompileFull], consume them: defaults stay unset until
 // the first consuming pass freezes them, and a pass receiving previously
 // configured values merges them instead of overriding. Conflicting or invalid
-// options are returned as errors before any selection is recorded. With
-// [FixDynamicModuleSizes], a size map that is valid on its own is applied
-// before the other options are validated, so an error from them leaves the
-// dynamic modules pinned: discard sys on error instead of retrying on it.
+// options are returned as errors before sys is mutated.
 //
 // Typical standalone use:
 //

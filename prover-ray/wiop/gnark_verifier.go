@@ -38,8 +38,8 @@ import (
 //
 // Limitations of this first iteration, all enforced by
 // [AllocateVerifierCircuit] failing closed:
-//   - no dynamic-size modules (their sizes change the circuit shape): fix their
-//     sizes before compiling, see [System.FixDynamicSizes];
+//   - no dynamic-size modules (their sizes change the circuit shape): build
+//     the System with sized modules;
 //   - no column elision (the prover would choose the batch shapes);
 //   - every verifier action must implement [GnarkVerifierAction].
 type VerifierCircuit struct {
@@ -219,7 +219,7 @@ func checkCircuitSupport(sys *System) {
 	for _, m := range sys.Modules {
 		if m.IsDynamic() {
 			panic(fmt.Sprintf("wiop: VerifierCircuit: dynamic module %q is not supported; "+
-				"fix its size before compiling (see System.FixDynamicSizes)", m.Context.Path()))
+				"build the System with sized modules", m.Context.Path()))
 		}
 	}
 	for _, r := range sys.Rounds {
