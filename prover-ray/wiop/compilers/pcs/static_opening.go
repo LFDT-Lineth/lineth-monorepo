@@ -51,7 +51,29 @@ type StaticSizedClaims struct {
 // Static returns the static structure of the opening of sys, the System
 // whose verifier action a is. It fails with column elision (the layout is
 // then the prover's choice) and with a dynamic module.
+//
+// It is computed once per action and shared by every caller (the circuit's
+// allocation and definition, the recursion machine): the result must not be
+// modified. A panic while computing it is returned as the error, on that
+// call and every later one.
 func (a *OpeningVerifierAction) Static(sys *wiop.System) (*StaticOpening, error) {
+	if sys != a.sys {
+		return nil, fmt.Errorf("pcs: Static: called with a System other than the action's")
+	}
+	a.staticOnce.Do(func() {
+		// sync.Once counts a panicking call as done: without the recover,
+		// every later call would return (nil, nil).
+		defer func() {
+			if r := recover(); r != nil {
+				a.static, a.staticErr = nil, fmt.Errorf("pcs: Static: %v", r)
+			}
+		}()
+		a.static, a.staticErr = a.computeStatic(sys)
+	})
+	return a.static, a.staticErr
+}
+
+func (a *OpeningVerifierAction) computeStatic(sys *wiop.System) (*StaticOpening, error) {
 	c := a.c
 	if c.elisionEnabled {
 		return nil, fmt.Errorf("pcs: column elision makes the opening's layout the prover's")

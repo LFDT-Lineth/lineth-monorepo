@@ -23,8 +23,8 @@ import (
 // The verifier is built for one system, and takes every one of its shape
 // choices from it: a cell's encoding in the transcript, for instance, is its
 // declared one (a scalar for a base cell, six elements for an extension one).
-// Native verification takes it from the proof's value, so Inputs rejects a
-// proof whose values do not follow the declarations.
+// As System.Verify does natively, Inputs rejects a proof whose values do not
+// follow the declarations.
 //
 // Dynamic modules are supported (see verifier_sizes.go): the sizes are
 // inputs, so one verifier checks the proofs of every size. The PCS opening is

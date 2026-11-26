@@ -771,7 +771,7 @@ func Compile(sys *wiop.System, opts ...Option) {
 	// before the opening squeezes alpha_DEEP.
 	openingRound := sys.NewRound()
 	openingRound.RegisterAction(&openingProverAction{c: c})
-	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
+	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c, sys: sys})
 }
 
 // checkStaticSizes panics when a statically sized committed column exceeds the
@@ -899,7 +899,16 @@ func (c *compiled) releaseCommittedStates(rt *wiop.Runtime) {
 }
 
 // OpeningVerifierAction replays the opening transcript and checks the proof.
-type OpeningVerifierAction struct{ c *compiled }
+type OpeningVerifierAction struct {
+	c *compiled
+	// sys is the System the action verifies, the only one Static accepts.
+	sys *wiop.System
+
+	// The memoized [OpeningVerifierAction.Static].
+	staticOnce sync.Once
+	static     *StaticOpening
+	staticErr  error
+}
 
 func (a *OpeningVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.c.verify(rt, *rt.PCSOpeningProof)

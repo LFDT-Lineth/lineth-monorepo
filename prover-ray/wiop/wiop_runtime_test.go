@@ -1,6 +1,7 @@
 package wiop_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -142,6 +143,34 @@ func TestRuntime_AssignColumn_DoublePanic(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, wioptest.ConstVec(4, 1))
 	assert.Panics(t, func() { rt.AssignColumn(col, wioptest.ConstVec(4, 2)) })
+}
+
+// TestRuntime_AssignColumn_DeclaredField: a column's declared field is
+// binding, as a cell's is. Extension-field data on a base column is refused at
+// assignment, before a cell derived from it (a LagrangeEval claim, an opened
+// position) would fail on its declared tag; every other pairing is accepted.
+func TestRuntime_AssignColumn_DeclaredField(t *testing.T) {
+	sys, r0, _, mod := newTestSystem(t)
+	base := mod.NewColumn(sys.Context.Childf("base"), r0)
+	ext := mod.NewExtensionColumn(sys.Context.Childf("ext"), r0)
+	liftedBase := mod.NewExtensionColumn(sys.Context.Childf("lifted"), r0)
+	empty := mod.NewColumn(sys.Context.Childf("empty"), r0)
+	refused := mod.NewColumn(sys.Context.Childf("refused"), r0)
+	extVec := func() *wiop.ConcreteVector {
+		return &wiop.ConcreteVector{Plain: field.VecFromExt(make([]field.Ext, 4))}
+	}
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(base, wioptest.ConstVec(4, 1))
+	rt.AssignColumn(ext, extVec())
+	rt.AssignColumn(liftedBase, wioptest.ConstVec(4, 1))
+	rt.AssignColumn(empty, &wiop.ConcreteVector{Plain: field.VecFromExt(nil)})
+	assert.PanicsWithValue(t,
+		fmt.Sprintf("wiop: AssignColumn: column %q is declared base-field but is assigned extension-field data",
+			refused.Context.Path()),
+		func() { rt.AssignColumn(refused, extVec()) },
+		"even with zero extension coordinates, the data's field is not the declared one")
+	assert.False(t, rt.HasColumnAssignment(refused), "a refused assignment leaves the column unassigned")
 }
 
 func TestRuntime_GetColumnAssignment_UnassignedPanic(t *testing.T) {

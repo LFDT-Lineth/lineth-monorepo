@@ -106,7 +106,16 @@ func (m Mutator) Apply(rt *wiop.Runtime) {
 	}
 
 	if m.Cell != nil {
-		rt.OverrideCell(m.Cell, tweak(rt.GetCellValue(m.Cell)))
+		v := tweak(rt.GetCellValue(m.Cell))
+		// A value tagged unlike the cell's declaration would be rejected by
+		// System.Verify's tag check (or diverge the transcript) before the
+		// constraint under test runs, so the test would pass for the wrong reason.
+		if v.IsBase() == m.Cell.IsExtension() {
+			panic(fmt.Sprintf("wioptest: Mutator: tweak returned a value whose field tag (base=%v) "+
+				"does not match the declaration of cell %q (extension=%v)",
+				v.IsBase(), m.Cell.Context.Path(), m.Cell.IsExtension()))
+		}
+		rt.OverrideCell(m.Cell, v)
 		return
 	}
 

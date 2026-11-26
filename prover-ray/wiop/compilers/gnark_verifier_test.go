@@ -22,29 +22,29 @@ import (
 // gnarkVerifier is the verifier circuit of a fully compiled system, compiled
 // once over BN254 so several witnesses can be solved against it.
 type gnarkVerifier struct {
-	sys         *wiop.System
-	template    wiop.Proof
-	templatePub wiop.PublicInput
-	ccs         interface {
+	sys *wiop.System
+	// circ is the unassigned circuit assignments are made from; the one
+	// compiled is a separate allocation, which frontend.Compile writes into.
+	circ *wiop.VerifierCircuit
+	ccs  interface {
 		Solve(witness.Witness, ...solver.Option) (any, error)
 		GetNbConstraints() int
 	}
 }
 
-func compileGnarkVerifier(t *testing.T, sys *wiop.System, template wiop.Proof, pub wiop.PublicInput) *gnarkVerifier {
+func compileGnarkVerifier(t *testing.T, sys *wiop.System) *gnarkVerifier {
 	t.Helper()
-	gv := &gnarkVerifier{sys: sys, template: template, templatePub: pub}
+	gv := &gnarkVerifier{sys: sys, circ: wiop.AllocateVerifierCircuit(sys)}
 	var err error
 	gv.ccs, err = frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder,
-		wiop.AllocateVerifierCircuit(sys, template, pub))
+		wiop.AllocateVerifierCircuit(sys))
 	require.NoError(t, err, "verifier circuit must compile")
 	return gv
 }
 
 func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicInput) error {
 	t.Helper()
-	assignment := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub).
-		AssignVerifierCircuit(proof, pub)
+	assignment := gv.circ.AssignVerifierCircuit(proof, pub)
 	w, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	require.NoError(t, err, "assignment must produce a witness")
 	_, err = gv.ccs.Solve(w)
@@ -60,26 +60,11 @@ func (gv *gnarkVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicIn
 func (gv *gnarkVerifier) requireRejectedBy(t *testing.T, proof wiop.Proof, pub wiop.PublicInput, check string) {
 	t.Helper()
 	require.Error(t, gv.solve(t, proof, pub), "proof must not satisfy the compiled circuit")
-	circuit := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub)
-	assignment := wiop.AllocateVerifierCircuit(gv.sys, gv.template, gv.templatePub).
-		AssignVerifierCircuit(proof, pub)
+	circuit := wiop.AllocateVerifierCircuit(gv.sys)
+	assignment := gv.circ.AssignVerifierCircuit(proof, pub)
 	err := test.IsSolved(circuit, assignment, ecc.BN254.ScalarField())
 	require.Error(t, err, "proof must not satisfy the circuit in the test engine")
 	require.Contains(t, err.Error(), check, "proof must be rejected by %s", check)
-}
-
-// gnarkSlots caps how many circuit-building subtests run at once. Each one
-// builds a verifier circuit of several million constraints, so running one
-// per CPU exhausts memory and is slower than running sequentially; four at
-// once runs about twice as fast as sequentially on a 16 GB machine.
-var gnarkSlots = make(chan struct{}, 4)
-
-// parallelGnark marks t parallel and holds one of [gnarkSlots] until t ends.
-func parallelGnark(t *testing.T) {
-	t.Helper()
-	t.Parallel()
-	gnarkSlots <- struct{}{}
-	t.Cleanup(func() { <-gnarkSlots })
 }
 
 // compileGnarkPipeline runs [compilers.CompileFull] with the testing options.
@@ -111,12 +96,11 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			gv := compileGnarkVerifier(t, sc.Sys)
 			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
@@ -145,12 +129,11 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 	for _, build := range wioptest.LookupScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			gv := compileGnarkVerifier(t, sc.Sys)
 			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
@@ -214,12 +197,11 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 		withTampering := !tampered
 		tampered = true
 		t.Run(sc.Name, func(t *testing.T) {
-			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			gv := compileGnarkVerifier(t, sc.Sys)
 			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 
 			invalid := build()
@@ -236,17 +218,19 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 }
 
 // TestGnarkVerifier_NonNativeScenarios is the non-native counterpart of
-// [TestGnarkVerifier_LocalVanishingScenarios].
+// [TestGnarkVerifier_LocalVanishingScenarios]. It runs the edge-case fixtures
+// only: the width fixtures' verifier circuits are the largest (28M to 63M
+// constraints) and add no in-circuit check the edge cases miss. The nonnative
+// package's native tests keep every fixture.
 func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
-	for i, build := range wioptest.NonNativeScenarios() {
+	for i, build := range wioptest.NonNativeEdgeCaseScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			gv := compileGnarkVerifier(t, sc.Sys)
 			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
@@ -271,12 +255,11 @@ func TestGnarkVerifier_RangeCheckScenarios(t *testing.T) {
 	for i, build := range wioptest.RangeCheckCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			gv := compileGnarkVerifier(t, sc.Sys, proof, pub)
+			gv := compileGnarkVerifier(t, sc.Sys)
 			require.NoError(t, gv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 			t.Logf("constraints: %d", gv.ccs.GetNbConstraints())
 
