@@ -5,7 +5,7 @@ The Docker images published by CI are built by a single script,
 
 | Caller | Entry point |
 |--------|-------------|
-| CI | [`.github/actions/docker-build-publish/action.yml`](../../.github/actions/docker-build-publish/action.yml), used by `.github/workflows/<image>-build-and-publish.yml` |
+| CI | [`.github/actions/docker-build-publish/action.yml`](../../.github/actions/docker-build-publish/action.yml), used by [`.github/workflows/reusable-docker-service-build.yml`](../../.github/workflows/reusable-docker-service-build.yml) (one table entry per image) |
 | Local | `make docker-build-<image>` ([`images.mk`](./images.mk), included from the root `Makefile`) |
 | Package-local | `make -C maru docker-build-local-image` and `make -C linea-besu/package build-image`, which delegate here so their documented flags (`BESU_PACKAGE_TAG`, `PLATFORM`, …) keep working |
 

@@ -93,8 +93,9 @@ jobs:
       id-token: write
     needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
-    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: coordinator
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
@@ -109,8 +110,9 @@ jobs:
       id-token: write
     needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
-    uses: ./.github/workflows/postman-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: postman
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
@@ -125,8 +127,9 @@ jobs:
       id-token: write
     needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
-    uses: ./.github/workflows/prover-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: prover
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
@@ -144,8 +147,9 @@ jobs:
       !cancelled() && !inputs.dry_run_release &&
       inputs.component-name == 'prover-ray' &&
       needs.release-push-tag-changelog.result == 'success'
-    uses: ./.github/workflows/prover-ray-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: prover-ray
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
@@ -160,8 +164,9 @@ jobs:
       id-token: write
     needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
-    uses: ./.github/workflows/maru-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: maru
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop
@@ -176,8 +181,9 @@ jobs:
       id-token: write
     needs: [release-push-tag-changelog]
     if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
-    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: transaction-exclusion-api
       image_tag: ${{ needs.release-push-tag-changelog.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.release-push-tag-changelog.outputs.docker_tag_with_suffix }}
       develop_tag: develop

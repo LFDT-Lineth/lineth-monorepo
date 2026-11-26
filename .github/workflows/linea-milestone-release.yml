@@ -74,8 +74,9 @@ jobs:
   build-local-coordinator:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.coordinator).tag_changed == 'true' }}
-    uses: ./.github/workflows/coordinator-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: coordinator
       image_tag: local
       develop_tag: develop
       push_image: false
@@ -84,8 +85,9 @@ jobs:
   build-local-postman:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.postman).tag_changed == 'true' }}
-    uses: ./.github/workflows/postman-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: postman
       image_tag: local
       develop_tag: develop
       push_image: false
@@ -94,8 +96,9 @@ jobs:
   build-local-prover:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.prover).tag_changed == 'true' }}
-    uses: ./.github/workflows/prover-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: prover
       image_tag: local
       develop_tag: develop
       push_image: false
@@ -104,8 +107,9 @@ jobs:
   build-local-tx-exclusion-api:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.tx-exclusion-api).tag_changed == 'true' }}
-    uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: transaction-exclusion-api
       image_tag: local
       develop_tag: develop
       push_image: false
@@ -114,8 +118,9 @@ jobs:
   build-local-maru:
     needs: [component-release-metadata]
     if: ${{ fromJson(needs.component-release-metadata.outputs.maru).tag_changed == 'true' }}
-    uses: ./.github/workflows/maru-build-and-publish.yml
+    uses: ./.github/workflows/reusable-docker-service-build.yml
     with:
+      component: maru
       image_tag: local
       develop_tag: develop
       push_image: false

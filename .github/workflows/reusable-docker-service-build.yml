@@ -1,0 +1,276 @@
+name: "Reusable: Docker service image build"
+
+# Builds (and optionally publishes) the Docker image of one service. This replaces the eight
+# per-component `*-build-and-publish.yml` workflows: what differs between components (runner,
+# Docker Hub environment, pre-build steps, Dockerfile, build contexts, platforms) is the table in
+# the `config` job below, so adding a component means adding one entry there.
+#
+# Callers keep one job per component (the release and build orchestrators gate and order them
+# individually) but all point at this file:
+#
+#   uses: ./.github/workflows/reusable-docker-service-build.yml
+#   with:
+#     component: coordinator
+#     image_tag: ...
+#
+# `workflow_dispatch` is kept for the two components that could already be built by hand.
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+  id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component to build: a key of the table in the `config` job"
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      image_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        description: "Image name; defaults to the component's entry in the `config` table"
+        required: false
+        type: string
+        default: ''
+      push_image:
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to build'
+        required: true
+        type: choice
+        options:
+          - lido-governance-monitor
+          - native-yield-automation-service
+      image_tag:
+        description: 'Image tag'
+        required: true
+        type: string
+      develop_tag:
+        description: 'Image tag will be "develop" if target branch is main'
+        required: true
+        type: choice
+        options:
+          - develop
+        default: 'develop'
+      image_name:
+        description: 'Image name (default: the component default)'
+        required: false
+        type: string
+        default: ''
+      push_image:
+        description: 'Toggle whether to push image to docker registry'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ inputs.component }}-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  config:
+    name: config
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions: {}
+    outputs:
+      cfg: ${{ steps.cfg.outputs.cfg }}
+    steps:
+      # Fields:
+      #   runner          runner size suffix (med | large)
+      #   slug            Docker Hub environment is dockerhub-<slug> (-approval off main), the OIDC
+      #                   connection variable is DOCKERHUB_OIDC_CONNECTIONID_<SLUG upper-snake>
+      #   image_name      default image name
+      #   gradle_project  Gradle project whose `:app:installDist` must run first ("" = no JVM build)
+      #   node            true when the image needs NODE_VERSION (from .nvmrc) as a build arg
+      #   docker_context, dockerfile_path, build_args, build_contexts, push_platforms   docker-build-publish inputs
+      #   qemu            set up QEMU when pushing (needed for multi-arch builds)
+      #   save_artifact   keep the image as a workflow artifact on non-push builds (e2e consumes it)
+      #   artifact_name   name of that artifact
+      - name: Resolve component configuration
+        id: cfg
+        shell: bash
+        env:
+          COMPONENT: ${{ inputs.component }}
+        run: |
+          cfg=$(jq -ce --arg c "$COMPONENT" '
+            (.[$c] // error("unknown component: " + $c))
+            | . + {oidc_var: ("DOCKERHUB_OIDC_CONNECTIONID_" + (.slug | ascii_upcase | gsub("-"; "_")))}
+          ' <<'JSON'
+          {
+            "coordinator": {
+              "runner": "large", "slug": "linea-coordinator", "image_name": "consensys/linea-coordinator",
+              "gradle_project": "coordinator", "node": false,
+              "docker_context": ".", "dockerfile_path": "./coordinator/Dockerfile", "build_args": "",
+              "build_contexts": "libs=./coordinator/app/build/install/coordinator/lib",
+              "push_platforms": "linux/amd64,linux/arm64", "qemu": true,
+              "save_artifact": true, "artifact_name": "linea-coordinator"
+            },
+            "maru": {
+              "runner": "large", "slug": "maru", "image_name": "consensys/maru",
+              "gradle_project": "maru", "node": false,
+              "docker_context": "maru/app", "dockerfile_path": "maru/app/Dockerfile", "build_args": "",
+              "build_contexts": "libs=./maru/app/build/install/app/lib/\nmaru=./maru/app/build/libs/\nlicenses=.",
+              "push_platforms": "linux/amd64,linux/arm64", "qemu": true,
+              "save_artifact": true, "artifact_name": "linea-maru"
+            },
+            "transaction-exclusion-api": {
+              "runner": "med", "slug": "linea-transaction-exclusion-api", "image_name": "consensys/linea-transaction-exclusion-api",
+              "gradle_project": "transaction-exclusion-api", "node": false,
+              "docker_context": ".", "dockerfile_path": "./transaction-exclusion-api/Dockerfile", "build_args": "",
+              "build_contexts": "libs=./transaction-exclusion-api/app/build/install/transaction-exclusion-api/lib",
+              "push_platforms": "linux/amd64,linux/arm64", "qemu": true,
+              "save_artifact": true, "artifact_name": "linea-transaction-exclusion-api"
+            },
+            "postman": {
+              "runner": "med", "slug": "linea-postman", "image_name": "consensys/linea-postman",
+              "gradle_project": "", "node": true,
+              "docker_context": ".", "dockerfile_path": "./postman/Dockerfile", "build_args": "NATIVE_LIBS_RELEASE_TAG=blob-libs-v3.0.1",
+              "build_contexts": "",
+              "push_platforms": "linux/amd64,linux/arm64", "qemu": true,
+              "save_artifact": true, "artifact_name": "linea-postman"
+            },
+            "prover": {
+              "runner": "med", "slug": "linea-prover", "image_name": "consensys/linea-prover",
+              "gradle_project": "", "node": false,
+              "docker_context": ".", "dockerfile_path": "./prover/Dockerfile", "build_args": "",
+              "build_contexts": "prover=prover/",
+              "push_platforms": "linux/amd64", "qemu": false,
+              "save_artifact": true, "artifact_name": "linea-prover"
+            },
+            "prover-ray": {
+              "runner": "med", "slug": "lineth-prover-ray", "image_name": "consensys/lineth-prover-ray",
+              "gradle_project": "", "node": false,
+              "docker_context": "prover-ray", "dockerfile_path": "./prover-ray/Dockerfile", "build_args": "",
+              "build_contexts": "licenses=.",
+              "push_platforms": "linux/amd64", "qemu": false,
+              "save_artifact": false, "artifact_name": ""
+            },
+            "lido-governance-monitor": {
+              "runner": "med", "slug": "linea-lido-governance-monitor", "image_name": "consensys/linea-lido-governance-monitor",
+              "gradle_project": "", "node": true,
+              "docker_context": ".", "dockerfile_path": "./operations/native-yield/lido-governance-monitor/Dockerfile", "build_args": "",
+              "build_contexts": "",
+              "push_platforms": "linux/amd64", "qemu": true,
+              "save_artifact": false, "artifact_name": "linea-lido-governance-monitor"
+            },
+            "native-yield-automation-service": {
+              "runner": "med", "slug": "linea-native-yield-automation-service", "image_name": "consensys/linea-native-yield-automation-service",
+              "gradle_project": "", "node": true,
+              "docker_context": ".", "dockerfile_path": "./operations/native-yield/automation-service/Dockerfile", "build_args": "",
+              "build_contexts": "",
+              "push_platforms": "linux/amd64", "qemu": true,
+              "save_artifact": true, "artifact_name": "linea-native-yield-automation-service"
+            }
+          }
+          JSON
+          )
+          echo "cfg=$cfg" >> "$GITHUB_OUTPUT"
+
+  build-and-publish:
+    needs: config
+    name: ${{ inputs.component }} build
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-${{ fromJSON(needs.config.outputs.cfg).runner }}
+    environment: ${{ !inputs.push_image && 'dockerhub-pull' || github.ref == 'refs/heads/main' && format('dockerhub-{0}', fromJSON(needs.config.outputs.cfg).slug) || format('dockerhub-{0}-approval', fromJSON(needs.config.outputs.cfg).slug) }}
+    env:
+      IMAGE_NAME: ${{ inputs.image_name || fromJSON(needs.config.outputs.cfg).image_name }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      # prover and prover-ray download Go modules while building the image.
+      GOPROXY: "https://proxy.golang.org"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Login to Docker Hub
+        uses: ./.github/actions/dockerhub-login
+        with:
+          connection-id: ${{ inputs.push_image && vars[fromJSON(needs.config.outputs.cfg).oidc_var] || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
+
+      - name: Setup Java, Gradle and Besu
+        if: ${{ fromJSON(needs.config.outputs.cfg).gradle_project != '' }}
+        uses: ./.github/actions/setup-jvm-with-besu
+
+      - name: Build dist
+        if: ${{ fromJSON(needs.config.outputs.cfg).gradle_project != '' }}
+        env:
+          GRADLE_PROJECT: ${{ fromJSON(needs.config.outputs.cfg).gradle_project }}
+        run: ./gradlew "${GRADLE_PROJECT}:app:installDist"
+
+      # For published coordinator images (releases and develop): verify the config is documented and
+      # regenerate the reference docs so they can be attached to the image as an artifact.
+      - name: Generate coordinator config docs
+        if: ${{ inputs.component == 'coordinator' && inputs.push_image }}
+        run: |
+          ./gradlew -V :coordinator:config:checkConfigDocs :coordinator:config:generateConfigDocs
+          # Stage flat so the files sit at the artifact root (not under docs/tech/components/).
+          mkdir -p "${{ runner.temp }}/coordinator-config-docs"
+          cp docs/tech/components/coordinator-config-reference.md \
+             docs/tech/components/coordinator-config-schema.json \
+             "${{ runner.temp }}/coordinator-config-docs/"
+
+      - name: Upload coordinator config docs
+        if: ${{ inputs.component == 'coordinator' && inputs.push_image }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coordinator-config-docs-${{ inputs.image_tag_with_suffix != '' && inputs.image_tag_with_suffix || inputs.image_tag }}
+          path: ${{ runner.temp }}/coordinator-config-docs
+          if-no-files-found: error
+
+      - name: Get Node.js version
+        id: get-node-version
+        if: ${{ fromJSON(needs.config.outputs.cfg).node }}
+        uses: ./.github/actions/get-node-version
+
+      - name: Compose Docker build args
+        id: build-args
+        shell: bash
+        env:
+          BASE_ARGS: ${{ fromJSON(needs.config.outputs.cfg).build_args }}
+          NODE_VERSION: ${{ steps.get-node-version.outputs.node-version }}
+        run: |
+          {
+            echo "args<<BUILD_ARGS_EOF"
+            if [[ -n "$BASE_ARGS" ]]; then echo "$BASE_ARGS"; fi
+            if [[ -n "$NODE_VERSION" ]]; then echo "NODE_VERSION=$NODE_VERSION"; fi
+            echo "BUILD_ARGS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
+        with:
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tags: ${{ inputs.image_tag_with_suffix && format('{0},{1}', inputs.image_tag, inputs.image_tag_with_suffix) || inputs.image_tag }}
+          develop_tag: ${{ inputs.develop_tag }}
+          push_image: ${{ inputs.push_image }}
+          docker_context: ${{ fromJSON(needs.config.outputs.cfg).docker_context }}
+          dockerfile_path: ${{ fromJSON(needs.config.outputs.cfg).dockerfile_path }}
+          build_args: ${{ steps.build-args.outputs.args }}
+          build_contexts: ${{ fromJSON(needs.config.outputs.cfg).build_contexts }}
+          push_platforms: ${{ fromJSON(needs.config.outputs.cfg).push_platforms }}
+          requires_qemu: ${{ fromJSON(needs.config.outputs.cfg).qemu && inputs.push_image }}
+          save_artifact: ${{ fromJSON(needs.config.outputs.cfg).save_artifact && !inputs.push_image }}
+          artifact_name: ${{ fromJSON(needs.config.outputs.cfg).artifact_name }}
+
+      # prover-ray: smoke gate on the local (push_image=false) build, against the guest built
+      # from this commit. If it fails, the release is blocked before any push.
+      - name: Build guest artifacts
+        if: ${{ inputs.component == 'prover-ray' && !inputs.push_image }}
+        run: make -C riscv-guests docker-artifacts GUEST=l2-execution OUT="$RUNNER_TEMP/guest-artifacts"
+
+      - name: Smoke test the image
+        if: ${{ inputs.component == 'prover-ray' && !inputs.push_image }}
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" "$RUNNER_TEMP/guest-artifacts"
