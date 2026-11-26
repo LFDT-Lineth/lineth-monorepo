@@ -88,12 +88,11 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     const l2_l1_messages = try allocator.alloc([32]u8, message_count);
     const all_addresses = try allocator.alloc([20]u8, address_count);
     const offsets = try allocator.alloc(u16, offset_count);
-    const program_vks = try allocator.alloc([32]u8, proofs.len);
     var message_pos: usize = 0;
     var address_pos: usize = 0;
     var offset_pos: usize = 0;
     var end_bridge: guest_common.l1_l2_bridge.Pair = .none;
-    for (proofs, program_vks) |verifiable, *program_vk| {
+    for (proofs) |verifiable| {
         const pi = verifiable.proof.public_inputs;
         @memcpy(l2_l1_messages[message_pos..][0..pi.l2_l1_messages.items.len], pi.l2_l1_messages.items);
         message_pos += pi.l2_l1_messages.items.len;
@@ -107,7 +106,6 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
             .offsets = pi.l2_messaging_blocks_offsets.items,
         }, range_start, proof_offsets);
         offset_pos += proof_offsets.len;
-        program_vk.* = verifiable.program_vk;
         end_bridge = guest_common.l1_l2_bridge.advance(end_bridge, pi);
     }
 
@@ -129,7 +127,7 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
         .final_shared_blob_carry_over_tail_bytes = verified.final_shared_blob_carry_over_tail_bytes,
         .l2_l1_messages = .{ .items = l2_l1_messages },
         .filtered_addresses = .{ .items = guest_common.lists.sortedDistinct(20, all_addresses) },
-        .program_vks = .{ .items = guest_common.lists.sortedDistinct(32, program_vks) },
+        .program_vks = .{ .items = try guest_common.program_vks.collect(allocator, proofs) },
         .block_count = range_end - range_start + 1,
         .l2_messaging_blocks_offsets = .{ .items = offsets },
     };
