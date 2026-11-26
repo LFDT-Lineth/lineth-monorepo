@@ -472,12 +472,11 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
 
 
 def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
-    """`keccak256(abi.encodePacked(bytes32[]))`."""
     return keccak256(b"".join(bytes(value) for value in values))
 
 
 def hash_address_list(values: Sequence[Address]) -> Hash32:
-    """`keccak256(abi.encodePacked(address[]))`: each element is left-padded to 32 bytes."""
+    """`keccak256(abi.encodePacked(address[]))`."""
     return keccak256(b"".join(left_pad_zero_bytes(value, 32) for value in values))
 
 

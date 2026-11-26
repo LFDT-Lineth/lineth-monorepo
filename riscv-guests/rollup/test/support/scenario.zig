@@ -40,7 +40,7 @@ pub fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
-/// `keccak256(abi.encodePacked(address[]))`: each address left-padded to a 32-byte slot.
+/// `keccak256(abi.encodePacked(address[]))`.
 fn hashAddressList(addresses: []const Address) Hash {
     var hasher = std.crypto.hash.sha3.Keccak256.init(.{});
     for (addresses) |address| {

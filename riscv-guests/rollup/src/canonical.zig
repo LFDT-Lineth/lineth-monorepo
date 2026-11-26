@@ -18,8 +18,8 @@ pub const Address = truncation.Address;
 pub const Error = truncation.Error || error{
     /// The conflation has no block, or its block count differs from its proof's range.
     BlockCountMismatch,
-    /// keccak256(abi.encodePacked(address[])) of the senders of the conflation's transactions
-    /// differs from the proof's `tx_froms_hash`.
+    /// keccak256 of the senders of the conflation's transactions differs from the proof's
+    /// `tx_froms_hash`.
     SendersHashMismatch,
 };
 
@@ -57,7 +57,7 @@ pub fn derive(
         sender_count += block.froms.len;
     }
 
-    // `abi.encodePacked(address[])`: each sender left-padded to a 32-byte slot.
+    // abi.encodePacked(address[]) pads each address to 32 bytes.
     const senders = try allocator.alloc([32]u8, sender_count);
     @memset(std.mem.sliceAsBytes(senders), 0);
     var next: usize = 0;

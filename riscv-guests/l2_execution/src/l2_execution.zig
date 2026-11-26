@@ -143,8 +143,7 @@ fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
     return zkvm_accelerators.keccak256Digest(buf);
 }
 
-/// `keccak256(abi.encodePacked(address[]))`, matching the L1 contract and the Python reference
-/// implementation's `hash_address_list`: each address is left-padded to a 32-byte slot.
+/// `keccak256(abi.encodePacked(address[]))`: each address is left-padded to 32 bytes.
 fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 32);
     defer alloc.free(buf);
