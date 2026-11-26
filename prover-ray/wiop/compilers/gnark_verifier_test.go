@@ -90,10 +90,7 @@ func compileGnarkPipeline(t *testing.T, sys *wiop.System) {
 
 // withCell returns a copy of proof whose cell id is shifted by one.
 func withCell(proof wiop.Proof, id wiop.ObjectID) wiop.Proof {
-	cells := make(map[wiop.ObjectID]field.Gen, len(proof.Cells))
-	for k, v := range proof.Cells {
-		cells[k] = v
-	}
+	cells := maps.Clone(proof.Cells)
 	cells[id] = cells[id].Add(field.ElemFromBase(field.One()))
 	bad := proof
 	bad.Cells = cells
