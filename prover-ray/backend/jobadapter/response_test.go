@@ -87,9 +87,28 @@ func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {
 	assert.Equal(t, readReferenceResponse(t), got)
 }
 
+// TestNewResponses_GuestOutput checks that the l2-execution and rollup
+// responses carry the guest output as hex, and 0x when there is none.
+func TestNewResponses_GuestOutput(t *testing.T) {
+	for name, tc := range map[string]struct {
+		output []byte
+		want   string
+	}{
+		"guest output": {[]byte{0xab, 0xcd}, "0xabcd"},
+		"none":         {nil, "0x"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			result := backend.Result{GuestOutput: tc.output}
+			assert.Equal(t, tc.want, newExecutionResponse(result, 1, "v").GuestOutput)
+			assert.Equal(t, tc.want, newRollupResponse(result, 1, "v").GuestOutput)
+		})
+	}
+}
+
 func assertResponseShapeMatchesReference(t *testing.T, got map[string]any) {
 	t.Helper()
 	want := readReferenceResponse(t)
+	want["guestOutput"] = ""
 	assertJSONShape(t, want, got, "response")
 }
 

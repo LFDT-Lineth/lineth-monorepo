@@ -10,6 +10,9 @@ type rollupResponse struct {
 	ProofHex         string                     `json:"proof"`
 	StartBlockNumber uint64                     `json:"startBlockNumber"`
 	PublicInputs     rollupResponsePublicInputs `json:"publicInputs"`
+	// GuestOutput is the guest output (hash || frame) of the result as hex, 0x
+	// when the result has none.
+	GuestOutput string `json:"guestOutput"`
 }
 
 // rollupResponsePublicInputs is the rollup PI tuple.
@@ -43,6 +46,7 @@ func newRollupResponse(result backend.Result, startBlockNumber uint64, proverVer
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     rollupPublicInputs(result.RollupPublicInputs),
+		GuestOutput:      hexBytes(result.GuestOutput),
 	}
 }
 
