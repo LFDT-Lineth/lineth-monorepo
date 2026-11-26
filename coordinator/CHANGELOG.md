@@ -6,6 +6,10 @@
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
 
+### 🐛 Bug Fixes
+
+- *(coordinator)* Submit each RISC-V blob once when adjacent rollups share a blob (#4605)
+
 ### 🚜 Refactor
 
 - *(coordinator, prover-ray, riscv-guest)* Rename the DA carry-over fields to match DaStreamPosition (#4556)

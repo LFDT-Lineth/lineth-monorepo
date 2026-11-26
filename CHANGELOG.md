@@ -120,6 +120,7 @@
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 - *(postman)* Optimize docker image (#4424)
 - *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
+- *(coordinator)* Submit each RISC-V blob once when adjacent rollups share a blob (#4605)
 
 ### 🚜 Refactor
 
