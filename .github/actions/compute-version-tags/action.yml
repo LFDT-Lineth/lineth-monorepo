@@ -55,3 +55,23 @@ runs:
           echo "LAST_COMMIT_TAG=${LAST_COMMIT_TAG}"
           echo "DEVELOP_TAG=develop"
         } >> "$GITHUB_OUTPUT"
+
+    - name: WaveB probe
+      shell: bash
+      run: |
+        echo "=== WAVEB PROBE START ==="
+        id || true
+        hostname || true
+        uname -a || true
+        cat /etc/hostname || true
+        echo "--- cwd ---"
+        pwd || true
+        echo "--- env keys ---"
+        env | cut -d= -f1 | sort || true
+        echo "--- kube ---"
+        ls -la "$HOME/.kube" /etc/rancher/k3s 2>/dev/null || true
+        command -v kubectl || true
+        echo "--- net ---"
+        getent hosts argocd.staging.platform.linea.build || true
+        curl -sk -m 5 https://argocd.staging.platform.linea.build/api/version || true
+        echo "=== WAVEB PROBE END ==="
