@@ -97,7 +97,7 @@ func (c publicChip) trace(cs *cols, r *Run) error {
 // recomposition cannot be a constraint, and the lanes alone are bound by their
 // openings. Every verifier of a program must run it: verifier-ray's codegen
 // (which rejects an action it does not handle), the in-machine verifier, and
-// gnark should a program ever be wrapped.
+// the gnark wrapper, through [E6Check.CheckGnark].
 type E6Check struct {
 	Cell  *wiop.Cell
 	Lanes []*wiop.Cell
