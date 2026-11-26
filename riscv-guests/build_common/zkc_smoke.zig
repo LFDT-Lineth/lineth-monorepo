@@ -1,12 +1,13 @@
 //! Runs a guest ELF under zkc on a request and compares the output it prints with the
 //! expected output byte for byte: `zkc_smoke --elf PATH --input PATH --expected PATH --makefile
-//! PATH [--zkc-flags TEXT]`. The makefile is arithmetization's, which defines the zkc run. The
-//! guest's output is the commitment and frame zkc reports.
+//! PATH [--zkc-target NAME] [--zkc-flags TEXT]`. The makefile is arithmetization's, which defines
+//! the zkc run; the target is `elf-exec` unless `elf-trace` is named. The guest's output is the
+//! commitment and frame zkc reports.
 
 const std = @import("std");
 const zkc = @import("zkc");
 
-const usage = "usage: zkc_smoke --elf PATH --input PATH --expected PATH --makefile PATH [--zkc-flags TEXT]\n";
+const usage = "usage: zkc_smoke --elf PATH --input PATH --expected PATH --makefile PATH [--zkc-target elf-exec|elf-trace] [--zkc-flags TEXT]\n";
 
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
@@ -16,6 +17,7 @@ pub fn main(init: std.process.Init) !void {
     var input: ?[]const u8 = null;
     var expected_path: ?[]const u8 = null;
     var makefile: ?[]const u8 = null;
+    var target: zkc.Target = .@"elf-exec";
     var flags: []const u8 = "";
     var i: usize = 1;
     while (i < args.len) : (i += 2) {
@@ -29,6 +31,8 @@ pub fn main(init: std.process.Init) !void {
             expected_path = value;
         } else if (std.mem.eql(u8, args[i], "--makefile")) {
             makefile = value;
+        } else if (std.mem.eql(u8, args[i], "--zkc-target")) {
+            target = std.meta.stringToEnum(zkc.Target, value) orelse fatal("unknown zkc target");
         } else if (std.mem.eql(u8, args[i], "--zkc-flags")) {
             flags = value;
         } else fatal("unknown option");
@@ -37,6 +41,7 @@ pub fn main(init: std.process.Init) !void {
     const expected = try std.Io.Dir.cwd().readFileAlloc(init.io, expected_path orelse fatal("missing --expected"), arena, .limited(1 << 28));
     const run = try zkc.run(arena, init.io, .{
         .makefile = makefile orelse fatal("missing --makefile"),
+        .target = target,
         .elf = elf orelse fatal("missing --elf"),
         .input = input orelse fatal("missing --input"),
         .flags = flags,
