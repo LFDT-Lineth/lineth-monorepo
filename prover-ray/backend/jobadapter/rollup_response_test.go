@@ -28,6 +28,7 @@ func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
 	want := unmarshalObject(t, readSpecFixture(t, referenceRollupResponse))
+	want["guestOutput"] = ""
 	assertJSONShape(t, want, raw, "rollupResponse")
 	assert.NotContains(t, raw, "status")
 	assert.NotContains(t, raw, "jobId")
@@ -53,5 +54,6 @@ func TestNewRollupResponse_MatchesReferenceValues(t *testing.T) {
 
 	got, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
+	want["guestOutput"] = "0x"
 	assert.Equal(t, want, got)
 }

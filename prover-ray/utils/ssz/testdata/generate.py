@@ -86,6 +86,17 @@ def rollup_inputs():
     return reference, calldata
 
 
+def rollup_request_guest_output():
+    # The reference rollup request with each embedded l2-execution proof
+    # carrying its guestOutput instead of its publicInputs.
+    obj = json.loads(ROLLUP_REQUEST.read_text())
+    request = proof_io_v1.decode_rollup_request(obj)
+    for embedded, verifiable in zip(obj["proofRequest"]["l2ExecutionProofs"], request.l2_execution_proofs):
+        del embedded["publicInputs"]
+        embedded["guestOutput"] = "0x" + l2_execution_ssz.encode_l2_execution_output(verifiable.proof).hex()
+    return obj
+
+
 def rollup_output():
     # keccak256(frame) || frame, frame = 0x0005 || SSZ(public inputs).
     proof = proof_io_v1._decode_rollup_proof(json.loads(ROLLUP_RESPONSE.read_text()), "").proof
@@ -105,3 +116,6 @@ if __name__ == "__main__":
     (directory / "rollup_input.ssz").write_bytes(reference)
     (directory / "rollup_input_calldata.ssz").write_bytes(calldata)
     (directory / "rollup_output.ssz").write_bytes(rollup_output())
+    (ROOT / "prover-ray/backend/jobadapter/testdata/rollup_request_guest_output.json").write_text(
+        json.dumps(rollup_request_guest_output(), indent=2) + "\n"
+    )

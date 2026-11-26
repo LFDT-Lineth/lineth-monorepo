@@ -44,29 +44,35 @@ func TestRunner_RunRollup(t *testing.T) {
 }
 
 // TestRunner_RunRollup_GuestInput checks that the modes that run the rollup
-// guest pass it the input built from the request, and that dev-mock passes none.
+// guest pass it the input built from the request, with publicInputs or
+// guestOutput in its proofs, and that dev-mock passes none.
 func TestRunner_RunRollup_GuestInput(t *testing.T) {
 	golden, err := os.ReadFile("../../utils/ssz/testdata/rollup_input.ssz")
 	require.NoError(t, err)
 
-	for mode, want := range map[backend.ProverMode][]byte{
-		backend.ProverModeDevZkVM:    golden,
-		backend.ProverModeDevPartial: golden,
-		backend.ProverModeDevMock:    nil,
+	for format, request := range map[string]string{
+		publicInputsKey: referenceRollupRequest,
+		guestOutputKey:  rollupRequestGuestOutput,
 	} {
-		t.Run(string(mode), func(t *testing.T) {
-			mock := &mockProver{}
-			runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
-			require.NoError(t, err)
+		for mode, want := range map[backend.ProverMode][]byte{
+			backend.ProverModeDevZkVM:    golden,
+			backend.ProverModeDevPartial: golden,
+			backend.ProverModeDevMock:    nil,
+		} {
+			t.Run(format+"/"+string(mode), func(t *testing.T) {
+				mock := &mockProver{}
+				runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
+				require.NoError(t, err)
 
-			result := runner.Run(context.Background(), RunRequest{
-				ID: "rollup-input", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, referenceRollupRequest),
+				result := runner.Run(context.Background(), RunRequest{
+					ID: "rollup-input", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, request),
+				})
+
+				require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
+				require.Len(t, mock.jobs, 1)
+				assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
 			})
-
-			require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
-			require.Len(t, mock.jobs, 1)
-			assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
-		})
+		}
 	}
 }
 
@@ -146,4 +152,42 @@ func TestRunner_RunAggregation_Malformed(t *testing.T) {
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
 	assert.Empty(t, mock.jobs)
+}
+
+// TestRunner_RunRollup_InvalidGuestOutput checks that the modes that run the
+// rollup guest reject an embedded guestOutput that is not an l2-execution
+// guest output, and that dev-mock, which builds no input, accepts it.
+func TestRunner_RunRollup_InvalidGuestOutput(t *testing.T) {
+	withGuestOutput := func(mutate func(out []byte) []byte) []byte {
+		obj := unmarshalObject(t, readSpecFixture(t, rollupRequestGuestOutput))
+		proof := obj[proofRequestKey].(map[string]any)[l2ExecutionProofsKey].([]any)[0].(map[string]any)
+		proof[guestOutputKey] = hexBytes(mutate(mustHex(t, proof[guestOutputKey].(string))))
+		return marshal(t, obj)
+	}
+	for name, body := range map[string][]byte{
+		"empty": withGuestOutput(func([]byte) []byte { return nil }),
+		"wrong hash": withGuestOutput(func(out []byte) []byte {
+			out[0] ^= 1
+			return out
+		}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			for mode, wantStatus := range map[backend.ProverMode]RunStatus{
+				backend.ProverModeDevZkVM:    RunStatusFailed,
+				backend.ProverModeDevPartial: RunStatusFailed,
+				backend.ProverModeDevMock:    RunStatusSuccess,
+			} {
+				runner, err := NewRunner(&mockProver{}, testProverVersion, WithMode(mode))
+				require.NoError(t, err)
+
+				result := runner.Run(context.Background(), RunRequest{ID: "rollup", Type: backend.ProofTypeRollup, Body: body})
+
+				require.Equal(t, wantStatus, result.Status, "%s: %v", mode, result.Err)
+				if wantStatus == RunStatusFailed {
+					assert.Equal(t, FailureCodeInvalidInput, result.FailureCode, mode)
+					assert.ErrorContains(t, result.Err, "l2ExecutionProofs[0].guestOutput", mode)
+				}
+			}
+		})
+	}
 }
