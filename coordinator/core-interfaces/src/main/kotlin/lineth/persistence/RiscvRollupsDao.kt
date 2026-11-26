@@ -25,6 +25,9 @@ interface RiscvRollupsDao {
     endBlockCreatedBefore: Instant,
   ): SafeFuture<List<RiscvRollupRecord>>
 
+  /** The last rollup of the gap-free run starting at [startingBlockNumberInclusive], or null if no rollup starts there. */
+  fun findHighestConsecutiveRollupFromBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<RiscvRollupRecord?>
+
   fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?>
 
   fun findRollupByEndBlockNumber(endBlockNumber: ULong): SafeFuture<RiscvRollupRecord?>
