@@ -45,8 +45,10 @@ jobs:
       - name: Setup Besu in maven local
         uses: ./.github/actions/setup-besu-maven-local
       - name: Build maru and Unit tests
+        # The runner has a 16 CPU quota and Gradle runs one worker per CPU by default, so about 15 test JVMs ran at once,
+        # each getting about one core, which made the cold start of the tests slow enough to trip their timeouts.
         run: |
-          ./gradlew -V maru:app:buildNeeded
+          ./gradlew -V --max-workers=8 maru:app:buildNeeded
       - name: Run integration tests
         env:
           MARU_IT_METHOD_PARALLEL: ${{ inputs.maru_it_method_parallel }}

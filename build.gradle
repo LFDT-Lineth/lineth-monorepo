@@ -223,6 +223,21 @@ allprojects {
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
     systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
+    // Unit tests only (tracer, the integration test tasks and their own settings are left alone).
+    // JUnit sizes its pool from the CPU count of the JVM by default (dynamic strategy), 16 on the CI runner, where about
+    // 15 test JVMs share 16 CPUs: each JVM gets about one core but runs up to 16 tests at once, whose cold start (class
+    // loading, ...) then takes tens of seconds and trips the timeouts of the tests. Fix the pool to a few threads instead,
+    // whatever the machine. Override with -PtestParallelism=<n>.
+    // max-pool-size is needed as much as parallelism: a test blocking in CompletableFuture.get (what AssertJ's
+    // succeedsWithin does) makes the pool add a compensation thread, which starts the next test. Measured with 48 tests
+    // blocking for 200 ms on a 16 CPU machine: all 48 ran at once with the dynamic strategy, 20 to 25 with
+    // parallelism=4 alone, and exactly 4 with parallelism=4 and max-pool-size=4.
+    if (name == 'test' && !isTracerProject) {
+      def testParallelism = (project.findProperty("testParallelism") ?: "4").toString()
+      systemProperties["junit.jupiter.execution.parallel.config.strategy"] = "fixed"
+      systemProperties["junit.jupiter.execution.parallel.config.fixed.parallelism"] = testParallelism
+      systemProperties["junit.jupiter.execution.parallel.config.fixed.max-pool-size"] = testParallelism
+    }
     maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
   }
 
