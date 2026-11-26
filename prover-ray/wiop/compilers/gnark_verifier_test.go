@@ -68,6 +68,20 @@ func (gv *gnarkVerifier) requireRejectedBy(t *testing.T, proof wiop.Proof, pub w
 	require.Contains(t, err.Error(), check, "proof must be rejected by %s", check)
 }
 
+// gnarkSlots caps how many circuit-building subtests run at once. Each one
+// builds a verifier circuit of several million constraints, so running one
+// per CPU exhausts memory and is slower than running sequentially; four at
+// once runs about twice as fast as sequentially on a 16 GB machine.
+var gnarkSlots = make(chan struct{}, 4)
+
+// parallelGnark marks t parallel and holds one of [gnarkSlots] until t ends.
+func parallelGnark(t *testing.T) {
+	t.Helper()
+	t.Parallel()
+	gnarkSlots <- struct{}{}
+	t.Cleanup(func() { <-gnarkSlots })
+}
+
 // compileGnarkPipeline runs [compilers.CompileFull] with the testing options.
 func compileGnarkPipeline(t *testing.T, sys *wiop.System) {
 	t.Helper()
@@ -100,6 +114,7 @@ func TestGnarkVerifier_LogDerivativeSumScenarios(t *testing.T) {
 	for _, build := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
+			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
@@ -133,6 +148,7 @@ func TestGnarkVerifier_LookupScenarios(t *testing.T) {
 	for _, build := range wioptest.LookupScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
+			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
@@ -201,6 +217,7 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 		withTampering := !tampered
 		tampered = true
 		t.Run(sc.Name, func(t *testing.T) {
+			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
@@ -227,6 +244,7 @@ func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
 	for i, build := range wioptest.NonNativeScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
+			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
@@ -256,6 +274,7 @@ func TestGnarkVerifier_RangeCheckScenarios(t *testing.T) {
 	for i, build := range wioptest.RangeCheckCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
+			parallelGnark(t)
 			compileGnarkPipeline(t, sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
