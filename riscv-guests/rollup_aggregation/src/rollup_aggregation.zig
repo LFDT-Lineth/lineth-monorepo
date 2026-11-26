@@ -137,19 +137,7 @@ fn verifyJunction(left: rollup_proof.RollupProof, right: rollup_proof.RollupProo
         l.end_processed_ftx_number != r.parent_ftx_number) return error.ContinuityBroken;
 }
 
-/// The program IDs of the verified programs: every VK a proof bubbles up and the VK it was verified
-/// under, each mapped to its ID, distinct and ascending. A VK is its own ID.
+/// The program IDs of the verified programs, distinct and ascending. A program VK is its own ID.
 fn programIds(allocator: Allocator, proofs: []const rollup_proof.VerifiableRollupProof) Allocator.Error![][32]u8 {
-    var count: usize = proofs.len;
-    for (proofs) |verifiable| count += verifiable.proof.public_inputs.program_vks.items.len;
-    const ids = try allocator.alloc([32]u8, count);
-    var next: usize = 0;
-    for (proofs) |verifiable| {
-        const bubbled = verifiable.proof.public_inputs.program_vks.items;
-        @memcpy(ids[next..][0..bubbled.len], bubbled);
-        next += bubbled.len;
-        ids[next] = verifiable.program_vk;
-        next += 1;
-    }
-    return lists.sortedDistinct(32, ids);
+    return guest_common.program_vks.collect(allocator, proofs);
 }
