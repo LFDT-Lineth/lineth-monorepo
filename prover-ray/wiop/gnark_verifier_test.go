@@ -379,6 +379,22 @@ func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
 		"a verifier action without CheckGnark must be rejected instead of dropped")
 }
 
+// TestAllocateVerifierCircuit_RejectsUnreducedQuery checks that building the
+// circuit panics on a query no compiler pass reduced, instead of dropping it.
+func TestAllocateVerifierCircuit_RejectsUnreducedQuery(t *testing.T) {
+	sys, col, _ := newPCSOnlySystem()
+	// Declared after compilation, so no pass reduces it and no verifier action
+	// checks it.
+	col.Module.NewVanishing(sys.Context.Childf("unreduced"), col.View())
+
+	require.PanicsWithValue(t,
+		`wiop: VerifierCircuit: query "gnark-pcs/unreduced" (and 0 more) was not reduced by any compiler pass; `+
+			"the predicate it states would be silently dropped",
+		func() { wiop.AllocateVerifierCircuit(sys) })
+}
+
+// TestAssignVerifierCircuit_RejectsShapeMismatch checks that assigning a proof
+// whose cell field tags differ from the circuit's template panics.
 func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 	sys, col, le := newPCSOnlySystem()
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })

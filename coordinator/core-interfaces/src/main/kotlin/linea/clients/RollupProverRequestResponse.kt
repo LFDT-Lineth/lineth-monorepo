@@ -24,15 +24,15 @@ data class RollupProofRequestV1(
   val l2Executions: List<BlockIntervalProofIndex>,
   val chunks: List<ChunkWitness>,
   val parentDataRollingHash: ByteArray,
-  val parentSharedBlobCarryOverTailBytes: Int,
+  val parentSharedBlobCarryOverTailBytes: UInt,
   val parentBlobDataRollingHash: ByteArray? = null,
 ) : BlockInterval, StartBlockTimestampProvider {
   init {
     assertConsecutiveIntervals(l2Executions)
-    require(parentSharedBlobCarryOverTailBytes in 0..MAX_TAIL_BYTES) {
+    require(parentSharedBlobCarryOverTailBytes <= MAX_TAIL_BYTES) {
       "parentSharedBlobCarryOverTailBytes=$parentSharedBlobCarryOverTailBytes must be in 0..$MAX_TAIL_BYTES"
     }
-    require(parentSharedBlobCarryOverTailBytes == 0 || parentBlobDataRollingHash != null) {
+    require(parentSharedBlobCarryOverTailBytes == 0u || parentBlobDataRollingHash != null) {
       "parentBlobDataRollingHash is required when parentSharedBlobCarryOverTailBytes > 0"
     }
   }
@@ -71,7 +71,7 @@ data class RollupProofRequestV1(
     result = 31 * result + l2Executions.hashCode()
     result = 31 * result + chunks.hashCode()
     result = 31 * result + parentDataRollingHash.contentHashCode()
-    result = 31 * result + parentSharedBlobCarryOverTailBytes
+    result = 31 * result + parentSharedBlobCarryOverTailBytes.hashCode()
     result = 31 * result + (parentBlobDataRollingHash?.contentHashCode() ?: 0)
     return result
   }

@@ -232,3 +232,6 @@ ai-generated
 # Copied from the repository root at pack time
 ts-libs/sdk/*/LICENSE-APACHE
 ts-libs/sdk/*/LICENSE-MIT
+
+# Local KICS scan output (see .github/workflows/dockerfile-security-scan.yml)
+kics-results/

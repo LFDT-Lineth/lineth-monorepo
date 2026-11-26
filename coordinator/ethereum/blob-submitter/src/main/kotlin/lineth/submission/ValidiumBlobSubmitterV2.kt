@@ -1,8 +1,8 @@
 package lineth.submission
 
 import linea.contract.l1.LineaValidiumSmartContractClient
-import linea.domain.BlobRecordV2
 import linea.domain.BlobSubmittedEvent
+import linea.domain.RiscvRollupRecord
 import lineth.gaspricing.GasPriceCapProviderV2
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -18,19 +18,27 @@ class ValidiumBlobSubmitterV2(
 ) : BlobSubmitterV2 {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  override fun submitBlobs(blobsChunks: List<BlobRecordV2>): SafeFuture<List<String>> {
+  override fun submitBlobs(blobsChunks: List<RiscvRollupRecord>): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobRecord ->
         val newChainOfFutures = chainOfFutures
           .thenCompose { listOfTxHashes ->
-            submitBlobsInSingleTx(blobRecord)
-              .thenApply { txHash -> listOfTxHashes + txHash }
+            if (hasNoNewData(blobRecord)) {
+              SafeFuture.completedFuture(listOfTxHashes)
+            } else {
+              submitBlobsInSingleTx(blobRecord)
+                .thenApply { txHash -> listOfTxHashes + txHash }
+            }
           }
         newChainOfFutures
       }
   }
 
-  private fun submitBlobsInSingleTx(blobRecord: BlobRecordV2): SafeFuture<String> {
+  /** The rollup lies inside the previous rollup's last blob, whose rolling hash is already accepted. */
+  private fun hasNoNewData(blobRecord: RiscvRollupRecord): Boolean =
+    blobRecord.parentDataRollingHash.contentEquals(blobRecord.dataRollingHash)
+
+  private fun submitBlobsInSingleTx(blobRecord: RiscvRollupRecord): SafeFuture<String> {
     return (
       gasPriceCapProvider?.getGasPriceCaps(blobRecord.startBlockTimestamp)
         ?: SafeFuture.completedFuture(null)
@@ -74,7 +82,8 @@ class ValidiumBlobSubmitterV2(
       }
   }
 
-  override fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*> {
+  override fun submitBlobCall(blobRecord: RiscvRollupRecord): SafeFuture<*> {
+    if (hasNoNewData(blobRecord)) return SafeFuture.completedFuture(null)
     return (
       gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecord.startBlockTimestamp)
         ?: SafeFuture.completedFuture(null)

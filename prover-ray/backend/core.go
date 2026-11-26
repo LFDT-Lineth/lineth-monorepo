@@ -45,12 +45,24 @@ const (
 	guestLogMemory    = "guest_log"
 )
 
-// Spec frame of the l2-execution guest output.
+// Spec frame of the guest output: schema id 0x0003 (l2-execution) or 0x0005 (rollup).
 const (
-	guestOutputSchemaID     = 0x0003
-	guestOutputSchemaIDSize = 2
-	guestOutputHashSize     = 32
+	l2ExecutionOutputSchemaID = 0x0003
+	rollupOutputSchemaID      = 0x0005
+	guestOutputSchemaIDSize   = 2
+	guestOutputHashSize       = 32
 )
+
+// outputSchemaID returns the schema id of the guest output for proof type t.
+func outputSchemaID(t ProofType) (uint16, error) {
+	switch t {
+	case ProofTypeL2Execution:
+		return l2ExecutionOutputSchemaID, nil
+	case ProofTypeRollup:
+		return rollupOutputSchemaID, nil
+	}
+	return 0, fmt.Errorf("no guest output format for proof type %q: %w", t, ErrNotImplemented)
+}
 
 // Core is the shared proving kernel. Initialize once via [New]; it is
 // safe for concurrent use after that; each [Prove] call gets its own
@@ -269,12 +281,16 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // public inputs except EndBlockNumber, which the coordinator needs to identify
 // the proven batch. It runs no guest and ignores Payload.
 func (c *Core) proveDevMock(job Job) Result {
-	return Result{
+	result := Result{
 		JobID:        job.ID,
 		Status:       ResultStatusOK,
 		ProofBytes:   DevMarkerProof(ProverModeDevMock),
 		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
+	if job.Type == ProofTypeRollup {
+		result.RollupPublicInputs.EndBlockNumber = job.EndBlock
+	}
+	return result
 }
 
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
@@ -292,7 +308,7 @@ func (c *Core) proveDevZkVM(job Job) Result {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
-	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs, c.cfg.GoGen)
+	out, pi, err := executeGuestPublicInputs(c.binaryFile, inputs, job.Type, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -302,11 +318,12 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	}
 
 	return Result{
-		JobID:        job.ID,
-		Status:       ResultStatusOK,
-		ProofBytes:   proofBytes,
-		PublicInputs: pi,
-		GuestOutput:  out,
+		JobID:              job.ID,
+		Status:             ResultStatusOK,
+		ProofBytes:         proofBytes,
+		PublicInputs:       pi.execution,
+		RollupPublicInputs: pi.rollup,
+		GuestOutput:        out,
 	}
 }
 
@@ -326,7 +343,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 
 	// The lazy trace keeps no output, so Execute gives it. It also fails fast
 	// on a rejected block, before the trace.
-	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs, c.cfg.GoGen)
+	out, pi, err := executeGuestPublicInputs(c.driver.BinaryFile, inputs, job.Type, c.cfg.GoGen)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -346,12 +363,13 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	}
 
 	return Result{
-		JobID:        job.ID,
-		Status:       ResultStatusOK,
-		ProofBytes:   proofBytes,
-		PublicInputs: pi,
-		GuestOutput:  out,
-		ProgramVK:    c.programVK(root.Pub),
+		JobID:              job.ID,
+		Status:             ResultStatusOK,
+		ProofBytes:         proofBytes,
+		PublicInputs:       pi.execution,
+		RollupPublicInputs: pi.rollup,
+		GuestOutput:        out,
+		ProgramVK:          c.programVK(root.Pub),
 	}
 }
 
@@ -432,37 +450,53 @@ func (c *Core) programVK(pub wiop.PublicInput) [32]byte {
 }
 
 // executeGuest runs the guest under zkc Execute (the no-trace path), with gogen
-// or the interpreter, and returns its validated 0x0003 output.
-func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool) (bit.Array, error) {
+// or the interpreter, and returns its validated output, framed with schema.
+func executeGuest(
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, schema uint16, gogen bool,
+) (bit.Array, error) {
 	output, errs := binf.Execute(inputs, vm.DEFAULT_EXECUTION_CONFIG.WithGoGen(gogen))
-	return classifyGuestOutput(output, errs)
+	return classifyGuestOutput(output, errs, schema)
+}
+
+// guestPublicInputs holds the l2-execution or the rollup public inputs, by proof type.
+type guestPublicInputs struct {
+	execution PublicInputs
+	rollup    RollupPublicInputs
 }
 
 // executeGuestPublicInputs runs the guest under zkc Execute and returns its
-// 0x0003 output (hash || frame) and the public inputs decoded from it.
+// output (hash || frame) and the public inputs of proof type t.
 func executeGuestPublicInputs(
-	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, gogen bool,
-) ([]byte, PublicInputs, error) {
-	guestOutput, err := executeGuest(binf, inputs, gogen)
+	binf *zkcdriver.BinaryFile, inputs map[string]bit.Array, t ProofType, gogen bool,
+) (out []byte, pi guestPublicInputs, err error) {
+	schema, err := outputSchemaID(t)
 	if err != nil {
-		return nil, PublicInputs{}, err
+		return nil, pi, err
 	}
-	out := guestOutput.Bytes()
-	pi, err := decodeGuestPublicInputs(out[guestOutputHashSize:])
+	guestOutput, err := executeGuest(binf, inputs, schema, gogen)
 	if err != nil {
-		return nil, PublicInputs{}, fmt.Errorf("decoding the guest public inputs: %w", err)
+		return nil, pi, err
+	}
+	out = guestOutput.Bytes()
+	if schema == rollupOutputSchemaID {
+		pi.rollup, err = decodeRollupPublicInputs(out[guestOutputHashSize:])
+	} else {
+		pi.execution, err = decodeGuestPublicInputs(out[guestOutputHashSize:])
+	}
+	if err != nil {
+		return nil, pi, fmt.Errorf("decoding the guest public inputs: %w", err)
 	}
 	return out, pi, nil
 }
 
 // classifyGuestOutput turns a ZkC Execute result into either the guest's
-// validated 0x0003 output or an error that distinguishes a guest block rejection
-// (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
-// internal VM failure (a prover-side bug). A guest that rejects the block writes
-// no output, so a missing guest_output is also a rejection. The guest_output
-// must be exactly the hash, the only bytes the proof binds, and the guest_log
-// the schema id and public inputs it commits to.
-func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Array, err error) {
+// validated output, framed with schema, or an error that distinguishes a guest
+// block rejection (a recognized [vm.Failure], the guest's own exit on an
+// invalid block) from an internal VM failure (a prover-side bug). A guest that
+// rejects the block writes no output, so a missing guest_output is also a
+// rejection. The guest_output must be exactly the hash, the only bytes the
+// proof binds, and the guest_log the schema id and public inputs it commits to.
+func classifyGuestOutput(output map[string]bit.Array, errs []error, schema uint16) (res bit.Array, err error) {
 	if len(errs) > 0 {
 		return res, guestError(errors.Join(errs...))
 	}
@@ -478,7 +512,7 @@ func classifyGuestOutput(output map[string]bit.Array, errs []error) (res bit.Arr
 	if !ok {
 		return res, fmt.Errorf("guest wrote the hash but no %s (schema id and public inputs)", guestLogMemory)
 	}
-	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes()); err != nil {
+	if err = checkGuestOutputFrame(out.Bytes(), log.Bytes(), schema); err != nil {
 		return res, fmt.Errorf("%s does not follow the spec: %w", guestOutputMemory, err)
 	}
 	frame := slices.Concat(out.Bytes(), log.Bytes())
@@ -497,20 +531,38 @@ func guestError(err error) error {
 }
 
 // checkGuestOutputFrame checks the spec frame of the guest output: hash is
-// keccak256(0x0003 || public inputs) and framed is 0x0003 || public inputs. The
+// keccak256(schema || public inputs) and framed is schema || public inputs. The
 // public inputs are bound by the hash, which dev-partial checks against the
 // trace; the native runner check, when set, compares the whole output.
-func checkGuestOutputFrame(hash, framed []byte) error {
+func checkGuestOutputFrame(hash, framed []byte, schema uint16) error {
 	if len(framed) < guestOutputSchemaIDSize {
 		return fmt.Errorf("%d bytes after the hash, shorter than the schema id", len(framed))
 	}
 	if !bytes.Equal(hash, keccak256(framed)) {
-		return errors.New("hash does not match keccak256(0x0003 || public inputs)")
+		return errors.New("hash does not match keccak256(schema id || public inputs)")
 	}
-	if got := binary.BigEndian.Uint16(framed); got != guestOutputSchemaID {
-		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, guestOutputSchemaID)
+	if got := binary.BigEndian.Uint16(framed); got != schema {
+		return fmt.Errorf("schema id is 0x%04x, want 0x%04x", got, schema)
 	}
 	return nil
+}
+
+// GuestOutputPublicInputs returns the SSZ public inputs of guest output out
+// (hash || schema id || public inputs), after it checks the hash and that the
+// schema id is the output schema of proof type t.
+func GuestOutputPublicInputs(out []byte, t ProofType) ([]byte, error) {
+	schema, err := outputSchemaID(t)
+	if err != nil {
+		return nil, err
+	}
+	if len(out) < guestOutputHashSize {
+		return nil, fmt.Errorf("guest output is %d bytes, shorter than the hash", len(out))
+	}
+	hash, framed := out[:guestOutputHashSize], out[guestOutputHashSize:]
+	if err := checkGuestOutputFrame(hash, framed, schema); err != nil {
+		return nil, err
+	}
+	return framed[guestOutputSchemaIDSize:], nil
 }
 
 func keccak256(b []byte) []byte {

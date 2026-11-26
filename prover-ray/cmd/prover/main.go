@@ -95,8 +95,8 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 			mode:            backend.ProverMode(cfg.Execution.ProverMode),
 			requestsRootDir: cfg.Execution.RequestsRootDir,
 			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
-			shardSize:       cfg.Execution.ShardSize,
-			shardWorkers:    cfg.Execution.ShardWorkers,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
 			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        0,
@@ -108,6 +108,8 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Rollup.ProverMode),
 			requestsRootDir: cfg.Rollup.RequestsRootDir,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
 			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        1,
@@ -119,6 +121,8 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		return pipeline{
 			mode:            backend.ProverMode(cfg.Aggregation.ProverMode),
 			requestsRootDir: cfg.Aggregation.RequestsRootDir,
+			shardSize:       cfg.ShardSize,
+			shardWorkers:    cfg.ShardWorkers,
 			gogen:           cfg.GoGen,
 			guestsDir:       cfg.GuestsDir,
 			priority:        2,

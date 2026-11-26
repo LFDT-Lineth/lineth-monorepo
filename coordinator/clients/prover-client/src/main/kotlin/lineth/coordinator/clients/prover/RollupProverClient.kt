@@ -54,7 +54,7 @@ class RollupProofRequestDtoMapper(
             l2ExecutionProofIndexes = l2ExecutionProofIndexes,
             chunks = request.chunks.map { it.toDto() },
             parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-            parentSharedBlobCarryOverTailBytes = request.parentSharedBlobCarryOverTailBytes,
+            parentSharedBlobCarryOverTailBytes = request.parentSharedBlobCarryOverTailBytes.toInt(),
             parentBlobDataRollingHash = request.parentBlobDataRollingHash?.encodeHex(),
           ),
           metadata = MetaDataDto(

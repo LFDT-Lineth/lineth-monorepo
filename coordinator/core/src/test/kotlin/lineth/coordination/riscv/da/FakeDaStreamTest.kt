@@ -47,7 +47,7 @@ class FakeDaStreamTest {
   private fun DaStream.appendAll(vararg conflations: List<ByteArray>): List<SealedBlob> =
     conflations.flatMap { append(compressor.compress(it)) }
 
-  private fun assertBlobLayout(blob: SealedBlob, prevDataRollingHash: ByteArray) {
+  private fun assertBlobLayout(blob: SealedBlob, parentDataRollingHash: ByteArray) {
     val bytes = blob.blob
     assertThat(bytes).hasSize(BLOB_BYTES)
     assertThat(bytes[blob.payloadBytes.toInt()]).isEqualTo(BLOB_PAYLOAD_TERMINAL)
@@ -56,9 +56,9 @@ class FakeDaStreamTest {
     assertThat(blob.kzgCommitment).hasSize(KZG_POINT_BYTES).isEqualTo(FakeDaStream.fakeKzgCommitment(bytes))
     assertThat(blob.kzgProof).hasSize(KZG_POINT_BYTES).isEqualTo(FakeDaStream.fakeKzgProof(bytes))
     assertThat(blob.kzgCommitment).isNotEqualTo(blob.kzgProof)
-    assertThat(blob.prevDataRollingHash).isEqualTo(prevDataRollingHash)
+    assertThat(blob.parentDataRollingHash).isEqualTo(parentDataRollingHash)
     assertThat(blob.dataRollingHash)
-      .isEqualTo(Keccak256DataRollingHashCalculator.fold(prevDataRollingHash, blob.chunkHash))
+      .isEqualTo(Keccak256DataRollingHashCalculator.fold(parentDataRollingHash, blob.chunkHash))
   }
 
   @Test
@@ -98,7 +98,7 @@ class FakeDaStreamTest {
 
     assertThat(blob.payloadBytes).isEqualTo((SEGMENT_LENGTH_PREFIX_BYTES + compressed.compressedData.size).toUInt())
     assertThat(blob.segmentEnds).containsExactly(SegmentEnd(1UL, unusedTailBytes = 0u))
-    assertBlobLayout(blob, prevDataRollingHash = genesisDataRollingHash)
+    assertBlobLayout(blob, parentDataRollingHash = genesisDataRollingHash)
     assertThat(stream.flush()).isNull()
   }
 
@@ -112,7 +112,7 @@ class FakeDaStreamTest {
     assertThat(sealed).hasSize(1)
     assertThat(sealed.single().payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY.toUInt())
     assertThat(sealed.single().segmentEnds).containsExactly(SegmentEnd(1UL, unusedTailBytes = 0u))
-    assertBlobLayout(sealed.single(), prevDataRollingHash = genesisDataRollingHash)
+    assertBlobLayout(sealed.single(), parentDataRollingHash = genesisDataRollingHash)
   }
 
   @Test
@@ -148,8 +148,8 @@ class FakeDaStreamTest {
     assertThat(sealed[1].segmentEnds).isEmpty()
     assertThat(sealed[2].segmentEnds).isEmpty()
     assertThat(sealed).allSatisfy { assertThat(it.payloadBytes).isEqualTo(BLOB_PAYLOAD_CAPACITY.toUInt()) }
-    assertThat(sealed[1].prevDataRollingHash).isEqualTo(sealed[0].dataRollingHash)
-    assertThat(sealed[2].prevDataRollingHash).isEqualTo(sealed[1].dataRollingHash)
+    assertThat(sealed[1].parentDataRollingHash).isEqualTo(sealed[0].dataRollingHash)
+    assertThat(sealed[2].parentDataRollingHash).isEqualTo(sealed[1].dataRollingHash)
     assertThat(stream.flush()!!.segmentEnds).containsExactly(SegmentEnd(2UL, unusedTailBytes = 0u))
   }
 
@@ -201,7 +201,7 @@ class FakeDaStreamTest {
       dataRollingHash = blob2.dataRollingHash,
       sharedBlobCarryOverTailBytes = cutAfterC.unusedTailBytes,
       sharedBlob = blob2.blob,
-      parentBlobDataRollingHash = blob2.prevDataRollingHash,
+      parentBlobDataRollingHash = blob2.parentDataRollingHash,
     )
   }
 
@@ -260,7 +260,7 @@ class FakeDaStreamTest {
         dataRollingHash = flushed.dataRollingHash,
         sharedBlobCarryOverTailBytes = cutAfterA.unusedTailBytes,
         sharedBlob = flushed.blob,
-        parentBlobDataRollingHash = flushed.prevDataRollingHash,
+        parentBlobDataRollingHash = flushed.parentDataRollingHash,
       ),
     )
 
@@ -292,6 +292,6 @@ class FakeDaStreamTest {
 
     stream.append(compressor.compress(listOf(blockRlp(1UL))))
 
-    assertThat(stream.flush()!!.prevDataRollingHash).isEqualTo(genesisDataRollingHash)
+    assertThat(stream.flush()!!.parentDataRollingHash).isEqualTo(genesisDataRollingHash)
   }
 }

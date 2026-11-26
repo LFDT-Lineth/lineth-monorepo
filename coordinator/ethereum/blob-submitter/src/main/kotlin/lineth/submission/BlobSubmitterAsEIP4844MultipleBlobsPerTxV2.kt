@@ -2,9 +2,9 @@ package lineth.submission
 
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.LinethRollupSmartContractClient
-import linea.domain.BlobRecordV2
+import linea.domain.BlobData
 import linea.domain.BlobSubmittedEvent
-import linea.domain.DataRollingHashCalculator
+import linea.domain.RiscvRollupRecord
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.encodeHex
 import lineth.gaspricing.GasPriceCapProviderV2
@@ -14,9 +14,12 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 import kotlin.time.Clock
 
+/**
+ * Submits each rollup's blobs in stream order. A blob shared with the previous rollup is submitted with that rollup,
+ * the one it ends, so it is skipped here: a rollup's end rolling hash must be anchored on L1 for it to finalize.
+ */
 class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
   private val contract: LinethRollupSmartContractClient,
-  private val dataRollingHashCalculator: DataRollingHashCalculator,
   private val targetBlobsPerTransaction: UInt,
   private val gasPriceCapProvider: GasPriceCapProviderV2?,
   private val blobSubmittedEventConsumer: Consumer<BlobSubmittedEvent> = Consumer<BlobSubmittedEvent> { },
@@ -24,7 +27,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
 ) : BlobSubmitterV2 {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  override fun submitBlobs(blobsChunks: List<BlobRecordV2>): SafeFuture<List<String>> {
+  override fun submitBlobs(blobsChunks: List<RiscvRollupRecord>): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobRecord ->
         val newChainOfFutures = chainOfFutures
@@ -36,7 +39,20 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  private fun submitBlobRecordInTxs(blobRecord: BlobRecordV2, isEthCall: Boolean = false): SafeFuture<List<String>> {
+  private fun blobsToSubmit(blobRecord: RiscvRollupRecord): List<BlobData> =
+    if (blobRecord.parentSharedBlobCarryOverTailBytes > 0u) blobRecord.blobsData.drop(1) else blobRecord.blobsData
+
+  private fun submitBlobRecordInTxs(
+    blobRecord: RiscvRollupRecord,
+    isEthCall: Boolean = false,
+  ): SafeFuture<List<String>> {
+    if (blobsToSubmit(blobRecord).isEmpty()) {
+      log.debug(
+        "rollup={} has no new blobs: its only blob was submitted with the previous rollup",
+        blobRecord.intervalString(),
+      )
+      return SafeFuture.completedFuture(emptyList())
+    }
     return (
       if (isEthCall) {
         gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecord.startBlockTimestamp)
@@ -45,29 +61,20 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       } ?: SafeFuture.completedFuture(null)
       )
       .thenCompose<List<String>> { gasPriceCaps ->
-        var parentDataRollingHash = blobRecord.parentDataRollingHash
-        val chunkedBlobs = blobRecord.blobsData.chunked(targetBlobsPerTransaction.toInt())
+        val chunkedBlobs = blobsToSubmit(blobRecord).chunked(targetBlobsPerTransaction.toInt())
         (if (isEthCall) listOf(chunkedBlobs.first()) else chunkedBlobs)
           .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobs ->
             val newChainOfFutures = chainOfFutures
               .thenCompose { listOfTxHashes ->
-                val storedDataRollingHash = blobs.map { it.chunkHash }.fold(
-                  parentDataRollingHash,
-                ) { dataRollingHash, chunkHash ->
-                  dataRollingHashCalculator.fold(dataRollingHash, chunkHash)
-                }
                 submitBlobsInSingleTx(
                   blobs = blobs.map { it.blobBytes },
-                  parentDataRollingHash = parentDataRollingHash,
-                  storedDataRollingHash = storedDataRollingHash,
+                  parentDataRollingHash = blobs.first().parentDataRollingHash,
+                  storedDataRollingHash = blobs.last().dataRollingHash,
                   blobRecord = blobRecord,
                   gasPriceCaps = gasPriceCaps,
                   isEthCall = isEthCall,
                 )
-                  .thenApply { txHash ->
-                    parentDataRollingHash = storedDataRollingHash
-                    listOfTxHashes + txHash
-                  }
+                  .thenApply { txHash -> listOfTxHashes + txHash }
               }
             newChainOfFutures
           }
@@ -88,7 +95,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
     blobs: List<ByteArray>,
     parentDataRollingHash: ByteArray,
     storedDataRollingHash: ByteArray,
-    blobRecord: BlobRecordV2,
+    blobRecord: RiscvRollupRecord,
     gasPriceCaps: GasPriceCaps?,
     isEthCall: Boolean = false,
   ): SafeFuture<String> {
@@ -133,7 +140,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
       }
   }
 
-  override fun submitBlobCall(blobRecord: BlobRecordV2): SafeFuture<*> {
+  override fun submitBlobCall(blobRecord: RiscvRollupRecord): SafeFuture<*> {
     return submitBlobRecordInTxs(blobRecord, true)
   }
 }

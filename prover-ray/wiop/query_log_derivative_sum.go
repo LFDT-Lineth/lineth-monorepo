@@ -47,8 +47,8 @@ type Fraction struct {
 // Filter_k[row] = 0 should not contribute to the running sum even if their
 // numerator/denominator would otherwise be ill-defined on those rows.
 //
-// LogDerivativeSum implements [AssignableQuery] but not [GnarkCheckableQuery]:
-// a compiler pass must reduce it before gnark verification.
+// LogDerivativeSum implements [AssignableQuery]. A compiler pass must reduce
+// it before gnark verification.
 //
 // Use [System.NewLogDerivativeSum] to construct and register an instance.
 type LogDerivativeSum struct {

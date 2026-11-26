@@ -151,12 +151,6 @@ func TestLagrangeEval_Check_Mismatch(t *testing.T) {
 	_ = r0
 }
 
-func TestLagrangeEval_CheckGnark_Panics(t *testing.T) {
-	sys, _, _, _, col, coin := lagrangeSystem(t)
-	le := sys.NewLagrangeEval(sys.Context.Childf("leGnark"), []*wiop.ColumnView{col.View()}, coin)
-	assert.Panics(t, func() { le.CheckGnark(nil, nil) })
-}
-
 // ---- LagrangeEval with Cell as evaluation point (covers roundOf *Cell branch) ----
 
 func TestLagrangeEval_CellEvalPoint_Round(t *testing.T) {

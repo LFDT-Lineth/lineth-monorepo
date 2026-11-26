@@ -20,8 +20,10 @@
 //! standard Zig one, and `-Dsecp256k1-backend` selects its secp256k1 provider: `constantine`
 //! (default) or `std`. The provider instance is the one place these choices take effect: the build
 //! fails when they reach an instance without `-Dzkvm-provide`, or when a program takes
-//! `zkvm_accelerators` from the provider instance. zesu and Constantine are lazy dependencies
-//! behind `-Dzkvm-provide`, fetched and built only for consumers that pass it:
+//! `zkvm_accelerators` from the provider instance. The provider instance also exposes
+//! `constantine_c`, Constantine's own C declarations translated for its target, which type every
+//! call into the archive. zesu and Constantine are lazy dependencies behind `-Dzkvm-provide`,
+//! fetched and built only for consumers that pass it:
 //!   const dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize, .@"zkvm-provide" = true });
 
 const std = @import("std");
@@ -115,6 +117,11 @@ fn addCryptoProviders(
         },
     });
     provide.addOptions("build_options", provide_options);
+    if (!is_guest) provide.addImport("zkvm_accelerators", b.createModule(.{
+        .root_source_file = b.path("src/zkvm_accelerators.zig"),
+        .target = target,
+        .optimize = optimize,
+    }));
 
     const zesu = b.lazyDependency("zesu", .{
         .target = target,
@@ -129,10 +136,26 @@ fn addCryptoProviders(
 
     const constantine = b.lazyDependency("guest_crypto_ctt", .{}) orelse return;
     const archive_name = if (is_guest) "riscv_staticlib" else "host_staticlib";
-    // The archives exist once Constantine is fetched.
+    // The archives and the headers exist once Constantine is fetched.
     const archive = constantine.builder.named_lazy_paths.get(archive_name) orelse return;
+    const include = constantine.builder.named_lazy_paths.get("include") orelse return;
     provide.addObjectFile(archive);
     b.addNamedLazyPath("zkvm_provide_archive", archive);
+
+    // The calls into the archive are typed by Constantine's own headers, for `target`. The module is
+    // published for the native modules that call the archive's prover.
+    const translated = b.addTranslateC(.{
+        .root_source_file = b.addWriteFiles().add(
+            "constantine_c.h",
+            "#include <constantine/protocols/ethereum_evm_precompiles.h>\n#include <constantine/protocols/ethereum_eip4844_kzg.h>\n",
+        ),
+        .target = target,
+        .optimize = .Debug,
+    });
+    translated.addIncludePath(include);
+    const constantine_c = translated.createModule();
+    guest_crypto.addImport("constantine_c", constantine_c);
+    b.modules.put(b.allocator, b.dupe("constantine_c"), constantine_c) catch @panic("OOM");
 }
 
 /// One of zesu's C-free precompile implementations, behind `zesu_crypto_backend`.
