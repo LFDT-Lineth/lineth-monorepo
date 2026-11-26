@@ -33,7 +33,7 @@ services:
   prover-ray:
     container_name: prover-ray
     hostname: prover-ray
-    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-0.2.0-20261028-abcdec9}
+    image: consensys/lineth-prover-ray:${LINEA_PROVER_RAY_TAG:-1.0.0-20261126-498004b}
     platform: linux/amd64
     profiles: ["riscv"]
     environment:
@@ -49,7 +49,7 @@ services:
 
   coordinator:
     # First release whose prover requests match prover-ray 0.2.0.
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.4.0-rc1-20261118-c800dbe}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-3.0.0-20261126-20d2e5e}
     # Started by start-env-with-riscv once the L1 contract is deployed.
     profiles: !override ["riscv"]
     depends_on: !override
