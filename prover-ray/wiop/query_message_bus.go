@@ -64,7 +64,7 @@ func (d BusDirection) String() string {
 // preserved on the query so a downstream cross-shard layer can collect products
 // from sibling shards and join them.
 //
-// MessageBus does not implement [GnarkCheckableQuery] nor [AssignableQuery]:
+// MessageBus does not implement [AssignableQuery]:
 // its semantics span multiple queries within a system and are discharged by
 // the dedicated compiler pass. [MessageBus.Check] is a no-op for that reason —
 // the in-shard product identity is enforced after compilation by the

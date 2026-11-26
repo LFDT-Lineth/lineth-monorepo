@@ -1,7 +1,5 @@
 package wiop
 
-import "github.com/consensys/gnark/frontend"
-
 // Query is the base interface for all verifier predicates in the protocol.
 // A query declares a predicate over committed columns, coins, and cells that
 // the verifier must check.
@@ -32,18 +30,6 @@ type Query interface {
 	// Context returns the ContextFrame that uniquely identifies this query
 	// within the protocol hierarchy.
 	Context() *ContextFrame
-}
-
-// GnarkCheckableQuery is an optional interface implemented by queries that can
-// be verified inside a gnark arithmetic circuit. Queries that cannot be
-// expressed in-circuit (e.g. lookup tables) do not implement this interface
-// and must be compiled away before gnark verification.
-type GnarkCheckableQuery interface {
-	Query
-	// CheckGnark asserts the query predicate inside a gnark circuit. It
-	// accesses gnark-variable assignments via run and enforces the predicate
-	// through api.
-	CheckGnark(api frontend.API, run *GnarkRuntime)
 }
 
 // AssignableQuery is an optional interface implemented by queries that can

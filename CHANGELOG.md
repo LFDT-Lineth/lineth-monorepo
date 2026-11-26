@@ -55,6 +55,7 @@
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
@@ -120,6 +121,7 @@
 - *(coordinator, docker)* Let downstream images opt out of the license files (#4382)
 - *(postman)* Optimize docker image (#4424)
 - *(coordinator)* Resolve L1 gas fees asynchronously to avoid blocking the event loop (#4423) (#4432)
+- *(coordinator)* Submit each RISC-V blob once when adjacent rollups share a blob (#4605)
 
 ### 🚜 Refactor
 
@@ -233,3 +235,5 @@
 - *(maru, coordinator, tx-exclusion-api)* JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"  (#4540)
 - *(maru, coordinator, tx-exclusion-api)* Pin 25-noble image digest for the cve fix and remove the temp workaround (#4593)
 - *(maru)* Remove noisy p2p connection stack trace (#4542)
+- *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
+- *(linea-besu)* Update docker base image version digest for cve fix (#4617)

@@ -38,6 +38,33 @@ func TestDecodeAggregationRequest_Golden(t *testing.T) {
 	assert.Equal(t, uint64(18), req.RollupProofs[1].PublicInputs.EndBlockNumber)
 }
 
+// TestDecodeAggregationRequest_GuestOutput checks that an embedded rollup proof
+// carrying guestOutput decodes to its bytes, with no public inputs, also when
+// it carries publicInputs too.
+func TestDecodeAggregationRequest_GuestOutput(t *testing.T) {
+	for name, keepPublicInputs := range map[string]bool{"guestOutput only": false, "both": true} {
+		t.Run(name, func(t *testing.T) {
+			obj := unmarshalObject(t, readSpecFixture(t, referenceAggregationRequest))
+			proofs := obj[proofRequestKey].(map[string]any)[rollupProofsKey].([]any)
+			for _, p := range proofs {
+				if !keepPublicInputs {
+					delete(p.(map[string]any), publicInputsKey)
+				}
+				p.(map[string]any)[guestOutputKey] = "0xabcd"
+			}
+
+			req, err := DecodeAggregationRequest(marshal(t, obj))
+			require.NoError(t, err)
+			require.Len(t, req.RollupProofs, len(proofs))
+			for i, p := range req.RollupProofs {
+				assert.Equal(t, []byte{0xab, 0xcd}, p.GuestOutput, "proof %d", i)
+				assert.Zero(t, p.PublicInputs, "proof %d", i)
+				assert.Equal(t, uint64(proofs[i].(map[string]any)[startBlockNumberKey].(float64)), p.StartBlockNumber)
+			}
+		})
+	}
+}
+
 func TestDecodeAggregationRequest_InvalidJSON(t *testing.T) {
 	_, err := DecodeAggregationRequest([]byte("not json"))
 	require.Error(t, err)
@@ -65,7 +92,14 @@ func TestDecodeAggregationRequest_InvalidShape(t *testing.T) {
 		{"EmptyRollupProofs", func(o map[string]any) { pr(o)[rollupProofsKey] = []any{} }, rollupProofsKey},
 		{"ProofMissingProgramVk", func(o map[string]any) { delete(proof0(o), programVkKey) }, programVkKey},
 		{"ProofMissingProof", func(o map[string]any) { delete(proof0(o), proofKey) }, proofKey},
-		{"ProofMissingPublicInputs", func(o map[string]any) { delete(proof0(o), publicInputsKey) }, publicInputsKey},
+		{"ProofWithoutPublicInputsOrGuestOutput",
+			func(o map[string]any) { delete(proof0(o), publicInputsKey) }, guestOutputKey},
+		{"ProofGuestOutputNotHex",
+			func(o map[string]any) {
+				delete(proof0(o), publicInputsKey)
+				proof0(o)[guestOutputKey] = "0xzz"
+			},
+			guestOutputKey},
 		{"PublicInputsMissingProgramVks", func(o map[string]any) { delete(pi0(o), programVksKey) }, programVksKey},
 		{"PublicInputsMissingHashField", func(o map[string]any) { delete(pi0(o), "endDataRollingHash") }, "endDataRollingHash"},
 		{"PublicInputsMissingParentSharedBlobCarryOverTailBytes",
