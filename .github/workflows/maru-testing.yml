@@ -31,7 +31,7 @@ jobs:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # update to on demand runner to avoid mid run termination and flakiness
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl-od
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large-od
     name: maru tests
     steps:
       - name: Checkout

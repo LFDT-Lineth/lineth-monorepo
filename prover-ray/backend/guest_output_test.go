@@ -202,3 +202,33 @@ func TestDecodeGuestPublicInputs_Rejects(t *testing.T) {
 		})
 	}
 }
+
+// TestGuestOutputPublicInputs checks that the public inputs of a guest output
+// are returned only when its hash and the schema id of the proof type match.
+func TestGuestOutputPublicInputs(t *testing.T) {
+	out, err := os.ReadFile(referenceGuestOutput)
+	require.NoError(t, err)
+
+	got, err := GuestOutputPublicInputs(out, ProofTypeL2Execution)
+	require.NoError(t, err)
+	assert.Equal(t, out[guestOutputHashSize+guestOutputSchemaIDSize:], got)
+
+	badHash := bytes.Clone(out)
+	badHash[0] ^= 1
+	for name, tc := range map[string]struct {
+		out     []byte
+		typ     ProofType
+		wantErr string
+	}{
+		"empty":        {nil, ProofTypeL2Execution, "shorter than the hash"},
+		"no schema id": {out[:guestOutputHashSize+1], ProofTypeL2Execution, "shorter than the schema id"},
+		"wrong hash":   {badHash, ProofTypeL2Execution, "hash does not match"},
+		"wrong schema": {out, ProofTypeRollup, "schema id is 0x0003, want 0x0005"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := GuestOutputPublicInputs(tc.out, tc.typ)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}

@@ -47,8 +47,8 @@ type Fraction struct {
 // Filter_k[row] = 0 should not contribute to the running sum even if their
 // numerator/denominator would otherwise be ill-defined on those rows.
 //
-// LogDerivativeSum implements [AssignableQuery] but not [GnarkCheckableQuery]:
-// a compiler pass must reduce it before gnark verification.
+// LogDerivativeSum implements [AssignableQuery]. A compiler pass must reduce
+// it before gnark verification.
 //
 // Use [System.NewLogDerivativeSum] to construct and register an instance.
 type LogDerivativeSum struct {
@@ -207,7 +207,6 @@ func (sys *System) NewLogDerivativeSum(ctx *ContextFrame, fractions []Fraction) 
 	}
 
 	var maxFracRound *Round
-	isExt := false
 	for i, f := range fractions {
 		if f.Numerator == nil {
 			panic(fmt.Sprintf("wiop: System.NewLogDerivativeSum: fraction %d has a nil Numerator", i))
@@ -258,9 +257,6 @@ func (sys *System) NewLogDerivativeSum(ctx *ContextFrame, fractions []Fraction) 
 			if r := maxRoundInExpr(expr); r != nil && (maxFracRound == nil || r.ID > maxFracRound.ID) {
 				maxFracRound = r
 			}
-			if expr.IsExtension() {
-				isExt = true
-			}
 		}
 	}
 
@@ -278,7 +274,11 @@ func (sys *System) NewLogDerivativeSum(ctx *ContextFrame, fractions []Fraction) 
 		))
 	}
 
-	result := resultRound.NewCell(ctx.Childf("result"), isExt)
+	// The result is always an extension value: the compiled prover accumulates
+	// the sum in the extension field, and in every real use a fraction carries a
+	// verifier coin anyway. Declaring it base for all-base fractions would let
+	// two honest provers (compiled and SelfAssign) tag it differently.
+	result := resultRound.NewCell(ctx.Childf("result"), true)
 
 	rr := &LogDerivativeSum{
 		baseQuery: baseQuery{

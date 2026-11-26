@@ -9,6 +9,7 @@
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Changing the output of the guest program to include the plain PI + its hash (#4092)
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 

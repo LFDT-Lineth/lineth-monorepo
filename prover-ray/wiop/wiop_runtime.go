@@ -203,6 +203,16 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 
 	m := col.Module
 	dataLen := v.Plain.Len()
+	// The column's declared field is binding, as a cell's is (see
+	// [Cell.canonical]): cells derived from the column's data (a LagrangeEval
+	// claim, an opened position) take their tag from it, and must hold their
+	// declared one. Fail here, at the cause, rather than at the derived cell.
+	if !col.IsExtension && dataLen > 0 && !v.Plain.IsBase() {
+		panic(fmt.Sprintf(
+			"wiop: AssignColumn: column %q is declared base-field but is assigned extension-field data",
+			col.Context.Path(),
+		))
+	}
 	if dataLen > ColumnSizeMaxSupported {
 		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, ColumnSizeMaxSupported)
 	}
@@ -300,6 +310,10 @@ func (run *Runtime) AssignCell(cell *Cell, v field.Gen) {
 			cell.Context.Path(),
 		))
 	}
+	v, err := cell.canonical(v)
+	if err != nil {
+		panic(fmt.Sprintf("wiop: AssignCell: %v", err))
+	}
 	run.cells[id] = v
 }
 
@@ -354,7 +368,10 @@ func (run *Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
 		return field.Gen{}, false
 	}
 
-	v = cell.Assigner(run)
+	v, err := cell.canonical(cell.Assigner(run))
+	if err != nil {
+		panic(fmt.Sprintf("wiop: resolveLazyCell: %v", err))
+	}
 
 	run.lock.Lock()
 	if existing, exists := run.cells[cell.Context.ID]; exists {

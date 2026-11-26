@@ -229,6 +229,19 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
+  fun `findHighestConsecutiveRollupFromBlockNumber returns the last rollup of the gap-free run`() {
+    val rollup21to30 = rollup(21UL, 30UL)
+    val rollup41to50 = rollup(41UL, 50UL)
+    save(rollup41to50, rollup21to30, rollup(1UL, 10UL), rollup(11UL, 20UL))
+
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(1UL).get()).isEqualTo(rollup21to30)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(21UL).get()).isEqualTo(rollup21to30)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(41UL).get()).isEqualTo(rollup41to50)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(31UL).get()).isNull()
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(5UL).get()).isNull()
+  }
+
+  @Test
   fun `a blob shared by two rollups is stored once`() {
     save(rollup1, rollup2)
 

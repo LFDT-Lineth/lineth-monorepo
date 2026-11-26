@@ -56,7 +56,7 @@ func TestVerifierCircuit_MerkleHash(t *testing.T) {
 				proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
 				require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 				// Compile the verifier circuit
-				cv := compileVerifierCircuit(t, sys, proof, pub)
+				cv := compileVerifierCircuit(t, sys)
 				// runtime check that the honest proof satisfies it.
 				require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
 				t.Logf("constraints: %d", cv.ccs.GetNbConstraints())
@@ -119,14 +119,14 @@ func TestVerifierCircuit_PLONKProve(t *testing.T) {
 			proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(16)) })
 			require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
-			ccs, err := frontend.Compile(modulus, scs.NewBuilder, wiop.AllocateVerifierCircuit(sys, proof, pub))
+			ccs, err := frontend.Compile(modulus, scs.NewBuilder, wiop.AllocateVerifierCircuit(sys))
 			require.NoError(t, err)
 			srs, srsLagrange, err := unsafekzg.NewSRS(ccs)
 			require.NoError(t, err)
 			pk, vk, err := plonk.Setup(ccs, srs, srsLagrange)
 			require.NoError(t, err)
 
-			assignment := wiop.AllocateVerifierCircuit(sys, proof, pub).AssignVerifierCircuit(proof, pub)
+			assignment := wiop.AllocateVerifierCircuit(sys).AssignVerifierCircuit(proof, pub)
 			w, err := frontend.NewWitness(assignment, modulus)
 			require.NoError(t, err)
 			public, err := w.Public()
@@ -144,7 +144,7 @@ func TestVerifierCircuit_PLONKProve(t *testing.T) {
 			root[0].Add(&root[0], &one)
 			bad.Commitments[0] = root
 			badW, err := frontend.NewWitness(
-				wiop.AllocateVerifierCircuit(sys, proof, pub).AssignVerifierCircuit(bad, pub), modulus)
+				wiop.AllocateVerifierCircuit(sys).AssignVerifierCircuit(bad, pub), modulus)
 			require.NoError(t, err)
 			_, err = plonk.Prove(ccs, pk, badW)
 			require.ErrorContains(t, err, "is not satisfied", "tampered wiop proof must not be provable")
