@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @ExtendWith(VertxExtension::class)
 class TracesGeneratorJsonRpcClientV2Test {
@@ -85,6 +86,7 @@ class TracesGeneratorJsonRpcClientV2Test {
         retryConfig =
         RequestRetryConfig(
           maxRetries = 2u,
+          timeout = 10.seconds,
           backoffDelay = 10.milliseconds,
           failuresWarningThreshold = 1u,
         ),

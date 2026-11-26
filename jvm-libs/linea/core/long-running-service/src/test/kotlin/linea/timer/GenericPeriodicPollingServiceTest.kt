@@ -242,7 +242,7 @@ class GenericPeriodicPollingServiceTest {
     pollingService.start()
       .thenApply {
         await()
-          .timeout(30.seconds.toJavaDuration())
+          .timeout(2.seconds.toJavaDuration())
           .untilAsserted {
             assertThat(numberOfInvocations.get()).isGreaterThanOrEqualTo(3)
             // assert invariant of not calling action in parallel
