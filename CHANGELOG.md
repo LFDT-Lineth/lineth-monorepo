@@ -55,6 +55,7 @@
 - *(coordinator)* Add RISC-V rollup calculator and DA witness assembler (#4378)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### 🐛 Bug Fixes
 
