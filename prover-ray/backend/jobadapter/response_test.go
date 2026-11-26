@@ -105,11 +105,13 @@ func TestNewResponses_GuestOutput(t *testing.T) {
 	}
 }
 
+// assertResponseShapeMatchesReference checks that got has the fields of the
+// spec's reference response, and publicInputs.
 func assertResponseShapeMatchesReference(t *testing.T, got map[string]any) {
 	t.Helper()
-	want := readReferenceResponse(t)
-	want["guestOutput"] = ""
-	assertJSONShape(t, want, got, "response")
+	require.Contains(t, got, "publicInputs")
+	delete(got, "publicInputs")
+	assertJSONShape(t, readReferenceResponse(t), got, "response")
 }
 
 func filledHash(b byte) [32]byte {

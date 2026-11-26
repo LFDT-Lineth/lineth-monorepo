@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,17 +64,28 @@ func TestDecodeRollupRequest_Golden(t *testing.T) {
 	assert.Equal(t, mustHex(t, "0xabcdef"), p0.Proof)
 	assert.Equal(t, uint64(10), p0.StartBlockNumber)
 	assert.Equal(t, mustHex(t, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), p0.ProgramVk)
-	assert.Equal(t, uint64(11), p0.PublicInputs.EndBlockNumber)
-	assert.Equal(t, uint64(1763000200), p0.PublicInputs.EndBlockTimestamp)
-	assert.Equal(t, filledHash(0xc0), p0.PublicInputs.DynamicChainConfigHash)
-	assert.Equal(t, uint64(2), p0.PublicInputs.BlockCount)
-	assert.Len(t, p0.PublicInputs.L2L1Messages, 1)
-	assert.Equal(t, filledHash(0x08), p0.PublicInputs.L2L1Messages[0])
-	assert.Empty(t, p0.PublicInputs.L2MessagingBlocksOffsets)
-	assert.Len(t, p0.PublicInputs.FilteredAddresses, 2)
-
 	assert.Equal(t, uint64(12), req.L2ExecutionProofs[1].StartBlockNumber)
-	assert.Equal(t, uint64(14), req.L2ExecutionProofs[1].PublicInputs.EndBlockNumber)
+
+	outputs := embeddedGuestOutputs(t, unmarshalObject(t, readSpecFixture(t, referenceRollupRequest)), l2ExecutionProofsKey)
+	for i, p := range req.L2ExecutionProofs {
+		assert.Equal(t, mustHex(t, outputs[i]), p.GuestOutput, "proof %d", i)
+		assert.Zero(t, p.PublicInputs, "proof %d", i)
+	}
+}
+
+// TestDecodeRollupRequest_PublicInputs checks that the embedded proofs of a
+// request in the publicInputs format decode to their public inputs.
+func TestDecodeRollupRequest_PublicInputs(t *testing.T) {
+	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+	withPublicInputs(t, obj, l2ExecutionProofsKey, publicInputs(testPublicInputs))
+
+	req, err := DecodeRollupRequest(marshal(t, obj))
+	require.NoError(t, err)
+	require.Len(t, req.L2ExecutionProofs, 2)
+	for i, p := range req.L2ExecutionProofs {
+		assert.Equal(t, testPublicInputs, p.PublicInputs, "proof %d", i)
+		assert.Nil(t, p.GuestOutput, "proof %d", i)
+	}
 }
 
 // TestDecodeRollupRequest_OptionalBoundaryHash verifies parentBlobDataRollingHash
@@ -110,30 +122,21 @@ func TestDecodeRollupRequest_CalldataChunk(t *testing.T) {
 	assert.Empty(t, req.Chunks[0].KZGProof)
 }
 
-// TestDecodeRollupRequest_GuestOutput checks that an embedded proof carrying
-// guestOutput decodes to its bytes, with no public inputs, also when it carries
-// publicInputs too.
-func TestDecodeRollupRequest_GuestOutput(t *testing.T) {
-	for name, keepPublicInputs := range map[string]bool{"guestOutput only": false, "both": true} {
-		t.Run(name, func(t *testing.T) {
-			obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
-			proofs := obj[proofRequestKey].(map[string]any)[l2ExecutionProofsKey].([]any)
-			for _, p := range proofs {
-				if !keepPublicInputs {
-					delete(p.(map[string]any), publicInputsKey)
-				}
-				p.(map[string]any)[guestOutputKey] = "0xabcd"
-			}
+// TestDecodeRollupRequest_GuestOutputOverPublicInputs checks that an embedded
+// proof carrying both guestOutput and publicInputs is read from guestOutput.
+func TestDecodeRollupRequest_GuestOutputOverPublicInputs(t *testing.T) {
+	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+	outputs := embeddedGuestOutputs(t, obj, l2ExecutionProofsKey)
+	withPublicInputs(t, obj, l2ExecutionProofsKey, publicInputs(testPublicInputs))
+	for i, p := range obj[proofRequestKey].(map[string]any)[l2ExecutionProofsKey].([]any) {
+		p.(map[string]any)[guestOutputKey] = outputs[i]
+	}
 
-			req, err := DecodeRollupRequest(marshal(t, obj))
-			require.NoError(t, err)
-			require.Len(t, req.L2ExecutionProofs, len(proofs))
-			for i, p := range req.L2ExecutionProofs {
-				assert.Equal(t, []byte{0xab, 0xcd}, p.GuestOutput, "proof %d", i)
-				assert.Zero(t, p.PublicInputs, "proof %d", i)
-				assert.Equal(t, uint64(proofs[i].(map[string]any)[startBlockNumberKey].(float64)), p.StartBlockNumber)
-			}
-		})
+	req, err := DecodeRollupRequest(marshal(t, obj))
+	require.NoError(t, err)
+	for i, p := range req.L2ExecutionProofs {
+		assert.Equal(t, mustHex(t, outputs[i]), p.GuestOutput, "proof %d", i)
+		assert.Zero(t, p.PublicInputs, "proof %d", i)
 	}
 }
 
@@ -143,7 +146,9 @@ func TestDecodeRollupRequest_InvalidJSON(t *testing.T) {
 	assert.Contains(t, err.Error(), "parsing JSON")
 }
 
-// TestDecodeRollupRequest_InvalidShape sweeps the rollup envelope error paths.
+// TestDecodeRollupRequest_InvalidShape sweeps the rollup envelope error paths,
+// on the request in the publicInputs format so the public-input object has its
+// own cases.
 func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 	pr := func(o map[string]any) map[string]any { return o[proofRequestKey].(map[string]any) }
 	chunk0 := func(o map[string]any) map[string]any { return pr(o)[chunksKey].([]any)[0].(map[string]any) }
@@ -247,12 +252,62 @@ func TestDecodeRollupRequest_InvalidShape(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+			withPublicInputs(t, obj, l2ExecutionProofsKey, publicInputs(testPublicInputs))
 			tc.mutate(obj)
 			_, err := DecodeRollupRequest(marshal(t, obj))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
+}
+
+// testPublicInputs are the public inputs that the publicInputs-format tests put
+// in each embedded l2-execution proof.
+var testPublicInputs = backend.PublicInputs{
+	ParentBlockHash:                       filledHash(0x0a),
+	EndBlockHash:                          filledHash(0x0b),
+	EndBlockNumber:                        14,
+	EndBlockTimestamp:                     1763000210,
+	EndL1L2BridgeRollingHash:              filledHash(0x03),
+	EndL1L2BridgeRollingHashMessageNumber: 5,
+	DynamicChainConfigHash:                filledHash(0xc0),
+	ParentFtxRollingHash:                  filledHash(0x04),
+	ParentFtxNumber:                       15,
+	EndFtxRollingHash:                     filledHash(0x05),
+	EndProcessedFtxNumber:                 18,
+	FilteredAddresses:                     [][20]byte{{0x09}},
+	TxFromsHash:                           filledHash(0x07),
+	BlockCount:                            2,
+	L2MessagingBlocksOffsets:              []uint16{1},
+	L2L1Messages:                          [][32]byte{filledHash(0x08)},
+}
+
+// withPublicInputs replaces the guestOutput of each proof in the proofsKey list
+// of the request obj with the publicInputs object pi, as the prover's response
+// writer makes it.
+func withPublicInputs(t *testing.T, obj map[string]any, proofsKey string, pi any) {
+	t.Helper()
+	for _, p := range obj[proofRequestKey].(map[string]any)[proofsKey].([]any) {
+		piObj, err := jsonMarshalObject(pi)
+		require.NoError(t, err)
+		proof := p.(map[string]any)
+		delete(proof, guestOutputKey)
+		proof[publicInputsKey] = piObj
+	}
+}
+
+// embeddedGuestOutputs returns the guestOutput of each proof in the proofsKey
+// list of the request obj.
+func embeddedGuestOutputs(t *testing.T, obj map[string]any, proofsKey string) []string {
+	t.Helper()
+	proofs := obj[proofRequestKey].(map[string]any)[proofsKey].([]any)
+	outputs := make([]string, 0, len(proofs))
+	for _, p := range proofs {
+		out, ok := p.(map[string]any)[guestOutputKey].(string)
+		require.True(t, ok, "each embedded proof should carry guestOutput")
+		outputs = append(outputs, out)
+	}
+	return outputs
 }
 
 func unmarshalObject(t *testing.T, data []byte) map[string]any {

@@ -14,16 +14,11 @@ from remerkleable.complex import Container
 
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / "rollup_spec/src"))
-from rollup_spec import l2_execution_ssz, proof_io_v1, rollup_ssz
+from rollup_spec import proof_io_v1, rollup_ssz
 from rollup_spec import stateless_input as ref
 
-# The spec's reference l2-execution response: its public inputs are what the
-# guest output frame encodes.
-L2_EXECUTION_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
 # The spec's reference rollup request.
 ROLLUP_REQUEST = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.request.json"
-# The spec's reference rollup response.
-ROLLUP_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json"
 
 
 class EmptyExecutionRequests(Container):
@@ -67,12 +62,6 @@ def encode(obj):
     return bytes.fromhex("1501") + body.encode_bytes()
 
 
-def l2_execution_output():
-    # keccak256(frame) || frame, frame = 0x0003 || SSZ(public inputs).
-    proof = proof_io_v1._decode_l2_execution_proof(json.loads(L2_EXECUTION_RESPONSE.read_text()), "").proof
-    return l2_execution_ssz.encode_l2_execution_output(proof)
-
-
 def rollup_inputs():
     # 0x0004 || SSZ(rollup private input), for the reference request and for a
     # variant with no parent blob data rolling hash and a calldata chunk.
@@ -86,23 +75,6 @@ def rollup_inputs():
     return reference, calldata
 
 
-def rollup_request_guest_output():
-    # The reference rollup request with each embedded l2-execution proof
-    # carrying its guestOutput instead of its publicInputs.
-    obj = json.loads(ROLLUP_REQUEST.read_text())
-    request = proof_io_v1.decode_rollup_request(obj)
-    for embedded, verifiable in zip(obj["proofRequest"]["l2ExecutionProofs"], request.l2_execution_proofs):
-        del embedded["publicInputs"]
-        embedded["guestOutput"] = "0x" + l2_execution_ssz.encode_l2_execution_output(verifiable.proof).hex()
-    return obj
-
-
-def rollup_output():
-    # keccak256(frame) || frame, frame = 0x0005 || SSZ(public inputs).
-    proof = proof_io_v1._decode_rollup_proof(json.loads(ROLLUP_RESPONSE.read_text()), "").proof
-    return rollup_ssz.encode_rollup_output(proof)
-
-
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     for name in ("payload0", "payload1", "full"):
@@ -111,11 +83,6 @@ if __name__ == "__main__":
     (ROOT / "prover-ray/backend/jobadapter/testdata/single_block_expected.ssz").write_bytes(
         (directory / "stateless_input_payload0.ssz").read_bytes()
     )
-    (directory / "l2_execution_output.ssz").write_bytes(l2_execution_output())
     reference, calldata = rollup_inputs()
     (directory / "rollup_input.ssz").write_bytes(reference)
     (directory / "rollup_input_calldata.ssz").write_bytes(calldata)
-    (directory / "rollup_output.ssz").write_bytes(rollup_output())
-    (ROOT / "prover-ray/backend/jobadapter/testdata/rollup_request_guest_output.json").write_text(
-        json.dumps(rollup_request_guest_output(), indent=2) + "\n"
-    )

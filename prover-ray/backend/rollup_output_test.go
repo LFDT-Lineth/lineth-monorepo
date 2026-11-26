@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,99 +12,31 @@ import (
 )
 
 const (
-	// referenceRollupResponse is the spec's reference rollup response.
+	// referenceRollupResponse is the spec's reference rollup response. Its
+	// guestOutput is the reference rollup guest output.
 	referenceRollupResponse = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
 		"10-14-getZkRollupProofV1.response.json"
-	// referenceRollupOutput encodes its public inputs (utils/ssz/testdata/generate.py).
-	referenceRollupOutput = "../utils/ssz/testdata/rollup_output.ssz"
+	// referenceRollupRequest is the request of that response.
+	referenceRollupRequest = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
+		"10-14-getZkRollupProofV1.request.json"
 )
-
-// specRollupPublicInputs is the publicInputs object of the spec's rollup response.
-type specRollupPublicInputs struct {
-	EndBlockNumber                        uint64    `json:"endBlockNumber"`
-	EndBlockTimestamp                     uint64    `json:"endBlockTimestamp"`
-	EndL1L2BridgeRollingHash              specHex   `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber uint64    `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                specHex   `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                  specHex   `json:"parentFtxRollingHash"`
-	ParentFtxNumber                       uint64    `json:"parentFtxNumber"`
-	EndFtxRollingHash                     specHex   `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                 uint64    `json:"endProcessedFtxNumber"`
-	ParentDataRollingHash                 specHex   `json:"parentDataRollingHash"`
-	EndDataRollingHash                    specHex   `json:"endDataRollingHash"`
-	ParentBlockHash                       specHex   `json:"parentBlockHash"`
-	EndBlockHash                          specHex   `json:"endBlockHash"`
-	ParentSharedBlobCarryOverTailBytes    uint64    `json:"parentSharedBlobCarryOverTailBytes"`
-	FinalSharedBlobCarryOverTailBytes     uint64    `json:"finalSharedBlobCarryOverTailBytes"`
-	FilteredAddresses                     []specHex `json:"filteredAddresses"`
-	ProgramVks                            []specHex `json:"programVks"`
-	BlockCount                            uint64    `json:"blockCount"`
-	L2MessagingBlocksOffsets              []uint16  `json:"l2MessagingBlocksOffsets"`
-	L2L1Messages                          []specHex `json:"l2L1Messages"`
-}
-
-// referenceRollupPublicInputs reads them. An unknown field fails, so a new spec
-// field shows up here.
-func referenceRollupPublicInputs(t *testing.T) RollupPublicInputs {
-	t.Helper()
-	data, err := os.ReadFile(referenceRollupResponse)
-	require.NoError(t, err)
-	var response struct {
-		PublicInputs json.RawMessage `json:"publicInputs"`
-	}
-	require.NoError(t, json.Unmarshal(data, &response))
-	dec := json.NewDecoder(bytes.NewReader(response.PublicInputs))
-	dec.DisallowUnknownFields()
-	var spec specRollupPublicInputs
-	require.NoError(t, dec.Decode(&spec), "the spec's public inputs should parse")
-
-	hash := func(h specHex) [32]byte {
-		require.Len(t, h, 32, "a hash should be 32 bytes")
-		return [32]byte(h)
-	}
-	hashes := func(hs []specHex) [][32]byte {
-		out := make([][32]byte, len(hs))
-		for i, h := range hs {
-			out[i] = hash(h)
-		}
-		return out
-	}
-	pi := RollupPublicInputs{
-		EndBlockNumber:                        spec.EndBlockNumber,
-		EndBlockTimestamp:                     spec.EndBlockTimestamp,
-		EndL1L2BridgeRollingHash:              hash(spec.EndL1L2BridgeRollingHash),
-		EndL1L2BridgeRollingHashMessageNumber: spec.EndL1L2BridgeRollingHashMessageNumber,
-		DynamicChainConfigHash:                hash(spec.DynamicChainConfigHash),
-		ParentFtxRollingHash:                  hash(spec.ParentFtxRollingHash),
-		ParentFtxNumber:                       spec.ParentFtxNumber,
-		EndFtxRollingHash:                     hash(spec.EndFtxRollingHash),
-		EndProcessedFtxNumber:                 spec.EndProcessedFtxNumber,
-		ParentDataRollingHash:                 hash(spec.ParentDataRollingHash),
-		EndDataRollingHash:                    hash(spec.EndDataRollingHash),
-		ParentBlockHash:                       hash(spec.ParentBlockHash),
-		EndBlockHash:                          hash(spec.EndBlockHash),
-		ParentSharedBlobCarryOverTailBytes:    spec.ParentSharedBlobCarryOverTailBytes,
-		FinalSharedBlobCarryOverTailBytes:     spec.FinalSharedBlobCarryOverTailBytes,
-		L2L1Messages:                          hashes(spec.L2L1Messages),
-		FilteredAddresses:                     make([][20]byte, len(spec.FilteredAddresses)),
-		ProgramVks:                            hashes(spec.ProgramVks),
-		BlockCount:                            spec.BlockCount,
-		L2MessagingBlocksOffsets:              append([]uint16{}, spec.L2MessagingBlocksOffsets...),
-	}
-	for i, a := range spec.FilteredAddresses {
-		require.Len(t, a, 20, "an address should be 20 bytes")
-		pi.FilteredAddresses[i] = [20]byte(a)
-	}
-	return pi
-}
 
 // referenceRollupFrame returns the hash and the frame of the reference output.
 func referenceRollupFrame(t *testing.T) (hash, framed []byte) {
 	t.Helper()
-	out, err := os.ReadFile(referenceRollupOutput)
-	require.NoError(t, err)
-	require.Greater(t, len(out), guestOutputHashSize, "the guest output should hold a hash and a frame")
+	out := specGuestOutput(t, referenceRollupResponse)
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
+}
+
+// referenceRollupPublicInputs returns the public inputs of the reference rollup
+// output, as decodeRollupPublicInputs decodes them (see
+// TestDecodeRollupPublicInputs).
+func referenceRollupPublicInputs(t *testing.T) RollupPublicInputs {
+	t.Helper()
+	_, framed := referenceRollupFrame(t)
+	pi, err := decodeRollupPublicInputs(framed)
+	require.NoError(t, err)
+	return pi
 }
 
 // Positions of the list offsets in the fixed head of the rollup public inputs.
@@ -114,6 +47,9 @@ const (
 	rollupBlocksOffsetPos     = 332
 )
 
+// TestDecodeRollupPublicInputs checks the decoder on the spec's reference rollup
+// guest output, against the fields that the reference request fixes. The other
+// fields of the reference are independent sample values.
 func TestDecodeRollupPublicInputs(t *testing.T) {
 	hash, framed := referenceRollupFrame(t)
 	require.NoError(t, checkGuestOutputFrame(hash, framed, rollupOutputSchemaID),
@@ -121,7 +57,39 @@ func TestDecodeRollupPublicInputs(t *testing.T) {
 
 	got, err := decodeRollupPublicInputs(framed)
 	require.NoError(t, err)
-	assert.Equal(t, referenceRollupPublicInputs(t), got, "every field should match the spec's public inputs")
+
+	data, err := os.ReadFile(referenceRollupRequest)
+	require.NoError(t, err)
+	var request struct {
+		ProofRequest struct {
+			ParentDataRollingHash specHex `json:"parentDataRollingHash"`
+			L2ExecutionProofs     []struct {
+				GuestOutput specHex `json:"guestOutput"`
+				ProgramVk   specHex `json:"programVk"`
+			} `json:"l2ExecutionProofs"`
+		} `json:"proofRequest"`
+	}
+	require.NoError(t, json.Unmarshal(data, &request))
+	proofs := request.ProofRequest.L2ExecutionProofs
+	require.NotEmpty(t, proofs)
+	inner := make([]PublicInputs, len(proofs))
+	var messages, vks [][32]byte
+	for i, p := range proofs {
+		require.Greater(t, len(p.GuestOutput), guestOutputHashSize)
+		inner[i], err = decodeGuestPublicInputs(p.GuestOutput[guestOutputHashSize:])
+		require.NoError(t, err)
+		messages = append(messages, inner[i].L2L1Messages...)
+		if !slices.Contains(vks, [32]byte(p.ProgramVk)) {
+			vks = append(vks, [32]byte(p.ProgramVk))
+		}
+	}
+	slices.SortFunc(vks, func(a, b [32]byte) int { return bytes.Compare(a[:], b[:]) })
+
+	assert.Equal(t, [32]byte(request.ProofRequest.ParentDataRollingHash), got.ParentDataRollingHash)
+	assert.Equal(t, vks, got.ProgramVks, "the distinct VKs of the inner proofs, sorted")
+	assert.Equal(t, inner[0].ParentBlockHash, got.ParentBlockHash, "the parent block of the first inner proof")
+	assert.Equal(t, inner[len(inner)-1].EndBlockHash, got.EndBlockHash, "the end block of the last inner proof")
+	assert.Equal(t, messages, got.L2L1Messages, "the messages of the inner proofs, in order")
 }
 
 func TestDecodeRollupPublicInputs_Rejects(t *testing.T) {

@@ -9,10 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// rollupRequestGuestOutput is the reference rollup request with guestOutput in
-// place of publicInputs in each embedded proof (utils/ssz/testdata/generate.py).
-const rollupRequestGuestOutput = "testdata/rollup_request_guest_output.json"
-
 // The goldens come from rollup_spec, see utils/ssz/testdata/generate.py.
 func TestBuildRollupInput_MatchesSpec(t *testing.T) {
 	reference := readSpecFixture(t, referenceRollupRequest)
@@ -35,7 +31,6 @@ func TestBuildRollupInput_MatchesSpec(t *testing.T) {
 	}{
 		"reference":            {reference, "rollup_input.ssz"},
 		"calldata no boundary": {marshal(t, obj), "rollup_input_calldata.ssz"},
-		"guestOutput":          {readSpecFixture(t, rollupRequestGuestOutput), "rollup_input.ssz"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			req, err := DecodeRollupRequest(tc.request)

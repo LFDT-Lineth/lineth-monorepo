@@ -27,33 +27,34 @@ func TestNewRollupResponse_MatchesReferenceShape(t *testing.T) {
 
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
-	want := unmarshalObject(t, readSpecFixture(t, referenceRollupResponse))
-	want["guestOutput"] = ""
-	assertJSONShape(t, want, raw, "rollupResponse")
+	require.Contains(t, raw, publicInputsKey)
+	delete(raw, publicInputsKey)
+	assertJSONShape(t, unmarshalObject(t, readSpecFixture(t, referenceRollupResponse)), raw, "rollupResponse")
 	assert.NotContains(t, raw, "status")
 	assert.NotContains(t, raw, "jobId")
 }
 
 // TestNewRollupResponse_MatchesReferenceValues checks that a result holding the
-// public inputs of the spec's reference response gives that response.
+// guest output of the spec's reference response gives that response, plus the
+// publicInputs of the result.
 func TestNewRollupResponse_MatchesReferenceValues(t *testing.T) {
-	reference := readSpecFixture(t, referenceRollupResponse)
-	var env, piObj map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(reference, &env))
-	require.NoError(t, json.Unmarshal(env[publicInputsKey], &piObj))
-	pi, err := decodeRollupProofPublicInputs(piObj, decodeAggregationOp, "")
-	require.NoError(t, err)
-
-	want := unmarshalObject(t, reference)
+	want := unmarshalObject(t, readSpecFixture(t, referenceRollupResponse))
 	result := backend.Result{
 		ProofBytes:         mustHex(t, want[proofKey].(string)),
 		ProgramVK:          [32]byte(mustHex(t, want[programVkKey].(string))),
-		RollupPublicInputs: backend.RollupPublicInputs(pi),
+		GuestOutput:        mustHex(t, want[guestOutputKey].(string)),
+		RollupPublicInputs: testRollupPublicInputs,
 	}
 	resp := newRollupResponse(result, uint64(want[startBlockNumberKey].(float64)), want["proverVersion"].(string))
 
 	got, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
-	want["guestOutput"] = "0x"
+	var piObj map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(marshal(t, got[publicInputsKey]), &piObj))
+	pi, err := decodeRollupProofPublicInputs(piObj, decodeAggregationOp, "")
+	require.NoError(t, err)
+	assert.Equal(t, testRollupPublicInputs, backend.RollupPublicInputs(pi), "publicInputs should read back to the result's")
+
+	delete(got, publicInputsKey)
 	assert.Equal(t, want, got)
 }
