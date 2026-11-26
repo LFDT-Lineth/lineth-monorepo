@@ -156,7 +156,7 @@ func TestStaticOpening_OtherSystem(t *testing.T) {
 	require.ErrorContains(t, err, "System other than the action's", "another System, on the first call")
 	op, err := action.Static(s.sys)
 	require.NoError(t, err, "the rejected call memoized nothing")
-	var rounds []*wiop.Round
+	rounds := make([]*wiop.Round, 0, len(op.Batches))
 	for _, b := range op.Batches {
 		rounds = append(rounds, b.Round)
 	}
