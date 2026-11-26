@@ -1,4 +1,4 @@
-//! Runs a rollup guest ELF under zkc on a request and compares the output it prints with the
+//! Runs a guest ELF under zkc on a request and compares the output it prints with the
 //! expected output byte for byte: `zkc_smoke --elf PATH --input PATH --expected PATH --makefile
 //! PATH [--zkc-flags TEXT]`. The makefile is arithmetization's, which defines the zkc run. The
 //! guest's output is the commitment and frame zkc reports.

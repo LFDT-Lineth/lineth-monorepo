@@ -46,10 +46,26 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 ## Development
 
 ```bash
-make -C rollup_aggregation test         # native host tests; the proofs are real devmode proofs (`go` has to be on PATH)
-make -C rollup_aggregation compile      # statically-linked rv64im ELF at zig-out/bin/rollup_aggregation_guest
-make -C rollup_aggregation gen-fixture  # rewrites test/testdata/sample.request.ssz and sample.output.bin
-make -C rollup_aggregation exec         # compile, then run under the ZkC interpreter on the committed sample request
+make -C rollup_aggregation test             # native host tests; the proofs are real devmode proofs (`go` has to be on PATH)
+make -C rollup_aggregation compile          # statically-linked rv64im ELF at zig-out/bin/rollup_aggregation_guest
+make -C rollup_aggregation gen-fixture      # rewrites test/testdata/sample.request.ssz and sample.output.bin
+make -C rollup_aggregation exec             # compile, then run under the ZkC interpreter on the committed sample request
+make -C rollup_aggregation zkc-smoke-exec   # the same run, whose output has to equal the committed output byte for byte
 ```
 
-`test/support/scenario.zig` writes chains of adjacent rollup proofs as literal public inputs and proves each with the devmode prover of `lineth_recursion`. `test/sample_fixture_test.zig` runs the statement on the committed sample request and requires the committed output.
+`-Dkeccak-accel` (`KECCAK_ACCEL=` on `make`) and `-Dsecp256k1-backend` (`SECP256K1_BACKEND=`) select the keccak and secp256k1 providers of `zkvm_provide`, as in the rollup guest.
+
+### Tests
+
+`test/support/scenario.zig` writes chains of adjacent rollup proofs as literal public inputs and proves each with the devmode prover of `lineth_recursion`.
+
+- `test/rollup_aggregation_test.zig`: the public inputs of one proof and of a chain of three.
+- `test/rejection_test.zig`: one test per rule of the statement (the shape of the request, recursion, tiling, each continuity rule, the messaging offsets, the bounds of the output), each asserting the error and its exit-code category.
+- `test/sample_fixture_test.zig`: the statement over the committed sample request yields the committed output.
+- `test/reference/linea_aggregation_test.zig`: three adjacent rollup requests built from the Linea mainnet window of the rollup package (`rollup`'s `test/testdata/`; no EF corpus is needed), each run through the real rollup statement and proved under a rollup program VK, aggregated; the finalization public inputs are asserted against the rollup outputs.
+
+`zkc-smoke` runs the guest ELF under the ZkC interpreter on the committed sample request and compares the output it prints with the committed output; the comparison tool is shared with the rollup guest through `build_common`.
+
+## Releases
+
+The **RISC-V Rollup Aggregation Guest Release** workflow releases the ELF under `releases/riscv-rollup-aggregation/v<semver>` tags, as described in the [guests README](../README.md#guest-releases); `make release-asset GUEST=rollup-aggregation RELEASE_VERSION=<version>` stages it locally.

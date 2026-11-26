@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
     const host = Host.init(b, options.host_target);
     addHostTests(b, host, crypto);
     addFixtureStep(b, host, crypto);
+    common.addZkcSmokeStep(b, host.native.target, host.native.optimize);
 }
 
 /// Every `-D` option of this package, read once.
@@ -97,6 +98,7 @@ const Host = struct {
         const deps = Deps.init(b, target, .Debug, true);
         const package = common.createPackageModule(b, target, .Debug, deps.package);
         const devmode_prover = deps.lineth_recursion.module("devmode_prover");
+        const rollup = b.dependency("rollup", .{ .target = target, .optimize = .Debug, .@"host-tools" = true });
         const scenario = b.createModule(.{
             .root_source_file = b.path("test/support/scenario.zig"),
             .target = target,
@@ -118,6 +120,9 @@ const Host = struct {
                     .{ .name = "core_serde", .module = deps.core_serde },
                     .{ .name = "guest_common", .module = deps.guest_common },
                     .{ .name = "scenario", .module = scenario },
+                    .{ .name = "devmode_prover", .module = devmode_prover },
+                    .{ .name = "rollup", .module = rollup.module("rollup") },
+                    .{ .name = "rollup_scenario", .module = rollup.module("scenario") },
                     .{ .name = "zkvm_accelerators", .module = deps.zkvm_accelerators },
                 }) catch @panic("OOM"),
             },
@@ -125,11 +130,13 @@ const Host = struct {
     }
 };
 
-/// The `test/*_test.zig` suites; the sample suite embeds the committed fixture.
+/// The `test/*_test.zig` suites and the `test/reference/*_test.zig` suites over real rollup
+/// requests; the sample suite embeds the committed fixture.
 fn addHostTests(b: *std.Build, host: Host, crypto: common.HostCrypto) void {
     const test_step = b.step("test", "Run native Zig tests for the rollup-aggregation guest");
     const tests = common.addTests(b, test_step, host.native, .{});
     crypto.linkAll(tests);
+    crypto.linkAll(common.addTests(b, test_step, host.native, .{ .dir = "test/reference" }));
     const sample = tests.get("test/sample_fixture_test.zig").?.root_module;
     sample.addAnonymousImport("sample.request.ssz", .{ .root_source_file = b.path("test/testdata/sample.request.ssz") });
     sample.addAnonymousImport("sample.output.bin", .{ .root_source_file = b.path("test/testdata/sample.output.bin") });

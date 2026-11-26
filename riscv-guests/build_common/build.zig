@@ -181,6 +181,23 @@ pub fn zkcModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.
     });
 }
 
+/// Adds the `zkc-smoke` step, which runs a guest ELF under zkc and compares its output with the
+/// native statement's; the options of `zkc_smoke.zig` follow `--`.
+pub fn addZkcSmokeStep(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    const smoke = b.addExecutable(.{
+        .name = "zkc_smoke",
+        .root_module = b.createModule(.{
+            .root_source_file = b.dependency("build_common", .{}).path("zkc_smoke.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "zkc", .module = zkcModule(b, target, optimize) }},
+        }),
+    });
+    const run = b.addRunArtifact(smoke);
+    if (b.args) |args| run.addArgs(args);
+    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&run.step);
+}
+
 pub fn parseAddress(comptime name: []const u8, value: []const u8) u64 {
     return std.fmt.parseInt(u64, value, 0) catch @panic("invalid -D" ++ name ++ " value");
 }

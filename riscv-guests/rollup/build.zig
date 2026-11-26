@@ -12,13 +12,17 @@ pub fn build(b: *std.Build) void {
     addGuestProgram(b, options);
     if (!options.host_tools) return;
 
-    const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
     const unit = Host.init(b, options.host_target, .Debug, null);
+    // The package and the test scenario are what the tests of a dependent package build requests with.
+    b.modules.put(b.allocator, b.dupe("rollup"), unit.package) catch @panic("OOM");
+    b.modules.put(b.allocator, b.dupe("scenario"), unit.scenario) catch @panic("OOM");
+
+    const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, options, unit, crypto);
     addFixtureStep(b, tools);
     addFetchBlocksStep(b, tools);
-    addZkcSmokeStep(b, tools);
+    common.addZkcSmokeStep(b, unit.native.target, unit.native.optimize);
 }
 
 /// Every `-D` option of this package, read once.
@@ -105,6 +109,8 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 /// What the native tests and tools of one optimize mode share: the modules they import.
 const Host = struct {
     native: common.NativeOptions,
+    package: *std.Build.Module,
+    scenario: *std.Build.Module,
 
     /// `fixtures` is the directory of the EF zkevm fixtures the `ef_fixtures` module names.
     fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, fixtures: ?std.Build.LazyPath) Host {
@@ -160,6 +166,8 @@ const Host = struct {
             },
         });
         return .{
+            .package = package,
+            .scenario = scenario,
             // Tests run on the native host: a freestanding riscv64 target has no OS to run a
             // `std.testing` binary against.
             .native = .{
@@ -189,7 +197,6 @@ fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
     crypto.link(tools.get("fetch_blocks").?);
-    tools.get("zkc_smoke").?.root_module.addImport("zkc", common.zkcModule(b, host.native.target, host.native.optimize));
     return tools;
 }
 
@@ -220,12 +227,4 @@ fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
     const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
     if (b.args) |args| fetch_blocks.addArgs(args);
     b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
-}
-
-/// Runs the guest ELF under zkc and compares its output with the native statement's; the options
-/// of `zkc_smoke` follow `--`.
-fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
-    const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
-    if (b.args) |args| zkc_smoke.addArgs(args);
-    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
 }

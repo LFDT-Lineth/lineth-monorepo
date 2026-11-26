@@ -64,7 +64,7 @@ make -C l2_execution compile ZIG=/path/to/zig IN_ORIGIN=0x08800000   # override 
 
 ### Reference tests (full EF zkevm fixture suite)
 
-l2-execution is the Rollup's extended guest, not a vanilla EVM-execution guest — the EF stateless-fixture suite is used as a reference test: it asserts the dummy-wrapped extended guest (`runL2Execution`) agrees with the fixture's own expected validity verdict on block validity (the reference-test corpus is the source of truth — no second, independently re-run implementation needed), so `reference-test` is a **per-guest target**, not an orchestrated one. The rollup guest's `make -C rollup test` also runs its `test/reference` suites over 12 curated blocks of the same corpus and a window of 150 Linea mainnet blocks (`rollup/test/testdata/`): they build valid rollup requests from them and assert acceptance and the rejection of tampered copies. For l2-execution, `make test` is the fast single-fixture smoke test; the full suite:
+l2-execution is the Rollup's extended guest, not a vanilla EVM-execution guest — the EF stateless-fixture suite is used as a reference test: it asserts the dummy-wrapped extended guest (`runL2Execution`) agrees with the fixture's own expected validity verdict on block validity (the reference-test corpus is the source of truth — no second, independently re-run implementation needed), so `reference-test` is a **per-guest target**, not an orchestrated one. The rollup guest's `make -C rollup test` also runs its `test/reference` suites over 12 curated blocks of the same corpus and a window of 150 Linea mainnet blocks (`rollup/test/testdata/`): they build valid rollup requests from them and assert acceptance and the rejection of tampered copies. The rollup-aggregation guest's `make -C rollup_aggregation test` aggregates three adjacent rollup requests built from the same Linea window, without the EF corpus. For l2-execution, `make test` is the fast single-fixture smoke test; the full suite:
 
 ```bash
 make -C l2_execution reference-test ZIG=/path/to/zig
@@ -77,9 +77,10 @@ The runner walks the `blockchain_tests/` tree of the shared fixtures directory (
 
 ## Guest releases
 
-Use the **RISC-V L2 Execution Guest Release** or **RISC-V Rollup Guest Release** workflow in the
-GitHub Actions UI. Releases are independent, using `releases/riscv-l2-execution/v<semver>` and
-`releases/riscv-rollup/v<semver>` tags. On non-main branches, supply a release tag suffix. The
+Use the **RISC-V L2 Execution Guest Release**, **RISC-V Rollup Guest Release** or **RISC-V Rollup
+Aggregation Guest Release** workflow in the GitHub Actions UI. Releases are independent, using
+`releases/riscv-l2-execution/v<semver>`, `releases/riscv-rollup/v<semver>` and
+`releases/riscv-rollup-aggregation/v<semver>` tags. On non-main branches, supply a release tag suffix. The
 component changelogs track changes to the guest and its shared build inputs. The release manager
 reviews the resulting draft by default; the pre-release option follows the normal component release
 convention.
@@ -94,7 +95,7 @@ SHA3-256). Published release assets are immutable; use a new tag for a changed b
 deployment and Program ID selection are handled separately.
 
 To stage a release ELF locally, run `make release-asset GUEST=l2-execution RELEASE_VERSION=0.0.1`
-(or use `GUEST=rollup`) from this directory. From inside a guest directory, use
+(or use `GUEST=rollup` or `GUEST=rollup-aggregation`) from this directory. From inside a guest directory, use
 `make release-asset RELEASE_VERSION=0.0.1`; the guest name is that directory's name with hyphens
 in place of underscores. A release
 version is required, and staging fails if it is missing. Each guest exposes the shared
@@ -121,7 +122,7 @@ Two workflows guard the guests.
 
 The integrated guest pipeline reuses the same test actions automatically on relevant PRs and `main` pushes. Reference-output-only changes run just the unit tests; full guest or interpreter changes run the unit and reference suites in parallel after the guest build.
 
-[`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2_execution exec ZKC_EXEC_FLAGS="--fast"` (the ELF → JSON → `zkc` path described below). Fast mode (`--fast`) skips tracing, which is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above. The same job runs the rollup guest on a generated sample request of one conflation in one blob (`make -C rollup zkc-smoke-external`) and requires the output it prints under zkc to equal, byte for byte, the output the native statement computes for that request.
+[`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2_execution exec ZKC_EXEC_FLAGS="--fast"` (the ELF → JSON → `zkc` path described below). Fast mode (`--fast`) skips tracing, which is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above. The same job runs the rollup guest on a generated sample request of one conflation in one blob (`make -C rollup zkc-smoke-external`) and requires the output it prints under zkc to equal, byte for byte, the output the native statement computes for that request. It does the same for the rollup-aggregation guest on its committed sample request of two rollup proofs (`make -C rollup_aggregation zkc-smoke-external`), against the committed output.
 
 The shared host-test steps live in [`.github/actions/run-riscv-guests-host-tests`](../.github/actions/run-riscv-guests-host-tests/action.yml) and [`.github/actions/run-riscv-guests-reference-tests`](../.github/actions/run-riscv-guests-reference-tests/action.yml). Both compose [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml), which installs the Zig version pinned in `.zigversion`, Nim, and LLVM for the Constantine build, with Zig package fetches, build artifacts and EF zkevm fixtures cached. The interpreter-run workflow reuses that setup and adds Go plus a `zkc` install.
 
