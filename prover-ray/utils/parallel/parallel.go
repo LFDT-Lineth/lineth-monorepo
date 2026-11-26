@@ -8,23 +8,18 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
-// Execute process in parallel the work function
-func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
-	nbTasks := runtime.GOMAXPROCS(0)
+// Execute runs work over [0, nbIterations) split into GOMAXPROCS contiguous
+// ranges, one goroutine each. See [ExecuteWithNbTasks].
+func Execute(nbIterations int, work func(start, stop int)) {
+	ExecuteWithNbTasks(nbIterations, runtime.GOMAXPROCS(0), work)
+}
 
-	if len(maxCpus) == 1 {
-		nbTasks = maxCpus[0]
-		if nbTasks < 1 {
-			nbTasks = 1
-		}
-	}
-
-	// heuristic to avoid creating too many goroutines (experimental, may change)
-	// nbGoRoutines := runtime.NumGoroutine()
-	// nbCpus := runtime.GOMAXPROCS(0) * 4
-	// for nbTasks+nbGoRoutines > nbCpus && nbTasks > 1 {
-	// 	nbTasks--
-	// }
+// ExecuteWithNbTasks runs work over [0, nbIterations) split into nbTasks
+// contiguous ranges of near-equal size, one goroutine each (at least one
+// task, and no more than nbIterations). With one task, work runs in the
+// calling goroutine. A panic in work is recovered and re-raised in the
+// calling goroutine, with the stack of the goroutine that panicked.
+func ExecuteWithNbTasks(nbIterations, nbTasks int, work func(start, stop int)) {
 	nbTasks = max(1, nbTasks)
 
 	if nbTasks == 1 {

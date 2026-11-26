@@ -97,7 +97,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 		h := newRowHasher(rt, alpha, it.cols, it.selector, head, n)
 		dst := tEntries[tOffsets[frag] : tOffsets[frag]+n]
 		chunks := splitRows(n, workers)
-		parallel.Execute(len(chunks), func(start, stop int) {
+		parallel.ExecuteWithNbTasks(len(chunks), workers, func(start, stop int) {
 			buf := h.newBuffers()
 			for c := start; c < stop; c++ {
 				for lo := chunks[c][0]; lo < chunks[c][1]; lo += hashBlock {
@@ -108,7 +108,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 					}
 				}
 			}
-		}, workers)
+		})
 	}
 	table := buildTable(tEntries, workers)
 
@@ -138,7 +138,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 		}
 	}
 	counts := newCounts(len(tEntries), workers)
-	parallel.Execute(len(items), func(start, stop int) {
+	parallel.ExecuteWithNbTasks(len(items), workers, func(start, stop int) {
 		var (
 			bufs   = make([]*hashBuffers, len(sides))
 			selBuf = make([]field.Ext, hashBlock)
@@ -173,7 +173,7 @@ func (t *mAssignmentTask) run(rt *wiop.Runtime, workers int) {
 			}
 		}
 		local.flush()
-	}, workers)
+	})
 
 	// --- Fill the M vectors from the counts.
 	for frag := range t.ms {
@@ -404,7 +404,7 @@ func buildTable(tEntries []tEntry, workers int) *lookupTable {
 	tab := &lookupTable{mask: uint32(numBuckets - 1), maps: make([]map[field.Ext]uint32, numBuckets)}
 	bucketOf := func(e *tEntry) uint32 { return extHash(&e.val) & tab.mask }
 	buckets := partitionByBucket(tEntries, numBuckets, bucketOf, workers)
-	parallel.Execute(numBuckets, func(start, stop int) {
+	parallel.ExecuteWithNbTasks(numBuckets, workers, func(start, stop int) {
 		for b := start; b < stop; b++ {
 			m := make(map[field.Ext]uint32, len(buckets[b]))
 			for _, e := range buckets[b] {
@@ -414,7 +414,7 @@ func buildTable(tEntries []tEntry, workers int) *lookupTable {
 			}
 			tab.maps[b] = m
 		}
-	}, workers)
+	})
 	return tab
 }
 
@@ -504,14 +504,14 @@ const rowsPerChunk = 8192
 func partitionByBucket[E any](entries []E, numBuckets int, bucket func(*E) uint32, workers int) [][]E {
 	chunks := splitRows(len(entries), workers)
 	counts := make([][]int, len(chunks))
-	parallel.Execute(len(chunks), func(start, stop int) {
+	parallel.ExecuteWithNbTasks(len(chunks), workers, func(start, stop int) {
 		for c := start; c < stop; c++ {
 			counts[c] = make([]int, numBuckets)
 			for i := chunks[c][0]; i < chunks[c][1]; i++ {
 				counts[c][bucket(&entries[i])]++
 			}
 		}
-	}, workers)
+	})
 
 	// Bucket b starts after every smaller bucket; within it, chunk c writes
 	// after every earlier chunk.
@@ -533,7 +533,7 @@ func partitionByBucket[E any](entries []E, numBuckets int, bucket func(*E) uint3
 	}
 
 	flat := make([]E, len(entries))
-	parallel.Execute(len(chunks), func(start, stop int) {
+	parallel.ExecuteWithNbTasks(len(chunks), workers, func(start, stop int) {
 		for c := start; c < stop; c++ {
 			pos := counts[c]
 			for i := chunks[c][0]; i < chunks[c][1]; i++ {
@@ -542,7 +542,7 @@ func partitionByBucket[E any](entries []E, numBuckets int, bucket func(*E) uint3
 				pos[b]++
 			}
 		}
-	}, workers)
+	})
 
 	buckets := make([][]E, numBuckets)
 	for b := range numBuckets {

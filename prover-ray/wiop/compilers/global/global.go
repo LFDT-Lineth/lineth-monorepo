@@ -869,17 +869,17 @@ func evalColumnsOnCosets(
 		shifts := bitReversedCosetTable(cosetDomains[k])
 		if v := extEvals[c]; v != nil {
 			dst := v[k*n : (k+1)*n]
-			parallel.Execute(n, func(start, end int) {
+			parallel.ExecuteWithNbTasks(n, tasks, func(start, end int) {
 				extensions.VectorE6(dst[start:end]).MulByElement(v[start:end], shifts[start:end])
-			}, tasks)
+			})
 			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.WithNbTasks(tasks))
 			return
 		}
 		v := baseEvals[c]
 		dst := v[k*n : (k+1)*n]
-		parallel.Execute(n, func(start, end int) {
+		parallel.ExecuteWithNbTasks(n, tasks, func(start, end int) {
 			koalabear.Vector(dst[start:end]).Mul(v[start:end], shifts[start:end])
-		}, tasks)
+		})
 		cosetDomains[k].FFT(dst, fft.DIT, fft.WithNbTasks(tasks))
 	}
 	type item struct{ c, k int }
@@ -970,11 +970,11 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		ratio = len(cosetDomains)
 		tasks = max(1, runtime.GOMAXPROCS(0)/ratio)
 	)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for k := start; k < end; k++ {
 			cosetDomains[k].FFTInverseExt6(agg[k*n:(k+1)*n], fft.DIF, fft.OnCoset(), fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 
 	// coefs[m][k] = g^{-nm}·ω_ratio^{-km}/ratio, with ω_ratio = ω_N^n.
 	var g, gInvN, omegaInv, ratioInv field.Element
@@ -1000,12 +1000,12 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	}
 
 	shares := make([][]field.Ext, ratio)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			shares[m] = make([]field.Ext, n)
 			hugepage.Advise(shares[m])
 		}
-	}, ratio)
+	})
 	// share_m = Σ_k coefs[m][k]·β_k, one ScalarMulByElement + Add pass per k.
 	parallel.Execute(n, func(start, end int) {
 		tmp := extensions.VectorE6(field.ExtPool.Get(end - start))
@@ -1020,11 +1020,11 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		field.ExtPool.Put(tmp)
 	})
 
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			smallDomain.FFTExt6(shares[m], fft.DIT, fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 	return shares
 }
 

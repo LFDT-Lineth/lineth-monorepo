@@ -417,21 +417,21 @@ func VecPrefixSumExt(z []Ext, workers int) {
 	nbChunks := (n + size - 1) / size
 	chunk := func(c int) []Ext { return z[c*size : min((c+1)*size, n)] }
 	offsets := make([]Ext, nbChunks)
-	parallel.Execute(nbChunks, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks, workers, func(start, end int) {
 		for c := start; c < end; c++ {
 			offsets[c] = scan(chunk(c), Ext{})
 		}
-	}, workers)
+	})
 	if nbChunks < 2 {
 		return
 	}
 	// offsets[c] becomes the sum of the totals of chunks 0..c-1.
 	scan(offsets[:nbChunks-1], Ext{})
 	copy(offsets[1:], offsets[:nbChunks-1])
-	parallel.Execute(nbChunks-1, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks-1, workers, func(start, end int) {
 		for c := start + 1; c < end+1; c++ {
 			v := chunk(c)
 			extensions.VectorE6(v).ScalarAdd(v, &offsets[c])
 		}
-	}, workers)
+	})
 }
