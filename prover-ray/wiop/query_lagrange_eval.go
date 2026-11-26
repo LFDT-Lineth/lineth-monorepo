@@ -8,7 +8,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/hugepage"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
-	"github.com/consensys/gnark/frontend"
 )
 
 // LagrangeEval is a [Query] that evaluates a batch of polynomials at a single
@@ -22,9 +21,10 @@ import (
 //
 // where ω is the canonical n-th root of unity of the ambient field.
 //
-// LagrangeEval is both [GnarkCheckableQuery] and [AssignableQuery]:
-//   - Check and CheckGnark assert that all polynomials and the evaluation point
-//     are publicly visible, then verify that the claims match the evaluations.
+// LagrangeEval is an [AssignableQuery]:
+//   - Check verifies that the claims match the evaluations recomputed from the
+//     assigned columns. It is never checked in-circuit: the PCS compiler must
+//     reduce it before gnark verification.
 //   - SelfAssign computes the evaluations from the runtime assignment and
 //     stores them in the EvaluationClaims cells.
 //
@@ -351,15 +351,6 @@ func (le *LagrangeEval) evalPolynomialsEach(rt *Runtime, z0 field.Gen) []field.G
 		}
 	})
 	return results
-}
-
-// CheckGnark implements [GnarkCheckableQuery]. Asserts inside a gnark circuit
-// that each polynomial evaluates to the claimed value at the EvaluationPoint.
-//
-// Precondition: all polynomials and the EvaluationPoint must be publicly
-// visible; panics otherwise.
-func (le *LagrangeEval) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
-	panic("wiop: LagrangeEval.CheckGnark not yet implemented")
 }
 
 // NewLagrangeEval constructs and registers a [LagrangeEval] query on sys.

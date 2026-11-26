@@ -1,15 +1,28 @@
 # BUILDER image
 FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 
-WORKDIR /opt/consensys/maru
+WORKDIR /opt/lineth/maru
+
+# Run as a dedicated non-root user (uid 1000, same convention as the besu image).
+# Ubuntu noble ships an "ubuntu" user at uid 1000 — remove it first.
+# /tmp/maru-db is maru's persistence data-path (docker/config/maru/sequencer.config.toml);
+# pre-create it maru-owned so bind-mounting the private key file into it does not
+# leave a root-owned directory that uid 1000 cannot write the database into.
+RUN userdel ubuntu 2>/dev/null || true && rm -rf /home/ubuntu && \
+    adduser --uid 1000 --disabled-password --gecos "" --home /opt/lineth/maru maru && \
+    mkdir -p /tmp/maru-db && \
+    chown -R maru:maru /opt/lineth/maru /tmp/maru-db
 
 # Keep the libs tree so downstream builds can ship nested layouts.
-COPY --from=libs . ./
+COPY --from=libs --chown=maru:maru  . ./
 # The glob lets downstream builds whose licenses context has no license files skip them
 # (scripts/docker/build-image.sh --no-license-check).
 COPY --from=licenses LICENSE-* /licenses/
 
-ARG LINETH_APP_JAR=/opt/consensys/maru/maru.jar
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
+
+ARG LINETH_APP_JAR=/opt/lineth/maru/maru.jar
 ENV LINETH_APP_JAR=$LINETH_APP_JAR
 
 # Build-time metadata as defined at http://label-schema.org
