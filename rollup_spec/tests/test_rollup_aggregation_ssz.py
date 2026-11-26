@@ -27,11 +27,17 @@ import rollup_spec
 
 from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
 from ethereum.crypto.hash import Hash32, keccak256
+from ethereum.state import Address
+from ethereum_types.numeric import U64
 from rollup_spec.proof_io_v1 import (
-    _decode_rollup_public_input,
+    _bytes_from_hex,
+    _require,
+    _require_list,
+    _u64,
     decode_aggregation_request,
     encode_aggregation_response,
 )
+from rollup_spec.rollup import RollupPublicInput
 from rollup_spec.rollup_aggregation_ssz import (
     ROLLUP_AGGREGATION_INPUT_SCHEMA_ID,
     ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
@@ -61,6 +67,48 @@ def _load_json(name: str) -> dict:
 
 def _hexbytes(value: str) -> bytes:
     return bytes.fromhex(value[2:] if value[:2] in ("0x", "0X") else value)
+
+
+def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
+    def h(key: str) -> Hash32:
+        return Hash32(_bytes_from_hex(_require(obj, key, ctx), f"{ctx}{key}"))
+
+    def n(key: str) -> U64:
+        return _u64(_require(obj, key, ctx), f"{ctx}{key}")
+
+    program_vks = _require_list(obj, "programVks", ctx)
+    return RollupPublicInput(
+        end_block_number=n("endBlockNumber"),
+        end_block_timestamp=n("endBlockTimestamp"),
+        end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
+        end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
+        dynamic_chain_config_hash=h("dynamicChainConfigHash"),
+        parent_ftx_rolling_hash=h("parentFtxRollingHash"),
+        parent_ftx_number=n("parentFtxNumber"),
+        end_ftx_rolling_hash=h("endFtxRollingHash"),
+        end_processed_ftx_number=n("endProcessedFtxNumber"),
+        parent_data_rolling_hash=h("parentDataRollingHash"),
+        end_data_rolling_hash=h("endDataRollingHash"),
+        parent_block_hash=h("parentBlockHash"),
+        end_block_hash=h("endBlockHash"),
+        parent_shared_blob_carry_over_tail_bytes=int(n("parentSharedBlobCarryOverTailBytes")),
+        final_shared_blob_carry_over_tail_bytes=int(n("finalSharedBlobCarryOverTailBytes")),
+        l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
+                        for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
+        filtered_addresses=[
+            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
+            for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
+        ],
+        program_vks=[
+            Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
+            for i, v in enumerate(program_vks)
+        ],
+        block_count=int(n("blockCount")) if "blockCount" in obj else 0,
+        l2_messaging_blocks_offsets=[
+            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
+            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
+        ],
+    )
 
 
 def _aggregation_output_from_response(resp: dict) -> FinalizationSubmission:

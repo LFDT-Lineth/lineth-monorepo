@@ -27,7 +27,6 @@ from ethereum_types.numeric import U64
 
 from rollup_spec.rollup import ChunkWitness, RollupProof
 from rollup_spec.proof_io_v1 import (
-    _decode_rollup_public_input,
     decode_rollup_request,
     encode_rollup_response,
 )
@@ -63,7 +62,7 @@ def _hexbytes(value: str) -> bytes:
 def _rollup_output_from_response(resp: dict) -> RollupProof:
     """The rollup guest's own output implied by a response fixture: the same
     guest-emitted fields, with `proverVersion`/`proof` dropped."""
-    pi = _decode_rollup_public_input(resp["publicInputs"], "publicInputs.")
+    pi = decode_rollup_output_ssz(bytes.fromhex(resp["guestOutput"][2:]))
     return RollupProof(
         public_inputs=pi,
         start_block_number=U64(resp["startBlockNumber"]),
