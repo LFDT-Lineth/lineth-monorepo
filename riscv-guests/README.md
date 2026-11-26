@@ -15,6 +15,7 @@ riscv-guests/
   lineth_recursion/    Shared library package: the recursive verification of a proof (`lineth_recursion` module) by the devmode system of verifier-ray, and the devmode prover (`devmode_prover` module) that builds proofs for tests
   l2_execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
   rollup/              Rollup guest: the rollup statement over conflations, DA chunks and l2-execution proofs: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
+  rollup_aggregation/  Rollup-aggregation guest: the finalization statement over rollup proofs: build.zig + build.zig.zon + Makefile + src/ + test/ + tools/
 ```
 
 Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**. `src/root.zig` is the package module — one namespace per source file, which the files inside `src/` reach through relative imports — and `src/main.zig` is the guest entry point that exports `main`; the installed binary keeps the guest's own name (`evm_execution_guest`, `rollup_guest`). Host-only code lives beside it: unit tests and their helpers in `test/` (committed sample/test data in `test/testdata/`) and native programs in `tools/`. The split mirrors what `build.zig` builds: `build_common`'s `createPackageModule` and `addGuest` turn `src/` into the package module and the ELF; `zig build test` / `extended-vanilla` compile `test/` and `tools/` against the package module. (Automated tests read their EF fixtures from the shared copy described under Dependencies, not from committed data — `test/testdata/` is the manual ZkC-run samples, and for `rollup` its Linea mainnet block window.)
@@ -143,4 +144,5 @@ Each guest folder is a complete package: its own dependencies (`build.zig.zon`),
 - `lineth_recursion/`: the recursive verification of a proof by the devmode system of `verifier-ray`, and the devmode prover the tests of its consumers build their proofs with.
 - `l2_execution/`: the Rollup's extended l2-execution guest. See `l2_execution/README.md`.
 - `rollup/`: the rollup guest: block truncation, DA stream verification, recursion and chain checks, and the rollup public inputs. See `rollup/README.md`.
+- `rollup_aggregation/`: the rollup-aggregation guest: recursive verification of the rollup proofs of a finalization range, their tiling and continuity, and the finalization public inputs. See `rollup_aggregation/README.md`.
 ```

@@ -1,0 +1,29 @@
+.{
+    .name = .rollup_aggregation_guest,
+    .version = "0.0.0",
+    .fingerprint = 0xd7964138b911a672,
+    .minimum_zig_version = "0.16.0",
+    // The sibling packages are spelled through the repository root: the verifier package refers to
+    // them that way, and a package is identified by the spelling of its path.
+    .dependencies = .{
+        // Shared build helpers for all riscv-guests packages (sibling path dependency).
+        .build_common = .{ .path = "../../riscv-guests/build_common" },
+        // Lineth zkVM accelerator wrappers (sibling path dependency): the io-interface
+        // (read_input/write_output) and, through -Dzkvm-provide, the zkvm_* crypto providers.
+        .lineth_accelerators = .{ .path = "../../riscv-guests/lineth_accelerators" },
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ codec the guest input
+        // is decoded with, and the rollup proof wire contract.
+        .guest_common = .{ .path = "../../riscv-guests/guest_common" },
+        // The recursive verifier (sibling path dependency): the generated devmode system it
+        // verifies against is a gitignored file that `make` generates before the first build. With
+        // -Dhost-tools it also exposes the devmode prover that builds the proofs for tests.
+        .lineth_recursion = .{ .path = "../../riscv-guests/lineth_recursion" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // production guest code (compiled into the rv64im object/ELF)
+        "test", // host-only: unit tests, test support and the committed sample fixture
+        "tools", // host-only: fixture generator
+    },
+}
