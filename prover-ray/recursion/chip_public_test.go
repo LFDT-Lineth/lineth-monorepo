@@ -5,6 +5,8 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,5 +117,34 @@ func TestPublic_KindPanics(t *testing.T) {
 	a := m.InputDigest()
 	for _, kind := range []int{0, 3, 9} {
 		require.Panics(t, func() { m.Public(a, kind, "A", 0) }, "kind %d", kind)
+	}
+}
+
+// TestPublic_Gnark checks that the gnark verifier circuit of a program with
+// public inputs can be built from its system, accepts an honest proof, and
+// rejects a forged E6 public input in E6Check's CheckGnark, the only check
+// binding it to the proof.
+func TestPublic_Gnark(t *testing.T) {
+	for _, forge := range []bool{false, true} {
+		m, _ := publicProgram()
+		p, err := m.Compile(testPCSOpts...)
+		require.NoError(t, err)
+		if forge {
+			cell, _ := p.Sys.LookupPublicInputByTag("Y", 0)
+			honest := cell.Assigner
+			cell.Assigner = func(rt *wiop.Runtime) field.Gen { return honest(rt).Add(field.ElemOne()) }
+		}
+		r, err := p.Execute(publicInputs())
+		require.NoError(t, err)
+		proof, pub := p.Prove(r)
+
+		assignment := wiop.AllocateVerifierCircuit(p.Sys).AssignVerifierCircuit(proof, pub)
+		err = test.IsSolved(wiop.AllocateVerifierCircuit(p.Sys), assignment, ecc.BN254.ScalarField())
+		if !forge {
+			require.NoError(t, err, "an honest proof should satisfy the circuit")
+			continue
+		}
+		require.Error(t, err, "a forged E6 public input should not satisfy the circuit")
+		require.Contains(t, err.Error(), "recursion.(*E6Check).CheckGnark", "it should be rejected by E6Check")
 	}
 }
