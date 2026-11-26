@@ -34,9 +34,12 @@ pub const Verifier = struct {
     image: []align(@alignOf(verifier.VerifyInput)) u8,
     workspace: *Workspace,
 
-    pub fn init(allocator: Allocator, longest_proof_len: usize) Allocator.Error!Verifier {
+    /// `proofs` is a slice of verifiable proofs, each holding its image at `proof.proof.bytes`.
+    pub fn init(allocator: Allocator, proofs: anytype) Allocator.Error!Verifier {
+        var longest: usize = 0;
+        for (proofs) |verifiable| longest = @max(longest, verifiable.proof.proof.bytes.len);
         return .{
-            .image = try allocator.alignedAlloc(u8, .of(verifier.VerifyInput), longest_proof_len),
+            .image = try allocator.alignedAlloc(u8, .of(verifier.VerifyInput), longest),
             .workspace = try allocator.create(Workspace),
         };
     }

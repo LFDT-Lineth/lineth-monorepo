@@ -65,9 +65,7 @@ pub fn run(allocator: Allocator, input: rollup_ssz.RollupProofPrivateInput) Erro
     const range_end = last.public_inputs.end_block_number;
 
     try chain.verifyTiling(proofs);
-    var longest_proof_len: usize = 0;
-    for (proofs) |verifiable| longest_proof_len = @max(longest_proof_len, verifiable.proof.proof.bytes.len);
-    const recursive_verifier = try recursion.Verifier.init(allocator, longest_proof_len);
+    const recursive_verifier = try recursion.Verifier.init(allocator, proofs);
     for (proofs) |verifiable| try verifyL2ExecutionProof(allocator, recursive_verifier, verifiable);
 
     const block_hashes = try concatHashes(allocator, conflations, .block_hashes);

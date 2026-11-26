@@ -13,6 +13,8 @@ const recursion = lineth_recursion.recursion;
 const program_vk: [32]u8 = @splat(0x2a);
 const public_input_hash: [32]u8 = @splat(0x51);
 
+const VerifiableProof = struct { proof: struct { proof: struct { bytes: []const u8 } } };
+
 /// What a test verifies one proof with: its image, and the verifier sized to it.
 const Case = struct {
     image: []u8,
@@ -20,7 +22,8 @@ const Case = struct {
 
     fn init(a: Allocator, vk: [32]u8, hash: [32]u8) !Case {
         const image = try devmode_prover.prove(a, vk, hash);
-        return .{ .image = image, .verifier = try recursion.Verifier.init(a, image.len) };
+        const proofs = [_]VerifiableProof{.{ .proof = .{ .proof = .{ .bytes = image } } }};
+        return .{ .image = image, .verifier = try recursion.Verifier.init(a, &proofs) };
     }
 };
 
