@@ -66,10 +66,7 @@ const Deps = struct {
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
         else
             b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
-        const lineth_recursion = if (host_tools)
-            b.dependency("lineth_recursion", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
-        else
-            b.dependency("lineth_recursion", .{ .target = target, .optimize = optimize });
+        const lineth_recursion = b.dependency("lineth_recursion", .{ .target = target, .optimize = optimize, .@"host-tools" = host_tools });
         // The same instance `lineth_da` and `guest_common` import, so one compilation holds the module once.
         const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
         return .{
