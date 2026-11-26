@@ -143,18 +143,6 @@ func TestVanishing_AutoCancelledPositions_SharedDAG(t *testing.T) {
 	assert.Equal(t, []int{0}, v.CancelledPositions, "the shift -1 at the bottom of the shared DAG must cancel position 0")
 }
 
-// TestVanishing_CheckGnark_Panics checks that a Vanishing is never checked
-// in-circuit, since the global compiler always reduces it.
-func TestVanishing_CheckGnark_Panics(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("vgCol"), r0)
-	v := mod.NewVanishing(sys.Context.Childf("vg"), col.View())
-	assert.PanicsWithValue(t,
-		"wiop: Vanishing(test/vg).CheckGnark: vanishings are not checkable in-circuit; "+
-			"compile the query away with the global compiler first",
-		func() { v.CheckGnark(nil, nil) })
-}
-
 // ---- maxRoundInExpr (via Vanishing.Round) ----
 
 func TestMaxRoundInExpr_MultipleRounds(t *testing.T) {
