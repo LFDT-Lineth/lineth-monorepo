@@ -17,6 +17,9 @@ type executionResponse struct {
 	StartBlockNumber uint64                `json:"startBlockNumber"`
 	PublicInputs     executionPublicInputs `json:"publicInputs"`
 	ProgramVk        string                `json:"programVk"`
+	// GuestOutput is the guest output (hash || frame) of the result as hex, 0x
+	// when the result has none.
+	GuestOutput string `json:"guestOutput"`
 }
 
 type executionPublicInputs struct {
@@ -55,6 +58,7 @@ func newExecutionResponse(result backend.Result, startBlockNumber uint64, prover
 		StartBlockNumber: startBlockNumber,
 		PublicInputs:     publicInputs(result.PublicInputs),
 		ProgramVk:        hexHash(result.ProgramVK),
+		GuestOutput:      hexBytes(result.GuestOutput),
 	}
 }
 

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -22,6 +23,7 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -36,6 +38,11 @@ class GenericPeriodicPollingServiceTest {
   private lateinit var log: Logger
   private val pollingInterval = 50.milliseconds
 
+  // Every service created through [newPollingService] is stopped in [afterEach]. Otherwise a test that
+  // finishes leaves its timer running: a JvmTimer is a daemon thread that lives until the JVM exits and
+  // keeps ticking (and logging through the Mockito spy) while other tests are still running.
+  private val pollingServices = CopyOnWriteArrayList<PollingService>()
+
   companion object {
     @JvmStatic
     fun timerFactories() = listOf(
@@ -49,6 +56,32 @@ class GenericPeriodicPollingServiceTest {
   @BeforeEach
   fun beforeEach() {
     log = Mockito.spy(LogManager.getLogger(PollingService::class.java))
+  }
+
+  // Runs before the VertxExtension closes the injected Vertx, so VertxTimer in-flight tasks can still complete.
+  @AfterEach
+  fun afterEach() {
+    // stop() is idempotent, so services already stopped by the test itself are fine
+    val stopFutures = pollingServices.map { it.stop() }
+    pollingServices.clear()
+    // stop() completes once the in-flight action has finished: wait for it so no action outlives its test
+    stopFutures.forEach { it.get(5, TimeUnit.SECONDS) }
+  }
+
+  private fun newPollingService(
+    pollingInterval: Duration,
+    log: Logger,
+    timerFactory: TimerFactory,
+    timerSchedule: TimerSchedule,
+    mockAction: (_: Unit) -> SafeFuture<Unit> = { SafeFuture.completedFuture(Unit) },
+  ): PollingService {
+    return PollingService(
+      pollingInterval,
+      log,
+      timerFactory = timerFactory,
+      timerSchedule = timerSchedule,
+      mockAction = mockAction,
+    ).also { pollingServices.add(it) }
   }
 
   fun createTimerFactory(timerFactoryType: KClass<out TimerFactory>, vertx: Vertx): TimerFactory {
@@ -76,7 +109,7 @@ class GenericPeriodicPollingServiceTest {
     val action = { _: Unit ->
       SafeFuture.failedFuture<Unit>(IllegalStateException("Test error"))
     }
-    val pollingService = PollingService(
+    val pollingService = newPollingService(
       pollingInterval,
       log,
       mockAction = action,
@@ -107,7 +140,7 @@ class GenericPeriodicPollingServiceTest {
     val action = { _: Unit ->
       throw IllegalStateException("Throw test")
     }
-    val pollingService = PollingService(
+    val pollingService = newPollingService(
       pollingInterval,
       log,
       mockAction = action,
@@ -145,7 +178,7 @@ class GenericPeriodicPollingServiceTest {
         asyncDelay(vertx, 5.milliseconds)
       }
     }
-    val pollingService = PollingService(
+    val pollingService = newPollingService(
       pollingInterval,
       log,
       mockAction = action,
@@ -184,7 +217,7 @@ class GenericPeriodicPollingServiceTest {
         asyncDelay(vertx, 5.milliseconds)
       }
     }
-    val pollingService = PollingService(
+    val pollingService = newPollingService(
       pollingInterval,
       log,
       mockAction = action,
@@ -221,7 +254,7 @@ class GenericPeriodicPollingServiceTest {
       prevActionIsRunning.set(true)
       asyncDelay(vertx, 10.milliseconds).thenApply { prevActionIsRunning.set(false) }
     }
-    val pollingService = PollingService(
+    val pollingService = newPollingService(
       pollingInterval,
       log,
       mockAction = action,
@@ -290,7 +323,7 @@ class GenericPeriodicPollingServiceTest {
   ) {
     val actionCallCount = AtomicInteger(0)
     val pollingService =
-      PollingService(
+      newPollingService(
         pollingInterval,
         log,
         mockAction = {
@@ -338,7 +371,7 @@ class GenericPeriodicPollingServiceTest {
     val poller1Calls = AtomicInteger(0)
     val poller2Calls = AtomicInteger(0)
     // 10x faster than poller 2
-    val poller1 = PollingService(
+    val poller1 = newPollingService(
       pollingInterval = 10.milliseconds,
       log,
       timerFactory = timerFactory,
@@ -349,7 +382,7 @@ class GenericPeriodicPollingServiceTest {
       SafeFuture.completedFuture(Unit)
     }
 
-    val poller2 = PollingService(
+    val poller2 = newPollingService(
       pollingInterval = 100.milliseconds,
       log,
       timerFactory = timerFactory,

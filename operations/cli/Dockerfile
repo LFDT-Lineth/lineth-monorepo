@@ -1,6 +1,16 @@
 ARG NODE_VERSION=24.22.3
+# Digest of node:${NODE_VERSION}-slim, kept in sync with .nvmrc. If you override
+# NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
+ARG NODE_IMAGE_DIGEST=sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
+
+# Fail the build if NODE_VERSION and NODE_IMAGE_DIGEST drift: CI passes
+# NODE_VERSION from .nvmrc but not the digest, and with tag@digest only the
+# digest selects content — a .nvmrc bump alone would silently build the old
+# Node under a new label.
+ARG NODE_VERSION
+RUN [ "$(node --version)" = "v${NODE_VERSION}" ]
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -16,17 +26,21 @@ COPY patches/ ./patches/
 COPY ts-libs/eslint-config/ ./ts-libs/eslint-config/
 COPY operations/cli/ ./operations/cli/
 
+# kics-scan ignore-line
+# Versions are pinned by pnpm-lock.yaml (--frozen-lockfile); this is a workspace
+# install from the lockfile, not a single-package add. KICS: NPM Install Without Pinned Version.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 RUN pnpm run -F operations build
 RUN pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./operations/cli --prod ./prod
 
-FROM node:${NODE_VERSION}-slim AS release
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS release
 
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
-USER node
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 COPY --from=builder /usr/src/app/prod ./
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
