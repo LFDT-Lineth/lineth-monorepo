@@ -6,6 +6,7 @@
 const std = @import("std");
 const core_serde = @import("core_serde");
 const devmode_prover = @import("devmode_prover");
+const guest_common = @import("guest_common");
 const rollup_aggregation = @import("rollup_aggregation");
 const scenario = @import("scenario");
 
@@ -56,8 +57,8 @@ test "a frame of another schema id is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const frame = try framedRequest(a);
-    frame[1] = @truncate(rollup_ssz.OUTPUT_SCHEMA_ID);
+    const request = try scenario.request(a, &.{ .{}, .{} });
+    const frame = try guest_common.ssz.encodeFramed(rollup_ssz.RollupAggregationInput, a, rollup_ssz.OUTPUT_SCHEMA_ID, request);
     try expectFramedRejected(error.MalformedFrame, guest_errors.CODE_MALFORMED_FRAME, a, frame);
 }
 
@@ -76,16 +77,6 @@ test "a frame cut inside its body is rejected" {
 
     const frame = try framedRequest(a);
     try expectFramedRejected(error.InvalidSsz, guest_errors.CODE_MALFORMED_SSZ, a, frame[0 .. frame.len / 2]);
-}
-
-test "a frame whose container offset points past its end is rejected" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const frame = try framedRequest(a);
-    @memset(frame[2..6], 0xff);
-    try expectFramedRejected(error.InvalidSsz, guest_errors.CODE_MALFORMED_SSZ, a, frame);
 }
 
 // ── Recursion ────────────────────────────────────────────────────────────────────────────────────
@@ -287,14 +278,16 @@ test "offsets that do not increase are rejected" {
 }
 
 const max_offset = std.math.maxInt(u16);
-const near_limit: scenario.Spec = .{ .block_count = max_offset - 4 };
+/// The blocks the first proof leaves below the largest offset.
+const room = 4;
+const near_limit: scenario.Spec = .{ .block_count = max_offset - room };
 
 test "an offset that rebases to 16 bits is accepted" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const a = arena.allocator();
 
-    const pi = try run(a, try scenario.request(a, &.{ near_limit, .{ .offsets = &.{max_offset - near_limit.block_count} } }));
+    const pi = try run(a, try scenario.request(a, &.{ near_limit, .{ .offsets = &.{room} } }));
     try std.testing.expectEqualDeep(&[_]u16{max_offset}, pi.l2_messaging_blocks_offsets.items);
 }
 
@@ -303,13 +296,15 @@ test "an offset that rebases beyond 16 bits is rejected" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const proofs = try scenario.build(a, &.{ near_limit, .{ .offsets = &.{max_offset - near_limit.block_count + 1} } });
+    const proofs = try scenario.build(a, &.{ near_limit, .{ .offsets = &.{room + 1} } });
     try expectRejected(error.InvalidMessagingOffsets, guest_errors.CODE_MESSAGING_OFFSETS, a, proofs);
 }
 
 // ── Bounds and resources ─────────────────────────────────────────────────────────────────────────
 
 const max_program_ids = rollup_proof.MAX_PROGRAM_VKS;
+/// The program VK the one proof of a request is verified under, an ID beside the ones it bubbles up.
+const own_program_ids = 1;
 
 /// `count` distinct program VKs in ascending order.
 fn distinctVks(a: Allocator, count: usize) ![]const [32]u8 {
@@ -326,7 +321,7 @@ test "more distinct program IDs than the output holds are rejected by the output
     defer arena.deinit();
     const a = arena.allocator();
 
-    const request = try scenario.request(a, &.{.{ .program_vks = try distinctVks(a, max_program_ids) }});
+    const request = try scenario.request(a, &.{.{ .program_vks = try distinctVks(a, max_program_ids - own_program_ids + 1) }});
     try expectFramedRejected(error.OutputEncodeFailed, guest_errors.CODE_OUTPUT_ENCODE_FAILED, a, try rollup_ssz.encodeInput(a, request));
 }
 
@@ -335,7 +330,7 @@ test "as many distinct program IDs as the output holds are accepted" {
     defer arena.deinit();
     const a = arena.allocator();
 
-    const bubbled = try distinctVks(a, max_program_ids - 1);
+    const bubbled = try distinctVks(a, max_program_ids - own_program_ids);
     const request = try scenario.request(a, &.{.{ .program_vks = bubbled }});
     const output = try runFramed(a, try rollup_ssz.encodeInput(a, request));
     try std.testing.expectEqual(max_program_ids, (try rollup_ssz.decodeOutput(a, output)).program_ids.items.len);

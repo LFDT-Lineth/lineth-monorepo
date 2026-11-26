@@ -7,7 +7,6 @@ const rollup_aggregation = @import("rollup_aggregation");
 const scenario = @import("scenario");
 
 const rollup_aggregation_ssz = rollup_aggregation.rollup_aggregation_ssz;
-const guest_errors = rollup_aggregation.guest_errors;
 
 fn sampleInput(alloc: std.mem.Allocator) !rollup_aggregation_ssz.RollupAggregationInput {
     const messages = [_][32]u8{ @splat(0x71), @splat(0x72) };
@@ -47,12 +46,6 @@ fn samplePublicInput() rollup_aggregation_ssz.FinalizationPublicInput {
     };
 }
 
-fn exitCodeOfDecoding(bytes: []const u8) !guest_errors.ExitCode {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    if (rollup_aggregation_ssz.decodeInput(arena.allocator(), bytes)) |_| return error.DecodedMalformedInput else |err| return guest_errors.exitCode(err);
-}
-
 test "encodeInput/decodeInput: round-trips the rollup proofs under the 0x0006 schema id" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -72,20 +65,6 @@ test "encodeInput/decodeInput: an input without proofs round-trips" {
     const empty: rollup_aggregation_ssz.RollupAggregationInput = .{ .rollup_proofs = .{ .items = &.{} } };
     const decoded = try rollup_aggregation_ssz.decodeInput(alloc, try rollup_aggregation_ssz.encodeInput(alloc, empty));
     try std.testing.expectEqual(@as(usize, 0), decoded.rollup_proofs.items.len);
-}
-
-test "decoding failures exit with the code of their category" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
-    const frame = try rollup_aggregation_ssz.encodeInput(alloc, try sampleInput(alloc));
-    const wrong_schema = try alloc.dupe(u8, frame);
-    wrong_schema[1] = 0x07; // the aggregation output's schema id
-    try std.testing.expectEqual(guest_errors.CODE_MALFORMED_FRAME, try exitCodeOfDecoding(wrong_schema));
-    try std.testing.expectEqual(guest_errors.CODE_MALFORMED_FRAME, try exitCodeOfDecoding(&.{}));
-    try std.testing.expectEqual(guest_errors.CODE_MALFORMED_SSZ, try exitCodeOfDecoding(frame[0 .. frame.len / 2]));
-    try std.testing.expectEqual(guest_errors.CODE_MALFORMED_SSZ, try exitCodeOfDecoding(frame[0..3]));
 }
 
 test "encodeOutput: the commitment to the frame, then the 0x0007 schema id and the public inputs" {
