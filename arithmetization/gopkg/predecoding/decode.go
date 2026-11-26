@@ -44,7 +44,9 @@ const (
 	bType         = 4
 	uType         = 5
 	jType         = 6
-	// TODO : should be renamed
+	// miscMemType is the type of the MISC-MEM opcode, which holds FENCE and
+	// FENCE.I. Both are no-ops on this VM, so every word with this opcode
+	// decodes to NO_OP, whatever its other fields.
 	miscMemType = 7
 )
 
@@ -980,8 +982,7 @@ func classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd uint
 		op = decodeJTypeSemantic(opcode)
 	case uType:
 		op = decodeUTypeSemantic(opcode)
-	default:
-		// undefinedType, and any type this switch does not handle.
+	case undefinedType:
 		op = computeInvalid
 	}
 	return checkNoOp(instructionType, op, rd)
