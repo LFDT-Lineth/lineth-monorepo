@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(prover-ray)* Gnark wrapper for logderivsum and lookups (#4576)
 ## [1.0.0] - 2026-11-26
 
 ### 🚀 Features
