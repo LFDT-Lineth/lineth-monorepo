@@ -13,8 +13,20 @@ import (
 )
 
 const (
-	// TODO: do we want a max ?
-	DefaultMaxDecodedRecords uint64 = 2_000_000
+	// DefaultMaxDecodedRecords is the default cap on the number of records
+	// emitted by [Predecode]. The decoded table is dense: it holds one record
+	// for every four-byte word between the lowest and the highest executable
+	// address, gaps included. The cap turns an implausibly large span, typically
+	// executable sections placed far apart, into an error instead of a
+	// multi-gigabyte allocation and minutes of decoding: the 32-bit address
+	// space allows about 2^30 records, which at roughly half a microsecond per
+	// record would take several minutes and about 16 GiB.
+	//
+	// 16,000,000 records cover 64 MB of executable span and produce about
+	// 174 MB of decoded rows. For comparison, the l2_execution guest has
+	// 337,394 records (November 2026) and decodes in about 150 ms. Override the
+	// cap with [WithMaxDecodedRecords].
+	DefaultMaxDecodedRecords uint64 = 16_000_000
 	// BitsPerRowOfModuleDecoded determines the number of bits for a single row of the
 	// module "decoded" in the RISC-V interpreter.
 	BitsPerRowOfModuleDecoded uint = 87

@@ -194,7 +194,7 @@
 //     pre-decoding matches `blobs_data` / `read_instruction_from_blobs`.
 //  2. OOM guard. The tables are *dense* (one record per 4-byte slot in the
 //     span), so an implausibly large / non-contiguous span is rejected. The cap is
-//     `DefaultMaxDecodedRecords` (2,000,000), overridable with
+//     `DefaultMaxDecodedRecords` (16,000,000), overridable with
 //     `WithMaxDecodedRecords`. The command maps `ELF2JSON_MAX_DECODED_RECORDS`
 //     to that option.
 //  3. Flatten to a byte image. Copy each executable blob into a zero-filled
