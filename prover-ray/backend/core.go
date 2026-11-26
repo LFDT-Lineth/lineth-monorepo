@@ -281,12 +281,16 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // public inputs except EndBlockNumber, which the coordinator needs to identify
 // the proven batch. It runs no guest and ignores Payload.
 func (c *Core) proveDevMock(job Job) Result {
-	return Result{
+	result := Result{
 		JobID:        job.ID,
 		Status:       ResultStatusOK,
 		ProofBytes:   DevMarkerProof(ProverModeDevMock),
 		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
+	if job.Type == ProofTypeRollup {
+		result.RollupPublicInputs.EndBlockNumber = job.EndBlock
+	}
+	return result
 }
 
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs

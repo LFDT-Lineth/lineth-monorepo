@@ -8,12 +8,12 @@ log_level = 4
 guests_dir = "/opt/lineth/prover-ray/guests"
 # Run the guests with gogen instead of the interpreter (needs Go on PATH). On by default.
 gogen = true
-
-[execution]
-prover_mode = "dev-partial"
-requests_root_dir = "/opt/lineth/prover-ray/requests"
 shard_size = 500000
 # Shards traced and checked at the same time. Each needs about 30 to 35 GiB,
 # on top of the trace checkpoints, measured on the blocks listed in
 # docs/prover-modes.md.
 shard_workers = 1
+
+[execution]
+prover_mode = "dev-partial"
+requests_root_dir = "/opt/lineth/prover-ray/requests"

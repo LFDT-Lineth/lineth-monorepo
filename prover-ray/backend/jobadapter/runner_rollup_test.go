@@ -3,6 +3,7 @@ package jobadapter
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
@@ -40,6 +41,33 @@ func TestRunner_RunRollup(t *testing.T) {
 		"programVk should be the VK of the prover's proof, not the request's guestProgramId")
 	assert.Equal(t, "0xabcd", resp.ProofHex)
 	assert.Equal(t, uint64(10), resp.StartBlockNumber)
+}
+
+// TestRunner_RunRollup_GuestInput checks that the modes that run the rollup
+// guest pass it the input built from the request, and that dev-mock passes none.
+func TestRunner_RunRollup_GuestInput(t *testing.T) {
+	golden, err := os.ReadFile("../../utils/ssz/testdata/rollup_input.ssz")
+	require.NoError(t, err)
+
+	for mode, want := range map[backend.ProverMode][]byte{
+		backend.ProverModeDevZkVM:    golden,
+		backend.ProverModeDevPartial: golden,
+		backend.ProverModeDevMock:    nil,
+	} {
+		t.Run(string(mode), func(t *testing.T) {
+			mock := &mockProver{}
+			runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
+			require.NoError(t, err)
+
+			result := runner.Run(context.Background(), RunRequest{
+				ID: "rollup-input", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, referenceRollupRequest),
+			})
+
+			require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
+			require.Len(t, mock.jobs, 1)
+			assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
+		})
+	}
 }
 
 func TestRunner_RunRollup_Malformed(t *testing.T) {
