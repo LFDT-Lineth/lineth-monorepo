@@ -101,19 +101,28 @@ func TestBuildE6CheckSystem(t *testing.T) {
 func TestBuildE6CheckSystemRejectsMalformed(t *testing.T) {
 	sys := wiop.NewSystemf("malformed")
 	round := sys.NewRound()
+	last := round.EnsureNext()
 	ext := round.NewCell(sys.Context.Childf("ext"), true)
 	base := round.NewCell(sys.Context.Childf("base"), false)
+	lastExt := last.NewCell(sys.Context.Childf("last-ext"), true)
+	lastBase := last.NewCell(sys.Context.Childf("last-base"), false)
 	six := func(c *wiop.Cell) []*wiop.Cell {
 		return []*wiop.Cell{c, c, c, c, c, c}
 	}
+	lastSlot := len(sys.Rounds) - 1
+	if _, err := buildE6CheckEntry(&recursion.E6Check{Cell: ext, Lanes: six(base)}, lastSlot); err != nil {
+		t.Fatalf("well-formed check rejected: %v", err)
+	}
 	cases := map[string]*recursion.E6Check{
-		"base cell":      {Cell: base, Lanes: six(base)},
-		"five lanes":     {Cell: ext, Lanes: six(base)[:5]},
-		"extension lane": {Cell: ext, Lanes: six(ext)},
-		"nil lane":       {Cell: ext, Lanes: []*wiop.Cell{base, base, nil, base, base, base}},
+		"base cell":          {Cell: base, Lanes: six(base)},
+		"five lanes":         {Cell: ext, Lanes: six(base)[:5]},
+		"extension lane":     {Cell: ext, Lanes: six(ext)},
+		"nil lane":           {Cell: ext, Lanes: []*wiop.Cell{base, base, nil, base, base, base}},
+		"cell in last round": {Cell: lastExt, Lanes: six(base)},
+		"lane in last round": {Cell: ext, Lanes: []*wiop.Cell{base, base, base, base, base, lastBase}},
 	}
 	for name, check := range cases {
-		if _, err := buildE6CheckEntry(check); err == nil {
+		if _, err := buildE6CheckEntry(check, lastSlot); err == nil {
 			t.Errorf("%s: no error", name)
 		}
 	}

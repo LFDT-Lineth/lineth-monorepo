@@ -35,17 +35,20 @@ type E6CheckEntry struct {
 // round then registration order, and records the transcript positions of its
 // extension cell and lane cells. It rejects an action whose shape the Zig
 // sub-verifier could not check as the Go one does — a lane count other than
-// six, an extension lane, a base public-input cell — rather than emit a system
-// that drops or weakens the check.
+// six, an extension lane, a base public-input cell, a cell in the last wiop
+// round (which the Zig verifier does not replay, so every proof, honest or not,
+// would fail with CellRefOutOfRange) — rather than emit a system that drops,
+// weakens or breaks the check.
 func BuildE6CheckSystem(sys *wiop.System) (E6CheckSystem, error) {
 	out := E6CheckSystem{SourceName: sys.Context.Path()}
+	lastSlot := len(sys.Rounds) - 1
 	for _, round := range sys.Rounds {
 		for _, action := range round.VerifierActions {
 			check, ok := action.(*recursion.E6Check)
 			if !ok {
 				continue
 			}
-			entry, err := buildE6CheckEntry(check)
+			entry, err := buildE6CheckEntry(check, lastSlot)
 			if err != nil {
 				return E6CheckSystem{}, fmt.Errorf("codegen: BuildE6CheckSystem: round %d: %w", round.ID, err)
 			}
@@ -55,7 +58,7 @@ func BuildE6CheckSystem(sys *wiop.System) (E6CheckSystem, error) {
 	return out, nil
 }
 
-func buildE6CheckEntry(check *recursion.E6Check) (E6CheckEntry, error) {
+func buildE6CheckEntry(check *recursion.E6Check, lastSlot int) (E6CheckEntry, error) {
 	if check.Cell == nil {
 		return E6CheckEntry{}, fmt.Errorf("E6Check has no cell")
 	}
@@ -66,6 +69,9 @@ func buildE6CheckEntry(check *recursion.E6Check) (E6CheckEntry, error) {
 	if len(check.Lanes) != recursion.KindE6 {
 		return E6CheckEntry{}, fmt.Errorf("E6Check %q: %d lanes, want %d", path, len(check.Lanes), recursion.KindE6)
 	}
+	if err := checkE6NotLastRound("cell", path, check.Cell, lastSlot); err != nil {
+		return E6CheckEntry{}, err
+	}
 	entry := E6CheckEntry{Cell: cellRef(check.Cell)}
 	for l, lane := range check.Lanes {
 		if lane == nil {
@@ -74,9 +80,22 @@ func buildE6CheckEntry(check *recursion.E6Check) (E6CheckEntry, error) {
 		if lane.IsExtension() {
 			return E6CheckEntry{}, fmt.Errorf("E6Check %q: lane %d is an extension cell", path, l)
 		}
+		if err := checkE6NotLastRound(fmt.Sprintf("lane %d", l), path, lane, lastSlot); err != nil {
+			return E6CheckEntry{}, err
+		}
 		entry.Lanes[l] = cellRef(lane)
 	}
 	return entry, nil
+}
+
+// checkE6NotLastRound rejects a cell in the last wiop round: verifier-ray
+// replays rounds [0, lastSlot) only, so ctx.rounds has no such round.
+func checkE6NotLastRound(kind, path string, c *wiop.Cell, lastSlot int) error {
+	if slot := c.Context.ID.Slot(); slot >= lastSlot {
+		return fmt.Errorf("E6Check %q: %s is in the last wiop round (slot %d), which verifier-ray does not replay",
+			path, kind, slot)
+	}
+	return nil
 }
 
 func cellRef(c *wiop.Cell) ScalarCellRef {
