@@ -18,6 +18,7 @@ component_scopes() {
     prover-ray)           echo "prover-ray|deps|misc" ;;
     riscv-l2-execution)  echo "riscv-guest|deps|misc" ;;
     riscv-rollup)        echo "riscv-guest|deps|misc" ;;
+    riscv-rollup-aggregation) echo "riscv-guest|deps|misc" ;;
     riscv-lineth-da)     echo "riscv-guest|deps|misc" ;;
     postman)              echo "postman|deps|misc" ;;
     tx-exclusion-api)     echo "tx-exclusion-api|deps|misc" ;;
@@ -41,6 +42,7 @@ component_names() {
     "prover-ray" \
     "riscv-l2-execution" \
     "riscv-rollup" \
+    "riscv-rollup-aggregation" \
     "riscv-lineth-da" \
     "postman" \
     "tx-exclusion-api" \
@@ -57,6 +59,7 @@ component_folder() {
     prover-ray)         echo "prover-ray" ;;
     riscv-l2-execution) echo "riscv-guests/l2_execution" ;;
     riscv-rollup)       echo "riscv-guests/rollup" ;;
+    riscv-rollup-aggregation) echo "riscv-guests/rollup_aggregation" ;;
     riscv-lineth-da)    echo "riscv-guests/lineth_da" ;;
     postman)            echo "postman" ;;
     tx-exclusion-api)   echo "transaction-exclusion-api" ;;
@@ -93,6 +96,19 @@ component_include_path() {
       printf '%s\n' \
         "riscv-guests/rollup/**" \
         "riscv-guests/lineth_da/**" \
+        "riscv-guests/guest_common/**" \
+        "riscv-guests/build_common/**" \
+        "riscv-guests/release/**" \
+        "riscv-guests/lineth_accelerators/**" \
+        "riscv-guests/.zigversion" \
+        "riscv-guests/Makefile" \
+        "riscv-guests/Dockerfile" \
+        "riscv-guests/.dockerignore"
+      ;;
+    riscv-rollup-aggregation)
+      printf '%s\n' \
+        "riscv-guests/rollup_aggregation/**" \
+        "riscv-guests/lineth_recursion/**" \
         "riscv-guests/guest_common/**" \
         "riscv-guests/build_common/**" \
         "riscv-guests/release/**" \
