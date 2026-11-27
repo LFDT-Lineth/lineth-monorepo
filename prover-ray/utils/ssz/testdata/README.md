@@ -26,11 +26,10 @@ cd prover-ray && go test ./utils/ssz ./backend ./backend/jobadapter
 
 The generator also updates
 `backend/jobadapter/testdata/single_block_expected.ssz`, which duplicates payload0,
-and writes `l2_execution_output.ssz`: the l2-execution guest output
-(`keccak256(frame) || frame`, `frame = 0x0003 || SSZ(public inputs)`) for the
-public inputs of the spec's reference response
-`rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json`.
-`backend` decodes it and checks it against that response.
+and writes `l2_execution_output.ssz`: the `guestOutput` of the spec's reference
+response
+`rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json`
+as raw bytes, for `riscv-guests/guest_common/test/l2_execution_proof_test.zig`.
 
 It also writes the rollup guest input (`0x0004 || SSZ(rollup private input)`) for
 the spec's reference request
@@ -38,17 +37,6 @@ the spec's reference request
 (`rollup_input`), and for the same request with no boundary hash and a calldata
 chunk in place of the blob (`rollup_input_calldata`). `backend/jobadapter` builds
 the input from each request and checks it against these bytes.
-
-It also writes `backend/jobadapter/testdata/rollup_request_guest_output.json`: the
-same reference request with each embedded proof carrying its `guestOutput`
-(`encode_l2_execution_output`) in place of its `publicInputs`.
-`backend/jobadapter` builds the same input as `rollup_input` from it.
-
-It also writes `rollup_output.ssz`: the rollup guest output
-(`keccak256(frame) || frame`, `frame = 0x0005 || SSZ(public inputs)`) for the
-public inputs of the spec's reference response
-`rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json`.
-`backend` decodes it and checks it against that response.
 
 | Fixture | Bytes | SHA-256 |
 | --- | ---: | --- |
@@ -58,7 +46,6 @@ public inputs of the spec's reference response
 | l2_execution_output | 370 | `d16135f2d4662a0cd7cf30a492aff3718602a549948684cb47e3e2eeb361b293` |
 | rollup_input | 132197 | `bc47b47474e44b7825d969da5010b89d49920ff1592ec070ee4511421d7e3cdc` |
 | rollup_input_calldata | 999 | `2459d8aeb97ea9bec83f2a807f4d4b99ca5364985128dd57bf2de608b9c00a88` |
-| rollup_output | 506 | `b08e14656ef197030ba190bac457ed5f0740d827e8ad0568acdba196a1cc30e6` |
 
 `payload0` and `payload1` cover single-block coordinator fixture inputs.
 `full` additionally covers withdrawals, versioned hashes, extra data, block access

@@ -21,8 +21,10 @@ Guest output vs prover output: execution and rollup public inputs contain
 ordered message-hash lists; aggregation public inputs contain the final roots.
 The prover-system output prefix commits to the complete schema-framed SSZ
 public input. The zkVM/prover layer attaches `proof`, which is a placeholder
-(`b""`) in this reference. The Coordinator receives the final roots for L1
-finalization.
+(`b""`) in this reference. The l2-execution and rollup responses carry that
+output as `guestOutput`, and the requests embed it unchanged; the aggregation
+response carries its public inputs as JSON. The Coordinator receives the final
+roots for L1 finalization.
 
 Design notes:
   - The JSON field names are NOT a clean camel->snake mapping of the dataclass
@@ -60,24 +62,24 @@ from .block import (
     LinethRollupExtension,
     SystemContracts,
 )
-from .stateless_input import encode_stateless_input_ssz
+from .stateless_input import InvalidSsz, encode_stateless_input_ssz
 from .l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPrivateInput,
-    L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     run_l2_execution_guest,
 )
+from .l2_execution_ssz import decode_l2_execution_output_ssz, encode_l2_execution_output
 from .rollup import (
     BLOB_BYTES_LENGTH,
     ChunkWitness,
     ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
-    RollupPublicInput,
     VerifiableRollupProof,
     run_rollup_guest,
 )
+from .rollup_ssz import decode_rollup_output_ssz, encode_rollup_output
 from .l1_rollup import FinalizationSubmission
 from .rollup_aggregation import (
     RollupAggregationProofPrivateInput,
@@ -322,31 +324,11 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
     coordinator can echo it, unchanged, into the rollup request's embedded
     l2-execution proof (see `_decode_l2_execution_proof`).
     """
-    pi = proof.public_inputs
     return {
         "proverVersion": prover_version,
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
-        "publicInputs": {
-            "parentBlockHash": _hx(pi.parent_block_hash),
-            "endBlockHash": _hx(pi.end_block_hash),
-            "endBlockNumber": int(pi.end_block_number),
-            "endBlockTimestamp": int(pi.end_block_timestamp),
-            "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
-            "endL1L2BridgeRollingHash": _hx(pi.end_l1_l2_bridge_rolling_hash),
-            "endL1L2BridgeRollingHashMessageNumber": int(
-                pi.end_l1_l2_bridge_rolling_hash_message_number
-            ),
-            "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
-            "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-            "parentFtxNumber": int(pi.parent_ftx_number),
-            "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
-            "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
-            "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
-            "txFromsHash": _hx(pi.tx_froms_hash),
-            "blockCount": pi.block_count,
-            "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
-        },
+        "guestOutput": _hx(encode_l2_execution_output(proof)),
         "programVk": _hx(program_vk),
     }
 
@@ -384,45 +366,14 @@ def run_from_request_json(text: str | bytes, prover_version: str, *, program_vk:
 # ── l2-execution proof: nested decode (embedded in the rollup request) ────────
 
 
-def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPublicInput:
-    def h(key: str) -> Hash32:
-        return Hash32(_bytes_from_hex(_require(obj, key, ctx), f"{ctx}{key}"))
-
-    def n(key: str) -> U64:
-        return _u64(_require(obj, key, ctx), f"{ctx}{key}")
-
-    return L2ExecutionProofPublicInput(
-        parent_block_hash=h("parentBlockHash"),
-        end_block_hash=h("endBlockHash"),
-        end_block_number=n("endBlockNumber"),
-        end_block_timestamp=n("endBlockTimestamp"),
-        l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
-                        for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
-        end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
-        end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
-        dynamic_chain_config_hash=h("dynamicChainConfigHash"),
-        parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_ftx_number=n("parentFtxNumber"),
-        end_ftx_rolling_hash=h("endFtxRollingHash"),
-        end_processed_ftx_number=n("endProcessedFtxNumber"),
-        filtered_addresses=[
-            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
-            for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
-        ],
-        tx_froms_hash=h("txFromsHash"),
-        block_count=int(n("blockCount")),
-        l2_messaging_blocks_offsets=[
-            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
-            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
-        ],
-    )
-
-
 def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProof:
+    guest_output = _bytes_from_hex(_require(obj, "guestOutput", ctx), f"{ctx}guestOutput")
+    try:
+        public_inputs = decode_l2_execution_output_ssz(guest_output)
+    except InvalidSsz as e:
+        raise ProofIoError(f"'{ctx}guestOutput' is not an l2-execution guest output: {e}") from e
     proof = L2ExecutionProof(
-        public_inputs=_decode_l2_execution_public_input(
-            _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
-        ),
+        public_inputs=public_inputs,
         start_block_number=_u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber"),
         proof=_bytes_from_hex(_require(obj, "proof", ctx), f"{ctx}proof"),
     )
@@ -582,15 +533,6 @@ def _encode_finalization_shared_inputs(pi) -> dict:
     }
 
 
-def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
-    return {
-        **_encode_finalization_shared_inputs(pi),
-        "l2L1Messages": [_hx(h) for h in pi.l2_l1_messages],
-        "programVks": [_hx(v) for v in pi.program_vks],
-        "blockCount": pi.block_count,
-    }
-
-
 def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
@@ -605,7 +547,7 @@ def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_v
         "programVk": _hx(program_vk),
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
-        "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
+        "guestOutput": _hx(encode_rollup_output(proof)),
     }
 
 
@@ -638,53 +580,14 @@ def run_rollup_from_request_json(text: str | bytes, prover_version: str, *, prog
 # ── rollup proof: nested decode (embedded in the aggregation request) ─────────
 
 
-def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
-    def h(key: str) -> Hash32:
-        return Hash32(_bytes_from_hex(_require(obj, key, ctx), f"{ctx}{key}"))
-
-    def n(key: str) -> U64:
-        return _u64(_require(obj, key, ctx), f"{ctx}{key}")
-
-    program_vks = _require_list(obj, "programVks", ctx)
-    return RollupPublicInput(
-        end_block_number=n("endBlockNumber"),
-        end_block_timestamp=n("endBlockTimestamp"),
-        end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
-        end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
-        dynamic_chain_config_hash=h("dynamicChainConfigHash"),
-        parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_ftx_number=n("parentFtxNumber"),
-        end_ftx_rolling_hash=h("endFtxRollingHash"),
-        end_processed_ftx_number=n("endProcessedFtxNumber"),
-        parent_data_rolling_hash=h("parentDataRollingHash"),
-        end_data_rolling_hash=h("endDataRollingHash"),
-        parent_block_hash=h("parentBlockHash"),
-        end_block_hash=h("endBlockHash"),
-        parent_shared_blob_carry_over_tail_bytes=int(n("parentSharedBlobCarryOverTailBytes")),
-        final_shared_blob_carry_over_tail_bytes=int(n("finalSharedBlobCarryOverTailBytes")),
-        l2_l1_messages=[Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
-                        for i, h in enumerate(_require_list(obj, "l2L1Messages", ctx))],
-        filtered_addresses=[
-            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
-            for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
-        ],
-        program_vks=[
-            Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
-            for i, v in enumerate(program_vks)
-        ],
-        block_count=int(n("blockCount")) if "blockCount" in obj else 0,
-        l2_messaging_blocks_offsets=[
-            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
-            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
-        ],
-    )
-
-
 def _decode_rollup_proof(obj: dict, ctx: str) -> VerifiableRollupProof:
+    guest_output = _bytes_from_hex(_require(obj, "guestOutput", ctx), f"{ctx}guestOutput")
+    try:
+        public_inputs = decode_rollup_output_ssz(guest_output)
+    except InvalidSsz as e:
+        raise ProofIoError(f"'{ctx}guestOutput' is not a rollup guest output: {e}") from e
     proof = RollupProof(
-        public_inputs=_decode_rollup_public_input(
-            _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
-        ),
+        public_inputs=public_inputs,
         start_block_number=_u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber"),
         proof=_bytes_from_hex(_require(obj, "proof", ctx), f"{ctx}proof"),
     )

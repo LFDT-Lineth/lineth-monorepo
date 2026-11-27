@@ -473,6 +473,8 @@ The DA payload must contain the exact inputs required to re-execute the L2 block
 
 The fixtures under `prover_io/testdata/` document the request/response JSON the coordinator exchanges with the prover; they validate against the JSON Schemas under `prover_io/schemas/` (the versioned contract), and `proof_io_v1.py` is the codec that converts schema-valid JSON to/from the guest dataclasses. The bytes carried into the zkVM guest are binary, not this JSON.
 
+**Guest output on the wire.** The l2-execution and rollup responses carry the guest output as the guest wrote it, `guestOutput` (`keccak256(frame) ‖ frame`, with `frame = schemaId ‖ SSZ(PI)`), and the proofs embedded in the rollup and aggregation requests carry it unchanged. The aggregation response carries its public inputs as JSON (`publicInputs`), which the Coordinator submits to L1.
+
 **Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Lineth l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Lineth rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Lineth extension parsing outside the stateless-input slice. Do not append Lineth bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Lineth data would be interpreted as stateless input rather than ignored.
 
 **Container.** The logical request and witness shapes are defined once in the

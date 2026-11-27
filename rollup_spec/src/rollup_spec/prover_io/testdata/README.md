@@ -39,7 +39,10 @@ is a public-input list at every layer, distinct and sorted ascending by byte val
 Senders are committed by `txFromsHash` in the execution PI
 and reconstructed from the rollup's block inputs. Rollup emits the ordered message list;
 aggregation emits roots as public-input lists. The `proof` bytes are attached by the zkVM/prover layer,
-not the guest, so they are placeholders (`0x`) in these fixtures. The JSON response
+not the guest, so they are placeholders (`0x`) in these fixtures. The l2-execution
+and rollup responses carry the guest output as `guestOutput`
+(`keccak256(frame) || frame`), and the proofs embedded in the rollup and
+aggregation requests carry it unchanged. The JSON response
 also carries host metadata such as `startBlockNumber`. The aggregation response is a
 `FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the
 public inputs, which L1 consumes directly for finalization. The aggregation
@@ -55,7 +58,8 @@ carry: each request is a `{programVk, proofRequest}` envelope, where
 `programVk` is routing metadata (the block range is implied by the
 payloads/blobs), plus `chainId` on the rollup request (used for DA sender
 recovery). Derivable duplication is deliberately kept off the wire: no top-level
-`endBlockNumber` (it is in `publicInputs`), no `endShnarf` echo on the rollup
+`endBlockNumber` (it is in the guest output, or in `publicInputs` for the
+aggregation response), no `endShnarf` echo on the rollup
 request (only `parentShnarf` is sent; the guest recomputes `endShnarf` and
 returns it in the response PI), and no `chainId` on the aggregation request.
 

@@ -18,7 +18,7 @@ import ckzg
 import pytest
 
 import rollup_spec
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import KZGCommitment, kzg_commitment_to_versioned_hash
 from ethereum.state import Address
 from ethereum_types.numeric import U64
@@ -29,7 +29,9 @@ from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
 )
+from rollup_spec.l2_execution_ssz import decode_l2_execution_output_ssz, encode_l2_execution_output
 from rollup_spec.rollup import RollupProof, RollupPublicInput, trusted_setup
+from rollup_spec.rollup_ssz import decode_rollup_output_ssz, encode_rollup_output
 from rollup_spec.proof_io_v1 import (
     ProofIoError,
     decode_aggregation_request,
@@ -283,33 +285,16 @@ def test_encode_response_shape_and_values() -> None:
     assert out["proverVersion"] == "4.0.0-riscv"
     assert out["proof"] == "0xdeadbeef"
     assert out["startBlockNumber"] == 1000501
-    # endBlockNumber is not duplicated at top level; it lives in publicInputs.
+    # endBlockNumber is not duplicated at top level; it is in the guest output.
     assert "endBlockNumber" not in out
-
-    pi = out["publicInputs"]
-    assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
-    assert pi["endBlockHash"] == "0x" + ("0b" * 32)
-    assert pi["endBlockNumber"] == 1000503
-    assert pi["endBlockTimestamp"] == 1763000123
-    assert pi["l2L1Messages"] == ["0x" + ("08" * 32)]
-    assert pi["endL1L2BridgeRollingHashMessageNumber"] == 5
-    assert pi["parentFtxNumber"] == 15
-    assert pi["endProcessedFtxNumber"] == 18
-    assert set(pi.keys()) == {
-        "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
-        "l2L1Messages", "endL1L2BridgeRollingHash",
-        "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
-        "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
-            "endProcessedFtxNumber", "filteredAddresses", "txFromsHash",
-            "blockCount", "l2MessagingBlocksOffsets",
-    }
-
-    assert pi["filteredAddresses"] == ["0x" + ("09" * 20)]
+    # guestOutput is the guest output as the guest wrote it: keccak256(frame) || frame.
+    assert out["guestOutput"] == "0x" + encode_l2_execution_output(_sample_proof()).hex()
+    assert decode_l2_execution_output_ssz(bytes.fromhex(out["guestOutput"][2:])) == _sample_proof().public_inputs
     # §ProgramVK anchoring: the exec guest's own VK, carried on the proof
-    # (host-attached, not part of publicInputs — a guest cannot attest its own VK).
+    # (host-attached, not part of the guest output: a guest cannot attest its own VK).
     assert out["programVk"] == "0x" + ("aa" * 32)
     assert set(out.keys()) == {
-        "proverVersion", "proof", "startBlockNumber", "publicInputs", "programVk",
+        "proverVersion", "proof", "startBlockNumber", "guestOutput", "programVk",
     }
 
 
@@ -411,6 +396,29 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 14
     assert int(proof2.public_inputs.parent_ftx_number) == 18
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    [
+        pytest.param(lambda out: out[:33], id="shorter than the hash and the schema id"),
+        pytest.param(lambda out: bytes([out[0] ^ 1]) + out[1:], id="wrong hash"),
+        pytest.param(lambda out: keccak256(b"\x00\x05" + out[34:]) + b"\x00\x05" + out[34:], id="wrong schema id"),
+    ],
+)
+def test_decode_rollup_request_rejects_invalid_embedded_guest_output(corrupt) -> None:
+    req = _valid_rollup_request()
+    embedded = req["proofRequest"]["l2ExecutionProofs"][0]
+    embedded["guestOutput"] = "0x" + corrupt(bytes.fromhex(embedded["guestOutput"][2:])).hex()
+    with pytest.raises(ProofIoError, match=r"l2ExecutionProofs\[0\]\.guestOutput"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_requires_embedded_guest_output() -> None:
+    req = _valid_rollup_request()
+    del req["proofRequest"]["l2ExecutionProofs"][0]["guestOutput"]
+    with pytest.raises(ProofIoError, match="guestOutput"):
+        decode_rollup_request(req)
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -571,36 +579,15 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert out["proverVersion"] == "4.0.0-riscv"
     assert out["proof"] == "0xdeadbeef"
     assert out["startBlockNumber"] == 1000501
-    # endBlockNumber is not duplicated at top level; it lives in publicInputs.
+    # endBlockNumber is not duplicated at top level; it is in the guest output.
     assert "endBlockNumber" not in out
-
-    pi = out["publicInputs"]
-    assert pi["endBlockNumber"] == 1000520
-    assert pi["endBlockTimestamp"] == 1763000457
-    assert pi["parentDataRollingHash"] == "0x" + ("47" * 32)
-    assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
-    assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
-    assert pi["endBlockHash"] == "0x" + ("0b" * 32)
-    assert pi["parentSharedBlobCarryOverTailBytes"] == 4
-    assert pi["finalSharedBlobCarryOverTailBytes"] == 0
-    assert pi["parentFtxNumber"] == 7
-    assert pi["endProcessedFtxNumber"] == 9
-    # §ProgramVK anchoring: one combined programVks list (exec/rollup not
-    # distinguished on the wire). A rollup proof lists the exec VK it verified.
-    assert pi["programVks"] == ["0x" + ("aa" * 32)]
-    assert set(pi.keys()) == {
-        "endBlockNumber", "endBlockTimestamp",
-        "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
-        "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
-        "endFtxRollingHash", "endProcessedFtxNumber",
-        "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-            "parentSharedBlobCarryOverTailBytes", "finalSharedBlobCarryOverTailBytes", "l2L1Messages", "filteredAddresses", "programVks",
-            "blockCount", "l2MessagingBlocksOffsets",
-    }
-
+    # guestOutput is the guest output as the guest wrote it: keccak256(frame) || frame.
+    assert out["guestOutput"] == "0x" + encode_rollup_output(_sample_rollup_proof()).hex()
+    assert decode_rollup_output_ssz(bytes.fromhex(out["guestOutput"][2:])) == _sample_rollup_proof().public_inputs
     assert out["programVk"] == "0x" + ("bb" * 32)
-    assert pi["l2L1Messages"] == _expected_rollup_response()["publicInputs"]["l2L1Messages"]
-    assert pi["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
+    assert set(out.keys()) == {
+        "proverVersion", "programVk", "proof", "startBlockNumber", "guestOutput",
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -686,17 +673,26 @@ def test_decode_aggregation_request_non_array_rollup_proofs_is_rejected() -> Non
         decode_aggregation_request(req)
 
 
-def test_decode_aggregation_request_missing_nested_pi_field_is_rejected() -> None:
+@pytest.mark.parametrize(
+    "corrupt",
+    [
+        pytest.param(lambda out: out[:33], id="shorter than the hash and the schema id"),
+        pytest.param(lambda out: bytes([out[0] ^ 1]) + out[1:], id="wrong hash"),
+        pytest.param(lambda out: keccak256(b"\x00\x03" + out[34:]) + b"\x00\x03" + out[34:], id="wrong schema id"),
+    ],
+)
+def test_decode_aggregation_request_rejects_invalid_embedded_guest_output(corrupt) -> None:
     req = _valid_aggregation_request()
-    del req["proofRequest"]["rollupProofs"][0]["publicInputs"]["endDataRollingHash"]
-    with pytest.raises(ProofIoError, match="endDataRollingHash"):
+    embedded = req["proofRequest"]["rollupProofs"][0]
+    embedded["guestOutput"] = "0x" + corrupt(bytes.fromhex(embedded["guestOutput"][2:])).hex()
+    with pytest.raises(ProofIoError, match=r"rollupProofs\[0\]\.guestOutput"):
         decode_aggregation_request(req)
 
 
-def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
+def test_decode_aggregation_request_requires_embedded_guest_output() -> None:
     req = _valid_aggregation_request()
-    req["proofRequest"]["rollupProofs"][0]["publicInputs"]["parentDataRollingHash"] = "0xnothex"
-    with pytest.raises(ProofIoError, match="parentDataRollingHash"):
+    del req["proofRequest"]["rollupProofs"][0]["guestOutput"]
+    with pytest.raises(ProofIoError, match="guestOutput"):
         decode_aggregation_request(req)
 
 
@@ -708,9 +704,10 @@ def test_decode_aggregation_request_json_round_trips() -> None:
 def test_aggregation_request_fixture_tiles_finalization_range() -> None:
     request = _valid_aggregation_request()
     assert request["proofRequest"]["rollupProofs"][0]["startBlockNumber"] == request["metadata"]["startBlockNumber"]
-    assert request["proofRequest"]["rollupProofs"][-1]["publicInputs"]["endBlockNumber"] == request["metadata"]["endBlockNumber"]
+    decoded = decode_aggregation_request(request)
+    assert decoded.rollup_proofs[-1].proof.public_inputs.end_block_number == request["metadata"]["endBlockNumber"]
     with pytest.raises(NotImplementedError, match="VK-to-program-ID conversion"):
-        run_rollup_aggregation_guest(decode_aggregation_request(request))
+        run_rollup_aggregation_guest(decoded)
 
 
 # ── aggregation response encode ─────────────────────────────────────────────────

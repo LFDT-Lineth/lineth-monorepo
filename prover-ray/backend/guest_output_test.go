@@ -9,19 +9,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	// referenceL2ExecutionResponse is the spec's reference l2-execution
-	// response. Its public inputs are what the guest output frame encodes.
-	referenceL2ExecutionResponse = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
-		"10-11-getZkL2ExecutionProofV1.response.json"
-	// referenceGuestOutput is the guest output for those public inputs, made
-	// by the spec encoder (utils/ssz/testdata/generate.py).
-	referenceGuestOutput = "../utils/ssz/testdata/l2_execution_output.ssz"
-)
+// referenceL2ExecutionResponse is the spec's reference l2-execution response.
+// Its guestOutput is the reference guest output.
+const referenceL2ExecutionResponse = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
+	"10-11-getZkL2ExecutionProofV1.response.json"
 
 // specHex is a 0x-prefixed hex string of the spec's JSON.
 type specHex []byte
@@ -36,81 +32,43 @@ func (h *specHex) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-// specPublicInputs is the publicInputs object of the spec's response.
-type specPublicInputs struct {
-	ParentBlockHash                       specHex   `json:"parentBlockHash"`
-	EndBlockHash                          specHex   `json:"endBlockHash"`
-	EndBlockNumber                        uint64    `json:"endBlockNumber"`
-	EndBlockTimestamp                     uint64    `json:"endBlockTimestamp"`
-	EndL1L2BridgeRollingHash              specHex   `json:"endL1L2BridgeRollingHash"`
-	EndL1L2BridgeRollingHashMessageNumber uint64    `json:"endL1L2BridgeRollingHashMessageNumber"`
-	DynamicChainConfigHash                specHex   `json:"dynamicChainConfigHash"`
-	ParentFtxRollingHash                  specHex   `json:"parentFtxRollingHash"`
-	ParentFtxNumber                       uint64    `json:"parentFtxNumber"`
-	EndFtxRollingHash                     specHex   `json:"endFtxRollingHash"`
-	EndProcessedFtxNumber                 uint64    `json:"endProcessedFtxNumber"`
-	FilteredAddresses                     []specHex `json:"filteredAddresses"`
-	TxFromsHash                           specHex   `json:"txFromsHash"`
-	BlockCount                            uint64    `json:"blockCount"`
-	L2MessagingBlocksOffsets              []uint16  `json:"l2MessagingBlocksOffsets"`
-	L2L1Messages                          []specHex `json:"l2L1Messages"`
-}
-
-// referencePublicInputs reads the public inputs of the spec's reference
-// response. An unknown field fails, so a field added to the spec shows up here.
-func referencePublicInputs(t *testing.T) PublicInputs {
+// specGuestOutput returns the guestOutput of the spec response at path.
+func specGuestOutput(t *testing.T, path string) []byte {
 	t.Helper()
-	data, err := os.ReadFile(referenceL2ExecutionResponse)
+	data, err := os.ReadFile(path) //nolint:gosec // G304: test-controlled path
 	require.NoError(t, err)
 	var response struct {
-		PublicInputs json.RawMessage `json:"publicInputs"`
+		GuestOutput specHex `json:"guestOutput"`
 	}
 	require.NoError(t, json.Unmarshal(data, &response))
-	dec := json.NewDecoder(bytes.NewReader(response.PublicInputs))
-	dec.DisallowUnknownFields()
-	var spec specPublicInputs
-	require.NoError(t, dec.Decode(&spec), "the spec's public inputs should parse")
+	require.Greater(t, len(response.GuestOutput), guestOutputHashSize, "the guest output should hold a hash and a frame")
+	return response.GuestOutput
+}
 
-	hash := func(h specHex) [32]byte {
-		require.Len(t, h, 32, "a hash should be 32 bytes")
-		return [32]byte(h)
-	}
-	pi := PublicInputs{
-		ParentBlockHash:                       hash(spec.ParentBlockHash),
-		EndBlockHash:                          hash(spec.EndBlockHash),
-		EndBlockNumber:                        spec.EndBlockNumber,
-		EndBlockTimestamp:                     spec.EndBlockTimestamp,
-		EndL1L2BridgeRollingHash:              hash(spec.EndL1L2BridgeRollingHash),
-		EndL1L2BridgeRollingHashMessageNumber: spec.EndL1L2BridgeRollingHashMessageNumber,
-		DynamicChainConfigHash:                hash(spec.DynamicChainConfigHash),
-		ParentFtxRollingHash:                  hash(spec.ParentFtxRollingHash),
-		ParentFtxNumber:                       spec.ParentFtxNumber,
-		EndFtxRollingHash:                     hash(spec.EndFtxRollingHash),
-		EndProcessedFtxNumber:                 spec.EndProcessedFtxNumber,
-		FilteredAddresses:                     make([][20]byte, len(spec.FilteredAddresses)),
-		TxFromsHash:                           hash(spec.TxFromsHash),
-		BlockCount:                            spec.BlockCount,
-		L2MessagingBlocksOffsets:              append([]uint16{}, spec.L2MessagingBlocksOffsets...),
-		L2L1Messages:                          make([][32]byte, len(spec.L2L1Messages)),
-	}
-	for i, a := range spec.FilteredAddresses {
-		require.Len(t, a, 20, "an address should be 20 bytes")
-		pi.FilteredAddresses[i] = [20]byte(a)
-	}
-	for i, m := range spec.L2L1Messages {
-		pi.L2L1Messages[i] = hash(m)
-	}
-	return pi
+// referenceOutput returns the guestOutput of the spec's reference l2-execution
+// response.
+func referenceOutput(t *testing.T) []byte {
+	t.Helper()
+	return specGuestOutput(t, referenceL2ExecutionResponse)
 }
 
 // referenceFrame returns the hash and the frame (schema id || SSZ public
 // inputs) of the reference guest output.
 func referenceFrame(t *testing.T) (hash, framed []byte) {
 	t.Helper()
-	out, err := os.ReadFile(referenceGuestOutput)
-	require.NoError(t, err)
-	require.Greater(t, len(out), guestOutputHashSize, "the guest output should hold a hash and a frame")
+	out := referenceOutput(t)
 	return out[:guestOutputHashSize], out[guestOutputHashSize:]
+}
+
+// referencePublicInputs returns the public inputs of the reference guest
+// output, as decodeGuestPublicInputs decodes them (see
+// TestDecodeGuestPublicInputs).
+func referencePublicInputs(t *testing.T) PublicInputs {
+	t.Helper()
+	_, framed := referenceFrame(t)
+	pi, err := decodeGuestPublicInputs(framed)
+	require.NoError(t, err)
+	return pi
 }
 
 const errOffsetsOutOfOrder = "offsets out of order"
@@ -135,6 +93,9 @@ func withOffset(framed []byte, pos int, v uint32) []byte {
 	return out
 }
 
+// TestDecodeGuestPublicInputs checks the decoder on the spec's reference guest
+// output: utils/ssz, a separate encoder, must give back the same bytes from the
+// decoded public inputs.
 func TestDecodeGuestPublicInputs(t *testing.T) {
 	hash, framed := referenceFrame(t)
 	require.NoError(t, checkGuestOutputFrame(hash, framed, l2ExecutionOutputSchemaID),
@@ -142,7 +103,16 @@ func TestDecodeGuestPublicInputs(t *testing.T) {
 
 	got, err := decodeGuestPublicInputs(framed)
 	require.NoError(t, err)
-	assert.Equal(t, referencePublicInputs(t), got, "every field should match the spec's public inputs")
+
+	input := func(p ssz.L2ExecutionProof) []byte {
+		b, err := ssz.EncodeRollupInput(ssz.RollupInput{L2ExecutionProofs: []ssz.L2ExecutionProof{p}})
+		require.NoError(t, err)
+		return b
+	}
+	assert.Equal(t,
+		input(ssz.L2ExecutionProof{PublicInputsSSZ: framed[guestOutputSchemaIDSize:]}),
+		input(ssz.L2ExecutionProof{PublicInputs: ssz.L2ExecutionPublicInputs(got)}),
+		"the decoded public inputs should encode back to the spec's bytes")
 }
 
 func TestDecodeGuestPublicInputs_EmptyLists(t *testing.T) {
@@ -206,8 +176,7 @@ func TestDecodeGuestPublicInputs_Rejects(t *testing.T) {
 // TestGuestOutputPublicInputs checks that the public inputs of a guest output
 // are returned only when its hash and the schema id of the proof type match.
 func TestGuestOutputPublicInputs(t *testing.T) {
-	out, err := os.ReadFile(referenceGuestOutput)
-	require.NoError(t, err)
+	out := referenceOutput(t)
 
 	got, err := GuestOutputPublicInputs(out, ProofTypeL2Execution)
 	require.NoError(t, err)

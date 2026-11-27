@@ -202,10 +202,6 @@ class CarryOverTailBytesCase:
 
 _CARRY_OVER_TAIL_BYTES_CASES = [
     CarryOverTailBytesCase("10-14-getZkRollupProofV1.request.json", ("proofRequest", "parentSharedBlobCarryOverTailBytes")),
-    CarryOverTailBytesCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "parentSharedBlobCarryOverTailBytes")),
-    CarryOverTailBytesCase("10-14-getZkRollupProofV1.response.json", ("publicInputs", "finalSharedBlobCarryOverTailBytes")),
-    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "parentSharedBlobCarryOverTailBytes")),
-    CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.request.json", ("proofRequest", "rollupProofs", 0, "publicInputs", "finalSharedBlobCarryOverTailBytes")),
     CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "parentSharedBlobCarryOverTailBytes")),
     CarryOverTailBytesCase("10-18-getZkRollupAggregationProofV1.response.json", ("publicInputs", "finalSharedBlobCarryOverTailBytes")),
 ]

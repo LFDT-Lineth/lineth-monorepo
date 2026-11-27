@@ -31,7 +31,7 @@ from rollup_spec.l2_execution_ssz import (
     encode_l2_execution_public_inputs_bytes,
     hash_l2_execution_public_inputs,
 )
-from rollup_spec.proof_io_v1 import _decode_l2_execution_public_input, decode_request
+from rollup_spec.proof_io_v1 import decode_request
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
@@ -57,7 +57,7 @@ def _l2_execution_proof() -> L2ExecutionProof:
     """The guest output implied by the response fixture."""
     response = _load_json("getZkL2ExecutionProofV1.response.json")
     return L2ExecutionProof(
-        public_inputs=_decode_l2_execution_public_input(response["publicInputs"], "publicInputs."),
+        public_inputs=decode_l2_execution_output_ssz(bytes.fromhex(response["guestOutput"][2:])),
         start_block_number=U64(response["startBlockNumber"]),
     )
 

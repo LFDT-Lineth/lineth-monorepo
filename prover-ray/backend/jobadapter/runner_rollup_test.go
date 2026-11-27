@@ -20,10 +20,12 @@ func TestRunner_RunRollup(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
+	obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
+	withPublicInputs(t, obj, l2ExecutionProofsKey, publicInputs(testPublicInputs))
 	result := runner.Run(context.Background(), RunRequest{
 		ID:   "rollup-1",
 		Type: backend.ProofTypeRollup,
-		Body: readSpecFixture(t, referenceRollupRequest),
+		Body: marshal(t, obj),
 	})
 
 	require.Equal(t, RunStatusSuccess, result.Status)
@@ -32,7 +34,7 @@ func TestRunner_RunRollup(t *testing.T) {
 	job := mock.jobs[0]
 	assert.Equal(t, backend.ProofTypeRollup, job.Type)
 	assert.Equal(t, uint64(10), job.StartBlock)
-	assert.Equal(t, uint64(14), job.EndBlock)
+	assert.Equal(t, testPublicInputs.EndBlockNumber, job.EndBlock, "the end block of the last embedded proof")
 
 	resp, ok := result.ResponseBody.(rollupResponse)
 	require.True(t, ok)
@@ -44,35 +46,29 @@ func TestRunner_RunRollup(t *testing.T) {
 }
 
 // TestRunner_RunRollup_GuestInput checks that the modes that run the rollup
-// guest pass it the input built from the request, with publicInputs or
-// guestOutput in its proofs, and that dev-mock passes none.
+// guest pass it the input built from the request, and that dev-mock passes none.
 func TestRunner_RunRollup_GuestInput(t *testing.T) {
 	golden, err := os.ReadFile("../../utils/ssz/testdata/rollup_input.ssz")
 	require.NoError(t, err)
 
-	for format, request := range map[string]string{
-		publicInputsKey: referenceRollupRequest,
-		guestOutputKey:  rollupRequestGuestOutput,
+	for mode, want := range map[backend.ProverMode][]byte{
+		backend.ProverModeDevZkVM:    golden,
+		backend.ProverModeDevPartial: golden,
+		backend.ProverModeDevMock:    nil,
 	} {
-		for mode, want := range map[backend.ProverMode][]byte{
-			backend.ProverModeDevZkVM:    golden,
-			backend.ProverModeDevPartial: golden,
-			backend.ProverModeDevMock:    nil,
-		} {
-			t.Run(format+"/"+string(mode), func(t *testing.T) {
-				mock := &mockProver{}
-				runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
-				require.NoError(t, err)
+		t.Run(string(mode), func(t *testing.T) {
+			mock := &mockProver{}
+			runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
+			require.NoError(t, err)
 
-				result := runner.Run(context.Background(), RunRequest{
-					ID: "rollup-input", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, request),
-				})
-
-				require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
-				require.Len(t, mock.jobs, 1)
-				assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
+			result := runner.Run(context.Background(), RunRequest{
+				ID: "rollup-input", Type: backend.ProofTypeRollup, Body: readSpecFixture(t, referenceRollupRequest),
 			})
-		}
+
+			require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
+			require.Len(t, mock.jobs, 1)
+			assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
+		})
 	}
 }
 
@@ -119,10 +115,12 @@ func TestRunner_RunAggregation(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
+	obj := unmarshalObject(t, readSpecFixture(t, referenceAggregationRequest))
+	withPublicInputs(t, obj, rollupProofsKey, rollupPublicInputs(testRollupPublicInputs))
 	result := runner.Run(context.Background(), RunRequest{
 		ID:   "agg-1",
 		Type: backend.ProofTypeRollupAggregation,
-		Body: readSpecFixture(t, referenceAggregationRequest),
+		Body: marshal(t, obj),
 	})
 
 	require.Equal(t, RunStatusSuccess, result.Status)
@@ -131,7 +129,7 @@ func TestRunner_RunAggregation(t *testing.T) {
 	job := mock.jobs[0]
 	assert.Equal(t, backend.ProofTypeRollupAggregation, job.Type)
 	assert.Equal(t, uint64(10), job.StartBlock)
-	assert.Equal(t, uint64(18), job.EndBlock)
+	assert.Equal(t, testRollupPublicInputs.EndBlockNumber, job.EndBlock, "the end block of the last embedded proof")
 
 	resp, ok := result.ResponseBody.(aggregationResponse)
 	require.True(t, ok)
@@ -159,7 +157,7 @@ func TestRunner_RunAggregation_Malformed(t *testing.T) {
 // guest output, and that dev-mock, which builds no input, accepts it.
 func TestRunner_RunRollup_InvalidGuestOutput(t *testing.T) {
 	withGuestOutput := func(mutate func(out []byte) []byte) []byte {
-		obj := unmarshalObject(t, readSpecFixture(t, rollupRequestGuestOutput))
+		obj := unmarshalObject(t, readSpecFixture(t, referenceRollupRequest))
 		proof := obj[proofRequestKey].(map[string]any)[l2ExecutionProofsKey].([]any)[0].(map[string]any)
 		proof[guestOutputKey] = hexBytes(mutate(mustHex(t, proof[guestOutputKey].(string))))
 		return marshal(t, obj)
