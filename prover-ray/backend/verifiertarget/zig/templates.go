@@ -1,4 +1,4 @@
-package codegen
+package zig
 
 import (
 	"embed"
@@ -21,7 +21,7 @@ var zigTemplateFuncs = template.FuncMap{
 	"octuplet":   pcsOctupletLiteral,
 	"refs":       publicInputRefs,
 	"shifts":     intArray,
-	"zig":        ZigString,
+	"zig":        EscapeString,
 }
 
 // executeZigTemplate renders templates/<name>.zig.tmpl with data to w.

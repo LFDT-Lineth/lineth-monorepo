@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/verifiertarget/zig"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
 )
 
 // Emits the runtime PCS opening fixture for verify.zig. The compile-time
-// `pcs.System` is emitted separately by `codegen.WritePcsSystemZig`.
+// `pcs.System` is emitted separately by `zig.WritePcsSystemZig`.
 
 // pcsOpeningZigLiteral renders `verifier.PcsOpening{ .proof = ... }`.
 //
@@ -174,9 +174,9 @@ func elemArrayLiteral(values []field.Element) string {
 
 // writePcsSystemZig emits the compile-time PCS system for a scenario and
 // returns the const name.
-func writePcsSystemZig(out *bytes.Buffer, prefix string, sys *codegen.PcsSystem) string {
+func writePcsSystemZig(out *bytes.Buffer, prefix string, sys *zig.PcsSystem) string {
 	constPrefix := prefix + "_pcs_"
-	_ = codegen.WritePcsSystemZigWithOptions(out, 0, *sys, codegen.PcsZigOptions{
+	_ = zig.WritePcsSystemZigWithOptions(out, 0, *sys, zig.PcsZigOptions{
 		PcsImport:   "pcs",
 		FriImport:   "fri",
 		FieldImport: "field",

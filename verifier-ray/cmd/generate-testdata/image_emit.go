@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/verifiertarget/zig"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
@@ -16,7 +16,7 @@ import (
 // in verify.zig (image_case_index), so the image and the system come from the same compilation.
 //
 // The devmode system is too small to stand in: its proof has no FRI folding.
-func fixtureProofImage(cases []fixtureCase, systems []codegen.CompiledSystem) (int, []byte, error) {
+func fixtureProofImage(cases []fixtureCase, systems []zig.CompiledSystem) (int, []byte, error) {
 	for i, tc := range cases {
 		if tc.sys == nil {
 			continue
@@ -54,7 +54,7 @@ func imageCoversTests(in proofserialization.VerifyInput) bool {
 // hasPresentBatch0Column reports whether the honest manifest commits a column of batch 0, the
 // column the manifest-flip test elides. Batch 0's manifest is one cell per column of the batch, in
 // column order, from cell CellStart of round Round.
-func hasPresentBatch0Column(tc fixtureCase, compiled codegen.CompiledSystem, cells map[wiop.ObjectID]field.Gen) bool {
+func hasPresentBatch0Column(tc fixtureCase, compiled zig.CompiledSystem, cells map[wiop.ObjectID]field.Gen) bool {
 	if compiled.Pcs == nil || len(compiled.Pcs.BatchManifests) == 0 || compiled.Pcs.BatchManifests[0] == nil {
 		return false
 	}

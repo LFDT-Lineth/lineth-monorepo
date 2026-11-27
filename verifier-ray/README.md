@@ -28,7 +28,7 @@ testdata/fixture_proof_image.bin
 `verify.zig` and the fixture image are written by `cmd/generate-testdata/`. The
 devmode system and its image are written by prover-ray's
 `prover verifier-assets --system devmode` command, from the code
-generator in `prover-ray/verifierray/codegen`, so a circuit change in prover-ray
+generator in `prover-ray/backend/verifiertarget/zig`, so a circuit change in prover-ray
 needs no change here.
 
 Regenerate all generated Zig fixtures from the prover-ray checkout next to this

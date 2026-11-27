@@ -17,9 +17,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/verifiertarget/zig"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
@@ -105,7 +105,7 @@ type fixtureCase struct {
 	name string
 	// pcs is the compile-time PCS System baked once for this case; every proof
 	// of this case (honest, invalid, alt) verifies against it.
-	pcs     *codegen.PcsSystem
+	pcs     *zig.PcsSystem
 	honest  proofFixture
 	invalid *proofFixture
 	// invalidVerify is a SELF-CONSISTENT failing proof. Unlike invalid — which
@@ -175,19 +175,19 @@ func compileFullPipeline(sys *wiop.System, pcsOpts ...pcscompiler.Option) error 
 	return compilers.CompileFull(sys, compilers.ConfigurePCS(pcsOpts...))
 }
 
-func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
+func buildCompiledFixtureCases() ([]fixtureCase, []zig.CompiledSystem, error) {
 	var cases []fixtureCase
-	var systems []codegen.CompiledSystem
+	var systems []zig.CompiledSystem
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		if err := compileFullPipeline(sys); err != nil {
 			return fmt.Errorf("compile %s/%s: %w", source, name, err)
 		}
 		// Fail closed on any verifier action the codegen does not know how to emit.
-		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+		if err := zig.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		compiled, err := codegen.BuildCompiledSystem(sys)
+		compiled, err := zig.BuildCompiledSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
@@ -222,10 +222,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := compileFullPipeline(sys, pcsOpts...); err != nil {
 			return fmt.Errorf("compile %s/%s: %w", source, name, err)
 		}
-		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+		if err := zig.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		compiled, err := codegen.BuildCompiledSystem(sys)
+		compiled, err := zig.BuildCompiledSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
@@ -256,10 +256,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	// buildMessageBusFixtureCase): it skips compileFullPipeline, which would
 	// wrongly compile the already-compiled system a second time.
 	addPrecompiled := func(source, name string, sys *wiop.System, honest, invalid assignFn) error {
-		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+		if err := zig.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		compiled, err := codegen.BuildCompiledSystem(sys)
+		compiled, err := zig.BuildCompiledSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
@@ -566,7 +566,7 @@ func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column, error) 
 // the parallel cases/systems slices buildCompiledFixtureCases maintains.
 type messageBusFixtureCase struct {
 	tc       fixtureCase
-	compiled codegen.CompiledSystem
+	compiled zig.CompiledSystem
 }
 
 // buildMessageBusSharedRandomnessSystem builds a size-4 Send/Receive
@@ -643,16 +643,16 @@ func addMessageBusSharedRandomness(reg func(name string, sys *wiop.System, hones
 // since this system is already fully compiled by
 // buildMessageBusSharedRandomnessSystem. The invalid fixture is the honest
 // proof's fixture with exactly one of the 328 shared-randomness contribution
-// public-input cells flipped — codegen.BuildSharedRandomnessSystem's
+// public-input cells flipped — zig.BuildSharedRandomnessSystem's
 // ContributionRefs give the (round, index) transcript coordinates of those
 // cells, and sys.LookupPublicInputByTag resolves the matching index into
 // view.publicInputs (registration order == statement order, per
 // wiop.System.PublicInputs/LookupPublicInputByTag).
 func buildMessageBusFixtureCase(name string, sys *wiop.System, honest assignFn) (messageBusFixtureCase, error) {
-	if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+	if err := zig.AssertAllVerifierActionsHandled(sys); err != nil {
 		return messageBusFixtureCase{}, fmt.Errorf("verifier actions MessageBus/%s: %w", name, err)
 	}
-	compiled, err := codegen.BuildCompiledSystem(sys)
+	compiled, err := zig.BuildCompiledSystem(sys)
 	if err != nil {
 		return messageBusFixtureCase{}, fmt.Errorf("build compiled system MessageBus/%s: %w", name, err)
 	}
@@ -882,7 +882,7 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 	return vanishingProofView{
 		rounds:       rounds,
 		publicInputs: publicInputs,
-		moduleSizes:  codegen.DynamicModuleSizes(sys, rt),
+		moduleSizes:  zig.DynamicModuleSizes(sys, rt),
 	}
 }
 
@@ -1019,7 +1019,7 @@ func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round, publicInp
 
 // renderVerifyFixtures returns the formatted Zig source of verify.zig: every case with its compiled
 // system and proofs, and image_case_index, the case the fixture proof image encodes.
-func renderVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem, imageCase int) ([]byte, error) {
+func renderVerifyFixtures(cases []fixtureCase, systems []zig.CompiledSystem, imageCase int) ([]byte, error) {
 	// verify.zig drives the mandatory-PCS verifier.verify, the only consumer of
 	// these fixtures: a case without a PCS System could not be verified, so it
 	// is an error rather than silently dropped.
@@ -1031,7 +1031,7 @@ func renderVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem,
 
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
-	opts := codegen.CompiledSystemZigOptions{
+	opts := zig.CompiledSystemZigOptions{
 		EmitHeader:         false,
 		ProtocolImport:     "protocol",
 		FieldImport:        "field",
@@ -1042,7 +1042,7 @@ func renderVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem,
 	}
 
 	for i := range cases {
-		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
+		if err := zig.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
 			return nil, err
 		}
 		writeVerifyCase(&out, i, cases[i])
@@ -1054,7 +1054,7 @@ func renderVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem,
 	fmt.Fprintf(&out, "\n/// The case whose honest proof testdata/fixture_proof_image.bin encodes (%s).\n", cases[imageCase].name)
 	fmt.Fprintf(&out, "pub const image_case_index: usize = %d;\n", imageCase)
 
-	return codegen.FormatZig(out.Bytes())
+	return zig.FormatZig(out.Bytes())
 }
 
 func writeVerifyHeader(out *bytes.Buffer, count int) {
@@ -1197,13 +1197,13 @@ func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round 
 	fmt.Fprintln(out)
 }
 
-func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []codegen.CompiledSystem) {
+func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []zig.CompiledSystem) {
 	fmt.Fprintln(out, "pub const metadata = [_]VerifyCaseMetadata{")
 	for i, tc := range cases {
 		vanishingSystem := systems[i].Vanishing
 		expressionCount, bucketCount, vanishingCount := vanishingBenchCounts(vanishingSystem)
 		fmt.Fprintf(out, "    .{ .name = \"%s\", .module_count = %d, .dynamic_module_count = %d, .round_count = %d, .expression_count = %d, .bucket_count = %d, .vanishing_count = %d, .total_witness_claims = %d, .total_quotient_claims = %d },\n",
-			codegen.ZigString(tc.name),
+			zig.EscapeString(tc.name),
 			len(vanishingSystem.Modules),
 			vanishingSystem.DynamicModuleCount,
 			len(systems[i].Routing.RoundCoinCounts),
@@ -1226,7 +1226,7 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 			out,
 			"        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n",
 			i,
-			codegen.ZigString(tc.name),
+			zig.EscapeString(tc.name),
 			i,
 			i,
 		)
@@ -1262,7 +1262,7 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 		if tc.invalid != nil {
 			fmt.Fprintf(out, "        %d => verify_case_%d_failing_input,\n", i, i)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, zig.EscapeString(tc.name))
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1294,7 +1294,7 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 		if tc.invalidVerify != nil {
 			fmt.Fprintf(out, "        %d => verify_case_%d_failing_verify_input,\n", i, i)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, zig.EscapeString(tc.name))
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1319,9 +1319,9 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.invalidVerify != nil {
-			fmt.Fprintf(out, "        %d => \"%s\",\n", i, codegen.ZigString(tc.invalidVerifyError))
+			fmt.Fprintf(out, "        %d => \"%s\",\n", i, zig.EscapeString(tc.invalidVerifyError))
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, zig.EscapeString(tc.name))
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1348,7 +1348,7 @@ func writeAltGetter(out *bytes.Buffer, cases []fixtureCase, suffix, fieldPrefix,
 		if get(tc) != nil {
 			fmt.Fprintf(out, "        %d => verify_case_%d_%s_input,\n", i, i, fieldPrefix)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no %s\"),\n", i, i, codegen.ZigString(tc.name), missingLabel)
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no %s\"),\n", i, i, zig.EscapeString(tc.name), missingLabel)
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1367,7 +1367,7 @@ func writeAltGetter(out *bytes.Buffer, cases []fixtureCase, suffix, fieldPrefix,
 	fmt.Fprintln(out)
 }
 
-func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {
+func vanishingBenchCounts(system zig.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {
 	for _, module := range system.Modules {
 		expressionCount += len(module.Expressions)
 		bucketCount += len(module.Buckets)

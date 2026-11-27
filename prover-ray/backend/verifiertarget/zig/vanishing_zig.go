@@ -1,4 +1,4 @@
-package codegen
+package zig
 
 import (
 	"fmt"
@@ -134,14 +134,14 @@ func exprNodeLiteral(expr ExprNode) string {
 	switch expr.Kind {
 	case ExprColumnClaim:
 		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"",
-			checkIndex(expr.ColumnClaim, "column claim"), ZigString(expr.ColumnSourceName))
+			checkIndex(expr.ColumnClaim, "column claim"), EscapeString(expr.ColumnSourceName))
 	case ExprCellValue:
 		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"",
 			checkIndex(expr.Cell.Round, "cell round"), checkIndex(expr.Cell.Index, "cell index"),
-			ZigString(expr.Cell.SourceName))
+			EscapeString(expr.Cell.SourceName))
 	case ExprCoinValue:
 		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"",
-			checkIndex(expr.Coin.FlatIndex, "coin index"), ZigString(expr.Coin.SourceName))
+			checkIndex(expr.Coin.FlatIndex, "coin index"), EscapeString(expr.Coin.SourceName))
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = .{ .value = %d } },", expr.Constant.Uint64())
 	case ExprOp:
@@ -184,6 +184,7 @@ func intArray(values []int) string {
 	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
-func ZigString(value string) string {
+// EscapeString escapes value for use inside a Zig string literal.
+func EscapeString(value string) string {
 	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(value)
 }

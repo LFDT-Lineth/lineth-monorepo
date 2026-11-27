@@ -1,4 +1,4 @@
-package codegen
+package zig
 
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"

@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/verifierray/codegen"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/verifiertarget/zig"
 )
 
 // runVerifierAssets writes the verifier-ray assets of one prover-ray system: the generated Zig
 // system (--zig) and, with --image, the proof image of an honest proof of it.
 func runVerifierAssets(args []string, log io.Writer) error {
 	fs := flag.NewFlagSet("prover verifier-assets", flag.ContinueOnError)
-	system := fs.String("system", "", "system to generate: "+strings.Join(codegen.AssetSystems, ", ")+" (required)")
+	system := fs.String("system", "", "system to generate: "+strings.Join(zig.AssetSystems, ", ")+" (required)")
 	zigPath := fs.String("zig", "", "path of the generated Zig system (required)")
 	imagePath := fs.String("image", "", "path of the honest proof image; no proof is made when empty")
 	if err := fs.Parse(args); err != nil {
@@ -31,7 +31,7 @@ func runVerifierAssets(args []string, log io.Writer) error {
 		return fmt.Errorf("--zig is required")
 	}
 
-	assets, err := codegen.BuildVerifierAssets(*system, *imagePath != "")
+	assets, err := zig.BuildVerifierAssets(*system, *imagePath != "")
 	if err != nil {
 		return err
 	}
