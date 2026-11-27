@@ -141,7 +141,11 @@ class PreRiscvProofAggregationClient(
       responseFileNameProvider = AggregationProofFileNameProvider,
       enableRequestFilesCleanup = enableRequestFilesCleanup,
     ),
-    proofIndexProvider = createProofIndexProviderFn(hashFunction),
+    proofIndexProvider = createProofIndexProviderFn(
+      hashFunction = hashFunction,
+      executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
+      compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
+    ),
     requestMapper = AggregationRequestDtoMapper(
       executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
       compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
