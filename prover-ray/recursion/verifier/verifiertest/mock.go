@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math/bits"
 	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
@@ -74,6 +75,9 @@ func (s shape) equal(o shape) bool {
 // verification and compute the verdict anyway. Never on a production path.
 type Mock struct {
 	shape shape
+	// heights records that Define was given the heights of the child's
+	// modules: Assign then puts the heights of its system in the verdict.
+	heights bool
 }
 
 // NewMock returns the mock verifier of the proofs of the systems of sys's
@@ -103,22 +107,29 @@ func (v *Mock) Allocate(m *recursion.Machine) verifier.ProofCells {
 }
 
 // Define implements [verifier.Verifier]: the verdict is the digest of the
-// key, the public inputs and the commitments, laid out as Pack does, which
-// [Mock.Assign] computes with poseidon2.MDHasher.
-func (v *Mock) Define(m *recursion.Machine, key int, proof verifier.ProofCells) []int {
+// key (its root and heights), the public inputs and the commitments, laid out
+// as Pack does, which [Mock.Assign] computes with poseidon2.MDHasher.
+func (v *Mock) Define(m *recursion.Machine, key verifier.Key, proof verifier.ProofCells) ([]int, error) {
 	n := len(v.shape.pubs)
 	if len(proof) != n+v.shape.commitments+1 {
-		panic(fmt.Sprintf("verifier: %d proof cells, want %d", len(proof), n+v.shape.commitments+1))
+		return nil, fmt.Errorf("verifier: %d proof cells, want %d", len(proof), n+v.shape.commitments+1)
 	}
+	if key.Heights != nil && len(key.Heights) != len(v.shape.modules) {
+		return nil, fmt.Errorf("verifier: %d heights, want %d", len(key.Heights), len(v.shape.modules))
+	}
+	v.heights = key.Heights != nil
 	pubs, commitments, verdict := proof[:n], proof[n:n+v.shape.commitments], proof[n+v.shape.commitments]
-	items := append([]int{key}, pubs...)
-	kinds := append([]int{recursion.KindDigest}, v.shape.pubs...)
+	items, kinds := []int{key.Root}, []int{recursion.KindDigest}
+	for _, h := range key.Heights {
+		items, kinds = append(items, h), append(kinds, recursion.KindScalar)
+	}
+	items, kinds = append(items, pubs...), append(kinds, v.shape.pubs...)
 	for _, c := range commitments {
 		items = append(items, c)
 		kinds = append(kinds, recursion.KindDigest)
 	}
 	verifier.AssertEqDigest(m, m.MDHash(m.Pack(items, kinds)), verdict)
-	return slices.Clone([]int(pubs))
+	return slices.Clone([]int(pubs)), nil
 }
 
 // Assign implements [verifier.Verifier]: it checks that sys has the mock's
@@ -139,6 +150,11 @@ func (v *Mock) Assign(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) 
 	}
 	cells := make([]recursion.Cell, 0, len(pub)+v.shape.commitments+1)
 	elements := append([]field.Element(nil), sys.PrecomputedCommitment[:]...)
+	if v.heights {
+		for _, mod := range sys.Modules {
+			elements = append(elements, field.NewElement(uint64(bits.TrailingZeros(uint(mod.Size())))))
+		}
+	}
 	for pos, kind := range v.shape.pubs {
 		var c recursion.Cell
 		switch {
