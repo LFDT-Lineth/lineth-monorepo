@@ -3,8 +3,10 @@ package recursion
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/consensys/gnark/frontend"
 )
 
 // Setup columns of the public chip.
@@ -95,7 +97,7 @@ func (c publicChip) trace(cs *cols, r *Run) error {
 // recomposition cannot be a constraint, and the lanes alone are bound by their
 // openings. Every verifier of a program must run it: verifier-ray's codegen
 // (which rejects an action it does not handle), the in-machine verifier, and
-// gnark should a program ever be wrapped.
+// the gnark wrapper, through [E6Check.CheckGnark].
 type E6Check struct {
 	Cell  *wiop.Cell
 	Lanes []*wiop.Cell
@@ -116,4 +118,27 @@ func (c *E6Check) Check(rt *wiop.Runtime) error {
 		return fmt.Errorf("recursion: public input %q is not the E6 value of its lanes", c.Cell.Context.Path())
 	}
 	return nil
+}
+
+// CheckGnark implements [wiop.GnarkVerifierAction]: the in-circuit Check. A
+// lane the proof carries as an extension element is a shape the circuit cannot
+// bind to a base lane, so it panics; a value mismatch is unsatisfiable.
+func (c *E6Check) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
+	if len(c.Lanes) != KindE6 {
+		panic(fmt.Sprintf("recursion: E6Check of %q has %d lanes", c.Cell.Context.Path(), len(c.Lanes)))
+	}
+	var lanes [KindE6]circuit.Element
+	for l, lane := range c.Lanes {
+		v, ok := run.GetCellBase(lane)
+		if !ok {
+			panic(fmt.Sprintf("recursion: public input %q: lane %d is not a base field element", c.Cell.Context.Path(), l))
+		}
+		lanes[l] = v
+	}
+	want := circuit.Ext{
+		B0: circuit.E2{A0: lanes[0], A1: lanes[1]},
+		B1: circuit.E2{A0: lanes[2], A1: lanes[3]},
+		B2: circuit.E2{A0: lanes[4], A1: lanes[5]},
+	}
+	run.API().AssertIsEqualExt(want, run.GetCellValue(c.Cell))
 }

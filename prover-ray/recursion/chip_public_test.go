@@ -5,6 +5,8 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,5 +117,48 @@ func TestPublic_KindPanics(t *testing.T) {
 	a := m.InputDigest()
 	for _, kind := range []int{0, 3, 9} {
 		require.Panics(t, func() { m.Public(a, kind, "A", 0) }, "kind %d", kind)
+	}
+}
+
+// TestPublic_Gnark checks that the gnark verifier circuit of a program with
+// public inputs can be built from its system, accepts an honest proof, and
+// rejects a forgery of each lane of an E6 public input in E6Check's CheckGnark, the only check
+// binding it to the proof.
+func TestPublic_Gnark(t *testing.T) {
+	// One honest run (forged < 0) and one run per forged lane, each on a
+	// freshly compiled program, since forging patches the system's assigner.
+	for forged := -1; forged < KindE6; forged++ {
+		m, _ := publicProgram()
+		p, err := m.Compile(testPCSOpts...)
+		require.NoError(t, err)
+		// Forge one lane of Y through its cell's assigner, so the transcript
+		// absorbs the forged value and only E6Check can tell it from the lanes.
+		if forged >= 0 {
+			cell, _ := p.Sys.LookupPublicInputByTag("Y", 0)
+			honest := cell.Assigner
+			cell.Assigner = func(rt *wiop.Runtime) field.Gen {
+				c := E6Cell(honest(rt).AsExt())
+				c[forged].Add(&c[forged], new(field.Element).SetOne())
+				return field.ElemFromExt(CellE6(c))
+			}
+		}
+		r, err := p.Execute(publicInputs())
+		require.NoError(t, err)
+		proof, pub := p.Prove(r)
+
+		// The circuit comes from the system alone; the proof only fills the
+		// assignment. A separate allocation is solved, since solving writes
+		// into the circuit. The test engine is used over a compiled constraint
+		// system because its errors carry the stack of the failing assertion.
+		assignment := wiop.AllocateVerifierCircuit(p.Sys).AssignVerifierCircuit(proof, pub)
+		err = test.IsSolved(wiop.AllocateVerifierCircuit(p.Sys), assignment, ecc.BN254.ScalarField())
+		if forged < 0 {
+			require.NoError(t, err, "an honest proof should satisfy the circuit")
+			continue
+		}
+		require.Error(t, err, "lane %d: a forged E6 public input should not satisfy the circuit", forged)
+		// The failing assertion must be E6Check's, not some other check that
+		// happens to reject the proof.
+		require.Contains(t, err.Error(), "recursion.(*E6Check).CheckGnark", "lane %d: it should be rejected by E6Check", forged)
 	}
 }
