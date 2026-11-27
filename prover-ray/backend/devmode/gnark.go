@@ -7,8 +7,68 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
+	plonkbn254 "github.com/consensys/gnark/backend/plonk/bn254"
+	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/test/unsafekzg"
 )
+
+// gnarkToxicSeed seeds the unsafe KZG SRS of [GnarkSetup]. PLONK setup has no
+// other randomness, so a fixed seed gives the same keys on every run.
+var gnarkToxicSeed = []byte("lineth-devmode-gnark")
+
+// GnarkSetup compiles [GnarkCircuit] and runs the PLONK setup over BN254 on an
+// unsafe KZG SRS from a fixed seed: the keys are the same on every run, and
+// anyone can forge proofs under them (test/dev builds only).
+func GnarkSetup() (constraint.ConstraintSystem, plonk.ProvingKey, plonk.VerifyingKey, error) {
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &GnarkCircuit{})
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("devmode: compiling the gnark circuit: %w", err)
+	}
+	srs, srsLagrange, err := unsafekzg.NewSRS(ccs, unsafekzg.WithToxicSeed(gnarkToxicSeed))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("devmode: building the KZG SRS: %w", err)
+	}
+	pk, vk, err := plonk.Setup(ccs, srs, srsLagrange)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("devmode: PLONK setup: %w", err)
+	}
+	return ccs, pk, vk, nil
+}
+
+// GnarkProve proves [GnarkCircuit] with PLONK over BN254 for the devmode public
+// inputs pub of a proof over sys, under the keys of [GnarkSetup].
+func GnarkProve(sys *wiop.System, pub wiop.PublicInput) (plonk.Proof, error) {
+	if len(pub) != NumPublicInputs {
+		return nil, fmt.Errorf("devmode: GnarkProve: got %d public inputs, want %d", len(pub), NumPublicInputs)
+	}
+	ccs, pk, _, err := GnarkSetup()
+	if err != nil {
+		return nil, err
+	}
+	w, err := frontend.NewWitness(NewGnarkAssignment(sys, pub), ecc.BN254.ScalarField())
+	if err != nil {
+		return nil, fmt.Errorf("devmode: gnark witness: %w", err)
+	}
+	proof, err := plonk.Prove(ccs, pk, w)
+	if err != nil {
+		return nil, fmt.Errorf("devmode: PLONK prove: %w", err)
+	}
+	return proof, nil
+}
+
+// GnarkEncode writes a proof of [GnarkProve] in the layout the gnark Solidity
+// verifier reads.
+func GnarkEncode(proof plonk.Proof) ([]byte, error) {
+	p, ok := proof.(*plonkbn254.Proof)
+	if !ok {
+		return nil, fmt.Errorf("devmode: GnarkEncode: got a %T, want a BN254 PLONK proof", proof)
+	}
+	return p.MarshalSolidity(), nil
+}
 
 // GnarkCircuit is the gnark (BN254 PLONK) statement of dev mode. It exposes the
 // same two public inputs as the wiop wrapper circuit: the packed guest output

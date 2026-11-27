@@ -12,8 +12,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/frontend/cs/scs"
-	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,9 +64,10 @@ func TestPack(t *testing.T) {
 	require.Equal(t, want.Mod(want, r), devmode.PackProgramVK(vk))
 }
 
-// TestGnarkCircuit_PLONKProve proves and verifies the devmode gnark circuit
-// over BN254 on public inputs from [devmode.Prove], and checks that the proof
-// is rejected under a changed public input. The SRS comes from [unsafekzg].
+// TestGnarkCircuit_PLONKProve verifies the proof of [devmode.GnarkProve] on
+// public inputs from [devmode.Prove] under the key of a
+// separate [devmode.GnarkSetup], so the keys are the same on every setup. It
+// also checks that the proof is rejected under a changed public input.
 func TestGnarkCircuit_PLONKProve(t *testing.T) {
 	modulus := ecc.BN254.ScalarField()
 
@@ -77,20 +76,13 @@ func TestGnarkCircuit_PLONKProve(t *testing.T) {
 	_, pub, err := devmode.Prove(sys, gnarkPub())
 	require.NoError(t, err)
 
-	ccs, err := frontend.Compile(modulus, scs.NewBuilder, &devmode.GnarkCircuit{})
-	require.NoError(t, err)
-	srs, srsLagrange, err := unsafekzg.NewSRS(ccs)
-	require.NoError(t, err)
-	pk, vk, err := plonk.Setup(ccs, srs, srsLagrange)
+	ccs, pk, vk, err := devmode.GnarkSetup()
 	require.NoError(t, err)
 
-	assignment := devmode.NewGnarkAssignment(sys, pub)
-	w, err := frontend.NewWitness(assignment, modulus)
-	require.NoError(t, err)
-	public, err := w.Public()
+	proof, err := devmode.GnarkProve(sys, pub)
 	require.NoError(t, err)
 
-	proof, err := plonk.Prove(ccs, pk, w)
+	public, err := frontend.NewWitness(devmode.NewGnarkAssignment(sys, pub), modulus, frontend.PublicOnly())
 	require.NoError(t, err)
 	t.Logf("constraints=%d", ccs.GetNbConstraints())
 	require.NoError(t, plonk.Verify(proof, vk, public), "PLONK proof must verify")
