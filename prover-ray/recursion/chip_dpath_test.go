@@ -3,7 +3,6 @@ package recursion
 import (
 	"fmt"
 	"math/rand/v2"
-	"sort"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
@@ -28,17 +27,6 @@ type dpathValues struct {
 	root    Cell
 }
 
-// canonicalOrder returns the groups by decreasing height, equal heights by
-// increasing index.
-func canonicalOrder(heights []int) []int {
-	order := make([]int, len(heights))
-	for g := range order {
-		order[g] = g
-	}
-	sort.SliceStable(order, func(a, b int) bool { return heights[order[a]] > heights[order[b]] })
-	return order
-}
-
 // dpRand is a source of random cells.
 type dpRand struct{ *rand.Rand }
 
@@ -60,7 +48,7 @@ func (r dpRand) cell() Cell {
 func dpathTree(t *testing.T, heights []int, seed uint64) dpathValues {
 	t.Helper()
 	rnd := dpRand{rand.New(rand.NewPCG(seed, 31))}
-	order := canonicalOrder(heights)
+	order := canonical(heights)
 	top := heights[order[0]]
 	digests := make([][]Cell, len(heights))
 	for g, h := range heights {
@@ -247,7 +235,7 @@ func groupedValues(t *testing.T, table fri.MultiSizeTable, logSizes []int, s uin
 		alone[size] = fri.SizedTable{Base: table[size].Base[col : col+g+1], Groups: []fri.GroupShape{{BaseWidth: g + 1}}}
 		v.leaves = append(v.leaves, Cell(alone.Merkleize(fri.MerkleHashKoalaBear).OpenBranch(i>>(top-l)).Leaf))
 	}
-	v.order = canonicalOrder(v.heights)
+	v.order = canonical(v.heights)
 	branch := tree.OpenBranch(i)
 	for h := 1; h <= top; h++ {
 		v.sibs[h-1] = Cell(branch.Siblings[h-1])
