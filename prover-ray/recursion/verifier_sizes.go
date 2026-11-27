@@ -20,15 +20,30 @@ type dynSize struct {
 	mod     *wiop.Module
 	log, n  int // the cells of ℓ and n
 	minLog  int // the log of the module's MinRuntimeSize
-	inputID int // the index of ℓ's input in Verifier.inputs
+	inputID int // the index of ℓ's input in Verifier.inputs, -1 if ℓ is not an input
 }
 
 // allocSizes allocates the input of every dynamic module's size, in module
 // order, and derives its size cell.
+//
+// With VerifierOptions.Heights, a sized module's size is a cell too: its log
+// is the caller's cell, not an input, and is not absorbed in the transcript.
+// It goes through the same tables as a dynamic module's, from its
+// MinRuntimeSize, from which its openings have one shape: the bound a
+// dynamic module has, and that pcs.ObliviousOpening checks on the verifier's
+// own system only.
 func (v *Verifier) allocSizes() {
 	mins := v.sys.MinRuntimeSizes()
+	sized := 0
 	for k, mod := range v.sys.Modules {
 		if !mod.IsDynamic() {
+			if v.opts.Heights != nil {
+				minLog := bits.TrailingZeros(uint(mod.MinRuntimeSize()))
+				d := &dynSize{mod: mod, log: v.opts.Heights[sized], minLog: minLog, inputID: -1}
+				d.n = v.sizeConstFrom(d, minLog, "size", func(n int) field.Element { return field.NewElement(uint64(n)) })
+				v.heights[mod] = d
+			}
+			sized++
 			continue
 		}
 		minLog := bits.TrailingZeros(uint(mins[k]))
@@ -58,10 +73,12 @@ func (v *Verifier) logSize(mod *wiop.Module) int {
 	return v.scalarInt(bits.Len(uint(utils.NextPowerOfTwo(mod.Size()) - 1)))
 }
 
-// dyn returns the size of a dynamic module, nil for a sized one.
+// dyn returns the size of a module whose size is a cell: a dynamic module,
+// or a sized one with VerifierOptions.Heights. It returns nil for a module of
+// constant size.
 func (v *Verifier) dyn(mod *wiop.Module) *dynSize {
 	if !mod.IsDynamic() {
-		return nil
+		return v.heights[mod]
 	}
 	for _, k := range v.sizeOrder {
 		if d := v.sizes[k]; d.mod == mod {
