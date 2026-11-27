@@ -160,9 +160,11 @@ type Result struct {
 	// ResultStatusOK.
 	ProofBytes []byte
 
-	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job.
-	PublicInputs       PublicInputs
-	RollupPublicInputs RollupPublicInputs
+	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job,
+	// AggregationPublicInputs for an aggregation job.
+	PublicInputs            PublicInputs
+	RollupPublicInputs      RollupPublicInputs
+	AggregationPublicInputs AggregationPublicInputs
 
 	// GuestOutput is the guest's output (hash || frame) in dev-zkvm and
 	// dev-partial, for the response and the runner's native runner check. nil

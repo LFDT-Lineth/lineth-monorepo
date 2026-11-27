@@ -62,6 +62,8 @@ func outputSchemaID(t ProofType) (uint16, error) {
 		return l2ExecutionOutputSchemaID, nil
 	case ProofTypeRollup:
 		return rollupOutputSchemaID, nil
+	case ProofTypeRollupAggregation:
+		return aggregationOutputSchemaID, nil
 	}
 	return 0, fmt.Errorf("no guest output format for proof type %q: %w", t, ErrNotImplemented)
 }
@@ -289,8 +291,11 @@ func (c *Core) proveDevMock(job Job) Result {
 		ProofBytes:   DevMarkerProof(ProverModeDevMock),
 		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
-	if job.Type == ProofTypeRollup {
+	switch job.Type {
+	case ProofTypeRollup:
 		result.RollupPublicInputs.EndBlockNumber = job.EndBlock
+	case ProofTypeRollupAggregation:
+		result.AggregationPublicInputs.EndBlockNumber = job.EndBlock
 	}
 	return result
 }
@@ -320,12 +325,13 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	}
 
 	return Result{
-		JobID:              job.ID,
-		Status:             ResultStatusOK,
-		ProofBytes:         proofBytes,
-		PublicInputs:       pi.execution,
-		RollupPublicInputs: pi.rollup,
-		GuestOutput:        out,
+		JobID:                   job.ID,
+		Status:                  ResultStatusOK,
+		ProofBytes:              proofBytes,
+		PublicInputs:            pi.execution,
+		RollupPublicInputs:      pi.rollup,
+		AggregationPublicInputs: pi.aggregation,
+		GuestOutput:             out,
 	}
 }
 
@@ -365,13 +371,14 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	}
 
 	return Result{
-		JobID:              job.ID,
-		Status:             ResultStatusOK,
-		ProofBytes:         proofBytes,
-		PublicInputs:       pi.execution,
-		RollupPublicInputs: pi.rollup,
-		GuestOutput:        out,
-		ProgramVK:          c.programVK(root.Pub),
+		JobID:                   job.ID,
+		Status:                  ResultStatusOK,
+		ProofBytes:              proofBytes,
+		PublicInputs:            pi.execution,
+		RollupPublicInputs:      pi.rollup,
+		AggregationPublicInputs: pi.aggregation,
+		GuestOutput:             out,
+		ProgramVK:               c.programVK(root.Pub),
 	}
 }
 
@@ -470,10 +477,12 @@ func executeGuest(
 	return classifyGuestOutput(output, errs, schema)
 }
 
-// guestPublicInputs holds the l2-execution or the rollup public inputs, by proof type.
+// guestPublicInputs holds the l2-execution, the rollup or the aggregation public
+// inputs, by proof type.
 type guestPublicInputs struct {
-	execution PublicInputs
-	rollup    RollupPublicInputs
+	execution   PublicInputs
+	rollup      RollupPublicInputs
+	aggregation AggregationPublicInputs
 }
 
 // executeGuestPublicInputs runs the guest under zkc Execute and returns its
@@ -490,9 +499,12 @@ func executeGuestPublicInputs(
 		return nil, pi, err
 	}
 	out = guestOutput.Bytes()
-	if schema == rollupOutputSchemaID {
+	switch schema {
+	case rollupOutputSchemaID:
 		pi.rollup, err = decodeRollupPublicInputs(out[guestOutputHashSize:])
-	} else {
+	case aggregationOutputSchemaID:
+		pi.aggregation, err = decodeAggregationPublicInputs(out[guestOutputHashSize:])
+	default:
 		pi.execution, err = decodeGuestPublicInputs(out[guestOutputHashSize:])
 	}
 	if err != nil {

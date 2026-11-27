@@ -113,6 +113,7 @@ func TestProveDevPartial(t *testing.T) {
 		assert.ErrorContains(t, result.Err, "fixed head")
 	})
 	testProveRollup(t, ProverModeDevPartial)
+	testProveAggregation(t, ProverModeDevPartial)
 }
 
 func TestNew_DevPartialNeedsGuestsDir(t *testing.T) {

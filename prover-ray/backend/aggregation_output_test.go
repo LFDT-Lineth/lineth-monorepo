@@ -14,6 +14,9 @@ const (
 	// referenceAggregationResponse is the spec's reference aggregation response.
 	referenceAggregationResponse = "../../rollup_spec/src/rollup_spec/prover_io/testdata/" +
 		"10-18-getZkRollupAggregationProofV1.response.json"
+	// referenceAggregationOutput encodes its public inputs
+	// (utils/ssz/testdata/generate.py).
+	referenceAggregationOutput = "../utils/ssz/testdata/aggregation_output.ssz"
 	// guestAggregationOutput is the aggregation guest's output for its committed
 	// sample request.
 	guestAggregationOutput = "../../riscv-guests/rollup_aggregation/test/testdata/sample.output.bin"
@@ -127,7 +130,7 @@ func TestDecodeAggregationPublicInputs(t *testing.T) {
 		output string
 		want   AggregationPublicInputs
 	}{
-		"reference": {"../utils/ssz/testdata/aggregation_output.ssz", referenceAggregationPublicInputs(t)},
+		"reference": {referenceAggregationOutput, referenceAggregationPublicInputs(t)},
 		"offsets":   {"../utils/ssz/testdata/aggregation_output_offsets.ssz", withOffsets},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -151,7 +154,7 @@ func TestDecodeAggregationPublicInputs_GuestOutput(t *testing.T) {
 }
 
 func TestDecodeAggregationPublicInputs_Rejects(t *testing.T) {
-	_, framed := aggregationFrame(t, "../utils/ssz/testdata/aggregation_output.ssz")
+	_, framed := aggregationFrame(t, referenceAggregationOutput)
 	filteredStart := offsetAt(framed, aggregationFilteredOffsetPos)
 	programIDsStart := offsetAt(framed, aggregationProgramIDsOffsetPos)
 

@@ -55,6 +55,20 @@ func TestProve_DevMock_RollupEndBlock(t *testing.T) {
 		"only the batch end block is set; other public inputs stay zero")
 }
 
+// TestProve_DevMock_AggregationEndBlock checks that dev-mock sets the end block
+// of an aggregation job in the aggregation public inputs, which an aggregation
+// response carries.
+func TestProve_DevMock_AggregationEndBlock(t *testing.T) {
+	c, err := New(Config{Mode: ProverModeDevMock})
+	require.NoError(t, err)
+
+	result := c.Prove(context.Background(),
+		Job{ID: "aggregation", Type: ProofTypeRollupAggregation, StartBlock: 10, EndBlock: 18})
+	require.NoError(t, result.Err)
+	assert.Equal(t, AggregationPublicInputs{EndBlockNumber: 18}, result.AggregationPublicInputs,
+		"only the end block is set; other public inputs stay zero")
+}
+
 func TestProverMode_Helpers(t *testing.T) {
 	assert.True(t, ProverModeDevMock.IsDev())
 	assert.True(t, ProverModeDevZkVM.IsDev())
