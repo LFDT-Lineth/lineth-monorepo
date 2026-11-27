@@ -46,7 +46,9 @@ import (
 // opening proof's shape against the inputs the check allocated, and returns
 // what their values are read from.
 type openingCheck interface {
-	prepare(proof wiop.Proof) (*pcsInput, error)
+	// prepare lays out the opening of a proof of sys, the verifier's system
+	// or one of its structure (see Verifier.InputsFor).
+	prepare(sys *wiop.System, proof wiop.Proof) (*pcsInput, error)
 }
 
 // pcsInput is what the PCS opening's inputs read their values from: the
@@ -104,6 +106,9 @@ type rowCells struct {
 func (v *Verifier) checkPCS(a *pcs.OpeningVerifierAction) error {
 	if pcs.FRIFixedDomain(v.sys) {
 		return v.checkObliviousPCS(a)
+	}
+	if v.opts.Heights != nil {
+		return fmt.Errorf("PCS opening: the sizes of the sized modules are cells, which needs a size-oblivious opening")
 	}
 	op, err := a.Static(v.sys)
 	if err != nil {
@@ -240,7 +245,8 @@ func (pc *pcsCommon) inputFrom(kind int, value func(*pcsInput) Cell) int {
 
 // transcript continues the inner system's transcript as compiled.verify
 // does, and returns the query positions' cells (lanes of challenges, not yet
-// reduced). It sets the batches' roots.
+// reduced). It sets the batches' roots: the precomputed batch's is the key,
+// a constant or the cell of VerifierOptions.Key.
 func (pc *pcsCommon) transcript(
 	numRounds, numQueries int, batches []pcs.BatchRef, precomputedRoot field.Octuplet,
 ) []int {
@@ -266,10 +272,13 @@ func (pc *pcsCommon) transcript(
 		positions = append(positions, m.Lanes(d, k%CellWidth, KindScalar))
 	}
 	for _, b := range batches {
-		if b.IsPrecomp {
-			pc.treeRoots = append(pc.treeRoots, m.Const(Cell(precomputedRoot)))
-		} else {
+		switch {
+		case !b.IsPrecomp:
 			pc.treeRoots = append(pc.treeRoots, pc.v.commitments[b.Round.ID])
+		case pc.v.opts.HasKey:
+			pc.treeRoots = append(pc.treeRoots, pc.v.opts.Key)
+		default:
+			pc.treeRoots = append(pc.treeRoots, m.Const(Cell(precomputedRoot)))
 		}
 	}
 	return positions
@@ -598,7 +607,7 @@ func (pv *pcsVerifier) levelValue(i int, rows []map[int][2]rowCells, side, x, ru
 }
 
 // prepare checks the opening proof's shape (see checkOpeningShape).
-func (pv *pcsVerifier) prepare(proof wiop.Proof) (*pcsInput, error) {
+func (pv *pcsVerifier) prepare(_ *wiop.System, proof wiop.Proof) (*pcsInput, error) {
 	if err := pv.checkOpeningShape(proof.PCSOpeningProof); err != nil {
 		return nil, err
 	}

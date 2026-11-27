@@ -186,7 +186,7 @@ func TestVerifierOblivious_Rejects(t *testing.T) {
 	in, err := o.v.Inputs(c.proof, c.pub)
 	require.NoError(t, err, "the honest proof's inputs")
 	ob := o.v.pcs.(*obliviousPCS)
-	lay, err := ob.prepare(c.proof)
+	lay, err := ob.prepare(c.sys, c.proof)
 	require.NoError(t, err, "the honest proof's layout")
 	free := 0
 	for k := range in {
