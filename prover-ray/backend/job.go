@@ -128,8 +128,10 @@ type Result struct {
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
 	// wiop.Proof (wire format not yet decided); for dev-zkvm and dev-partial it
-	// is the image of a devmode proof of the guest output hash; for dev-mock it
-	// is the mode's marker. nil when Status is not ResultStatusOK.
+	// is a devmode proof of the guest output hash: a gnark PLONK proof in the
+	// Solidity layout for an aggregation job, the image of a wiop devmode proof
+	// otherwise; for dev-mock it is the mode's marker. nil when Status is not
+	// ResultStatusOK.
 	ProofBytes []byte
 
 	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job.
