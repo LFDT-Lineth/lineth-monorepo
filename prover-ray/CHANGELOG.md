@@ -12,6 +12,7 @@
 
 - *(prover-ray)* Batch the chaining of group digests into pair leaves (#4623)
 - *(prover-ray)* Adopt gnark-crypto kernels for the #4394 follow-ups (#4461)
+- *(prover-ray)* Fill paired leaf groups in one pass over the columns (#4625)
 ## [1.0.0] - 2026-11-26
 
 ### 🚀 Features
