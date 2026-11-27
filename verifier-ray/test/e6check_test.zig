@@ -84,16 +84,13 @@ test "e6check rejects an extension lane" {
     try std.testing.expectError(error.E6LaneNotBaseField, e6check.verify(system, ctxOf(&rounds)));
 }
 
-test "e6check compares a base public input as its lift" {
-    // Go's E6Check compares AsExt(), which lifts a base value: a public input
-    // tagged base equals the E6 value of lanes (v, 0, 0, 0, 0, 0) only.
-    var cells = [_]protocol.Scalar{ base(0), base(7), base(0), base(0), base(0), base(0), base(0) };
+test "e6check rejects a base public input" {
+    // The declared E6 cell is an extension cell: a base-tagged value is
+    // rejected even when its lift equals the lanes' E6 value.
+    const cells = [_]protocol.Scalar{ base(0), base(7), base(0), base(0), base(0), base(0), base(0) };
     const public = [_]protocol.Scalar{base(7)};
     const rounds = [_]protocol.RoundMessage{ .{ .cells = &cells }, .{ .cells = &public } };
-    try e6check.verify(system, ctxOf(&rounds));
-
-    cells[2] = base(1);
-    try std.testing.expectError(error.E6Mismatch, e6check.verify(system, ctxOf(&rounds)));
+    try std.testing.expectError(error.E6CellNotExtensionField, e6check.verify(system, ctxOf(&rounds)));
 }
 
 test "e6check rejects out-of-range refs" {

@@ -5,6 +5,7 @@ const ext = @import("../field/koalabear_ext.zig");
 pub const Error = error{
     E6Mismatch,
     E6LaneNotBaseField,
+    E6CellNotExtensionField,
 } || protocol.CellError;
 
 /// Number of base lanes of an E6 value (recursion.KindE6).
@@ -40,8 +41,11 @@ pub const System = struct {
 /// Both the lanes and the public input are read from `ctx` (the adversary's
 /// transcript); the public inputs are already merged into `ctx.rounds[*].cells`
 /// by `verifier.verify` before any sub-verifier runs. A lane must be a base
-/// field element, as in Go; the public input is compared as an extension
-/// element (Go's `AsExt`, which lifts a base value).
+/// field element and the public input an extension element, as the codegen
+/// (BuildE6CheckSystem) requires of the declared cells. Under `verifier.verify`
+/// the public-input binding already rejects a cell whose tag differs from its
+/// declaration (CellFieldMismatch); checking the tag here keeps this
+/// sub-verifier sound when called on its own.
 ///
 /// A `System{}` zero value (no checks) verifies trivially: a system exposing
 /// no E6 public input has nothing for this sub-verifier to enforce.
@@ -59,7 +63,10 @@ pub fn verify(system: System, ctx: protocol.Context) Error!void {
             .B1 = .{ .a0 = lane[2], .a1 = lane[3] },
             .B2 = .{ .a0 = lane[4], .a1 = lane[5] },
         };
-        const got = (try ctx.cell(check.cell.round, check.cell.index)).toExt();
+        const got = switch (try ctx.cell(check.cell.round, check.cell.index)) {
+            .ext => |e| e,
+            .base => return error.E6CellNotExtensionField,
+        };
         if (!want.eql(got)) return error.E6Mismatch;
     }
 }
