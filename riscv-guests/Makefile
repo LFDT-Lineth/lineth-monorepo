@@ -15,7 +15,7 @@
 # lineth_accelerators plays) but are listed here anyway so their own unit tests run as part of
 # `make test`.
 
-GUESTS ?= guest_common lineth_da lineth_recursion l2_execution rollup
+GUESTS ?= guest_common lineth_da lineth_recursion l2_execution rollup rollup_aggregation
 ZIG    ?= zig
 
 # Every directory holding a build.zig is a Zig package, so a new package is formatted without

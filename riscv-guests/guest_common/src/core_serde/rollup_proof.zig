@@ -1,5 +1,6 @@
-//! Wire contract of a rollup proof's public inputs: the tuple the rollup guest commits to. The
-//! layout is SSZ and the decoders accept only the canonical encoding; the lists alias the decoded buffer.
+//! Wire contract of a rollup proof: the public-input tuple the rollup guest commits to, the proof
+//! that carries it with its range start and proof bytes, and the verifiable proof that adds the
+//! program VK. The layouts are SSZ and the decoders accept only the canonical encoding; the lists alias the decoded buffer.
 //!
 //! The rollup guest's own output frames the public inputs with the 0x0005 schema id and leads with
 //! their keccak256 commitment: `keccak256(frame) || frame`, `frame = schema_id || SSZ(public inputs)`.
@@ -19,6 +20,7 @@ pub const MAX_L2_L1_MESSAGES: usize = l2_execution_proof.MAX_MESSAGES * MAX_L2_E
 pub const MAX_FILTERED_ADDRESSES: usize = 1 << 16;
 pub const MAX_PROGRAM_VKS: usize = 1 << 10;
 pub const MAX_MESSAGING_BLOCKS_OFFSETS: usize = 1 << 16;
+pub const MAX_PROOF_BYTES: usize = l2_execution_proof.MAX_PROOF_BYTES;
 
 /// The rollup public input tuple, in wire order.
 pub const RollupPublicInput = struct {
@@ -42,6 +44,17 @@ pub const RollupPublicInput = struct {
     program_vks: ssz.FixedList([32]u8, MAX_PROGRAM_VKS),
     block_count: u64,
     l2_messaging_blocks_offsets: ssz.FixedList(u16, MAX_MESSAGING_BLOCKS_OFFSETS),
+};
+
+pub const RollupProof = struct {
+    public_inputs: RollupPublicInput,
+    start_block_number: u64,
+    proof: ssz.ByteList(MAX_PROOF_BYTES),
+};
+
+pub const VerifiableRollupProof = struct {
+    proof: RollupProof,
+    program_vk: [32]u8,
 };
 
 pub fn encodePublicInputs(alloc: std.mem.Allocator, pi: RollupPublicInput) ssz.EncodeError![]u8 {
