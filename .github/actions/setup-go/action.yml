@@ -21,6 +21,15 @@ inputs:
   cache-dependency-path:
     description: 'Files hashed for the dependency cache, matching setup-go.'
     default: 'go.mod'
+  cache-go-build:
+    description: >
+      Set true to also cache the Go build cache (~/.cache/go-build and its macOS/Windows equivalents)
+      under a key made of the runner OS and the hash of go-build-cache-hash-files. Restored on every
+      ref, saved only on main (see the shared cache action).
+    default: 'false'
+  go-build-cache-hash-files:
+    description: 'Files hashed into the go-build cache key; only used when cache-go-build is true.'
+    default: '**/go.sum'
 runs:
   using: composite
   steps:
@@ -83,3 +92,14 @@ runs:
         key: ${{ steps.cache.outputs.prefix }}${{ steps.go.outputs.go-version }}-${{ hashFiles(inputs.cache-dependency-path) }}
         # Reuse main's cache when dependencies change; Go fetches missing modules.
         restore-keys: ${{ steps.cache.outputs.prefix }}${{ steps.go.outputs.go-version }}-
+    - name: Cache the Go build cache
+      if: ${{ inputs.cache-go-build == 'true' }}
+      uses: ./.github/actions/cache
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+          %LocalAppData%\go-build
+        key: ${{ runner.os }}-go-${{ hashFiles(inputs.go-build-cache-hash-files) }}
+        restore-keys: |
+          ${{ runner.os }}-go-

@@ -1,0 +1,30 @@
+name: 'Dump docker logs'
+description: >
+  Collects diagnostics from a docker-based test environment into <working-directory>/docker_logs:
+  the listing of the shared tmp/local directory, `docker ps -a`, and the last hour of logs of each
+  listed container. Every command is best-effort. Upload docker_logs/ with upload-artifact afterwards.
+inputs:
+  services:
+    description: 'Newline-separated container names whose logs are collected (docker_logs/<name>.txt)'
+    required: true
+  working-directory:
+    description: 'Directory (relative to github.workspace) that contains tmp/local and receives docker_logs'
+    required: false
+    default: '.'
+runs:
+  using: 'composite'
+  steps:
+    - name: Dump docker logs
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        SERVICES: ${{ inputs.services }}
+      run: |
+        mkdir -p docker_logs
+        find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
+        docker ps -a >> docker_logs/docker_ps.txt || true
+        while IFS= read -r service; do
+          service="${service//[[:space:]]/}"
+          [ -z "${service}" ] && continue
+          docker logs "${service}" --since 1h &>> "docker_logs/${service}.txt" || true
+        done <<< "${SERVICES}"

@@ -1,0 +1,25 @@
+name: 'Setup JVM toolchain with Besu'
+description: >
+  Installs Java and Gradle, then restores the Besu distribution prebuilt by prepare-linea-besu-maven
+  (main.yml) and publishes it to maven local. The Besu step is a no-op when the Besu BOM is already
+  in a remote maven repo. Requires the repository to be checked out first.
+inputs:
+  tracer-environment:
+    description: >
+      'true' to use setup-tracer-environment (Go, Java and Gradle, as needed to build the tracer)
+      instead of setup-java-and-gradle alone.
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Java and Gradle
+      if: ${{ inputs.tracer-environment != 'true' }}
+      uses: ./.github/actions/setup-java-and-gradle
+
+    - name: Setup Tracer Environment
+      if: ${{ inputs.tracer-environment == 'true' }}
+      uses: ./.github/actions/setup-tracer-environment
+
+    - name: Setup Besu in maven local
+      uses: ./.github/actions/setup-besu-maven-local

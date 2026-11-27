@@ -28,15 +28,7 @@ jobs:
         go-version: 1.25.7
         cache-dependency-path: |
               prover/go.sum
-    - uses: ./.github/actions/cache
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache-go-build: 'true'
     - name: gofmt
       working-directory: prover
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
@@ -73,15 +65,7 @@ jobs:
         go-version: ${{ matrix.go-version }}
         cache-dependency-path: |
               prover/go.sum
-    - uses: ./.github/actions/cache
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        cache-go-build: 'true'
     - name: Test compressor
       working-directory: prover/lib/compressor/blob
       run: |

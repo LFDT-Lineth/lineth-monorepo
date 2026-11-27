@@ -30,13 +30,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
-      - name: Setup Java and Gradle
-        uses: ./.github/actions/setup-java-and-gradle
-
-      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
-      # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
-      - name: Setup Besu in maven local
-        uses: ./.github/actions/setup-besu-maven-local
+      - name: Setup Java, Gradle and Besu
+        uses: ./.github/actions/setup-jvm-with-besu
 
       # Install pnpm to compile smart contracts
       - name: Setup nodejs environment
@@ -56,13 +51,9 @@ jobs:
             exit 1
           fi
       - name: Login to Docker Hub
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
-        env:
-          DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
-          DOCKERHUB_OIDC_EXPIREIN: 1800
+        uses: ./.github/actions/dockerhub-login
         with:
-          username: consensys
+          connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
       - name: Pre-pull images for running integration tests
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
@@ -77,9 +68,6 @@ jobs:
           ./gradlew coordinator:app:integrationTestAllNeeded
       - name: Upload Jacoco execution data
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: ./.github/actions/upload-jacoco-exec
         with:
           name: jacoco-coordinator-exec
-          path: |
-            **/build/jacoco/*.exec
-          if-no-files-found: ignore

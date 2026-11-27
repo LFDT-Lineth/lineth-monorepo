@@ -375,8 +375,5 @@ jobs:
       title: "Main workflow Failed"
       run_id: ${{ github.run_id }}
       enable_ai_analysis: ${{ needs.run-e2e-tests.result == 'failure' }}
-    secrets:
-      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
-      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
-      anthropic_api_key: ${{ secrets.LITELLM_KEY_CI_FAILURE_ANALYSIS }}
+    secrets: inherit
 

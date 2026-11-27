@@ -1,0 +1,38 @@
+name: 'Create and push release tag'
+description: >
+  Creates an annotated release tag and pushes it to origin. Does nothing if the tag already exists,
+  and fails if no tag was computed. Requires a checkout with push credentials.
+inputs:
+  tag:
+    description: 'Tag to create, e.g. releases/coordinator/v1.2.3'
+    required: true
+  component:
+    description: 'Label used in the tag message, which reads "<Component> release <tag>"'
+    required: true
+  target:
+    description: 'Commit to tag; defaults to HEAD'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Create and push ${{ inputs.component }} release tag
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        COMPONENT: ${{ inputs.component }}
+        TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+        if [ -z "${TAG}" ]; then
+          echo "No tag computed; aborting."
+          exit 1
+        fi
+        if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+          echo "Tag ${TAG} already exists; exit now."
+          exit 0
+        fi
+        TARGET="${TARGET:-HEAD}"
+        git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}" "${TARGET}"
+        git push origin "${TAG}"
+        echo "Pushed ${TAG} pointing at $(git rev-parse "${TARGET}")"

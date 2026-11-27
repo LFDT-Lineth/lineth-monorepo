@@ -358,7 +358,5 @@ jobs:
     with:
       title: "SDK Publish workflow failed"
       run_id: ${{ github.run_id }}
-    secrets:
-      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
-      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+    secrets: inherit
 

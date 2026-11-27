@@ -31,9 +31,19 @@ runs:
     - name: set docker tag
       id: dockertag
       shell: bash
+      # Inputs reach the script through env, never through ${{ }} inside `run:`: the version prefix
+      # and the suffix can carry a user-supplied release/image tag suffix, and expression expansion
+      # happens before bash parses the script, so a quote or $(...) in them would be executed.
+      env:
+        VERSION_PREFIX: ${{ inputs.version_prefix }}
+        COMMIT_TAG: ${{ inputs.commit_tag }}
+        IMAGE_TAG_SUFFIX: ${{ inputs.image_tag_suffix }}
       run: |
         timestamp="$(date -u +%Y%m%d)"
-        base="${{ inputs.version_prefix }}-${timestamp}-${{ inputs.commit_tag }}"
-        suffix="${{ inputs.image_tag_suffix && format('-{0}', inputs.image_tag_suffix) || '' }}"
+        base="${VERSION_PREFIX}-${timestamp}-${COMMIT_TAG}"
+        suffix=""
+        if [[ -n "${IMAGE_TAG_SUFFIX}" ]]; then
+          suffix="-${IMAGE_TAG_SUFFIX}"
+        fi
         echo "dockertag_with_suffix=${base}${suffix}" >> "$GITHUB_OUTPUT"
         echo "dockertag=${base}" >> "$GITHUB_OUTPUT"

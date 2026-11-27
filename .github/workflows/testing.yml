@@ -177,7 +177,6 @@ jobs:
       - transaction-exclusion-api
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -187,35 +186,13 @@ jobs:
       - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
 
-      - name: Download Jacoco execution data from coordinator
-        if: needs.coordinator.result != 'skipped'
+      # Every JVM suite uploads `jacoco-<suite>-exec` (upload-jacoco-exec); suites that were skipped
+      # upload nothing, so no per-suite condition is needed.
+      - name: Download Jacoco execution data from all JVM test jobs
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: jacoco-coordinator-exec
-          path: .
-      - name: Download Jacoco execution data from linea-sequencer tests
-        if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-linea-sequencer-exec
-          path: .
-      - name: Download Jacoco execution data from maru
-        if: needs.maru.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-maru-exec
-          path: .
-      - name: Download Jacoco execution data from staterecovery
-        if: needs.staterecovery.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-staterecovery-exec
-          path: .
-      - name: Download Jacoco execution data from transaction-exclusion-api
-        if: needs.transaction-exclusion-api.result != 'skipped'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: jacoco-transaction-exclusion-api-exec
+          pattern: jacoco-*-exec
+          merge-multiple: true
           path: .
 
       - name: Run Jacoco Root Report
@@ -229,13 +206,9 @@ jobs:
           path: |
             ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
       - name: Upload coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        uses: ./.github/actions/upload-coverage
         with:
-          fail_ci_if_error: true
           files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
           flags: kotlin
-          os: linux
           name: codecov-jvm-tests
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}

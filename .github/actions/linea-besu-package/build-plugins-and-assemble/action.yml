@@ -56,13 +56,10 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Tracer Environment
-      uses: ./.github/actions/setup-tracer-environment
-
-    # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
-    # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
-    - name: Setup Besu in maven local
-      uses: ./.github/actions/setup-besu-maven-local
+    - name: Setup Tracer Environment and Besu
+      uses: ./.github/actions/setup-jvm-with-besu
+      with:
+        tracer-environment: 'true'
 
     - name: Build besu from source
       shell: bash

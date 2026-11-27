@@ -30,16 +30,11 @@ on:
         required: false
         type: string
         default: "end-2-end-debug-logs"
-    secrets:
-      channel_id:
-        description: "Slack channel ID (from secrets)"
-        required: true
-      slack_bot_token:
-        description: "Slack bot token for posting messages"
-        required: true
-      anthropic_api_key:
-        description: "Anthropic API key for Claude analysis"
+      channel:
+        description: "Alert channel: 'engineering' (default) or 'arithmetization'. The Slack bot token, channel ids and Anthropic key are read from the caller's secrets, so call this workflow with `secrets: inherit`."
         required: false
+        type: string
+        default: "engineering"
 
 jobs:
   ai-analysis:
@@ -97,7 +92,7 @@ jobs:
         env:
           ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
-          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          anthropic_api_key: ${{ secrets.LITELLM_KEY_CI_FAILURE_ANALYSIS }}
           settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Edit(./e2e-failure-analysis.md)","Edit(./e2e-failure-summary.txt)"],"deny":[]}}'
           prompt: |
             You are analyzing a CI failure in the Lineth monorepo's E2E test suite.
@@ -469,14 +464,34 @@ jobs:
             echo "link_block=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Resolve Slack channel
+        id: channel
+        if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
+        shell: bash
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          ENGINEERING_CHANNEL_ID: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
+          ARITHMETIZATION_CHANNEL_ID: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
+        run: |
+          case "${CHANNEL}" in
+            engineering) id="${ENGINEERING_CHANNEL_ID}" ;;
+            arithmetization) id="${ARITHMETIZATION_CHANNEL_ID}" ;;
+            *) echo "::error::Unknown channel '${CHANNEL}' (expected engineering or arithmetization)"; exit 1 ;;
+          esac
+          if [ -z "${id}" ]; then
+            echo "::error::The Slack channel id secret for '${CHANNEL}' is not set"
+            exit 1
+          fi
+          echo "id=${id}" >> "$GITHUB_OUTPUT"
+
       - name: Send Slack Notification
         if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           method: chat.postMessage
-          token: ${{ secrets.slack_bot_token }}
+          token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
           payload: |
-            channel: ${{ secrets.channel_id }}
+            channel: ${{ steps.channel.outputs.id }}
             text: ":x: GitHub CI for *${{ steps.ctx.outputs.repo }}* — *${{ inputs.title }}*"
             blocks:
               - type: header

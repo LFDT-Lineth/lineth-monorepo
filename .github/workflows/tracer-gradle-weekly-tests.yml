@@ -54,7 +54,6 @@ jobs:
     with:
       title: "Weekly Tracer Tests workflow Failed"
       run_id: ${{ github.run_id }}
-    secrets:
-      channel_id: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
-      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+      channel: arithmetization
+    secrets: inherit
 

@@ -1,0 +1,24 @@
+name: 'Docker Hub login'
+description: >
+  Log in to Docker Hub through OIDC. Skipped on pull requests from forks, which get neither
+  repository variables nor an OIDC token. Callers pass the connection id for the account/role
+  they need (the shared pull-only connection, or a component's push connection).
+inputs:
+  connection-id:
+    description: 'Docker Hub OIDC connection id (a repository variable such as DOCKERHUB_OIDC_CONNECTIONID_PULL)'
+    required: true
+  expire-in:
+    description: 'Lifetime of the OIDC token in seconds'
+    required: false
+    default: '1800'
+runs:
+  using: 'composite'
+  steps:
+    - name: Login to Docker Hub
+      if: ${{ github.event.pull_request.head.repo.fork != true }}
+      uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      env:
+        DOCKERHUB_OIDC_CONNECTIONID: ${{ inputs.connection-id }}
+        DOCKERHUB_OIDC_EXPIREIN: ${{ inputs.expire-in }}
+      with:
+        username: consensys

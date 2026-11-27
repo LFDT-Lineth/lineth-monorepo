@@ -12,9 +12,10 @@ inputs:
   # Downstream workflows may enable cache saves for trusted pinned inputs; keep them disabled for custom refs.
   cache-save:
     description: >
-      When true, the Go module/build cache and the Zig cache are saved on a miss. Default false:
-      caches are restored only, so a run that builds an input-supplied ref cannot write into the
-      shared caches.
+      Whether the Go module/build cache and the Zig cache are saved on a miss: 'true', 'false' or 'auto'.
+      Default 'false': caches are restored only, so a run that builds an input-supplied ref cannot write
+      into the shared caches. 'auto' saves only when the run is trusted: not a pull request from a fork,
+      and no zkc-ref override (the version pinned in arithmetization/go.mod is built).
     required: false
     default: 'false'
 
@@ -25,20 +26,34 @@ runs:
         if: ${{ inputs.enable-ssh == 'true' }}
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
 
+      - name: Resolve cache policy
+        id: cache-policy
+        shell: bash
+        env:
+          CACHE_SAVE: ${{ inputs.cache-save }}
+          ZKC_REF: ${{ inputs.zkc-ref }}
+          TRUSTED_EVENT: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          if [ "${CACHE_SAVE}" = auto ]; then
+            if [ "${TRUSTED_EVENT}" = true ] && [ -z "${ZKC_REF}" ]; then save=true; else save=false; fi
+          else
+            save="${CACHE_SAVE}"
+          fi
+          echo "save=${save}" >> "$GITHUB_OUTPUT"
       - name: Install Go
         uses: ./.github/actions/setup-go
         with:
           go-version: '1.27.1'
           cache-dependency-path: "**/*.sum"
           # Preserve the existing opt-out for builds of custom refs.
-          cache: ${{ inputs.cache-save }}
+          cache: ${{ steps.cache-policy.outputs.save }}
 
       - name: Install Zig
         uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
           dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
-          cache-save: ${{ inputs.cache-save }}
+          cache-save: ${{ steps.cache-policy.outputs.save }}
 
       - name: Install Rust nightly
         shell: bash

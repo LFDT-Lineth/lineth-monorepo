@@ -119,13 +119,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Login to Docker Hub
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
-        env:
-          DOCKERHUB_OIDC_CONNECTIONID: ${{ github.event_name != 'pull_request' && vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_ALLTOOLS || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
-          DOCKERHUB_OIDC_EXPIREIN: 1800
+        uses: ./.github/actions/dockerhub-login
         with:
-          username: consensys
+          connection-id: ${{ github.event_name != 'pull_request' && vars.DOCKERHUB_OIDC_CONNECTIONID_LINEA_ALLTOOLS || vars.DOCKERHUB_OIDC_CONNECTIONID_PULL }}
       # Note: Building arm* images on QEMU emulator can get extremely slow
       # when downloading large packages with npm / yarn. Arm* based docker
       # images are not necessarily needed as we run amd64 machines for most
@@ -165,7 +161,5 @@ jobs:
     with:
       title: "All tools workflow failed"
       run_id: ${{ github.run_id }}
-    secrets:
-      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
-      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+    secrets: inherit
 

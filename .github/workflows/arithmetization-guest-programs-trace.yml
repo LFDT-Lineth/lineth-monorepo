@@ -59,7 +59,7 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
           # Share caches for go.mod-pinned runs from trusted refs; fork PRs and custom ZKC refs must not write to shared caches.
-          cache-save: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && inputs.zkc-ref == '' }}
+          cache-save: auto
 
       - name: Compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check
@@ -99,7 +99,5 @@ jobs:
     with:
       title: "Tracer guest programs trace workflow Failed"
       run_id: ${{ github.run_id }}
-    secrets:
-      channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
-      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+    secrets: inherit
 

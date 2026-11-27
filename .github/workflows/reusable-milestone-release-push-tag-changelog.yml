@@ -240,34 +240,12 @@ jobs:
 
       - name: Commit and push all CHANGELOG.md
         if: ${{ !inputs.create_pull_request }}
-        env:
-          RELEASE_VERSION: ${{ inputs.release_version }}
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo "No CHANGELOG.md changes to commit."
-            exit 0
-          fi
-          git add 'CHANGELOG.md' '**/CHANGELOG.md'
-          git commit -m "chore(misc): update CHANGELOG.md for milestone v${{ env.RELEASE_VERSION }} [skip ci]"
-
-          # Rebase on top of any commits that landed on the branch between
-          # checkout and now (e.g. a concurrent component-changelog-update push),
-          # then push. Retry a few times in case of repeated races.
-          for attempt in 1 2 3; do
-            git fetch origin "${GITHUB_REF_NAME}"
-            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
-              git rebase --abort
-              echo "Rebase conflict on attempt ${attempt}; aborting."
-              exit 1
-            fi
-            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
-              exit 0
-            fi
-            echo "Push rejected on attempt ${attempt}; refetching and retrying..."
-          done
-          echo "Failed to push CHANGELOG.md changes after 3 attempts." >&2
-          exit 1
+        uses: ./.github/actions/commit-and-push
+        with:
+          paths: |
+            CHANGELOG.md
+            **/CHANGELOG.md
+          message: "chore(misc): update CHANGELOG.md for milestone v${{ inputs.release_version }} [skip ci]"
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
@@ -295,20 +273,8 @@ jobs:
             **/CHANGELOG.md
 
       - name: Create and push Linea milestone release tag
-        env:
-          COMPONENT: "Linea Milestone"
-          TAG: ${{ inputs.release_tag }}
-        run: |
-          set -euo pipefail
-          if [ -z "${TAG}" ]; then
-            echo "No tag computed; aborting."
-            exit 1
-          fi
-          if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
-            echo "Tag ${TAG} already exists; exit now."
-            exit 0
-          fi
-          git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
-          git push origin "${TAG}"
-          echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+        uses: ./.github/actions/create-release-tag
+        with:
+          tag: ${{ inputs.release_tag }}
+          component: Linea Milestone
 

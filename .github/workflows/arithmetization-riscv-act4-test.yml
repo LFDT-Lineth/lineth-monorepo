@@ -55,7 +55,7 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
           # Share caches for go.mod-pinned runs from trusted refs; fork PRs and custom ZKC refs must not write to shared caches.
-          cache-save: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && inputs.zkc-ref == '' }}
+          cache-save: auto
 
       - name: Install Sail
         run: make -C arithmetization install-sail
