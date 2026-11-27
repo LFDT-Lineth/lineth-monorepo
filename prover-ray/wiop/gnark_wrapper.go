@@ -92,7 +92,11 @@ func (c *WrapperCircuit) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
+	// Bind each public input to its group: canonicalCells strictly reduces the
+	// cells the verifier used (rejecting x+p), then they are packed big-endian mod r.
+	// Guest output: 32 cells, one byte each.
 	api.AssertIsEqual(c.GuestOutput, PackBigEndianCircuit(api, c.canonicalCells(kb, c.guestOutputPos), GuestOutputBitsPerCell))
+	// Program VK: 8 cells, one 4-byte limb each.
 	api.AssertIsEqual(c.ProgramVK, PackBigEndianCircuit(api, c.canonicalCells(kb, c.programVKPos), ProgramVKBitsPerCell))
 	return nil
 }
@@ -105,8 +109,11 @@ func (c *WrapperCircuit) canonicalCells(kb *emulated.Field[emulated.KoalaBear], 
 	sys := c.Verifier.spec
 	out := make([]frontend.Variable, len(positions))
 	for i, pos := range positions {
+		// Map the wiop public-input position to the verifier's witness slot.
 		slot := c.Verifier.layout.cells[sys.PublicInputs[pos].Context.ID]
+		// Reduce to [0, p) and assert it, so x+p cannot stand in for x.
 		e := kb.ReduceStrict(&c.Verifier.PublicInputsBase[slot.index].EV)
+		// KoalaBear fits one 31-bit limb, so Limbs[0] is the canonical value.
 		out[i] = e.Limbs[0]
 	}
 	return out
