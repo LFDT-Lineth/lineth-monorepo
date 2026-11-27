@@ -239,6 +239,7 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(41UL).get()).isEqualTo(rollup41to50)
     assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(31UL).get()).isNull()
     assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(5UL).get()).isNull()
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(10UL).get()).isNull()
   }
 
   @Test
