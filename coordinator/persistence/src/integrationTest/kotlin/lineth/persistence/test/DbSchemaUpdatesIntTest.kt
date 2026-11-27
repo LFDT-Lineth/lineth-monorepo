@@ -30,19 +30,19 @@ class DbSchemaUpdatesIntTest {
   private val username = "postgres"
   private val password = "postgres"
 
+  private val dbCreationDataSource = PGSimpleDataSource().also {
+    it.serverNames = arrayOf(host)
+    it.portNumbers = intArrayOf(port)
+    it.databaseName = "postgres"
+    it.user = username
+    it.password = password
+  }
   private lateinit var dataSource: DataSource
   private lateinit var pool: Pool
   private lateinit var sqlClient: SqlClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
-    val dbCreationDataSource = PGSimpleDataSource().also {
-      it.serverNames = arrayOf(host)
-      it.portNumbers = intArrayOf(port)
-      it.databaseName = "postgres"
-      it.user = username
-      it.password = password
-    }
     DbHelper.createDataBase(dbCreationDataSource, databaseName)
     dataSource =
       PGSimpleDataSource().also {
@@ -58,14 +58,12 @@ class DbSchemaUpdatesIntTest {
 
   @AfterEach
   fun tearDown() {
-    DbHelper.resetAllConnections(dataSource, databaseName)
-    pool.close()
-      .onFailure { th ->
-        System.err.println("Error closing connection pool: " + th.message)
-      }
-    sqlClient.close().onFailure { th ->
-      System.err.println("Error closing sqlclient " + th.message)
-    }
+    val closes = listOf(
+      pool.close().onFailure { th -> System.err.println("Error closing connection pool: " + th.message) },
+      sqlClient.close().onFailure { th -> System.err.println("Error closing sqlclient " + th.message) },
+    )
+    closes.forEach { runCatching { it.get() } }
+    DbHelper.dropDataBase(dbCreationDataSource, databaseName)
   }
 
   @Test
