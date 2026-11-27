@@ -11,7 +11,7 @@ These cover the two properties this codec is responsible for:
 There is no golden-vector byte-stability check here: nothing outside this
 package's own encoder consumes its exact byte output (the riscv-guests Zig
 guests define and test their own wire format independently — see
-`riscv-guests/rollup-aggregation/test/support.zig`), so pinning this
+`riscv-guests/rollup_aggregation/test/rollup_aggregation_ssz_test.zig`), so pinning this
 encoder's bytes against a checked-in fixture would only be checking it
 against itself.
 

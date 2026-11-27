@@ -1,6 +1,5 @@
 //! The rollup-aggregation statement over literal rollup proofs, each carrying a real devmode proof:
-//! the public inputs of one proof and of a chain of three, and the rejection of a chain that does
-//! not tile or continue, of a proof that does not verify and of a request without proofs.
+//! the public inputs of one proof and of a chain of three.
 
 const std = @import("std");
 const rollup_aggregation = @import("rollup_aggregation");
@@ -129,47 +128,4 @@ test "the framed statement outputs the encoded public inputs" {
     const request = try scenario.request(a, &.{ .{}, .{} });
     const framed = try rollup_aggregation.rollup_aggregation.runFramed(a, try rollup_ssz.encodeInput(a, request));
     try std.testing.expectEqualDeep(try run(a, request), try rollup_ssz.decodeOutput(a, framed));
-}
-
-test "a request without proofs is rejected" {
-    try std.testing.expectError(error.InvalidRequest, run(std.testing.allocator, scenario.input(&.{})));
-}
-
-test "proofs that leave a gap between their block ranges are rejected" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const proofs = try scenario.build(a, &.{ .{}, .{} });
-    proofs[1].proof.start_block_number += 1;
-    try scenario.prove(a, proofs);
-    try std.testing.expectError(error.TilingBroken, run(a, scenario.input(proofs)));
-}
-
-test "proofs that do not continue each other's block hash are rejected" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const proofs = try scenario.build(a, &.{ .{}, .{} });
-    proofs[1].proof.public_inputs.parent_block_hash = @splat(0xee);
-    try scenario.prove(a, proofs);
-    try std.testing.expectError(error.ContinuityBroken, run(a, scenario.input(proofs)));
-}
-
-test "a proof of another public input or another program VK is rejected" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const a = arena.allocator();
-
-    const proofs = try scenario.build(a, &.{.{}});
-    try scenario.prove(a, proofs);
-    _ = try run(a, scenario.input(proofs));
-
-    proofs[0].proof.public_inputs.end_block_timestamp += 1;
-    try std.testing.expectError(error.RecursiveProofRejected, run(a, scenario.input(proofs)));
-    proofs[0].proof.public_inputs.end_block_timestamp -= 1;
-
-    proofs[0].program_vk = rollup_vk_b;
-    try std.testing.expectError(error.RecursiveProofRejected, run(a, scenario.input(proofs)));
 }

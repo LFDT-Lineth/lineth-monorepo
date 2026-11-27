@@ -14,5 +14,7 @@
         "program_id.zig",
         // The host module that runs a guest ELF under zkc.
         "zkc.zig",
+        // The host tool that compares a guest's output under zkc with the native one.
+        "zkc_smoke.zig",
     },
 }

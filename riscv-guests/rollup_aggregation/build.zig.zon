@@ -18,12 +18,15 @@
         // verifies against is a gitignored file that `make` generates before the first build. With
         // -Dhost-tools it also exposes the devmode prover that builds the proofs for tests.
         .lineth_recursion = .{ .path = "../../riscv-guests/lineth_recursion" },
+        // The rollup guest (sibling path dependency): with -Dhost-tools it exposes the package and
+        // the test scenario that build real rollup requests, for the tests that aggregate them.
+        .rollup = .{ .path = "../../riscv-guests/rollup" },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src", // production guest code (compiled into the rv64im object/ELF)
-        "test", // host-only: unit tests, test support and the committed sample fixture
+        "test", // host-only: unit tests, reference tests, test support and the committed sample fixture
         "tools", // host-only: fixture generator
     },
 }

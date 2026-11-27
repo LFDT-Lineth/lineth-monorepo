@@ -62,7 +62,7 @@ A rejected request exits with the category of the step that rejects it (`src/gue
 
 ## Allocation
 
-The guest serves every allocation from one bump allocator over the guest heap, which keeps them until the guest exits. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. The KZG trusted-setup context of the blob verification is built right after, before the input is read, so it takes the same heap prefix for every request. A request that needs more than the heap exits with code 16.
+The guest serves every allocation from one bump allocator over the guest heap, which keeps them until the guest exits. The same allocator backs the Constantine archive's C `malloc` through `zkvm_provide.setAllocator`, which `src/main.zig` installs before anything runs. The KZG trusted-setup context of the blob verification is built right after, before the input is read, so it takes the same heap prefix for every request. A request that needs more than the heap exits with code 15.
 
 The recursive verifier allocates once, for the whole request: one 8-byte-aligned copy buffer, sized to the longest proof image of the input, which every proof is copied into to be relocated in place (the image sits at an arbitrary offset inside the input), and the verifier's workspace of 1,560 bytes.
 

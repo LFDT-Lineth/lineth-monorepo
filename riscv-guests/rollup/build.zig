@@ -12,13 +12,13 @@ pub fn build(b: *std.Build) void {
     addGuestProgram(b, options);
     if (!options.host_tools) return;
 
+    const unit = Host.init(b, options.host_target, .Debug, null, .public);
     const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
-    const unit = Host.init(b, options.host_target, .Debug, null);
     const tools = addHostTools(b, unit, crypto);
     addHostTests(b, options, unit, crypto);
     addFixtureStep(b, tools);
     addFetchBlocksStep(b, tools);
-    addZkcSmokeStep(b, tools);
+    common.addZkcSmokeStep(b, unit.native.target, unit.native.optimize);
 }
 
 /// Every `-D` option of this package, read once.
@@ -106,10 +106,20 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
 const Host = struct {
     native: common.NativeOptions,
 
+    /// A public host publishes its package as `rollup` and its test scenario as `scenario`, the
+    /// modules a dependent package builds rollup requests with.
+    const Visibility = enum { private, public };
+
     /// `fixtures` is the directory of the EF zkevm fixtures the `ef_fixtures` module names.
-    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, fixtures: ?std.Build.LazyPath) Host {
+    fn init(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        fixtures: ?std.Build.LazyPath,
+        visibility: Visibility,
+    ) Host {
         const deps = Deps.init(b, target, optimize, true);
-        const package = common.createPackageModule(b, target, optimize, deps.package);
+        const package = module(b, visibility, "rollup", common.packageModuleOptions(b, target, optimize, deps.package));
         const da_support = deps.lineth_da.module("support");
         const zstd_encoder = deps.lineth_da.module("zstd_encoder");
         const ef_blocks = deps.lineth_da.module("ef_blocks");
@@ -142,7 +152,7 @@ const Host = struct {
                 .{ .name = "zesu_executor", .module = deps.lineth_da.module("zesu_executor") },
             },
         });
-        const scenario = b.createModule(.{
+        const scenario = module(b, visibility, "scenario", .{
             .root_source_file = b.path("test/support/scenario.zig"),
             .target = target,
             .optimize = optimize,
@@ -183,13 +193,19 @@ const Host = struct {
     }
 };
 
+fn module(b: *std.Build, visibility: Host.Visibility, name: []const u8, options: std.Build.Module.CreateOptions) *std.Build.Module {
+    return switch (visibility) {
+        .public => b.addModule(name, options),
+        .private => b.createModule(options),
+    };
+}
+
 /// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_blocks` recovers
 /// senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
     crypto.link(tools.get("fetch_blocks").?);
-    tools.get("zkc_smoke").?.root_module.addImport("zkc", common.zkcModule(b, host.native.target, host.native.optimize));
     return tools;
 }
 
@@ -204,7 +220,7 @@ fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.Host
         if (b.pkg_hash.len == 0) std.log.warn("test/reference skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
         return;
     };
-    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures);
+    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures, .private);
     crypto.linkAll(common.addTests(b, test_step, reference.native, .{ .dir = "test/reference" }));
 }
 
@@ -220,12 +236,4 @@ fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
     const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
     if (b.args) |args| fetch_blocks.addArgs(args);
     b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
-}
-
-/// Runs the guest ELF under zkc and compares its output with the native statement's; the options
-/// of `zkc_smoke` follow `--`.
-fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
-    const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
-    if (b.args) |args| zkc_smoke.addArgs(args);
-    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
 }

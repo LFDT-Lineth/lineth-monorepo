@@ -8,7 +8,7 @@
 # run itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; `exec`/`debug` build that ELF and hand it over.
 
-.PHONY: fetch test clean compile exec debug gen-fixture devmode-system
+.PHONY: fetch test clean compile exec debug gen-fixture zkc-smoke-exec zkc-smoke-external devmode-system
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -29,12 +29,18 @@ ZIG_FETCH_FLAGS ?=
 NAME := rollup_aggregation_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
+include $(MAKEFILE_DIR)../build_common/release.mk
+
 # The committed sample request exec/debug run, and the output the native statement computes for it.
 # `gen-fixture` rewrites both with this package's own encoder over two adjacent rollup proofs with
 # real devmode proofs. Pass your own INPUT=path/to/file to run something else.
 SAMPLE_INPUT  := $(MAKEFILE_DIR)test/testdata/sample.request.ssz
 SAMPLE_OUTPUT := $(MAKEFILE_DIR)test/testdata/sample.output.bin
 INPUT ?= $(SAMPLE_INPUT)
+
+# The output the guest has to print for INPUT, and the guest ELF the zkc smoke runs.
+EXPECTED_OUTPUT ?= $(SAMPLE_OUTPUT)
+ELF ?= $(BIN)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.
@@ -78,3 +84,18 @@ exec: compile
 
 debug: compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
+
+# Compile the guest, then run it under zkc on INPUT and compare its output with the native one.
+zkc-smoke-exec: compile
+	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" EXPECTED_OUTPUT="$(EXPECTED_OUTPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+
+# The same for a prebuilt ELF: the guest output printed by zkc has to equal EXPECTED_OUTPUT byte for byte.
+zkc-smoke-external: devmode-system
+	@[ -s "$(ELF)" ] || { echo "ELF missing or empty: '$(ELF)' (set ELF=path/to/$(NAME))"; exit 1; }
+	@[ -s "$(INPUT)" ] && [ -s "$(EXPECTED_OUTPUT)" ] || { echo "INPUT or EXPECTED_OUTPUT missing or empty: '$(INPUT)', '$(EXPECTED_OUTPUT)'"; exit 1; }
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		--input "$(abspath $(INPUT))" \
+		--expected "$(abspath $(EXPECTED_OUTPUT))" \
+		--makefile "$(abspath $(ARITHMETIZATION_TESTING_MAKEFILE))" \
+		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
