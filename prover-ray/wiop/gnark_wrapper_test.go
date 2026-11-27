@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/devmode"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
@@ -17,6 +18,7 @@ import (
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/stretchr/testify/require"
 )
@@ -143,6 +145,47 @@ func TestWrapperCircuit_PLONKProve(t *testing.T) {
 	require.NoError(t, err)
 	_, err = plonk.Prove(ccs, pk, badW)
 	require.ErrorContains(t, err, "is not satisfied", "a tampered wiop proof must not be provable")
+}
+
+// TestWrapperCircuit_NonCanonicalCell checks that a public-input cell assigned
+// x+p instead of x cannot be packed: the wiop verifier only sees cells mod p,
+// so without the strict reduction this witness would solve and expose a
+// packed guest output the contract would never compute.
+func TestWrapperCircuit_NonCanonicalCell(t *testing.T) {
+	modulus := ecc.BN254.ScalarField()
+
+	sys := newWrapperSystem(t)
+	proof, pub, err := devmode.Prove(sys, wrapperPub())
+	require.NoError(t, err)
+
+	circ := wiop.AllocateWrapperCircuit(sys, risc5.GuestPublicOutputsPI, risc5.ProgramVKPI)
+	ccs, err := frontend.Compile(modulus, scs.NewBuilder, circ)
+	require.NoError(t, err)
+
+	honest, err := frontend.NewWitness(circ.AssignWrapperCircuit(proof, pub), modulus)
+	require.NoError(t, err)
+	require.NoError(t, ccs.IsSolved(honest), "the honest witness must solve")
+
+	// Guest-output byte 0 is wiop public input 0 and, as devmode declares its
+	// public-input cells first and in order, PublicInputsBase[0]. It is a byte,
+	// so x+p still fits the 31-bit emulated limb.
+	_, pos := sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
+	require.Equal(t, 0, pos)
+	p := new(big.Int).SetUint64(field.Modulus().Uint64())
+	x := new(big.Int).SetUint64(pub[0].AsBase().Uint64())
+	nonCanonical := new(big.Int).Add(x, p)
+
+	bad := circ.AssignWrapperCircuit(proof, pub)
+	bad.Verifier.PublicInputsBase[0] = circuit.Element{EV: emulated.Element[emulated.KoalaBear]{
+		Limbs: []frontend.Variable{nonCanonical},
+	}}
+	// The packed value consistent with x+p: byte 0 has weight 2^(8*31).
+	shift := new(big.Int).Lsh(p, 8*31)
+	bad.GuestOutput = new(big.Int).Mod(new(big.Int).Add(bad.GuestOutput.(*big.Int), shift), modulus)
+
+	badW, err := frontend.NewWitness(bad, modulus)
+	require.NoError(t, err)
+	require.Error(t, ccs.IsSolved(badW), "a non-canonical public-input cell must be rejected")
 }
 
 // newWrapperSystem builds the devmode system without column elision, which
