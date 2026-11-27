@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
@@ -70,6 +71,9 @@ func (e *UnhandledVerifierActionError) Error() string {
 //     commitment; present only when messagebus.Compile ran in its default
 //     seeded mode — a shard compiled with messagebus.WithoutSharedRandomness
 //     registers no checker)
+//   - recursion.E6Check                        → BuildE6CheckSystem / e6check
+//     sub-verifier (an E6 public input of a recursion program == the E6 value
+//     of its six base lane openings; nothing else binds that public input)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem
 //     (performs no boundary check the Zig side must re-emit — the whole PCS
 //     opening, including the claimed evaluations, is reconstructed at verify
@@ -114,6 +118,8 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 	case *messagebus.CheckHandleSumInShard:
 		return true
 	case *messagebus.SharedRandomnessContributionChecker:
+		return true
+	case *recursion.E6Check:
 		return true
 	}
 	return false
