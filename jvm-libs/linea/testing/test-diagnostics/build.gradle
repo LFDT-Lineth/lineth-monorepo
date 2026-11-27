@@ -1,0 +1,11 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+}
+
+description="Lineth JUnit Platform listener that dumps the threads of tests running longer than expected"
+
+dependencies {
+  // Provided at runtime by the test classpath of every project this module is applied to.
+  compileOnly platform("org.junit:junit-bom:${libs.versions.junit.get()}")
+  compileOnly "org.junit.platform:junit-platform-launcher"
+}
