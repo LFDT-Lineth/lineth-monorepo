@@ -3,7 +3,6 @@
 
 const std = @import("std");
 const lineth_da = @import("lineth_da");
-const zkvm_accelerators = @import("zkvm_accelerators");
 const core_serde = @import("core_serde");
 const chain = @import("chain.zig");
 const rollup_ssz = @import("rollup_ssz.zig");
@@ -63,8 +62,7 @@ pub fn derive(
         @memcpy(senders[next..][0..block.froms.len], block.froms);
         next += block.froms.len;
     }
-    var senders_hash: Hash = undefined;
-    zkvm_accelerators.keccak256(std.mem.sliceAsBytes(senders), &senders_hash);
+    const senders_hash = try l2_execution_proof.txFromsHash(allocator, senders);
     if (!std.mem.eql(u8, &senders_hash, &proof.public_inputs.tx_froms_hash)) return error.SendersHashMismatch;
 
     const payload = try truncation.encodeBlocks(allocator, allocator, truncated);
