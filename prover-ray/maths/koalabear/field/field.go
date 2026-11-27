@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"math/bits"
 	"math/rand/v2"
-	"runtime"
 	"unsafe"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 )
 
@@ -51,6 +48,13 @@ var (
 	One         = koalabear.One
 )
 
+// BatchInvertInto sets res[i] = 1/a[i] for every i; zeroes map to zero. res
+// and a must have the same length; res may be a itself but must not otherwise
+// overlap it. It allocates nothing in steady state.
+func BatchInvertInto(res, a []Element) {
+	koalabear.BatchInvertInto(res, a)
+}
+
 // MulR multiplies by montConstant, where montConstant is the Montgommery constant
 func MulR(x Element) Element {
 	var res Element
@@ -77,38 +81,6 @@ func Zero() Element {
 func NewFromString(s string) (res Element) {
 	_, err := res.SetString(s)
 	if err != nil {
-		panic(err)
-	}
-	return res
-}
-
-// ExpToInt sets z to x**k
-func ExpToInt(z *Element, x Element, k int) *Element {
-	if k == 0 {
-		return z.SetOne()
-	}
-
-	if k < 0 {
-		x.Inverse(&x)
-		k = -k
-	}
-
-	z.Set(&x)
-
-	for i := bits.Len(uint(k)) - 2; i >= 0; i-- {
-		z.Square(z)
-		if (k>>i)&1 == 1 {
-			z.Mul(z, &x)
-		}
-	}
-
-	return z
-}
-
-// RandomElement returns a random element
-func RandomElement() Element {
-	var res Element
-	if _, err := res.SetRandom(); err != nil {
 		panic(err)
 	}
 	return res
@@ -186,7 +158,7 @@ func OctupletToBytes(octuplet [8]Element) [32]byte {
 func RandomOctuplet() Octuplet {
 	var oct Octuplet
 	for i := range oct {
-		oct[i] = RandomElement()
+		oct[i].MustSetRandom()
 	}
 	return oct
 }
@@ -209,26 +181,6 @@ func WriteOctupletTo(w io.Writer, octuplet Octuplet) error {
 		}
 	}
 	return nil
-}
-
-// ParBatchInvert is as a parallel implementation of [BatchInvert]. The caller
-// can supply the target number of cores to use to perform the paralellization.
-// If `numCPU=0` is provided, the function defaults to using all the available
-// cores exposed by the OS.
-func ParBatchInvert(a []Element, numCPU int) []Element {
-
-	if numCPU == 0 {
-		numCPU = runtime.NumCPU()
-	}
-
-	res := make([]Element, len(a))
-
-	parallel.Execute(len(a), func(start, stop int) {
-		subRes := BatchInvert(a[start:stop])
-		copy(res[start:stop], subRes)
-	}, numCPU)
-
-	return res
 }
 
 // ToInt returns the field element as a native int.

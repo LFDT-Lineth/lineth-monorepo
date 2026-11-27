@@ -40,7 +40,8 @@ func TestEvaluateRLCAsExt_ConstantEntries(t *testing.T) {
 		"only consts":       {k(23), k(24), k(25)},
 		"view then consts":  {c1.View(), k(26), k(27), k(28)},
 	}
-	alpha := field.RandomElementExt()
+	var alpha field.Ext
+	alpha.MustSetRandom()
 	for name, entries := range cases {
 		got := wiop.EvaluateRLCAsExt(rt, alpha, entries, n)
 		for row := range n {

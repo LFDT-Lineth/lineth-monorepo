@@ -20,10 +20,10 @@
         // of a DA stream against its chunks. With -Dhost-tools it also exposes the modules that
         // build real DA streams for tests.
         .lineth_da = .{ .path = "../../riscv-guests/lineth_da" },
-        // The recursive verifier of the l2-execution proofs and the generated devmode system it
-        // verifies against (sibling path dependency): `make` generates the system, a gitignored
-        // file, before the first build.
-        .verifier_ray = .{ .path = "../../verifier-ray" },
+        // The recursive verifier (sibling path dependency): the generated devmode system it
+        // verifies against is a gitignored file that `make` generates before the first build. With
+        // -Dhost-tools it also exposes the devmode prover that builds the proofs for tests.
+        .lineth_recursion = .{ .path = "../../riscv-guests/lineth_recursion" },
     },
     .paths = .{
         "build.zig",

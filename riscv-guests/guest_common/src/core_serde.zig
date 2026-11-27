@@ -5,4 +5,5 @@
 //! the linking program provides it.
 
 pub const l2_execution_proof = @import("core_serde/l2_execution_proof.zig");
+pub const output_frame = @import("core_serde/output_frame.zig");
 pub const rollup_proof = @import("core_serde/rollup_proof.zig");

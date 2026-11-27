@@ -1,12 +1,12 @@
 module github.com/LFDT-Lineth/lineth-monorepo/prover-ray
 
-go 1.27.1
+go 1.27.4
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
 	github.com/LFDT-Lineth/zkc v1.2.37
 	github.com/consensys/gnark v0.16.5-0.20261104230419-d5262f734b5b
-	github.com/consensys/gnark-crypto v0.22.1-0.20261103155519-1a9aede5b1c3
+	github.com/consensys/gnark-crypto v0.22.1-0.20261125162630-5e64eb0e9152
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/pkg/profile v1.7.0
 	github.com/sirupsen/logrus v1.9.4
@@ -14,6 +14,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.57.0
 	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.49.0
 )
 
 require (
@@ -50,7 +51,6 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )
