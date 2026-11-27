@@ -211,7 +211,7 @@ These failures are not caused by your change. Re-run the failed jobs:
 | Log shows | Cause |
 |---|---|
 | `The runner has received a shutdown signal` | The self-hosted runner was stopped mid-job. |
-| `Execution failed for task ':spotlessInternalRegisterDependencies'` / `Cannot fingerprint input property 'steps'` | An intermittent Spotless plugin error during Gradle setup. |
+| `Execution failed for task ':spotlessInternalRegisterDependencies'` | Spotless could not download a formatter dependency (network error or Maven Central rate limit). |
 
 If a test fails, passes on re-run, and you didn't change it, report it as flaky.
 

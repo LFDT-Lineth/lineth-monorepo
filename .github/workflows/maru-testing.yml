@@ -23,6 +23,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
+      - name: Collect runner info (start)
+        uses: ./.github/actions/collect-runner-info
+        with:
+          benchmark: 'true'
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
       # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (main.yml) and
@@ -35,6 +39,11 @@ jobs:
       - name: Run integration tests
         run: |
           ./gradlew maru:app:integrationTest
+      - name: Collect runner info (end)
+        if: always()
+        uses: ./.github/actions/collect-runner-info
+        with:
+          phase: end
       - name: Store reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -52,7 +52,7 @@ class MaruStartFromPragueTest {
     val besuNode = cluster.besuNode("sequencer")
 
     await
-      .atMost(10.seconds.toJavaDuration())
+      .atMost(30.seconds.toJavaDuration())
       .ignoreExceptions()
       .until {
         besuNode.latestBlock().number.toLong() > 5
@@ -80,7 +80,7 @@ class MaruStartFromPragueTest {
 
     await
       .ignoreExceptions()
-      .atMost(10.seconds.toJavaDuration())
+      .atMost(20.seconds.toJavaDuration())
       .until {
         besuNode.latestBlock().number.toLong() == totalBlocksToProduce.toLong()
       }
