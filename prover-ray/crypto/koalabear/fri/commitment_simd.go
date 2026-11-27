@@ -191,3 +191,44 @@ func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Oct
 		}
 	}
 }
+
+// compressInto sets dst[j] = C(dst[j], right[j]) for every j, in parallel.
+// With the batched hash, 16 compressions run per AVX-512 call, which is about
+// 7x cheaper per compression than the scalar one; the final len(dst)%16 and
+// the modes without a batched path use the scalar compression. dst and right
+// have the same length and must not overlap.
+func compressInto(hash MerkleHash, dst, right []field.Octuplet) {
+	if len(dst) != len(right) {
+		panic("fri: compressInto: length mismatch")
+	}
+	nbGroups := len(dst) / batchLanes
+	if !hash.batched() {
+		nbGroups = 0
+	}
+	if nbGroups > 0 {
+		parallel.Execute(nbGroups, func(start, end int) {
+			// The kernel takes the 16 states and blocks column-major,
+			// coordinate pos of lane at [pos*16+lane], and writes the 16
+			// results row-major straight into dst.
+			var state, block [8 * batchLanes]field.Element
+			for g := start; g < end; g++ {
+				j := g * batchLanes
+				for lane := range batchLanes {
+					d, r := &dst[j+lane], &right[j+lane]
+					for pos := range 8 {
+						state[pos*batchLanes+lane] = d[pos]
+						block[pos*batchLanes+lane] = r[pos]
+					}
+				}
+				batchPoseidon2.Compressx16ColumnsWithState(state[:], block[:], 8, dst[j:j+batchLanes])
+			}
+		})
+	}
+	if tail := nbGroups * batchLanes; tail < len(dst) {
+		parallel.Execute(len(dst)-tail, func(start, end int) {
+			for j := tail + start; j < tail+end; j++ {
+				dst[j] = hash.compress(dst[j], right[j])
+			}
+		})
+	}
+}

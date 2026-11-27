@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
 # Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
 # They track the digest-pinned debian base image; pinning would break the build

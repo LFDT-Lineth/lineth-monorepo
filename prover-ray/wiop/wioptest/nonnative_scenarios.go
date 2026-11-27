@@ -41,10 +41,24 @@ type NonNativeScenario struct {
 // handful of exceptional-input fixtures (maximal/undersized modulus,
 // unreduced operands, unreduced result, inactive rows).
 func NonNativeScenarios() []func() *NonNativeScenario {
+	return append(NonNativeWidthScenarios(), NonNativeEdgeCaseScenarios()...)
+}
+
+// NonNativeWidthScenarios returns the random-operand fixtures, one per
+// operand width (64, 128 and 256 bits).
+func NonNativeWidthScenarios() []func() *NonNativeScenario {
 	return []func() *NonNativeScenario{
 		NewNonNativeU64Scenario,
 		NewNonNativeU128Scenario,
 		NewNonNativeU256Scenario,
+	}
+}
+
+// NonNativeEdgeCaseScenarios returns the fixed-value fixtures, all with 64-bit
+// operands: a selector, extreme and small moduli, and unreduced operands and
+// results.
+func NonNativeEdgeCaseScenarios() []func() *NonNativeScenario {
+	return []func() *NonNativeScenario{
 		NewNonNativeSelectorScenario,
 		NewNonNativeModulusMaxScenario,
 		NewNonNativeModulusSmallScenario,

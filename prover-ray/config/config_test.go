@@ -36,29 +36,21 @@ native_runner_bin = "/opt/lineth/prover-ray/l2_execution_runner"
 	assert.Equal(t, "/data/guests", cfg.GuestsDir)
 }
 
-func TestNewConfigFromFile_ShardSize(t *testing.T) {
-	cfg, err := NewConfigFromFile(writeConfig(t, `
-version = "0.0.0-riscv"
-
-[execution]
-prover_mode = "dev-partial"
-shard_size = 500000
-`))
+// TestNewConfigFromFile_Shards checks that shard_size and shard_workers are
+// top-level settings.
+func TestNewConfigFromFile_Shards(t *testing.T) {
+	const (
+		version   = "version = \"0.0.0-riscv\"\n"
+		shards    = "shard_size = 500000\nshard_workers = 10\n"
+		execution = "[execution]\nprover_mode = \"dev-partial\"\n"
+	)
+	cfg, err := NewConfigFromFile(writeConfig(t, version+shards+execution))
 	require.NoError(t, err)
-	assert.Equal(t, uint64(500000), cfg.Execution.ShardSize)
-}
+	assert.Equal(t, uint64(500000), cfg.ShardSize)
+	assert.Equal(t, 10, cfg.ShardWorkers)
 
-func TestNewConfigFromFile_ShardWorkers(t *testing.T) {
-	cfg, err := NewConfigFromFile(writeConfig(t, `
-version = "0.0.0-riscv"
-
-[execution]
-prover_mode = "dev-partial"
-shard_size = 500000
-shard_workers = 10
-`))
-	require.NoError(t, err)
-	assert.Equal(t, 10, cfg.Execution.ShardWorkers)
+	_, err = NewConfigFromFile(writeConfig(t, version+execution+shards))
+	require.ErrorContains(t, err, "shard_size", "shard_size is not a pipeline setting")
 }
 
 // TestNewConfigFromFile_GoGen checks that gogen is a top-level setting, on by default.
@@ -82,12 +74,12 @@ func TestNewConfigFromFile_GoGen(t *testing.T) {
 func TestNewConfigFromFile_NegativeShardWorkers(t *testing.T) {
 	_, err := NewConfigFromFile(writeConfig(t, `
 version = "0.0.0-riscv"
+shard_workers = -1
 
 [execution]
 prover_mode = "dev-partial"
-shard_workers = -1
 `))
-	require.ErrorContains(t, err, "execution.shard_workers must not be negative")
+	require.ErrorContains(t, err, "shard_workers must not be negative")
 }
 
 func TestNewConfigFromFile_GuestELFRejected(t *testing.T) {

@@ -3,6 +3,14 @@
 ### 🚀 Features
 
 - *(prover-ray)* Gnark wrapper for logderivsum and lookups (#4576)
+- *(prover-ray)* Run the rollup guest in dev-zkvm and dev-partial (#4612)
+- *(prover-ray)* Return and accept guestOutput next to publicInputs (#4613)
+- *(prover-ray)* Ensuring that gnark wrapper does not need proof templates (#4465)
+- *(prover-ray)* Add in-circuit E6Check for the gnark verifier (#4629)
+
+### ⚡ Performance
+
+- *(prover-ray)* Batch the chaining of group digests into pair leaves (#4623)
 ## [1.0.0] - 2026-11-26
 
 ### 🚀 Features

@@ -1,19 +1,19 @@
-//! The recursive verification of one l2-execution proof: the proof image of the devmode system is
+//! The recursive verification of one proof: the proof image of the devmode system is
 //! accepted under the program VK and for the public-input hash it was proved for, and rejected
 //! under any other statement or once a round commitment is changed.
 
 const std = @import("std");
 
-const core_serde = @import("core_serde");
 const devmode_prover = @import("devmode_prover");
-const rollup = @import("rollup");
+const lineth_recursion = @import("lineth_recursion");
 
 const Allocator = std.mem.Allocator;
-const l2_execution_proof = core_serde.l2_execution_proof;
-const recursion = rollup.recursion;
+const recursion = lineth_recursion.recursion;
 
 const program_vk: [32]u8 = @splat(0x2a);
 const public_input_hash: [32]u8 = @splat(0x51);
+
+const VerifiableProof = struct { proof: struct { proof: struct { bytes: []const u8 } } };
 
 /// What a test verifies one proof with: its image, and the verifier sized to it.
 const Case = struct {
@@ -22,15 +22,8 @@ const Case = struct {
 
     fn init(a: Allocator, vk: [32]u8, hash: [32]u8) !Case {
         const image = try devmode_prover.prove(a, vk, hash);
-        const verifiable: l2_execution_proof.VerifiableL2ExecutionProof = .{
-            .program_vk = vk,
-            .proof = .{
-                .public_inputs = std.mem.zeroes(l2_execution_proof.L2ExecutionProofPublicInput),
-                .start_block_number = 0,
-                .proof = .{ .bytes = image },
-            },
-        };
-        return .{ .image = image, .verifier = try recursion.Verifier.init(a, &.{verifiable}) };
+        const proofs = [_]VerifiableProof{.{ .proof = .{ .proof = .{ .bytes = image } } }};
+        return .{ .image = image, .verifier = try recursion.Verifier.init(a, &proofs) };
     }
 };
 

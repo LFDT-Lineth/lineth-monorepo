@@ -161,6 +161,10 @@ jobs:
       - name: Build rollup guest and sample input
         run: make -C riscv-guests/rollup compile require-input KECCAK_ACCEL=false
 
+      # The sample request and its expected output are committed with the guest.
+      - name: Build rollup-aggregation guest
+        run: make -C riscv-guests/rollup_aggregation compile KECCAK_ACCEL=false
+
       - name: Upload prepared l2-execution ELF
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -175,6 +179,15 @@ jobs:
         with:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
+      - name: Upload prepared rollup-aggregation artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rollup-aggregation-accel-${{ github.sha }}
+          path: riscv-guests/rollup_aggregation/zig-out
           if-no-files-found: error
           overwrite: true
           retention-days: 1
@@ -235,6 +248,12 @@ jobs:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
 
+      - name: Download prepared rollup-aggregation artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rollup-aggregation-accel-${{ github.sha }}
+          path: riscv-guests/rollup_aggregation/zig-out
+
       - name: Setup RISC-V guests environment
         uses: ./.github/actions/setup-riscv-guests
 
@@ -269,6 +288,13 @@ jobs:
         run: >-
           make -C riscv-guests/rollup zkc-smoke-external
           ELF=${{ github.workspace }}/riscv-guests/rollup/zig-out/bin/rollup_guest
+
+      # The rollup-aggregation guest aggregates the committed sample request of two rollup proofs.
+      # Its output under zkc has to equal the committed output of the native statement.
+      - name: Compare rollup-aggregation guest output under zkc with the native statement (fast, but no accel keccak)
+        run: >-
+          make -C riscv-guests/rollup_aggregation zkc-smoke-external
+          ELF=${{ github.workspace }}/riscv-guests/rollup_aggregation/zig-out/bin/rollup_aggregation_guest
 
   zkc-interpreter-trace:
     name: l2-execution guest trace in ZKC interpreter (no accel)

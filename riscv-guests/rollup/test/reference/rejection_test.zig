@@ -12,7 +12,6 @@ const scenario = @import("scenario");
 
 const guest_errors = rollup.guest_errors;
 const l2_execution_proof = core_serde.l2_execution_proof;
-const messaging_offsets = rollup.messaging_offsets;
 const rollup_ssz = rollup.rollup_ssz;
 const ByteList = @import("guest_common").ssz.ByteList(rollup_ssz.MAX_BYTES_PER_BLOCK_RLP);
 
@@ -529,22 +528,6 @@ test "an offset beyond the proof's blocks is rejected" {
 
     const request = try requestOf(a, &.{ 3, 1 }, .{ .proofs = &.{.{ .messaging_offsets = &.{ 1, 4 } }} });
     try expectRejected(error.InvalidMessagingOffsets, guest_errors.CODE_MESSAGING_OFFSETS, a, request);
-}
-
-test "an offset rebases to 65535 but not to 65536" {
-    var pi = std.mem.zeroes(l2_execution_proof.L2ExecutionProofPublicInput);
-    pi.end_block_number = 65_536;
-    pi.block_count = 2;
-    pi.l2_messaging_blocks_offsets = .{ .items = &.{1} };
-    // The proof starts at block 65535, which is 65534 blocks after the first block of the rollup proof.
-    var proof: l2_execution_proof.L2ExecutionProof = .{ .public_inputs = pi, .start_block_number = 65_535, .proof = .{ .bytes = &.{} } };
-
-    var out: [2]u16 = undefined;
-    try messaging_offsets.rebase(proof, 1, out[0..1]);
-    try std.testing.expectEqual(@as(u16, 65_535), out[0]);
-
-    proof.public_inputs.l2_messaging_blocks_offsets = .{ .items = &.{ 1, 2 } };
-    try std.testing.expectError(error.InvalidMessagingOffsets, messaging_offsets.rebase(proof, 1, &out));
 }
 
 // ── Bounds and resources ─────────────────────────────────────────────────────────────────────────

@@ -162,7 +162,8 @@ func TestNewGrandProduct_NoNextRoundPanic(t *testing.T) {
 
 // TestGrandProduct_BaseFactorsWithExtensionData: base-declared factors that
 // hold extension-field data must not have their product cut down to its base
-// limb; SelfAssign panics instead.
+// limb. AssignColumn refuses such data; slipped in with OverrideColumn (as a
+// soundness test would), SelfAssign still panics instead of truncating.
 func TestGrandProduct_BaseFactorsWithExtensionData(t *testing.T) {
 	sys, num, den := newGrandProductSystem(t)
 	gp := sys.NewGrandProduct(
@@ -177,7 +178,12 @@ func TestGrandProduct_BaseFactorsWithExtensionData(t *testing.T) {
 		ext[i].B0.A0.SetUint64(uint64(i + 2))
 		ext[i].B1.A0.SetUint64(1)
 	}
-	rt.AssignColumn(num, &wiop.ConcreteVector{Plain: field.VecFromExt(ext)})
+	extData := &wiop.ConcreteVector{Plain: field.VecFromExt(ext)}
+	assert.PanicsWithValue(t,
+		`wiop: AssignColumn: column "gpSys/num" is declared base-field but is assigned extension-field data`,
+		func() { rt.AssignColumn(num, extData) })
+	rt.AssignColumn(num, makeVecU64(1, 1, 1, 1))
+	rt.OverrideColumn(num, extData)
 	rt.AssignColumn(den, makeVecU64(1, 1, 1, 1))
 	rt.AdvanceRound()
 
