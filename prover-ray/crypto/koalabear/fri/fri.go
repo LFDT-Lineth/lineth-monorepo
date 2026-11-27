@@ -309,8 +309,8 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // identity 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): point z
 // contributes scale_z · DenomBaseInv[(e − rot_z) mod N], where
 // e = bitReverse(pos), rot_z = rs mod N, scale_z = ω^{−rs}. Those entries are
-// first gathered into a contiguous chunk buffer, then subtracted, multiplied,
-// scaled and accumulated as whole vectors.
+// first gathered into a contiguous chunk buffer, then subtracted, scaled and
+// multiply-accumulated as whole vectors.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	if len(l.Columns) == 0 {
 		if running == nil {
@@ -349,7 +349,7 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 		}
 
 		var (
-			gbuf = extensions.VectorE6(make([]field.Ext, end-start))
+			gbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
 			dbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
 			tbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
 			ev   = extensions.VectorE6(evals[start:end])
@@ -381,15 +381,16 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 				for pos := start; pos < end; pos++ {
 					dbuf[pos-start] = l.DenomBaseInv[(bitReverseExponent(pos, logSize)-p.rot)&mask]
 				}
-				// evals += (G_g - Y_{g,z}) · dbuf · scale_z
+				// evals += (G_g - Y_{g,z}) · scale_z · dbuf, scaling before
+				// the fused multiply-accumulate saves a pass over evals.
 				tbuf.ScalarSub(gbuf, &p.combinedClaim)
-				tbuf.Mul(tbuf, dbuf)
 				if !p.scale.IsOne() {
 					tbuf.ScalarMulByElement(tbuf, &p.scale)
 				}
-				ev.Add(ev, tbuf)
+				ev.MulAcc(tbuf, dbuf)
 			}
 		}
+		field.ExtPool.Put(gbuf)
 		field.ExtPool.Put(dbuf)
 		field.ExtPool.Put(tbuf)
 	})

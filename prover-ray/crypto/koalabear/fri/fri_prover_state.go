@@ -203,10 +203,15 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 }
 
 // Release returns the Merkle trees of the committed folding layers to the
-// octuplet pool. It must be called only once the proof is opened, and the
-// state must not be used afterwards; the Proof returned by Open holds copies
-// of everything it took from the trees.
+// octuplet pool, and the running codeword, if one is still held (D=1, or an
+// abort before the final Fold), to the extension pool. It must be called only
+// once the proof is opened, and the state must not be used afterwards; the
+// Proof returned by Open holds copies of everything it took from the trees.
 func (st *ProverState) Release() {
+	if st.running != nil {
+		field.ExtPool.Put(st.running)
+		st.running = nil
+	}
 	for j, tree := range st.trees {
 		if t, ok := tree.(*Tree); ok {
 			field.OctupletPool.Put(t.Nodes)
