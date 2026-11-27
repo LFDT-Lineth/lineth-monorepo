@@ -63,12 +63,11 @@ func (l leafLayout) dpos(p int) int {
 	return p
 }
 
-// fillGroup fills the column-major matrix for the leaf group [g, g+16), laid out
-// matrix[pos*16+lane] as vortex.CompressPoseidon2x16Columns expects. In this
-// layout a column's 16 leaves are contiguous, so base columns are filled with a
-// single bulk copy of 16 consecutive leaf values (no per-element scatter), and
-// the kernel loads each rate coordinate instead of gathering.
-func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, g int) {
+// fillGroup fills the column-major matrix for the leaf group [j, j+16), laid
+// out matrix[pos*16+lane] as vortex.CompressPoseidon2x16Columns expects: a
+// column's 16 leaves are contiguous, so the kernel loads each rate coordinate
+// instead of gathering.
+func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, j int) {
 	// Header: identical for every lane.
 	for i := range l.header {
 		base := l.dpos(i) * simdLanes
@@ -77,57 +76,87 @@ func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, g int) {
 			matrix[base+lane] = h
 		}
 	}
-
-	// row(lane) = base + stride*lane. Non-bottom (paired) leaves digest two
-	// adjacent rows, so their 16 leaves are stride-2; the bottom level is
-	// stride-1 (contiguous), which enables the bulk-copy fast path.
 	if l.paired {
-		l.fillColumns(matrix, t, len(l.header), 2*g, 2)
-		off := len(l.header) + l.baseWidth + 6*l.extWidth
-		l.fillColumns(matrix, t, off, 2*g+1, 2)
-	} else {
-		l.fillColumns(matrix, t, len(l.header), g, 1)
+		l.fillPairedRows(matrix, t, j)
+		return
 	}
+	l.fillRows(matrix, t, j)
 }
 
-// fillColumns writes one row's base then ext columns into the column-major
-// matrix, starting at stream offset off, reading source row base+stride*lane
-// for lane 0..15.
-func (l leafLayout) fillColumns(matrix []field.Element, t SizedTable, off, base, stride int) {
-	s := off
+// fillRows writes rows [row, row+16) of every base then ext column into the
+// matrix, one row per lane (bottom level, unpaired leaves).
+func (l leafLayout) fillRows(matrix []field.Element, t SizedTable, row int) {
+	s := len(l.header)
 	for k := range t.Base {
-		col := t.Base[k]
 		dp := l.dpos(s) * simdLanes
-		if stride == 1 {
-			// 16 consecutive leaves of this column land contiguously.
-			copy(matrix[dp:dp+simdLanes], col[base:base+simdLanes])
-		} else {
-			for lane := range simdLanes {
-				matrix[dp+lane] = col[base+stride*lane]
-			}
-		}
+		// 16 consecutive leaves of this column land contiguously.
+		copy(matrix[dp:dp+simdLanes], t.Base[k][row:row+simdLanes])
 		s++
 	}
 	for k := range t.Ext {
 		col := t.Ext[k]
-		// The 6 limbs are contiguous unless the pad gap falls inside this
-		// column (at most one column across the stream), so resolve each
-		// destination once, outside the lane loop.
-		var dp [6]int
-		for i := range dp {
-			dp[i] = l.dpos(s+i) * simdLanes
-		}
+		dp := l.extPositions(s)
 		for lane := range simdLanes {
-			e := &col[base+stride*lane]
-			matrix[dp[0]+lane] = e.B0.A0
-			matrix[dp[1]+lane] = e.B0.A1
-			matrix[dp[2]+lane] = e.B1.A0
-			matrix[dp[3]+lane] = e.B1.A1
-			matrix[dp[4]+lane] = e.B2.A0
-			matrix[dp[5]+lane] = e.B2.A1
+			writeExtLane(matrix, &dp, lane, &col[row+lane])
 		}
 		s += 6
 	}
+}
+
+// fillPairedRows writes the group of 16 pair leaves starting at leaf j: leaf
+// j+lane digests rows 2(j+lane) and 2(j+lane)+1, the first row's columns at
+// one stream offset and the second row's after them.
+//
+// It reads each column once, rows [2j, 2j+32) in one run, and splits even
+// rows to the first row's position and odd rows to the second's. Filling the
+// two rows in separate passes over all columns reads every line twice, and
+// the second read misses: the columns are page-aligned slices, so the same
+// line of every column maps to the same L1 set, and the first pass has
+// evicted it by the time the second pass returns.
+func (l leafLayout) fillPairedRows(matrix []field.Element, t SizedTable, j int) {
+	off0 := len(l.header)
+	off1 := off0 + l.baseWidth + 6*l.extWidth
+	r0 := 2 * j
+	for k := range t.Base {
+		rows := t.Base[k][r0 : r0+2*simdLanes]
+		d0 := matrix[l.dpos(off0+k)*simdLanes:][:simdLanes]
+		d1 := matrix[l.dpos(off1+k)*simdLanes:][:simdLanes]
+		for lane := range simdLanes {
+			d0[lane] = rows[2*lane]
+			d1[lane] = rows[2*lane+1]
+		}
+	}
+	for k := range t.Ext {
+		rows := t.Ext[k][r0 : r0+2*simdLanes]
+		dp0 := l.extPositions(off0 + l.baseWidth + 6*k)
+		dp1 := l.extPositions(off1 + l.baseWidth + 6*k)
+		for lane := range simdLanes {
+			writeExtLane(matrix, &dp0, lane, &rows[2*lane])
+			writeExtLane(matrix, &dp1, lane, &rows[2*lane+1])
+		}
+	}
+}
+
+// extPositions returns the matrix offsets of the 6 limbs of an ext element at
+// stream offset s. The limbs are contiguous unless the pad gap falls inside
+// this element (at most one per stream), so they are resolved once, outside
+// the lane loops.
+func (l leafLayout) extPositions(s int) [6]int {
+	var dp [6]int
+	for i := range dp {
+		dp[i] = l.dpos(s+i) * simdLanes
+	}
+	return dp
+}
+
+// writeExtLane writes the 6 limbs of e to lane of the limb positions dp.
+func writeExtLane(matrix []field.Element, dp *[6]int, lane int, e *field.Ext) {
+	matrix[dp[0]+lane] = e.B0.A0
+	matrix[dp[1]+lane] = e.B0.A1
+	matrix[dp[2]+lane] = e.B1.A0
+	matrix[dp[3]+lane] = e.B1.A1
+	matrix[dp[4]+lane] = e.B2.A0
+	matrix[dp[5]+lane] = e.B2.A1
 }
 
 // hashLeafScalar reproduces the MDHasher path for a single leaf; used for the
@@ -189,5 +218,46 @@ func hashSizedLeaves(hash MerkleHash, t SizedTable, paired bool, out []field.Oct
 		for j := tail; j < nbLeaves; j++ {
 			out[j] = l.hashLeafScalar(hasher, t, j)
 		}
+	}
+}
+
+// compressInto sets dst[j] = C(dst[j], right[j]) for every j, in parallel.
+// With the batched hash, 16 compressions run per AVX-512 call, which is about
+// 7x cheaper per compression than the scalar one; the final len(dst)%16 and
+// the modes without a batched path use the scalar compression. dst and right
+// have the same length and must not overlap.
+func compressInto(hash MerkleHash, dst, right []field.Octuplet) {
+	if len(dst) != len(right) {
+		panic("fri: compressInto: length mismatch")
+	}
+	nbGroups := len(dst) / batchLanes
+	if !hash.batched() {
+		nbGroups = 0
+	}
+	if nbGroups > 0 {
+		parallel.Execute(nbGroups, func(start, end int) {
+			// The kernel takes the 16 states and blocks column-major,
+			// coordinate pos of lane at [pos*16+lane], and writes the 16
+			// results row-major straight into dst.
+			var state, block [8 * batchLanes]field.Element
+			for g := start; g < end; g++ {
+				j := g * batchLanes
+				for lane := range batchLanes {
+					d, r := &dst[j+lane], &right[j+lane]
+					for pos := range 8 {
+						state[pos*batchLanes+lane] = d[pos]
+						block[pos*batchLanes+lane] = r[pos]
+					}
+				}
+				batchPoseidon2.Compressx16ColumnsWithState(state[:], block[:], 8, dst[j:j+batchLanes])
+			}
+		})
+	}
+	if tail := nbGroups * batchLanes; tail < len(dst) {
+		parallel.Execute(len(dst)-tail, func(start, end int) {
+			for j := tail + start; j < tail+end; j++ {
+				dst[j] = hash.compress(dst[j], right[j])
+			}
+		})
 	}
 }

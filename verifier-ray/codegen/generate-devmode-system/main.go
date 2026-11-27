@@ -100,6 +100,7 @@ func writeCompiledZig(compiled verifierraycodegen.CompiledSystem) error {
 		GrandProductImport:     `@import("verifier_ray").query.grandproduct`,
 		RowLimitImport:         `@import("verifier_ray").query.rowlimit`,
 		SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
+		E6CheckImport:          `@import("verifier_ray").query.e6check`,
 		WritePcs:               true,
 		PcsImport:              `@import("verifier_ray").query.pcs`,
 		FriImport:              `@import("verifier_ray").query.fri`,
@@ -108,7 +109,7 @@ func writeCompiledZig(compiled verifierraycodegen.CompiledSystem) error {
 	}
 
 	fmt.Fprintf(&systemBuf,
-		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\n",
+		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .e6check = system_0_e6check, .pcs = pcs_system_0 };\n",
 	)
 
 	formatted, err := runZigFmt(systemBuf.Bytes())

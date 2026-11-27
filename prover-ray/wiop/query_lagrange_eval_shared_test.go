@@ -109,3 +109,62 @@ func materialize(cv *wiop.ConcreteVector, n int, pd wiop.PaddingDirection, shift
 	}
 	return field.VecFromExt(out)
 }
+
+// TestLagrangeEval_BasePoint_MatchesReference is the base-field-point
+// counterpart of TestLagrangeEval_SharedWeights_MatchesReference: it checks
+// the padded evaluation against polynomials.EvalLagrange on the materialised
+// vector, over both padding directions, base and extension data, shifts and a
+// non-zero padding value.
+func TestLagrangeEval_BasePoint_MatchesReference(t *testing.T) {
+	rng := rand.New(rand.NewPCG(3, 4))
+	shifts := []int{0, 1, -1, 3}
+	for _, n := range []int{4, 1 << 14} {
+		for _, pd := range []wiop.PaddingDirection{wiop.PaddingDirectionNone, wiop.PaddingDirectionLeft, wiop.PaddingDirectionRight} {
+			t.Run(fmt.Sprintf("n=%d/pd=%v", n, pd), func(t *testing.T) {
+				plainLen := n
+				if pd != wiop.PaddingDirectionNone {
+					plainLen = n - n/4 - 1
+				}
+
+				sys := wiop.NewSystemf("basepoint")
+				r0 := sys.NewRound()
+				r1 := sys.NewRound()
+				mod := sys.NewSizedModule(sys.Context.Childf("mod"), n, pd)
+				base := mod.NewColumn(sys.Context.Childf("base"), r0)
+				ext := mod.NewExtensionColumn(sys.Context.Childf("ext"), r0)
+				ep := r1.NewCell(sys.Context.Childf("ep"), false)
+
+				views := make([]*wiop.ColumnView, 0, 2*len(shifts))
+				for _, k := range shifts {
+					views = append(views, base.View().Shift(k), ext.View().Shift(k))
+				}
+				le := sys.NewLagrangeEval(sys.Context.Childf("le"), views, ep)
+
+				var pad field.Element
+				if pd != wiop.PaddingDirectionNone {
+					pad.SetUint64(rng.Uint64())
+				}
+				baseCV := &wiop.ConcreteVector{Plain: field.VecFromBase(field.VecPseudoRandBase(rng, plainLen)), Padding: pad}
+				extCV := &wiop.ConcreteVector{Plain: field.VecFromExt(field.VecPseudoRandExt(rng, plainLen)), Padding: pad}
+
+				rt := wiop.NewRuntime(sys)
+				rt.AssignColumn(base, baseCV)
+				rt.AssignColumn(ext, extCV)
+				rt.AdvanceRound()
+				z := field.ElemFromBase(field.PseudoRand(rng))
+				rt.AssignCell(ep, z)
+				le.SelfAssign(rt)
+
+				for i, pv := range views {
+					cv := baseCV
+					if pv.Column == ext {
+						cv = extCV
+					}
+					want := polynomials.EvalLagrange(materialize(cv, n, pd, pv.ShiftingOffset), z)
+					got := rt.GetCellValue(le.EvaluationClaims[i])
+					require.Equal(t, want, got, "view %d (shift %d, ext=%v)", i, pv.ShiftingOffset, pv.Column == ext)
+				}
+			})
+		}
+	}
+}

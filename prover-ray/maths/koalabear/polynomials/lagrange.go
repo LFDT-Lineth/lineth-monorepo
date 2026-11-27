@@ -5,7 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
 // EvalLagrange evaluates a polynomial given in Lagrange (evaluation) basis at
@@ -16,20 +16,7 @@ import (
 // The subgroup size n = len(p) must be a power of two not exceeding 2^MaxOrderRoot.
 // z must not be a root of unity.
 func EvalLagrange(p field.Vec, z field.Gen) field.Gen {
-	if p.Len() == 0 {
-		return field.ElemZero()
-	}
-	gen := field.RootOfUnityBy(p.Len())
-	switch {
-	case p.IsBase() && z.IsBase():
-		return field.ElemFromBase(evalLagrangeBaseBase(p.AsBase(), z.AsBase(), gen))
-	case p.IsBase():
-		return field.ElemFromExt(evalLagrangeBaseExt(p.AsBase(), z.AsExt(), gen))
-	case z.IsBase():
-		return field.ElemFromExt(evalLagrangeExtBase(p.AsExt(), z.AsBase(), gen))
-	default:
-		return field.ElemFromExt(evalLagrangeExtExt(p.AsExt(), z.AsExt(), gen))
-	}
+	return EvalLagrangeBatch(p, []field.Gen{z})[0]
 }
 
 // EvalLagrangeBatch evaluates the same Lagrange polynomial p at multiple points
@@ -41,32 +28,34 @@ func EvalLagrangeBatch(p field.Vec, zs []field.Gen) []field.Gen {
 	if len(zs) == 0 {
 		return nil
 	}
-	if len(zs) == 1 {
-		return []field.Gen{EvalLagrange(p, zs[0])}
-	}
+	results := make([]field.Gen, len(zs))
 	n := p.Len()
-	gen := field.RootOfUnityBy(n)
+	if n == 0 {
+		for j := range results {
+			results[j] = field.ElemZero()
+		}
+		return results
+	}
 	tb := bits.TrailingZeros(uint(n))
 
 	var invN field.Element
 	invN.SetUint64(uint64(n))
 	invN.Inverse(&invN)
 
+	// omegaPowers[i] = ωⁱ is a running product, so it stays a loop; every
+	// other pass below is a gnark-crypto vector kernel.
+	gen := field.RootOfUnityBy(n)
 	omegaPowers := make([]field.Element, n)
 	omegaPowers[0].SetOne()
 	for i := 1; i < n; i++ {
 		omegaPowers[i].Mul(&omegaPowers[i-1], &gen)
 	}
 
-	results := make([]field.Gen, len(zs))
+	// weightedP[i] = p[i]·ωⁱ/n.
 	if p.IsBase() {
-		weightedP := make([]field.Element, n)
-		pBase := p.AsBase()
-		for i := 0; i < n; i++ {
-			var wi field.Element
-			wi.Mul(&omegaPowers[i], &invN)
-			weightedP[i].Mul(&wi, &pBase[i])
-		}
+		weightedP := koalabear.Vector(make([]field.Element, n))
+		weightedP.Mul(omegaPowers, p.AsBase())
+		weightedP.ScalarMul(weightedP, &invN)
 		for j, z := range zs {
 			if z.IsBase() {
 				results[j] = field.ElemFromBase(evalBatchBaseBase(weightedP, z.AsBase(), omegaPowers, tb))
@@ -75,13 +64,9 @@ func EvalLagrangeBatch(p field.Vec, zs []field.Gen) []field.Gen {
 			}
 		}
 	} else {
-		weightedP := make([]field.Ext, n)
-		pExt := p.AsExt()
-		for i := 0; i < n; i++ {
-			var wi field.Element
-			wi.Mul(&omegaPowers[i], &invN)
-			weightedP[i].MulByElement(&pExt[i], &wi)
-		}
+		weightedP := extensions.VectorE6(make([]field.Ext, n))
+		weightedP.MulByElement(p.AsExt(), omegaPowers)
+		weightedP.ScalarMulByElement(weightedP, &invN)
 		for j, z := range zs {
 			if z.IsBase() {
 				results[j] = field.ElemFromExt(evalBatchExtBase(weightedP, z.AsBase(), omegaPowers, tb))
@@ -93,503 +78,72 @@ func EvalLagrangeBatch(p field.Vec, zs []field.Gen) []field.Gen {
 	return results
 }
 
-// EvalLagrangeBasisAtZ returns the vector [L₀(z), L₁(z), …, L_{n-1}(z)] where
-//
-//	Lᵢ(z) = ωⁱ/n · (zⁿ - 1) / (z - ωⁱ)
-//
-// are the Lagrange basis vectors on the root of unity subgroup.
-//
-// Uses the recurrence relation to avoid n-1 extra inversions:
-//
-//	L₀(z) = (1/n) · (zⁿ - 1) / (z - 1)
-//	Lᵢ(z) = Lᵢ₋₁(z) · ω · (z - ωⁱ⁻¹) / (z - ωⁱ)
-//
-// cardinality must be a power of two not exceeding 2^MaxOrderRoot; z must not
-// be a root of unity.
-func EvalLagrangeBasisAtZ(z field.Gen, cardinality uint64) []field.Gen {
-
-	var (
-		gen = field.RootOfUnityBy(int(cardinality))
-		n   = int(cardinality)
-	)
-
-	if z.IsBase() {
-		var (
-			res = computeLagrangeAtZBase(z.AsBase(), gen, n)
-			out = make([]field.Gen, n)
-		)
-
-		for i, e := range res {
-			out[i] = field.ElemFromBase(e)
-		}
-		return out
-	}
-
-	var (
-		res = computeLagrangeAtZExt(z.AsExt(), gen, n)
-		out = make([]field.Gen, n)
-	)
-
-	for i, e := range res {
-		out[i] = field.ElemFromExt(e)
-	}
-	return out
-}
-
-// QuotientLagrange computes q(X) = (v - p(X)) / (z - X) where p is in Lagrange
-// form over domain d and v = p(z) is the claimed evaluation at z outside the
-// domain. Returns q in Lagrange Normal form: q[j] = (v - p(ω^j)) / (z - ω^j).
-// Panics (division by zero) if z happens to be a domain point.
-func QuotientLagrange(p []field.Element, v, z field.Element) []field.Element {
-
-	var (
-		n      = len(p)
-		q      = make([]field.Element, n)
-		omegaJ = field.One()
-	)
-
-	omega, err := fft.Generator(uint64(n))
-	if err != nil {
-		panic(err) // there is no actual error case, this is a void error
-	}
-
-	for j := 0; j < n; j++ {
-		var num, den koalabear.Element
-		num.Sub(&v, &p[j])
-		den.Sub(&z, &omegaJ)
-		den.Inverse(&den)
-		q[j].Mul(&num, &den)
-		omegaJ.Mul(&omegaJ, &omega)
-	}
-
-	return q
-}
-
-// QuotientLagrangeExt is as QuotientLagrange but for extension fields.
-func QuotientLagrangeExt(p []field.Ext, v, z field.Ext) []field.Ext {
-
-	var (
-		n      = len(p)
-		q      = make([]field.Ext, n)
-		omegaJ = field.One()
-	)
-
-	omega, err := fft.Generator(uint64(n))
-	if err != nil {
-		panic(err) // there is no actual error case, this is a void error
-	}
-
-	for j := 0; j < n; j++ {
-		var num, den field.Ext
-		num.Sub(&v, &p[j])
-		field.SubByBase(&den, &z, &omegaJ)
-		// @alex: batch inverse here? My guts tell me that the efficient thing
-		// would be to implement a function computing all the quotients provided
-		// a list of poly and a list of claim. That way, we can batch the
-		// computation as efficiently as possible.
-		den.Inverse(&den)
-		q[j].Mul(&num, &den)
-		omegaJ.Mul(&omegaJ, &omega)
-	}
-
-	return q
-}
-
 // ---------------------------------------------------------------------------
-// Single-evaluation specializations
+// Evaluation at one point, given weightedP[i] = p[i]·ωⁱ/n and the ωⁱ table
 // ---------------------------------------------------------------------------
 
-// evalLagrangeBaseBase: p in 𝔽_p, z in 𝔽_p → result in 𝔽_p.
-func evalLagrangeBaseBase(p []field.Element, z, gen field.Element) field.Element {
-	n := len(p)
-	tb := bits.TrailingZeros(uint(n))
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
+// zPowNMinusOneBase returns zⁿ - 1 for n = 2^tb.
+func zPowNMinusOneBase(z field.Element, tb int) field.Element {
+	for range tb {
+		z.Square(&z)
 	}
-	var one, zPowNMinusOne field.Element
+	var one field.Element
 	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	weightedP := make([]field.Element, n)
-	denom := make([]field.Element, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		weightedP[i].Mul(&wi, &p[i])
-		denom[i].Sub(&z, &accOmega)
-		accOmega.Mul(&accOmega, &gen)
-	}
-
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Element
-	for i := 0; i < n; i++ {
-		var term field.Element
-		term.Mul(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Element
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+	z.Sub(&z, &one)
+	return z
 }
 
-// evalLagrangeBaseExt: p in 𝔽_p, z in 𝔽_{p^4} → result in 𝔽_{p^4}.
-func evalLagrangeBaseExt(p []field.Element, z field.Ext, gen field.Element) field.Ext {
-	n := len(p)
-	tb := bits.TrailingZeros(uint(n))
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	var zPowN field.Ext
-	zPowN.Set(&z)
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
+// zPowNMinusOneExt returns zⁿ - 1 for n = 2^tb.
+func zPowNMinusOneExt(z field.Ext, tb int) field.Ext {
+	for range tb {
+		z.Square(&z)
 	}
-	var one, zPowNMinusOne field.Ext
+	var one field.Ext
 	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	// weightedP[i] = (ω^i / n) * p[i] stays in 𝔽_p since both factors are base.
-	weightedP := make([]field.Element, n)
-	denom := make([]field.Ext, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		weightedP[i].Mul(&wi, &p[i])
-		denom[i].Set(&z)
-		denom[i].B0.A0.Sub(&denom[i].B0.A0, &accOmega) // z - ω^i
-		accOmega.Mul(&accOmega, &gen)
-	}
-
-	invDenom := make([]field.Ext, n)
-	field.VecBatchInvExt(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&invDenom[i], &weightedP[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+	z.Sub(&z, &one)
+	return z
 }
 
-// evalLagrangeExtBase: p in 𝔽_{p^4}, z in 𝔽_p → result in 𝔽_{p^4}.
-func evalLagrangeExtBase(p []field.Ext, z, gen field.Element) field.Ext {
-	n := len(p)
-	tb := bits.TrailingZeros(uint(n))
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	weightedP := make([]field.Ext, n)
-	denom := make([]field.Element, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		weightedP[i].MulByElement(&p[i], &wi)
-		denom[i].Sub(&z, &accOmega)
-		accOmega.Mul(&accOmega, &gen)
-	}
-
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.MulByElement(&sum, &zPowNMinusOne)
-	return result
+// invDenomBase returns 1/(z - ωⁱ) for every i.
+func invDenomBase(z field.Element, omegaPowers []field.Element) []field.Element {
+	d := koalabear.Vector(make([]field.Element, len(omegaPowers)))
+	d.ScalarSubFrom(&z, omegaPowers)
+	field.VecBatchInvBase(d, d)
+	return d
 }
 
-// evalLagrangeExtExt: p in 𝔽_{p^4}, z in 𝔽_{p^4} → result in 𝔽_{p^4}.
-func evalLagrangeExtExt(p []field.Ext, z field.Ext, gen field.Element) field.Ext {
-	n := len(p)
-	tb := bits.TrailingZeros(uint(n))
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	var zPowN field.Ext
-	zPowN.Set(&z)
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Ext
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	weightedP := make([]field.Ext, n)
-	denom := make([]field.Ext, n)
-	var accOmega field.Element
-	accOmega.SetOne()
-	for i := 0; i < n; i++ {
-		var wi field.Element
-		wi.Mul(&accOmega, &invN)
-		weightedP[i].MulByElement(&p[i], &wi)
-		denom[i].Set(&z)
-		denom[i].B0.A0.Sub(&denom[i].B0.A0, &accOmega) // z - ω^i
-		accOmega.Mul(&accOmega, &gen)
-	}
-
-	invDenom := make([]field.Ext, n)
-	field.VecBatchInvExt(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.Mul(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+// invDenomExt returns 1/(z - ωⁱ) for every i.
+func invDenomExt(z field.Ext, omegaPowers []field.Element) []field.Ext {
+	d := extensions.VectorE6(make([]field.Ext, len(omegaPowers)))
+	d.ScalarSubFromBase(&z, omegaPowers)
+	field.VecBatchInvExt(d, d)
+	return d
 }
-
-// ---------------------------------------------------------------------------
-// Batch inner helpers — accept pre-computed weightedP and omegaPowers
-// ---------------------------------------------------------------------------
 
 func evalBatchBaseBase(weightedP []field.Element, z field.Element, omegaPowers []field.Element, tb int) field.Element {
-	n := len(weightedP)
-
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	denom := make([]field.Element, n)
-	for i := 0; i < n; i++ {
-		denom[i].Sub(&z, &omegaPowers[i])
-	}
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Element
-	for i := 0; i < n; i++ {
-		var term field.Element
-		term.Mul(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Element
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+	sum := koalabear.Vector(weightedP).InnerProduct(invDenomBase(z, omegaPowers))
+	scale := zPowNMinusOneBase(z, tb)
+	sum.Mul(&sum, &scale)
+	return sum
 }
 
 func evalBatchBaseExt(weightedP []field.Element, z field.Ext, omegaPowers []field.Element, tb int) field.Ext {
-	n := len(weightedP)
-
-	var zPowN field.Ext
-	zPowN.Set(&z)
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Ext
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	denom := make([]field.Ext, n)
-	for i := 0; i < n; i++ {
-		denom[i].Set(&z)
-		denom[i].B0.A0.Sub(&denom[i].B0.A0, &omegaPowers[i])
-	}
-	invDenom := make([]field.Ext, n)
-	field.VecBatchInvExt(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&invDenom[i], &weightedP[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
+	sum := extensions.VectorE6(invDenomExt(z, omegaPowers)).InnerProductByElement(weightedP)
+	scale := zPowNMinusOneExt(z, tb)
+	sum.Mul(&sum, &scale)
+	return sum
 }
 
 func evalBatchExtBase(weightedP []field.Ext, z field.Element, omegaPowers []field.Element, tb int) field.Ext {
-	n := len(weightedP)
-
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	denom := make([]field.Element, n)
-	for i := 0; i < n; i++ {
-		denom[i].Sub(&z, &omegaPowers[i])
-	}
-	invDenom := make([]field.Element, n)
-	field.VecBatchInvBase(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.MulByElement(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.MulByElement(&sum, &zPowNMinusOne)
-	return result
+	sum := extensions.VectorE6(weightedP).InnerProductByElement(invDenomBase(z, omegaPowers))
+	scale := zPowNMinusOneBase(z, tb)
+	sum.MulByElement(&sum, &scale)
+	return sum
 }
 
 func evalBatchExtExt(weightedP []field.Ext, z field.Ext, omegaPowers []field.Element, tb int) field.Ext {
-	n := len(weightedP)
-
-	var zPowN field.Ext
-	zPowN.Set(&z)
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Ext
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	denom := make([]field.Ext, n)
-	for i := 0; i < n; i++ {
-		denom[i].Set(&z)
-		denom[i].B0.A0.Sub(&denom[i].B0.A0, &omegaPowers[i])
-	}
-	invDenom := make([]field.Ext, n)
-	field.VecBatchInvExt(invDenom, denom)
-
-	var sum field.Ext
-	for i := 0; i < n; i++ {
-		var term field.Ext
-		term.Mul(&weightedP[i], &invDenom[i])
-		sum.Add(&sum, &term)
-	}
-
-	var result field.Ext
-	result.Mul(&zPowNMinusOne, &sum)
-	return result
-}
-
-// ---------------------------------------------------------------------------
-// Lagrange-basis vector specializations
-// ---------------------------------------------------------------------------
-
-// computeLagrangeAtZBase: z in 𝔽_p → each Lᵢ(z) in 𝔽_p.
-func computeLagrangeAtZBase(z, gen field.Element, n int) []field.Element {
-	res := make([]field.Element, n)
-	tb := bits.TrailingZeros(uint(n))
-
-	zPowN := z
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Element
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	// L₀ = (zⁿ - 1) / (n · (z - 1))
-	var zMinusOne field.Element
-	zMinusOne.Sub(&z, &one)
-	res[0].Div(&zPowNMinusOne, &zMinusOne)
-	res[0].Mul(&res[0], &invN)
-
-	prevZMinusOmega := zMinusOne
-	var accOmega field.Element
-	accOmega.SetOne()
-
-	for i := 1; i < n; i++ {
-		// Lᵢ = ω · Lᵢ₋₁ · (z - ω^{i-1}) / (z - ωⁱ)
-		accOmega.Mul(&accOmega, &gen)
-		var curZMinusOmega field.Element
-		curZMinusOmega.Sub(&z, &accOmega)
-		res[i].Mul(&res[i-1], &gen)
-		res[i].Mul(&res[i], &prevZMinusOmega)
-		res[i].Div(&res[i], &curZMinusOmega)
-		prevZMinusOmega = curZMinusOmega
-	}
-	return res
-}
-
-// computeLagrangeAtZExt: z in 𝔽_{p^4} → each Lᵢ(z) in 𝔽_{p^4}.
-func computeLagrangeAtZExt(z field.Ext, gen field.Element, n int) []field.Ext {
-	res := make([]field.Ext, n)
-	tb := bits.TrailingZeros(uint(n))
-
-	var zPowN field.Ext
-	zPowN.Set(&z)
-	for i := 0; i < tb; i++ {
-		zPowN.Square(&zPowN)
-	}
-	var one, zPowNMinusOne field.Ext
-	one.SetOne()
-	zPowNMinusOne.Sub(&zPowN, &one)
-
-	var invN field.Element
-	invN.SetUint64(uint64(n))
-	invN.Inverse(&invN)
-
-	// L₀ = (zⁿ - 1) / (n · (z - 1))
-	var zMinusOne field.Ext
-	zMinusOne.Sub(&z, &one)
-	res[0].Div(&zPowNMinusOne, &zMinusOne)
-	res[0].MulByElement(&res[0], &invN)
-
-	prevZMinusOmega := zMinusOne
-	var accOmega field.Element
-	accOmega.SetOne()
-
-	for i := 1; i < n; i++ {
-		// Lᵢ = ω · Lᵢ₋₁ · (z - ω^{i-1}) / (z - ωⁱ)
-		accOmega.Mul(&accOmega, &gen)
-		var curZMinusOmega field.Ext
-		curZMinusOmega.Set(&z)
-		curZMinusOmega.B0.A0.Sub(&curZMinusOmega.B0.A0, &accOmega) // z - ω^i
-		res[i].MulByElement(&res[i-1], &gen)
-		res[i].Mul(&res[i], &prevZMinusOmega)
-		res[i].Div(&res[i], &curZMinusOmega)
-		prevZMinusOmega = curZMinusOmega
-	}
-	return res
+	sum := extensions.VectorE6(weightedP).InnerProduct(invDenomExt(z, omegaPowers))
+	scale := zPowNMinusOneExt(z, tb)
+	sum.Mul(&sum, &scale)
+	return sum
 }

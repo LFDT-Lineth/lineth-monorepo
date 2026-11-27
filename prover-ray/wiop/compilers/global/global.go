@@ -12,7 +12,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/internal/vecprog"
+	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // Compile adds the global-quotient compilation pass to sys. It groups each
@@ -362,7 +365,7 @@ func computeCancellationCoset(cancelled []int, n, N int) []field.Element {
 		if k < 0 {
 			k = n + pos
 		}
-		field.ExpToInt(&roots[i], omega, k)
+		roots[i].ExpInt64(omega, int64(k))
 	}
 
 	// Evaluate the product at every coset point. Points are independent, so
@@ -399,7 +402,7 @@ type cosetWalk struct {
 func newCosetWalk(shifts []field.Element, n, t int) *cosetWalk {
 	w := &cosetWalk{shifts: shifts, omega: field.RootOfUnityBy(n), n: n, k: t / n, i: t % n}
 	if w.k < len(shifts) {
-		field.ExpToInt(&w.x, w.omega, w.i)
+		w.x.ExpInt64(w.omega, int64(w.i))
 		w.x.Mul(&w.x, &shifts[w.k])
 	}
 	return w
@@ -470,7 +473,7 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 
 	omega := field.RootOfUnityBy(n)
 	var omegaP field.Element
-	field.ExpToInt(&omegaP, omega, p)
+	omegaP.ExpInt64(omega, int64(p))
 
 	// Constant numerator coefficient ω^p / n.
 	var nInv field.Element
@@ -485,7 +488,7 @@ func computeLagrangeSelectorCoset(position, n, N int) []field.Element {
 	var one field.Element
 	one.SetOne()
 	for k := range shifts {
-		field.ExpToInt(&num[k], shifts[k], n)
+		num[k].ExpInt64(shifts[k], int64(n))
 		num[k].Sub(&num[k], &one)
 		num[k].Mul(&num[k], &numCoef)
 	}
@@ -779,6 +782,29 @@ func cachedDomain(n int, shift *field.Element) *fft.Domain {
 	return d.(*fft.Domain)
 }
 
+// cosetTableCache holds, per cached coset domain, its shift powers
+// s^0, …, s^{n-1} in bit-reversed order: the coset scaling of an FFT(DIT),
+// whose input is bit-reversed.
+//
+// fft.NewDomain already precomputes this table (cosetTableBitReversed, for
+// Cardinality ≤ 2^22), but gnark-crypto does not export it, so this keeps a
+// second copy. Drop the cache once an accessor such as
+// CosetTableBitReversed() is exported upstream.
+var cosetTableCache sync.Map // *fft.Domain -> []field.Element
+
+// bitReversedCosetTable returns d's shift powers in bit-reversed order,
+// building them once per domain.
+func bitReversedCosetTable(d *fft.Domain) []field.Element {
+	if t, ok := cosetTableCache.Load(d); ok {
+		return t.([]field.Element)
+	}
+	t := make([]field.Element, d.Cardinality)
+	fft.BuildExpTable(d.FrMultiplicativeGen, t)
+	gutils.BitReverse(t)
+	got, _ := cosetTableCache.LoadOrStore(d, t)
+	return got.([]field.Element)
+}
+
 // annihilatorInverses returns 1/(x^n − 1) on each small coset of
 // [cosetShifts], where x^n = s_k^n = g^n·ω_ratio^k is constant.
 func annihilatorInverses(n, ratio int) []field.Element {
@@ -838,24 +864,28 @@ func evalColumnsOnCosets(
 		baseEvals[c] = vals
 	})
 
-	// Evaluation: coset k > 0 copies the coefficients from coset 0's slot
+	// Evaluation: coset k > 0 reads the coefficients from coset 0's slot
 	// before coset 0 is evaluated in place, in a second pass. FFT(DIT) takes
-	// the bit-reversed coefficients and returns the natural order.
+	// the bit-reversed coefficients and returns the natural order. The coset
+	// shift is applied while moving the coefficients into the slot
+	// (dst = coefs ⊙ shift-powers, bit-reversed), so the FFT runs without
+	// OnCoset and the coefficients are not first copied.
 	evalOn := func(c, k, tasks int) {
+		shifts := bitReversedCosetTable(cosetDomains[k])
 		if v := extEvals[c]; v != nil {
 			dst := v[k*n : (k+1)*n]
-			if k > 0 {
-				copy(dst, v[:n])
-			}
-			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
+			parallel.ExecuteWithNbTasks(n, tasks, func(start, end int) {
+				extensions.VectorE6(dst[start:end]).MulByElement(v[start:end], shifts[start:end])
+			})
+			cosetDomains[k].FFTExt6(dst, fft.DIT, fft.WithNbTasks(tasks))
 			return
 		}
 		v := baseEvals[c]
 		dst := v[k*n : (k+1)*n]
-		if k > 0 {
-			copy(dst, v[:n])
-		}
-		cosetDomains[k].FFT(dst, fft.DIT, fft.OnCoset(), fft.WithNbTasks(tasks))
+		parallel.ExecuteWithNbTasks(n, tasks, func(start, end int) {
+			koalabear.Vector(dst[start:end]).Mul(v[start:end], shifts[start:end])
+		})
+		cosetDomains[k].FFT(dst, fft.DIT, fft.WithNbTasks(tasks))
 	}
 	type item struct{ c, k int }
 	items := make([]item, 0, len(cols)*(ratio-1))
@@ -945,18 +975,18 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 		ratio = len(cosetDomains)
 		tasks = max(1, runtime.GOMAXPROCS(0)/ratio)
 	)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for k := start; k < end; k++ {
 			cosetDomains[k].FFTInverseExt6(agg[k*n:(k+1)*n], fft.DIF, fft.OnCoset(), fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 
 	// coefs[m][k] = g^{-nm}·ω_ratio^{-km}/ratio, with ω_ratio = ω_N^n.
 	var g, gInvN, omegaInv, ratioInv field.Element
 	g.SetUint64(field.MultiplicativeGen)
-	field.ExpToInt(&gInvN, g, n)
+	gInvN.ExpInt64(g, int64(n))
 	gInvN.Inverse(&gInvN)
-	field.ExpToInt(&omegaInv, field.RootOfUnityBy(n*ratio), n)
+	omegaInv.ExpInt64(field.RootOfUnityBy(n*ratio), int64(n))
 	omegaInv.Inverse(&omegaInv)
 	ratioInv.SetUint64(uint64(ratio))
 	ratioInv.Inverse(&ratioInv)
@@ -966,7 +996,7 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	for m := range coefs {
 		coefs[m] = make([]field.Element, ratio)
 		var step field.Element // ω_ratio^{-m}
-		field.ExpToInt(&step, omegaInv, m)
+		step.ExpInt64(omegaInv, int64(m))
 		coefs[m][0] = rowScale
 		for k := 1; k < ratio; k++ {
 			coefs[m][k].Mul(&coefs[m][k-1], &step)
@@ -975,30 +1005,31 @@ func cosetsToShares(agg []field.Ext, smallDomain *fft.Domain, cosetDomains []*ff
 	}
 
 	shares := make([][]field.Ext, ratio)
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			shares[m] = make([]field.Ext, n)
 			hugepage.Advise(shares[m])
 		}
-	}, ratio)
+	})
+	// share_m = Σ_k coefs[m][k]·β_k, one ScalarMulByElement + Add pass per k.
 	parallel.Execute(n, func(start, end int) {
+		tmp := extensions.VectorE6(field.ExtPool.Get(end - start))
 		for m, share := range shares {
-			for p := start; p < end; p++ {
-				var acc, term field.Ext
-				for k := range ratio {
-					term.MulByElement(&agg[k*n+p], &coefs[m][k])
-					acc.Add(&acc, &term)
-				}
-				share[p] = acc
+			s := extensions.VectorE6(share[start:end])
+			s.ScalarMulByElement(agg[start:end], &coefs[m][0])
+			for k := 1; k < ratio; k++ {
+				tmp.ScalarMulByElement(agg[k*n+start:k*n+end], &coefs[m][k])
+				s.Add(s, tmp)
 			}
 		}
+		field.ExtPool.Put(tmp)
 	})
 
-	parallel.Execute(ratio, func(start, end int) {
+	parallel.ExecuteWithNbTasks(ratio, ratio, func(start, end int) {
 		for m := start; m < end; m++ {
 			smallDomain.FFTExt6(shares[m], fft.DIT, fft.WithNbTasks(tasks))
 		}
-	}, ratio)
+	})
 	return shares
 }
 
@@ -1151,7 +1182,7 @@ func evalCancellationAtPoint(cancelled []int, n int, r field.Gen) field.Gen {
 			k = n + pos
 		}
 		var omegaK field.Element
-		field.ExpToInt(&omegaK, omega, k)
+		omegaK.ExpInt64(omega, int64(k))
 		factor := r.Sub(field.ElemFromBase(omegaK))
 		result = result.Mul(factor)
 	}

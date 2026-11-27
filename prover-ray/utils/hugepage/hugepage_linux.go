@@ -2,8 +2,12 @@
 
 package hugepage
 
-import "syscall"
+import (
+	"unsafe"
 
-func advise(addr, length uintptr) {
-	_, _, _ = syscall.Syscall(syscall.SYS_MADVISE, addr, length, syscall.MADV_HUGEPAGE)
+	"golang.org/x/sys/unix"
+)
+
+func advise(p unsafe.Pointer, length uintptr) {
+	_ = unix.Madvise(unsafe.Slice((*byte)(p), length), unix.MADV_HUGEPAGE)
 }

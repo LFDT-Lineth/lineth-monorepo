@@ -13,6 +13,7 @@ from .fork import (
     calculate_total_blob_gas,
 )
 from ethereum.state import Address
+from ethereum.utils.byte import left_pad_zero_bytes
 from ethereum_types.numeric import U64, Uint
 
 from .block import (
@@ -475,7 +476,8 @@ def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
 
 
 def hash_address_list(values: Sequence[Address]) -> Hash32:
-    return keccak256(b"".join(bytes(value) for value in values))
+    """`keccak256(abi.encodePacked(address[]))`."""
+    return keccak256(b"".join(left_pad_zero_bytes(value, 32) for value in values))
 
 
 def merge_filtered_addresses(address_lists: Iterable[Iterable[Address]]) -> List[Address]:

@@ -967,7 +967,9 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 
 	fs.UpdateExt(state.FinalPoly...)
 	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), c.effectiveN(rt, batches, manifests))
-	return pcs.Open(state, positions)
+	proof := pcs.Open(state, positions)
+	state.Release()
+	return proof
 }
 
 // verify replays the opening transcript exactly as the prover produced it and
@@ -1076,6 +1078,14 @@ func CommittedState(rt *wiop.Runtime, roundID int) (*fri.CommitterState, bool) {
 	}
 	st, ok := v.(*fri.CommitterState)
 	return st, ok
+}
+
+// PrecomputedState returns the FRI committer state of the precomputed batch,
+// committed once at compile time, nil if the System has no precomputed
+// column: for opening provers written outside the package, as
+// [CommittedState].
+func (a *OpeningVerifierAction) PrecomputedState() *fri.CommitterState {
+	return a.c.precomputed
 }
 
 // IsOpeningProverAction reports whether a is the PCS's opening prover action,

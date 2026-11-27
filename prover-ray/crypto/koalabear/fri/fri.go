@@ -287,7 +287,8 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // Column c is weighted by alphaDeep^Powers[c] and running by
 // alphaDeep^RunningPower (see deepPowers; by default, alphaDeep^c and
 // alphaDeep^len(Columns)). A nil running is the zero codeword (see
-// ProverState).
+// ProverState). The result comes from [field.ExtPool]; a caller done with it
+// may release it there.
 //
 // The batched DEEP quotient is computed combine-then-divide: the columns of
 // each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^{p(c)}·f_c(X)
@@ -303,18 +304,23 @@ func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) [
 // proofs — are bit-identical to the quotient-per-claim form (see
 // evalsAtReference in fri_evalsat_test.go).
 //
-// The combine pass runs through the field.VecScaleAcc* helpers — currently
-// scalar placeholders, to be swapped for gnark-crypto's AVX-512 VectorE6
-// kernels once available. The divide pass reconstructs denominator inverses
-// on the fly from DenomBaseInv via the rotation identity
-// 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): point z contributes
-// scale_z · DenomBaseInv[(e − rot_z) mod N], where e = bitReverse(pos),
-// rot_z = rs mod N, scale_z = ω^{−rs}.
+// Both passes run on gnark-crypto's VectorE6 kernels. The divide pass
+// reconstructs denominator inverses from DenomBaseInv via the rotation
+// identity 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): point z
+// contributes scale_z · DenomBaseInv[(e − rot_z) mod N], where
+// e = bitReverse(pos), rot_z = rs mod N, scale_z = ω^{−rs}. Those entries are
+// first gathered into a contiguous chunk buffer, then subtracted, scaled and
+// multiply-accumulated as whole vectors.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	if len(l.Columns) == 0 {
-		return append([]field.Ext(nil), running...)
+		if running == nil {
+			return nil
+		}
+		evals := field.ExtPool.Get(len(running))
+		copy(evals, running)
+		return evals
 	}
-	evals := make([]field.Ext, l.Columns[0].codewordLen())
+	evals := field.ExtPool.Get(l.Columns[0].codewordLen())
 	if running != nil && len(running) != len(evals) {
 		panic(fmt.Sprintf("fri: Level.EvalsAt: running codeword has %d values, want %d", len(running), len(evals)))
 	}
@@ -338,9 +344,16 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	parallel.Execute(len(evals), func(start, end int) {
 		if running != nil {
 			field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
+		} else {
+			clear(evals[start:end])
 		}
 
-		gbuf := make([]field.Ext, end-start)
+		var (
+			gbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
+			dbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
+			tbuf = extensions.VectorE6(field.ExtPool.Get(end - start))
+			ev   = extensions.VectorE6(evals[start:end])
+		)
 		for gi := range groups {
 			g := &groups[gi]
 
@@ -352,28 +365,34 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 			for _, c := range g.columns {
 				column := &l.Columns[c]
 				if column.isBase() {
-					extensions.VectorE6(gbuf).ScalarMulAccByElement(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
+					gbuf.ScalarMulAccBase(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
 				} else {
-					extensions.VectorE6(gbuf).ScalarMulAcc(extensions.VectorE6(column.EvalsExt[start:end]), &alphaPow[c])
+					gbuf.ScalarMulAcc(extensions.VectorE6(column.EvalsExt[start:end]), &alphaPow[c])
 				}
 			}
 
-			for pos := start; pos < end; pos++ {
-				// e is the natural-order exponent of this position's domain
-				// point (codewords are stored at bit-reversed indices);
-				// (e - rot) & mask is the correct mod-N index even when the
-				// difference is negative (two's-complement, N a power of 2).
-				e := bitReverseExponent(pos, logSize)
-				for k := range g.points {
-					p := &g.points[k]
-					var term field.Ext
-					term.Sub(&gbuf[pos-start], &p.combinedClaim)
-					term.Mul(&term, &l.DenomBaseInv[(e-p.rot)&mask])
-					term.MulByElement(&term, &p.scale)
-					evals[pos].Add(&evals[pos], &term)
+			for k := range g.points {
+				p := &g.points[k]
+				// Gather this point's inverse denominators: e is the
+				// natural-order exponent of the position's domain point
+				// (codewords are stored at bit-reversed indices); (e - rot) &
+				// mask is the correct mod-N index even when the difference is
+				// negative (two's-complement, N a power of 2).
+				for pos := start; pos < end; pos++ {
+					dbuf[pos-start] = l.DenomBaseInv[(bitReverseExponent(pos, logSize)-p.rot)&mask]
 				}
+				// evals += (G_g - Y_{g,z}) · scale_z · dbuf, scaling before
+				// the fused multiply-accumulate saves a pass over evals.
+				tbuf.ScalarSub(gbuf, &p.combinedClaim)
+				if !p.scale.IsOne() {
+					tbuf.ScalarMulByElement(tbuf, &p.scale)
+				}
+				ev.MulAcc(tbuf, dbuf)
 			}
 		}
+		field.ExtPool.Put(gbuf)
+		field.ExtPool.Put(dbuf)
+		field.ExtPool.Put(tbuf)
 	})
 	return evals
 }
@@ -630,15 +649,19 @@ func checkBranchShape(b Branch, numLeaves, capDepth int) error {
 // buildTreeExt builds the FRI Merkle tree over one folding layer: a complete
 // binary tree whose leaves are the layer's extension elements (padded into
 // octuplets). Unlike NewTree, which is the 3-ary multi-size builder, this is a
-// plain power-of-two binary tree with no auxiliary leaves.
+// plain power-of-two binary tree with no auxiliary leaves. Its nodes come from
+// the octuplet pool and go back through [ProverState.Release].
 func buildTreeExt(hash MerkleHash, layer []field.Ext) *Tree {
 	n := len(layer)
-	t := allocTree(hash, n)
+	t := allocPooledTree(hash, n)
 	bottom := t.Nodes[n-1:]
 	parallel.Execute(n, func(start, end int) {
 		for i := start; i < end; i++ {
+			// The whole leaf is written: a pooled node holds stale limbs.
+			var leaf field.Octuplet
 			limbs := extLimbs(layer[i])
-			copy(bottom[i][:6], limbs[:])
+			copy(leaf[:6], limbs[:])
+			bottom[i] = leaf
 		}
 	})
 	t.buildLevels(nil)
@@ -651,7 +674,8 @@ func buildTreeExt(hash MerkleHash, layer []field.Ext) *Tree {
 // evaluations of a fold, p(x) and p(-x), sit at the adjacent positions 2j and
 // 2j+1, so the fold combines layer[2j] and layer[2j+1] into next[j]. The output
 // is itself in bit-reversed order over the half-size domain, ready to be fed
-// back into the next round.
+// back into the next round. It comes from [field.ExtPool]; a caller done with
+// it may release it there.
 //
 // The folding formula, writing x = g^i for the natural-order domain point of
 // pair j (i.e. i = bitReverse(j) over the half-domain):
@@ -668,25 +692,14 @@ func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain)
 
 	var (
 		half        = len(layer) / 2
-		next        = make([]field.Ext, half)
+		next        = field.ExtPool.Get(half) // every pair is written below
 		invTwiddles = foldTwiddles(domain)
 	)
 
-	// Pairs are independent: the fold is chunked across CPUs.
+	// Pairs are independent: the fold is chunked across CPUs, each chunk one
+	// VectorE6.FoldPairs. invTwiddles holds (2x)⁻¹, the factor it expects.
 	parallel.Execute(half, func(start, end int) {
-		for j := start; j < end; j++ {
-			p, q := layer[2*j], layer[2*j+1]
-
-			var sum, diff field.Ext
-			sum.Add(&p, &q)
-			sum.Halve()
-
-			diff.Sub(&p, &q)
-			diff.MulByElement(&diff, &invTwiddles[j])
-			diff.Mul(&diff, &alpha)
-
-			next[j].Add(&sum, &diff)
-		}
+		extensions.VectorE6(next[start:end]).FoldPairs(layer[2*start:2*end], invTwiddles[start:end], &alpha)
 	})
 
 	return next

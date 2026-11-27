@@ -31,6 +31,7 @@ func WritePublicInputSystemZig(w io.Writer, system PublicInputSystem) error {
 func WritePublicInputSystemZigWithOptions(w io.Writer, system PublicInputSystem, opts PublicInputZigOptions) error {
 	tmpl, err := template.New("public_input").Funcs(template.FuncMap{
 		"intArray": intArray,
+		"bitWords": bitWords,
 		"refs":     publicInputRefs,
 	}).Parse(publicInputZigTemplate)
 	if err != nil {
@@ -50,6 +51,7 @@ const protocol = {{.Options.ProtocolImport}};
 
 {{end}}pub const {{.Options.ConstName}} = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{{intArray .System.RoundCellCounts}},
+    .cell_ext_bits = &[_]u64{{bitWords .System.CellExtBits}},
     .refs = &[_]protocol.public_input.CellRef{{refs .System.Refs}},
 };
 `
@@ -75,4 +77,17 @@ func publicInputRefs(refs []PublicInputRef) string {
 	}
 	out.WriteString(" }")
 	return out.String()
+}
+
+// bitWords renders bit-set words as a Zig array literal body, in hex so the
+// set bits stay readable.
+func bitWords(words []uint64) string {
+	if len(words) == 0 {
+		return "{}"
+	}
+	parts := make([]string, len(words))
+	for i, w := range words {
+		parts[i] = fmt.Sprintf("0x%x", w)
+	}
+	return "{ " + strings.Join(parts, ", ") + " }"
 }
