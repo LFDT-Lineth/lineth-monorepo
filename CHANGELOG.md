@@ -239,3 +239,4 @@
 - *(maru)* Remove noisy p2p connection stack trace (#4542)
 - *(misc)* Apply a shared Vert.x options file to all test JVMs (#4604)
 - *(linea-besu)* Update docker base image version digest for cve fix (#4617)
+- *(misc)* Ci jvm test config fix (#4638)
