@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Writes a provenance partial next to the generated MDX partial so doc.linea
+# Writes a provenance partial next to the generated MDX partial so lineth-docs
 # readers can trace the partial back to the exact monorepo commit (and release
 # tag, when applicable).
 #
