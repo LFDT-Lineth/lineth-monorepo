@@ -17,7 +17,7 @@ import linea.domain.BlockInterval
 import linea.domain.createBlock
 import linea.domain.toBesu
 import linea.rlp.RLP
-import lineth.coordination.riscv.rollup.Keccak256DataRollingHashCalculator
+import lineth.coordination.riscv.da.FakeDaStream.Keccak256DataRollingHashCalculator
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
