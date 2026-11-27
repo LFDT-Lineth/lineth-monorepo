@@ -1,5 +1,7 @@
 package linea.da
 
+import lineth.da.DaStream
+import lineth.da.DaStreamPosition
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

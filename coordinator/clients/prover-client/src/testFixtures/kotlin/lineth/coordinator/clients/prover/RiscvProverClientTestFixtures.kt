@@ -7,7 +7,6 @@ import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.RollupAggregationProofRequestV1
 import linea.clients.RollupProofRequestV1
-import linea.da.DaConstants
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
@@ -15,6 +14,7 @@ import linea.ethapi.SystemContracts
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.config.v2.FileBasedProverConfig
+import lineth.da.DaConstants
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.milliseconds

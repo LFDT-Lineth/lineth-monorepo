@@ -26,6 +26,9 @@ class FetchLibsSpec {
   final ListProperty<String> urls
   final ListProperty<String> libs
 
+  /** Names of the files inside the zip that are copied to {@code compressor-dictionaries/} as they are. */
+  final ListProperty<String> dictionaries
+
   /** Convenience setter: {@code url = "..."} is sugar for {@code urls = ["..."]}. */
   void setUrl(String url) {
     urls.add(url)
@@ -35,6 +38,7 @@ class FetchLibsSpec {
   FetchLibsSpec(ObjectFactory objects) {
     urls = objects.listProperty(String)
     libs = objects.listProperty(String)
+    dictionaries = objects.listProperty(String)
   }
 }
 
@@ -50,7 +54,8 @@ abstract class DownloadNativeLibsTask extends DefaultTask {
 
   /**
    * Parallel lists: urls[i] is the zip URL, libsPerUrl[i] is a comma-separated
-   * list of lib names to extract from that zip. Each fetchLibs block that declares
+   * list of lib names to extract from that zip, dictionariesPerUrl[i] the same for
+   * the dictionary file names. Each fetchLibs block that declares
    * N urls produces N entries here — one per URL. Using flat @Input ListProperty<String>
    * rather than @Nested objects guarantees reliable Gradle cache fingerprinting.
    */
@@ -59,6 +64,9 @@ abstract class DownloadNativeLibsTask extends DefaultTask {
 
   @Input
   abstract ListProperty<String> getLibsPerUrl()
+
+  @Input
+  abstract ListProperty<String> getDictionariesPerUrl()
 
   /**
    * Directory where downloaded zips are cached across task runs.
@@ -75,19 +83,25 @@ abstract class DownloadNativeLibsTask extends DefaultTask {
   void execute() {
     List<String> urlList = urls.get()
     List<String> libsList = libsPerUrl.get()
-    if (urlList.size() != libsList.size()) {
-      throw new org.gradle.api.GradleException("urls and libsPerUrl must have the same number of entries")
+    List<String> dictionariesList = dictionariesPerUrl.get()
+    if (urlList.size() != libsList.size() || urlList.size() != dictionariesList.size()) {
+      throw new org.gradle.api.GradleException(
+        "urls, libsPerUrl and dictionariesPerUrl must have the same number of entries")
     }
 
     Path cacheDir = downloadCacheDir.get().asFile.toPath()
     Path resDir = resourcesDir.get().asFile.toPath()
 
-    [urlList, libsList].transpose().each { String url, String libsCsv ->
+    [urlList, libsList, dictionariesList].transpose().each { String url, String libsCsv, String dictionariesCsv ->
       List<String> libs = libsCsv.split(",").toList()
+      List<String> dictionaries = dictionariesCsv.split(",").findAll { !it.isEmpty() }
       Path zipPath = downloadZipIfAbsent(url, cacheDir)
       Path unzipDir = cacheDir.resolve(zipPath.fileName.toString().replaceFirst(/\.zip$/, ""))
       libs.each { String libName ->
         extractLibToResources(zipPath, unzipDir, libName, resDir)
+      }
+      dictionaries.each { String dictionaryName ->
+        extractDictionaryToResources(zipPath, unzipDir, dictionaryName, resDir)
       }
     }
   }
@@ -133,6 +147,23 @@ abstract class DownloadNativeLibsTask extends DefaultTask {
           rename { destFileName }
         }
       }
+  }
+
+  protected void extractDictionaryToResources(Path zipFile, Path unzipDir, String dictionaryName, Path resourcesDir) {
+    unzipWithRetry(zipFile, unzipDir, Duration.ofSeconds(60))
+
+    List<File> matches = project.fileTree(unzipDir.toFile()).filter { File f -> f.name == dictionaryName }.files.toList()
+    if (matches.isEmpty()) {
+      throw new org.gradle.api.GradleException("Dictionary ${dictionaryName} not found in ${zipFile}")
+    }
+
+    matches.each { File file ->
+      logger.lifecycle("Copying {} → compressor-dictionaries/{}", file.name, dictionaryName)
+      project.copy {
+        from file
+        into resourcesDir.resolve("compressor-dictionaries")
+      }
+    }
   }
 
   protected static String resolveArchDir(String fileName) {
@@ -218,8 +249,8 @@ class DownloadNativeLibsPlugin implements Plugin<Project> {
       description = "Downloads and extracts native library binaries into the build directory."
       downloadCacheDir.set(cacheDir)
       resourcesDir.set(project.layout.buildDirectory.dir("generated/native-libs/src/main/resources"))
-      // Both providers are resolved lazily, after the build script's fetchLibs blocks have run.
-      // Each spec may declare multiple URLs; flatten so urls[i] <-> libsPerUrl[i].
+      // The providers are resolved lazily, after the build script's fetchLibs blocks have run.
+      // Each spec may declare multiple URLs; flatten so urls[i] <-> libsPerUrl[i] <-> dictionariesPerUrl[i].
       urls.set(project.provider {
         extension.specs.collectMany { spec -> spec.urls.get() }
       })
@@ -227,6 +258,12 @@ class DownloadNativeLibsPlugin implements Plugin<Project> {
         extension.specs.collectMany { spec ->
           String libsCsv = spec.libs.get().join(",")
           spec.urls.get().collect { libsCsv }
+        }
+      })
+      dictionariesPerUrl.set(project.provider {
+        extension.specs.collectMany { spec ->
+          String dictionariesCsv = spec.dictionaries.get().join(",")
+          spec.urls.get().collect { dictionariesCsv }
         }
       })
     }

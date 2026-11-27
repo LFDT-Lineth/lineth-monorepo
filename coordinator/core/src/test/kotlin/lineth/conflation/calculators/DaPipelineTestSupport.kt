@@ -1,11 +1,11 @@
 package lineth.conflation.calculators
 
-import linea.da.DaStreamPosition
 import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
+import lineth.da.DaStreamPosition
 import kotlin.time.Duration
 
 /** The RISC-V blob and rollup calculators wired together on [FakeDaStream], for pipeline tests. */

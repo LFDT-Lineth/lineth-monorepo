@@ -34,7 +34,7 @@ gradlePlugin {
       implementationClass = "YulPlugin"
     }
     create("DownloadNativeLibsPlugin") {
-      id = "linea.download-native-libs"
+      id = "lineth.download-native-libs"
       implementationClass = "DownloadNativeLibsPlugin"
     }
     create("SolcToolchainPlugin") {

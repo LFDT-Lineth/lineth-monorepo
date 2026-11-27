@@ -1,19 +1,21 @@
-package linea.da
+package lineth.da
 
-import linea.domain.BlockInterval
 import linea.kotlin.encodeHex
-import java.nio.file.Path
 
 /**
- * Compresses conflations into zstd frames for the RISC-V DA stream, with one codec version and dictionary.
+ * Compresses conflations into zstd frames for the RISC-V DA stream, with one codec version and chain ID.
  *
  * Stateless: [compress] is order-free and pure, so it may run ahead of [DaStream.append] and from any thread.
  */
 interface DaCompressor : AutoCloseable {
   val version: DaCodecVersion
 
-  /** Decodes, truncates, RLP-encodes and compresses one conflation into a zstd frame. */
-  fun compress(blockRlps: List<ByteArray>): CompressedConflation
+  /**
+   * Decodes, truncates, RLP-encodes and compresses the full block RLPs of one conflation into a zstd frame. It fails
+   * on a block it cannot decode or whose senders it cannot recover under the chain ID; any other validation is the
+   * caller's.
+   */
+  fun compress(blockRlps: List<ByteArray>): ByteArray
 }
 
 /**
@@ -33,50 +35,16 @@ interface DaStream : AutoCloseable {
   val version: DaCodecVersion
 
   /**
-   * Appends the segment of a conflation compressed by a [DaCompressor] of the same [version]. Conflations must be
+   * Appends the segment of a conflation: [frame] is what a [DaCompressor] of the same [version] compressed it into,
+   * and [conflationEndBlock] is the conflation's last block, reported back in [SegmentEnd]s. Conflations must be
    * appended in order, each once; ordering is the caller's responsibility. On error the stream is unchanged.
    *
    * @return the blobs this call sealed, in order (0..n).
    */
-  fun append(conflation: CompressedConflation): List<SealedBlob>
+  fun append(frame: ByteArray, conflationEndBlock: ULong): List<SealedBlob>
 
   /** Ends the open blob at the stream end. @return that blob, or null if no blob is open. */
   fun flush(): SealedBlob?
-}
-
-/**
- * A conflation compressed into one zstd frame: the body of its segment in the DA stream.
- *
- * @property blockInterval the conflation's blocks, reported back in [SegmentEnd]s
- * @property compressedData the zstd frame, without the length prefix: its segment takes
- *   [DaConstants.SEGMENT_LENGTH_PREFIX_BYTES] + `compressedData.size` bytes of the stream
- */
-data class CompressedConflation(
-  val blockInterval: BlockInterval,
-  val compressedData: ByteArray,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as CompressedConflation
-
-    if (blockInterval != other.blockInterval) return false
-    if (!compressedData.contentEquals(other.compressedData)) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = blockInterval.hashCode()
-    result = 31 * result + compressedData.contentHashCode()
-    return result
-  }
-
-  override fun toString(): String {
-    return "CompressedConflation(blockInterval=${blockInterval.intervalString()}, " +
-      "compressedData.size=${compressedData.size})"
-  }
 }
 
 /**
@@ -175,7 +143,7 @@ data class SegmentEnd(
 
 /** Creates [DaCompressor]s. */
 fun interface DaCompressorFactory {
-  fun create(version: DaCodecVersion, dictionary: Path): DaCompressor
+  fun create(version: DaCodecVersion, chainId: ULong): DaCompressor
 }
 
 /** Opens [DaStream]s. */
@@ -183,10 +151,18 @@ fun interface DaStreamFactory {
   fun open(version: DaCodecVersion, initialState: DaStreamPosition): DaStream
 }
 
-/** Identifies the DA codec build. The compression dictionary is configured independently. */
-enum class DaCodecVersion(val version: String) {
-  /** Pure-Kotlin stand-in with the real stream semantics; see `FakeDaStream`. */
+/**
+ * Identifies the DA codec build and the compression dictionary it was built with. A bundled codec is named by its
+ * release's version without a prerelease suffix, the form its library resource carries.
+ *
+ * @property dictionary name of the dictionary of this codec, absent for the fake
+ */
+enum class DaCodecVersion(val version: String, val dictionary: String? = null) {
+  /** Pure-Kotlin stand-in with the real stream semantics. */
   FAKE("fake-v1"),
+
+  /** The first `lineth_da` release. */
+  V1("v0.1.0", dictionary = "v2025-04-21"),
 }
 
 object DaConstants {
@@ -212,7 +188,7 @@ object DaConstants {
   const val BLOB_PAYLOAD_TERMINAL: Byte = 0xff.toByte()
 }
 
-/** Kinds of DA stream and compressor failures, mirroring the error codes of `lineth_da_status`. */
+/** Kinds of DA stream and compressor failures: `lineth_da_status` without `OK`, in order, so a status is `ordinal + 1`. */
 enum class DaStreamErrorType {
   INVALID_ARGUMENT,
   INVALID_DICTIONARY,
@@ -220,7 +196,6 @@ enum class DaStreamErrorType {
 
   /** Restoring: the appended bytes differ from the shared blob the stream was opened inside. */
   SEEDED_BLOB_MISMATCH,
-  INDEX_OUT_OF_RANGE,
   OUT_OF_MEMORY,
   INTERNAL,
 }
