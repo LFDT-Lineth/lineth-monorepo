@@ -54,6 +54,12 @@ object DbHelper {
       .use { con -> con.prepareStatement("CREATE DATABASE $databaseName;").execute() }
   }
 
+  /** Drops [databaseName], terminating any connection still open to it. */
+  fun dropDataBase(dataSource: DataSource, databaseName: String) {
+    dataSource.connection
+      .use { con -> con.prepareStatement("DROP DATABASE IF EXISTS $databaseName WITH (FORCE);").execute() }
+  }
+
   fun dropAndCreateDataBase(dataSource: DataSource, databaseName: String) {
     resetAllConnections(dataSource, databaseName)
     dataSource.connection

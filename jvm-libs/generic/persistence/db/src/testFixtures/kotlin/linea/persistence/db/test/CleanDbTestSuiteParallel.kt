@@ -10,6 +10,7 @@ import linea.persistence.db.DbHelper
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.postgresql.ds.PGSimpleDataSource
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
 abstract class CleanDbTestSuiteParallel {
@@ -18,7 +19,6 @@ abstract class CleanDbTestSuiteParallel {
   private val username = "postgres"
   private val password = "postgres"
   abstract val databaseName: String
-  private lateinit var dataSource: DataSource
   lateinit var pool: Pool
   lateinit var sqlClient: SqlClient
   var target: String = "1"
@@ -38,7 +38,7 @@ abstract class CleanDbTestSuiteParallel {
   open fun setUp(vertx: Vertx) {
     val dbCreationDataSource = createDataSource("postgres")
     DbHelper.createDataBase(dbCreationDataSource, databaseName)
-    dataSource = createDataSource(databaseName)
+    val dataSource = createDataSource(databaseName)
 
     pool = vertxConnectionPool(vertx, host, port, databaseName, username, password)
     sqlClient = vertxSqlClient(vertx, host, port, databaseName, username, password)
@@ -49,12 +49,12 @@ abstract class CleanDbTestSuiteParallel {
 
   @AfterEach
   open fun tearDown() {
-    pool
-      .close()
-      .onFailure { System.err.println("Error closing connection pool: " + it.message) }
-    sqlClient.close().onFailure {
-      System.err.println("Error closing sqlclient " + it.message)
-    }
-    DbHelper.resetAllConnections(dataSource, databaseName)
+    val closes = listOf(
+      pool.close().onFailure { System.err.println("Error closing connection pool: " + it.message) },
+      sqlClient.close().onFailure { System.err.println("Error closing sqlclient " + it.message) },
+    )
+    closes.forEach { runCatching { it.toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS) } }
+    // Each test creates its own database, so drop it: otherwise they pile up and exhaust Postgres' shared memory.
+    DbHelper.dropDataBase(createDataSource("postgres"), databaseName)
   }
 }
