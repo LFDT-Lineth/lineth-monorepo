@@ -223,7 +223,8 @@ allprojects {
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
     systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
-    maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
+    // nCpu / 2, clamped to [1, 8]
+    maxParallelForks = Math.max(1, Math.min((Runtime.runtime.availableProcessors() / 2).toInteger(), 8))
   }
 
   afterEvaluate { subproject ->
