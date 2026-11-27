@@ -2,24 +2,15 @@ package lineth.coordination.riscv.rollup
 
 import linea.clients.dummyRollupProofResponse
 import linea.domain.BlockIntervalProofIndex
-import linea.domain.RiscvRollupRecord
 import linea.domain.createRiscvRollupRecord
-import lineth.persistence.RiscvRollupsDao
+import lineth.persistence.FakeRiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
 
 class RollupProofPersistenceHandlerTest {
-  private val rollupsDao = mock<RiscvRollupsDao> {
-    on { saveRollupWithBlobs(any()) }.thenReturn(SafeFuture.completedFuture(Unit))
-  }
+  private val rollupsDao = FakeRiscvRollupsDao()
   private val handler = RollupProofPersistenceHandler(rollupsDao)
 
   private val record = createRiscvRollupRecord(
@@ -65,9 +56,7 @@ class RollupProofPersistenceHandlerTest {
   fun `a proof matching the request is persisted as the rollup row`() {
     handler.acceptNewRollupProof(proof(), context).get()
 
-    val saved = argumentCaptor<RiscvRollupRecord>()
-    verify(rollupsDao).saveRollupWithBlobs(saved.capture())
-    assertThat(saved.firstValue).isEqualTo(record)
+    assertThat(rollupsDao.rollups.values).containsExactly(record)
   }
 
   @Test
@@ -77,6 +66,6 @@ class RollupProofPersistenceHandlerTest {
     assertThatThrownBy { handler.acceptNewRollupProof(proof(finalSharedBlobCarryOverTailBytes = 0), context).get() }
       .hasMessageContaining("finalSharedBlobCarryOverTailBytes=0 expected=200")
 
-    verify(rollupsDao, never()).saveRollupWithBlobs(any())
+    assertThat(rollupsDao.rollups).isEmpty()
   }
 }

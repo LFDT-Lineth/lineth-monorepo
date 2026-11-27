@@ -1,6 +1,7 @@
-package lineth.coordination.riscv.rollup
+package lineth.coordination.riscv.da
 
 import linea.kotlin.decodeHex
+import lineth.coordination.riscv.da.FakeDaStream.Keccak256DataRollingHashCalculator
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

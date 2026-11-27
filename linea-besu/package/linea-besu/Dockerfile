@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:25-jre-noble@sha256:f3dd0838e69b881cc382237d5901e74ae3705b1056ad964b2e0e523b174fef99
 ARG VERSION="dev"
 ENV NO_PROXY_CACHE="-o Acquire::BrokenProxy=true -o Acquire::http::No-Cache=true -o Acquire::http::Pipeline-Depth=0"
 
@@ -22,7 +22,8 @@ RUN apt-get update $NO_PROXY_CACHE  && \
   chown besu:besu /data  && \
   chmod 0755 /data
 
-USER besu
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 WORKDIR /opt/besu
 
 COPY --chown=besu:besu besu /opt/besu/

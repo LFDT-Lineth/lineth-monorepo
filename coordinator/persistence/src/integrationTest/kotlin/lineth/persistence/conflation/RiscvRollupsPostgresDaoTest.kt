@@ -229,14 +229,17 @@ class RiscvRollupsPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `findHighestConsecutiveEndBlockNumberFromBlockNumber returns the end of the gap-free run`() {
-    save(rollup(41UL, 50UL), rollup(21UL, 30UL), rollup(1UL, 10UL), rollup(11UL, 20UL))
+  fun `findHighestConsecutiveRollupFromBlockNumber returns the last rollup of the gap-free run`() {
+    val rollup21to30 = rollup(21UL, 30UL)
+    val rollup41to50 = rollup(41UL, 50UL)
+    save(rollup41to50, rollup21to30, rollup(1UL, 10UL), rollup(11UL, 20UL))
 
-    assertThat(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(1UL).get()).isEqualTo(30UL)
-    assertThat(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(21UL).get()).isEqualTo(30UL)
-    assertThat(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(41UL).get()).isEqualTo(50UL)
-    assertThat(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(31UL).get()).isNull()
-    assertThat(rollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(5UL).get()).isNull()
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(1UL).get()).isEqualTo(rollup21to30)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(21UL).get()).isEqualTo(rollup21to30)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(41UL).get()).isEqualTo(rollup41to50)
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(31UL).get()).isNull()
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(5UL).get()).isNull()
+    assertThat(rollupsDao.findHighestConsecutiveRollupFromBlockNumber(10UL).get()).isNull()
   }
 
   @Test

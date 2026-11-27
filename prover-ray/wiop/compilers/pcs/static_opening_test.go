@@ -125,6 +125,61 @@ func TestStaticOpening_Rejects(t *testing.T) {
 	require.ErrorContains(t, err, "dynamic", "a dynamic module")
 }
 
+// TestStaticOpening_Memoized: Static is computed once per action, and every
+// caller (the circuit's allocation and definition, the recursion machine)
+// shares the result, failures included.
+func TestStaticOpening_Memoized(t *testing.T) {
+	s := newStaticTestSystem()
+	action := openingAction(s.sys)
+	first, err := action.Static(s.sys)
+	require.NoError(t, err, "the static opening")
+	second, err := action.Static(s.sys)
+	require.NoError(t, err, "the static opening, again")
+	require.Same(t, first, second, "the second call returns the memoized opening")
+
+	elided := newStaticTestSystem(WithColumnElision())
+	action = openingAction(elided.sys)
+	_, err1 := action.Static(elided.sys)
+	_, err2 := action.Static(elided.sys)
+	require.ErrorContains(t, err1, "elision", "column elision")
+	require.Equal(t, err1, err2, "the failure is memoized too")
+}
+
+// TestStaticOpening_OtherSystem: Static only answers for the action's own
+// System, first call included, so the memo can never hold another System's
+// opening.
+func TestStaticOpening_OtherSystem(t *testing.T) {
+	s, other := newStaticTestSystem(), newStaticTestSystem()
+
+	action := openingAction(s.sys)
+	_, err := action.Static(other.sys)
+	require.ErrorContains(t, err, "System other than the action's", "another System, on the first call")
+	op, err := action.Static(s.sys)
+	require.NoError(t, err, "the rejected call memoized nothing")
+	rounds := make([]*wiop.Round, 0, len(op.Batches))
+	for _, b := range op.Batches {
+		rounds = append(rounds, b.Round)
+	}
+	require.Contains(t, rounds, s.a.Round(), "the action's own System's opening")
+
+	_, err = action.Static(other.sys)
+	require.ErrorContains(t, err, "System other than the action's", "another System, once memoized")
+}
+
+// TestStaticOpening_PanicMemoizedAsError: a panic while computing the opening
+// is reported as an error, on the first call and on every later one, instead
+// of leaving the memo empty with no error. The action without a compiled PCS
+// configuration panics on its first field access.
+func TestStaticOpening_PanicMemoizedAsError(t *testing.T) {
+	s := newStaticTestSystem()
+	broken := &OpeningVerifierAction{sys: s.sys}
+	for call := range 2 {
+		op, err := broken.Static(s.sys)
+		require.Nil(t, op, "call %d: no opening", call)
+		require.ErrorContains(t, err, "pcs: Static: ", "call %d: the panic, as an error", call)
+	}
+}
+
 func openingAction(sys *wiop.System) *OpeningVerifierAction {
 	for _, r := range sys.Rounds {
 		for _, a := range r.VerifierActions {

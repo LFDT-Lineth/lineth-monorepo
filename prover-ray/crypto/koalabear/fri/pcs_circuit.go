@@ -95,12 +95,11 @@ type GnarkSizedClaimedValues struct {
 	Ext  [][]circuit.Ext
 }
 
-// GnarkVerifyInputs mirrors [VerifyInputs]. Shapes and Shifts are structural
-// and stay native; everything else is a circuit variable.
+// GnarkVerifyInputs mirrors [VerifyInputs] minus the shapes and shifts, which
+// are structural and come from the [VerifierPlan]; everything here is a
+// circuit variable.
 type GnarkVerifyInputs struct {
 	Roots          []circuit.Octuplet
-	Shapes         []Shape
-	Shifts         []BatchShifts
 	ClaimedValues  []GnarkBatchClaimedValues
 	Zeta           circuit.Ext
 	FoldAlphas     []circuit.Ext
@@ -237,25 +236,20 @@ func convertExt(e field.Ext, withValues bool) circuit.Ext {
 // Verify
 // =============================================================================
 
-// VerifyGnark is the in-circuit counterpart of [PCS.Verify]. Structural
-// mismatches panic at circuit-definition time; every value check is a
+// VerifyGnark is the in-circuit counterpart of [PCS.Verify] for the plan's
+// opening. Everything Verify derives from the shapes and shifts is the plan's,
+// computed once by [PCS.VerifierPlan]; structural mismatches of the inputs
+// and proof panic at circuit-definition time, and every value check is a
 // constraint.
-func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkOpeningProof) {
-	if len(in.Roots) != len(in.Shapes) {
-		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d roots, %d shapes", len(in.Roots), len(in.Shapes)))
+func (plan VerifierPlan) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkOpeningProof) {
+	pcs, layout := plan.pcs, plan.layout
+	if pcs == nil {
+		panic("fri: VerifierPlan.VerifyGnark: plan not built by PCS.VerifierPlan")
 	}
-	layout, err := canonicalLayout(in.Shapes, in.Shifts)
-	if err != nil {
-		panic(err)
+	if len(in.Roots) != len(plan.shapes) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d roots, %d shapes", len(in.Roots), len(plan.shapes)))
 	}
-	checkGnarkClaimShapes(in.ClaimedValues, in.Shifts)
-	pcs, err = pcs.restrictTo(layout.maxSizeLog2())
-	if err != nil {
-		panic(err)
-	}
-	if err := pcs.checkFoldedSchedule(layout); err != nil {
-		panic(fmt.Sprintf("fri: pcs.VerifyGnark: %v", err))
-	}
+	checkGnarkClaimShapes(in.ClaimedValues, plan.shifts)
 	if len(proof.InputQueries) != int(pcs.Params.NumQueries) {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: proof has %d input queries, want %d",
 			len(proof.InputQueries), pcs.Params.NumQueries))
@@ -269,35 +263,15 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	kapi := circuit.NewAPI(api)
 	pcs.assertClaimPointsOutOfDomainGnark(kapi, layout, in.Zeta)
 
-	orders := batchOrders(layout)
-	inputRoots, inputIndexByBatch := inputOpeningRootsGnark(layout, orders, in.Roots)
-	if len(proof.InputCaps) != len(inputRoots) {
-		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots)))
+	if len(proof.InputCaps) != len(plan.Trees) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d input caps, want %d", len(proof.InputCaps), len(plan.Trees)))
 	}
-
-	// Shape per input tree (one per batch), then one cap authentication each,
-	// outside the query loop. Mirrors the inputShapes/inputFrontiers block of
-	// [PCS.Verify].
-	inputShapes := make([]Shape, len(inputRoots))
-	for batchIdx, treeIdx := range inputIndexByBatch {
-		// The PCS allows empty batches, e.g. a batch whose columns were all
-		// elided upstream. Such a batch has no layout entries, hence no input
-		// tree, and treeIdx is -1: skip it. Otherwise each tree belongs to
-		// exactly one batch.
-		if treeIdx >= 0 {
-			inputShapes[treeIdx] = in.Shapes[batchIdx]
-		}
-	}
-	inputFrontiers := make([][]circuit.Octuplet, len(inputRoots))
-	inputCapInfos := make([]inputCapInfo, len(inputRoots))
-	for treeIdx := range inputRoots {
-		info, err := inputCapShapeInfo(pcs.Params, inputShapes[treeIdx])
-		if err != nil {
-			panic(fmt.Sprintf("fri: pcs.VerifyGnark: input cap %d: %v", treeIdx, err))
-		}
-		inputCapInfos[treeIdx] = info
-		inputFrontiers[treeIdx] = authenticateInputCapGnark(
-			kapi, pcs.Params.MerkleHash, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx],
+	// One cap authentication per input tree, outside the query loop. Mirrors
+	// the inputFrontiers block of [PCS.Verify].
+	inputFrontiers := make([][]circuit.Octuplet, len(plan.Trees))
+	for t, tree := range plan.Trees {
+		inputFrontiers[t] = authenticateInputCapGnark(
+			kapi, pcs.Params.MerkleHash, plan.capInfos[t], proof.InputCaps[t], tree.Shape, in.Roots[tree.Batch],
 		)
 	}
 
@@ -318,12 +292,12 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 		layout:            layout,
 		proof:             proof,
 		inputFrontiers:    inputFrontiers,
-		inputCapInfos:     inputCapInfos,
+		inputCapInfos:     plan.capInfos,
 		runningFrontiers:  runningFrontiers,
 		layoutClaims:      pcs.layoutClaimsGnark(kapi, layout, in.ClaimedValues, in.Zeta),
-		inputIndexByBatch: inputIndexByBatch,
-		orders:            orders,
-		shapes:            in.Shapes,
+		inputIndexByBatch: plan.inputIndexByBatch,
+		orders:            plan.orders,
+		shapes:            plan.shapes,
 		foldAlphas:        in.FoldAlphas,
 		finalPoly:         proof.FRIProof.FinalPoly,
 		levelPowers:       pcs.levelPowersGnark(kapi, layout, in.FoldAlphas),
@@ -410,27 +384,6 @@ func (pcs *PCS) assertClaimPointsOutOfDomainGnark(api *circuit.KoalaBearAPI, lay
 		diff := api.SubExt(pow, api.OneExt())
 		api.Frontend().AssertIsEqual(api.IsZeroExt(diff), 0)
 	}
-}
-
-// inputOpeningRootsGnark mirrors [inputOpeningRoots]: every batch gets its own
-// input tree, in order of first appearance.
-func inputOpeningRootsGnark(
-	layout layout, orders [][]int, roots []circuit.Octuplet,
-) ([]circuit.Octuplet, []int) {
-	indexByBatch := make([]int, len(roots))
-	for i := range indexByBatch {
-		indexByBatch[i] = -1
-	}
-	inputRoots := make([]circuit.Octuplet, 0, len(roots))
-	for levelIdx := range layout {
-		for _, batchIdx := range orders[levelIdx] {
-			if indexByBatch[batchIdx] < 0 {
-				indexByBatch[batchIdx] = len(inputRoots)
-				inputRoots = append(inputRoots, roots[batchIdx])
-			}
-		}
-	}
-	return inputRoots, indexByBatch
 }
 
 // gnarkQuotientClaim mirrors [quotientClaim].

@@ -51,10 +51,10 @@ class FakeRiscvRollupsDao(
         .toList(),
     )
 
-  override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
+  override fun findHighestConsecutiveRollupFromBlockNumber(
     startingBlockNumberInclusive: ULong,
-  ): SafeFuture<ULong?> =
-    SafeFuture.completedFuture(consecutiveRun(startingBlockNumberInclusive).lastOrNull()?.endBlockNumber)
+  ): SafeFuture<RiscvRollupRecord?> =
+    SafeFuture.completedFuture(consecutiveRun(startingBlockNumberInclusive).lastOrNull())
 
   override fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
     SafeFuture.completedFuture(rollups[startBlockNumber])

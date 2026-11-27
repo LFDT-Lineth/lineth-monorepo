@@ -126,7 +126,8 @@ e2e-ci-start-env-with-retry:
 	fi
 	$(MAKE) retry \
 		TARGET="e2e-ci-start-env E2E_STACK=$(E2E_STACK) OVERRIDE_COMPOSE_FILE=$(if $(OVERRIDE_COMPOSE_FILE),$(abspath $(OVERRIDE_COMPOSE_FILE)))" \
-		RETRY_LIMIT=10 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s RETRY_CLEANUP_TARGET=clean-environment
+		RETRY_LIMIT=3 RETRY_TIMEOUT=10m RETRY_BACKOFF=30s \
+		RETRY_CLEANUP_TARGET=clean-environment RETRY_DIAG_TARGET=diagnose-unhealthy-containers
 
 e2e-ci-test:
 	timeout $(E2E_TEST_TIMEOUT) pnpm run -F e2e $(E2E_TEST_SCRIPT)
@@ -147,6 +148,12 @@ start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
 start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
+# Repair permissions on any reused tree before creating directories, then make
+# every bind-mounted host dir world-writable. Docker creates missing mount
+# sources as root:root, and the root prover image can win the startup race with
+# the uid-1000 coordinator; either leaves 0755 root-owned request directories
+# that the coordinator cannot write to. If the host chmod fails on existing
+# root-owned data, retry through the pinned cleanup container.
 start-env:
 	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
@@ -154,19 +161,39 @@ start-env:
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
+	chmod -R a+rwX tmp/local 2>/dev/null || \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+			$(CLEANUP_IMAGE) chmod -R a+rwX /data; \
+	for pipeline in v3/execution v3/compression v3/aggregation v3/invalidity riscv/execution riscv/rollup riscv/aggregation; do \
+		mkdir -p "tmp/local/prover/$$pipeline/requests" "tmp/local/prover/$$pipeline/responses" "tmp/local/prover/$$pipeline/requests-done"; \
+	done; \
+	mkdir -p tmp/local/prover-ray/guests tmp/local/traces/v2/conflated tmp/local/conflation-backtesting; \
+	chmod -R a+rwX tmp/local 2>/dev/null || \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+			$(CLEANUP_IMAGE) chmod -R a+rwX /data; \
+
 	$(MAKE) seed-deny-list; \
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
+	poll=0; \
 	while [ "$(SKIP_L1_L2_NODE_HEALTH_CHECK)" = "false" ] && \
 			{ [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
 				[ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-cl-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
   			[ "$$(docker compose -f $(COMPOSE_FILE) ps -q sequencer | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ]; }; do \
+  			poll=$$((poll + 1)); \
+  			if [ $$poll -gt 150 ]; then \
+  				echo "Timed out: l1-el-node, l1-cl-node and/or sequencer not healthy after 300s"; \
+  				exit 1; \
+  			fi; \
   			sleep 2; \
   			echo "Checking health status of: l1-el-node, l1-cl-node and l2 sequencer..."; \
   	done
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
-		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET); \
+		echo "Deploying contracts (300s cap via perl alarm — GNU timeout is absent on macOS; same idiom as the retry target)"; \
+		perl -e 'alarm shift; exec @ARGV' 300 $(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) || { echo "deploy-contracts timed out after 300s or failed"; exit 1; }; \
 	fi
 
 start-env-with-validium:
@@ -234,7 +261,7 @@ retry: RETRY_TIMEOUT:=10m
 retry: RETRY_BACKOFF:=10s
 retry:
 	@if [ -z "$(TARGET)" ]; then \
-		echo "Usage: make retry TARGET=<target> [RETRY_LIMIT=n] [RETRY_TIMEOUT=Xm] [RETRY_BACKOFF=Xs] [RETRY_CLEANUP_TARGET=<target>]"; \
+		echo "Usage: make retry TARGET=<target> [RETRY_LIMIT=n] [RETRY_TIMEOUT=Xm] [RETRY_BACKOFF=Xs] [RETRY_CLEANUP_TARGET=<target>] [RETRY_DIAG_TARGET=<target>]"; \
 		exit 1; \
 	fi; \
 	to_seconds() { \
@@ -249,6 +276,9 @@ retry:
 	backoff_secs=$$(to_seconds $(RETRY_BACKOFF)); \
 	attempt=1; \
 	until perl -e 'alarm shift; exec @ARGV' $$timeout_secs $(MAKE) $(TARGET); do \
+		if [ -n "$(RETRY_DIAG_TARGET)" ]; then \
+			$(MAKE) $(RETRY_DIAG_TARGET) || true; \
+		fi; \
 		if [ $$attempt -ge $(RETRY_LIMIT) ]; then \
 			echo "Retry limit ($(RETRY_LIMIT)) reached for target: $(TARGET)"; \
 			exit 1; \
@@ -259,6 +289,22 @@ retry:
 		fi; \
 		attempt=$$((attempt + 1)); \
 		sleep $$backoff_secs; \
+	done
+
+## Prints container status and the logs of exited/unhealthy containers.
+## Wire into `make retry` with RETRY_DIAG_TARGET so evidence is captured
+## before RETRY_CLEANUP_TARGET tears the environment down.
+diagnose-unhealthy-containers:
+	@docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' || true
+	@for id in $$(docker ps -aq); do \
+		name=$$(docker inspect -f '{{.Name}}' $$id); \
+		image=$$(docker inspect -f '{{.Config.Image}}' $$id); \
+		status=$$(docker inspect -f '{{.State.Status}}{{if .State.Health}}/{{.State.Health.Status}}{{end}}' $$id); \
+		case "$$status" in \
+			exited*|*unhealthy*) \
+				echo "===== $$name ($$image) $$status ====="; \
+				docker logs --tail 80 $$id 2>&1 || true ;; \
+		esac; \
 	done
 
 stop_pid:
