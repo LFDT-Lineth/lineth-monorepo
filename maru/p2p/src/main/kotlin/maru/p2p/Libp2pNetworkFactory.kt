@@ -59,6 +59,12 @@ data class TekuLibP2PNetwork(
 class Libp2pNetworkFactory(
   private val domain: String,
 ) {
+  companion object {
+    /** Mirror Teku's defaults in LibP2PNetwork, which are package-private there. */
+    private const val MAX_ACTIVE_INBOUND_RPC_STREAMS = 128
+    private const val MAX_ACTIVE_INBOUND_RPC_STREAMS_PER_PEER = 16
+  }
+
   fun build(
     privateKey: PrivKey,
     port: UInt,
@@ -121,7 +127,11 @@ class Libp2pNetworkFactory(
     val peerId = PeerId.fromPubKey(privateKey.publicKey())
     val libP2PNodeId = LibP2PNodeId(peerId)
 
-    val inboundRpcStreamLimiter = InboundRpcStreamLimiter(128)
+    val inboundRpcStreamLimiter = InboundRpcStreamLimiter(
+      metricsSystem,
+      MAX_ACTIVE_INBOUND_RPC_STREAMS,
+      MAX_ACTIVE_INBOUND_RPC_STREAMS_PER_PEER,
+    )
     val rpcHandlers =
       rpcMethods.map { rpcMethod ->
         RpcHandler(asyncRunner, rpcMethod, metricsSystem, inboundRpcStreamLimiter)
@@ -163,6 +173,8 @@ class Libp2pNetworkFactory(
         gossipNetwork,
         /* listenPorts = */
         listOf(port.toInt()),
+        /* tcpEnabled = */
+        true,
         /* quicEnabled = */
         false,
       )

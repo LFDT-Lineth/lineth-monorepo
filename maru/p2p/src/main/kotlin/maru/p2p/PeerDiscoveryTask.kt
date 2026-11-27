@@ -92,7 +92,7 @@ class PeerDiscoveryTask(
       if (!started.get()) return
       if (getPeerCount() >= maxPeers) return
 
-      val peerAddress = p2pNetwork.createPeerAddress(peer)
+      val peerAddress = p2pNetwork.createPeerAddress(peer).orElse(null) ?: return
 
       if (p2pNetwork.isConnected(peerAddress)) return
       if (!reputationManager.isConnectionInitiationAllowed(peerAddress)) return

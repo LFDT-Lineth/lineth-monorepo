@@ -107,7 +107,7 @@ class MaruDiscoveryService(
       return DiscoveryPeer(
         node.get(EnrField.PKEY_SECP256K1) as Bytes,
         node.nodeId,
-        node.tcpAddress.get(),
+        node.tcpAddress,
         Optional.empty(),
         null,
         null,
