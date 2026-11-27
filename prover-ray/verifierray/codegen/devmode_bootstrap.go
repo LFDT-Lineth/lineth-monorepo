@@ -48,9 +48,6 @@ func BuildDevmodeHonestArtifacts() (HonestArtifacts, error) {
 	if err := devmode.Verify(sys, proof, pub); err != nil {
 		return HonestArtifacts{}, fmt.Errorf("verifying devmode proof: %w", err)
 	}
-	if err := AssertAllVerifierActionsHandled(sys); err != nil {
-		return HonestArtifacts{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
-	}
 
 	verifyInput, err := proofserialization.Project(sys, proof, pub)
 	if err != nil {

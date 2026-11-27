@@ -31,7 +31,13 @@ type CompiledSystem struct {
 // full verifier.verify path, so this errors if sys has no committed batches;
 // callers that legitimately emit the vanishing/logderiv systems standalone
 // should call the individual Build*System functions instead.
+//
+// It first runs AssertAllVerifierActionsHandled, so no caller can emit a
+// verifier that silently drops a check the protocol registers.
 func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
+	if err := AssertAllVerifierActionsHandled(sys); err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
 	routing, err := BuildCoinRouting(sys)
 	if err != nil {
 		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
