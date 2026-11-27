@@ -1602,6 +1602,93 @@ func TestCompile_CrossGroupCancellationIsRejected(t *testing.T) {
 	runRound(rt)
 
 	err := checkAllVerifierActions(rt)
-	assert.Error(t, err,
+	assert.ErrorContains(t, err, "must be zero",
 		"verifier must reject a lookup satisfied only by cross-group cancellation")
+}
+
+// buildTwoDistinctLookups compiles two single-column lookups S1 ⊂ T1 and
+// S2 ⊂ T2 over distinct tables, which land in two groups, and returns the
+// compiled system's lookup-ID verifier action.
+func buildTwoDistinctLookups(t *testing.T) *lookuptologderivsum.LookupIDsAreUniqueVerifierAction {
+	t.Helper()
+	sys := wiop.NewSystemf("ll-ids")
+	r0 := sys.NewRound()
+	for k := 1; k <= 2; k++ {
+		modT := sys.NewSizedModule(sys.Context.Childf("modT%d", k), 2, wiop.PaddingDirectionNone)
+		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", k), 2, wiop.PaddingDirectionNone)
+		colT := modT.NewColumn(sys.Context.Childf("T%d", k), r0)
+		colS := modS.NewColumn(sys.Context.Childf("S%d", k), r0)
+		sys.NewInclusion(sys.Context.Childf("inc%d", k),
+			[]wiop.Table{wiop.NewTable(colS.View())},
+			[]wiop.Table{wiop.NewTable(colT.View())})
+	}
+	lookuptologderivsum.Compile(sys)
+
+	var found *lookuptologderivsum.LookupIDsAreUniqueVerifierAction
+	for _, r := range sys.Rounds {
+		for _, va := range r.VerifierActions {
+			if a, ok := va.(*lookuptologderivsum.LookupIDsAreUniqueVerifierAction); ok {
+				require.Nil(t, found, "the ID check must be registered exactly once")
+				found = a
+			}
+		}
+	}
+	require.NotNil(t, found, "Compile must register the lookup-ID verifier action")
+	require.Len(t, found.IDColumns, 2, "two distinct tables must give two groups")
+	for g, cols := range found.IDColumns {
+		// One B fragment and one A fragment per group.
+		require.Len(t, cols, 2, "group %d must carry one ID column per fragment", g)
+	}
+	return found
+}
+
+// TestCompile_LookupIDsAreUnique checks that Compile gives every group a
+// distinct non-zero ID and that the verifier action accepts it.
+func TestCompile_LookupIDsAreUnique(t *testing.T) {
+	a := buildTwoDistinctLookups(t)
+	assert.NotEqual(t, a.IDColumns[0][0].Value, a.IDColumns[1][0].Value)
+	require.NoError(t, a.Check(nil))
+}
+
+// TestLookupIDsAreUniqueVerifierAction_Rejects checks that the verifier action
+// rejects every ID assignment that would let groups cancel each other.
+func TestLookupIDsAreUniqueVerifierAction_Rejects(t *testing.T) {
+	tests := []struct {
+		name   string
+		tamper func(ids [][]*wiop.Constant)
+		errMsg string
+	}{
+		{
+			name: "duplicate",
+			tamper: func(ids [][]*wiop.Constant) {
+				for _, c := range ids[1] {
+					c.Value = ids[0][0].Value
+				}
+			},
+			errMsg: "share the ID",
+		},
+		{
+			name: "zero",
+			tamper: func(ids [][]*wiop.Constant) {
+				for _, c := range ids[0] {
+					c.Value = field.Zero()
+				}
+			},
+			errMsg: "zero ID",
+		},
+		{
+			name: "inconsistent within a group",
+			tamper: func(ids [][]*wiop.Constant) {
+				ids[0][1].Value = ids[1][0].Value
+			},
+			errMsg: "inconsistent IDs",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			a := buildTwoDistinctLookups(t)
+			tc.tamper(a.IDColumns)
+			assert.ErrorContains(t, a.Check(nil), tc.errMsg)
+		})
+	}
 }
