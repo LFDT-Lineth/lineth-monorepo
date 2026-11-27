@@ -62,7 +62,8 @@ func buildRecursionE6Case() (fixtureCase, codegen.CompiledSystem, error) {
 		return fixtureCase{}, codegen.CompiledSystem{}, fmt.Errorf("execute %s/%s: %w", source, name, err)
 	}
 
-	honest, err := buildProofFixture(p.Sys, p.Assign(run), source, name, "honest")
+	proof, pub := p.Prove(run)
+	honest, err := proofFixtureFromProof(p.Sys, proof, pub, source, name, "honest")
 	if err != nil {
 		return fixtureCase{}, codegen.CompiledSystem{}, err
 	}
@@ -73,7 +74,8 @@ func buildRecursionE6Case() (fixtureCase, codegen.CompiledSystem, error) {
 	}
 	honestAssigner := cell.Assigner
 	cell.Assigner = func(rt *wiop.Runtime) field.Gen { return honestAssigner(rt).Add(field.ElemOne()) }
-	forged, err := buildProofFixture(p.Sys, p.Assign(run), source, name, "invalid-verify")
+	proof, pub = p.Prove(run)
+	forged, err := proofFixtureFromProof(p.Sys, proof, pub, source, name, "invalid-verify")
 	cell.Assigner = honestAssigner
 	if err != nil {
 		return fixtureCase{}, codegen.CompiledSystem{}, err

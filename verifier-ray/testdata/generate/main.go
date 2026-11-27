@@ -116,6 +116,61 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 	}, nil
 }
 
+// proofFixtureFromProof extracts the fixture data of a proof returned by
+// wiop.System.Prove (e.g. through recursion.Program.Prove), for callers that
+// prove through their own entry point rather than a raw assignment. It reads
+// the same transcript as extractVanishingProofView, from (proof, pub) instead
+// of the prover's runtime, as proofserialization.Project does.
+func proofFixtureFromProof(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput, source, name, label string) (proofFixture, error) {
+	if proof.PCSOpeningProof == nil {
+		return proofFixture{}, fmt.Errorf("pcs %s/%s: %s proof has no PCSOpeningProof", source, name, label)
+	}
+	if len(pub) != len(sys.PublicInputs) {
+		return proofFixture{}, fmt.Errorf("%s/%s: %s proof has %d public inputs, system declares %d",
+			source, name, label, len(pub), len(sys.PublicInputs))
+	}
+	publicInputByID := publicInputIndex(sys)
+
+	view := vanishingProofView{publicInputs: make([]runtimeTraceCell, len(pub))}
+	for i, v := range pub {
+		view.publicInputs[i] = traceCellOf(v)
+	}
+	for _, round := range sys.Rounds[:len(sys.Rounds)-1] {
+		var trace runtimeTraceRound
+		if round.HasCommitment {
+			root, ok := proof.Commitments[round.ID]
+			if !ok {
+				return proofFixture{}, fmt.Errorf("%s/%s: %s proof has no root for committed round %d",
+					source, name, label, round.ID)
+			}
+			trace.commitment = &root
+		}
+		for _, cell := range round.Cells {
+			if _, isPI := publicInputByID[cell.Context.ID]; isPI {
+				continue
+			}
+			if v, ok := proof.Cells[cell.Context.ID]; ok {
+				trace.cells = append(trace.cells, traceCellOf(v))
+			}
+		}
+		view.rounds = append(view.rounds, trace)
+	}
+	for k, m := range sys.Modules {
+		if m.IsDynamic() {
+			view.moduleSizes = append(view.moduleSizes, proof.DynamicSizes[k])
+		}
+	}
+	return proofFixture{view: view, opening: *proof.PCSOpeningProof}, nil
+}
+
+// traceCellOf records a cell value with its field tag.
+func traceCellOf(v field.Gen) runtimeTraceCell {
+	if v.IsBase() {
+		return baseTraceCell(v.AsBase())
+	}
+	return extTraceCell(v.AsExt())
+}
+
 // compileFullPipeline compiles sys through the canonical
 // compilers.CompileFull pipeline, shrinking the FRI query count to 4 for
 // fixtures: the production default (229) would emit ~229 Merkle branches per

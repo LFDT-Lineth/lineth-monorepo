@@ -59,14 +59,25 @@ func TestBuildE6CheckSystem(t *testing.T) {
 		t.Fatalf("got %d checks, want 2 (X and Y; the scalar S has none)", len(sys.Checks))
 	}
 
-	rt := wiop.NewRuntime(p.Sys)
-	p.Assign(r)(rt)
+	proof, pub := p.Prove(r)
+	piPos := make(map[wiop.ObjectID]int, len(p.Sys.PublicInputs))
+	for i, c := range p.Sys.PublicInputs {
+		piPos[c.Context.ID] = i
+	}
 	cellAt := func(ref ScalarCellRef) field.Gen {
 		t.Helper()
 		if ref.Round >= len(p.Sys.Rounds) || ref.Index >= len(p.Sys.Rounds[ref.Round].Cells) {
 			t.Fatalf("ref %+v out of range", ref)
 		}
-		return rt.GetCellValue(p.Sys.Rounds[ref.Round].Cells[ref.Index])
+		cell := p.Sys.Rounds[ref.Round].Cells[ref.Index]
+		if i, ok := piPos[cell.Context.ID]; ok {
+			return pub[i]
+		}
+		v, ok := proof.Cells[cell.Context.ID]
+		if !ok {
+			t.Fatalf("ref %+v: cell not in the proof", ref)
+		}
+		return v
 	}
 
 	for k, tag := range []wiop.PublicInputTag{"X", "Y"} {
