@@ -33,13 +33,13 @@
 // fills it with a proof that verifies (the node program copies its first
 // child) and leaves the slot's values out of its own computation.
 //
-// The wiop verifier is not written in the machine's instructions yet. [New],
-// the production constructor, returns [ErrNotImplemented]; dev and test code
-// uses verifiertest.NewMock, which is not sound. Like
-// wiop.AllocateVerifierCircuit, [New] must fail on a system registering a
-// verifier action it cannot run in the machine (the node programs register
-// recursion.E6Check for every extension public input), rather than drop the
-// check.
+// [New], the production constructor, wraps the in-machine wiop verifier of
+// package recursion, for systems compiled size-oblivious
+// (pcs.WithSizeOblivious); dev and test code may use verifiertest.NewMock,
+// which is not sound. Like wiop.AllocateVerifierCircuit, [New]'s verifier
+// fails on a system registering a verifier action it cannot run in the
+// machine, rather than drop the check: Define returns the error. The
+// transcript does not absorb the key yet (#4510).
 package verifier
 
 import (
@@ -49,20 +49,61 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// ErrNotImplemented is returned by [New] until the wiop verifier is written
-// in the machine's instructions.
-var ErrNotImplemented = errors.New("verifier: the in-machine wiop verifier is not implemented")
-
 // Constructor returns the verifier of the proofs of the systems of sys's
 // shape: [New] in production, verifiertest.NewMock in tests. Code that builds
 // programs takes a Constructor, so that only its caller chooses the mock.
 type Constructor func(sys *wiop.System) (Verifier, error)
 
-// New returns the verifier of the proofs of the systems of sys's shape. It is
-// the production constructor and returns [ErrNotImplemented] for now; use
-// verifiertest.NewMock in dev and test code.
-func New(_ *wiop.System) (Verifier, error) {
-	return nil, ErrNotImplemented
+// New returns the verifier of the proofs of the systems of sys's shape: the
+// in-machine wiop verifier of package recursion. It is the production
+// constructor. sys must be compiled size-oblivious for Define to take the
+// heights of its sized modules as cells.
+func New(sys *wiop.System) (Verifier, error) {
+	if sys == nil {
+		return nil, errors.New("verifier: no system")
+	}
+	return &machineVerifier{sys: sys}, nil
+}
+
+// machineVerifier is the in-machine wiop verifier behind the [Verifier]
+// interface. A recursion.Verifier allocates its inputs as it is built, so
+// Allocate allocates nothing: the cells of a proof are the inputs Define
+// allocates. Every verifier Define builds for the system has the same inputs,
+// in the same order, so Assign lays a proof out with the first.
+type machineVerifier struct {
+	sys *wiop.System
+	// first is the verifier of the first Define. It is written once, when
+	// the program is built, and only read by Assign afterwards.
+	first *recursion.Verifier
+}
+
+// Allocate implements [Verifier].
+func (v *machineVerifier) Allocate(*recursion.Machine) ProofCells { return nil }
+
+// Define implements [Verifier].
+func (v *machineVerifier) Define(m *recursion.Machine, key Key, _ ProofCells) ([]int, error) {
+	rv, err := recursion.NewVerifierWith(m, v.sys, recursion.VerifierOptions{
+		Key: key.Root, HasKey: true, Heights: key.Heights,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if v.first == nil {
+		v.first = rv
+	}
+	pubs := make([]int, len(v.sys.PublicInputs))
+	for i := range pubs {
+		pubs[i] = rv.PublicInput(i)
+	}
+	return pubs, nil
+}
+
+// Assign implements [Verifier].
+func (v *machineVerifier) Assign(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) ([]recursion.Cell, error) {
+	if v.first == nil {
+		return nil, errors.New("verifier: Assign before Define")
+	}
+	return v.first.InputsFor(sys, proof, pub)
 }
 
 // Key is what a proof is verified under, as cells of the program: Root, the

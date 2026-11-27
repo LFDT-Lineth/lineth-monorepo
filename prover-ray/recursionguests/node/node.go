@@ -66,8 +66,8 @@
 // recursion/verifier) under the child key and folds the public inputs
 // the verifier yields, so a child's values enter the node only through its
 // verified proof. The caller chooses the verifier with a verifier.Constructor:
-// verifier.New in production, which fails until the wiop verifier is written
-// in the machine's instructions, and verifiertest.NewMock in tests.
+// verifier.New in production, the wiop verifier in the machine's
+// instructions, and verifiertest.NewMock in tests.
 //
 // No program bounds how many times a child appears under a node, nor the
 // depth of the tree: see issue #4491.
