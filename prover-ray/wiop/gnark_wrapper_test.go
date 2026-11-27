@@ -2,7 +2,9 @@ package wiop_test
 
 import (
 	"encoding/binary"
+	"maps"
 	"math/big"
+	"slices"
 	"testing"
 	"time"
 
@@ -73,9 +75,9 @@ func TestWrapperCircuit_Misuse(t *testing.T) {
 }
 
 // TestWrapperCircuit_PLONKProve wraps a devmode wiop proof: PLONK prove and
-// verify over BN254, the public witness is the two packed values, the proof is
-// rejected under a changed public input, and a tampered wiop proof cannot be
-// proven. The SRS comes from [unsafekzg].
+// verify over BN254 and the proof is rejected under a changed public input.
+// The checks that need no proof are in [TestWrapperCircuit_IsSolved]. The SRS
+// comes from [unsafekzg].
 func TestWrapperCircuit_PLONKProve(t *testing.T) {
 	if testing.Short() {
 		t.Skip("PLONK setup and proving")
@@ -106,21 +108,8 @@ func TestWrapperCircuit_PLONKProve(t *testing.T) {
 	t.Logf("constraints=%d prove=%v", ccs.GetNbConstraints(), time.Since(start).Round(time.Millisecond))
 	require.NoError(t, plonk.Verify(plonkProof, vk, public), "PLONK proof must verify")
 
-	// The public witness is exactly the two packed values, guest output first,
-	// and agrees with the devmode gnark circuit.
-	wantOut := devmode.PackGuestOutput(risc5.GetGuestPublicOutputs(sys, pub))
-	programVK := risc5.GetProgramVK(sys, pub)
-	wantVK := devmode.PackProgramVK(programVK[:])
-	vec, ok := public.Vector().(fr.Vector)
-	require.True(t, ok)
-	require.Len(t, vec, 2)
-	var e0, e1 fr.Element
-	e0.SetBigInt(wantOut)
-	e1.SetBigInt(wantVK)
-	require.Equal(t, e0, vec[0], "public input 0 is the packed guest output")
-	require.Equal(t, e1, vec[1], "public input 1 is the packed program VK")
-
 	// The same proof is rejected under a changed public input.
+	wantOut, wantVK := wantPacked(sys, pub)
 	one := big.NewInt(1)
 	for i, changed := range []*wiop.WrapperCircuit{
 		{GuestOutput: new(big.Int).Add(wantOut, one), ProgramVK: wantVK},
@@ -130,28 +119,13 @@ func TestWrapperCircuit_PLONKProve(t *testing.T) {
 		require.NoError(t, err)
 		require.Error(t, plonk.Verify(plonkProof, vk, badPublic), "changed public input %d must be rejected", i)
 	}
-
-	// A tampered wiop proof cannot be proven.
-	bad := wiop.Proof{Cells: proof.Cells, Commitments: map[int]field.Octuplet{}, PCSOpeningProof: proof.PCSOpeningProof}
-	for id, c := range proof.Commitments {
-		bad.Commitments[id] = c
-	}
-	for id, c := range bad.Commitments {
-		c[0].Add(&c[0], new(field.Element).SetOne())
-		bad.Commitments[id] = c
-		break
-	}
-	badW, err := frontend.NewWitness(circ.AssignWrapperCircuit(bad, pub), modulus)
-	require.NoError(t, err)
-	_, err = plonk.Prove(ccs, pk, badW)
-	require.ErrorContains(t, err, "is not satisfied", "a tampered wiop proof must not be provable")
 }
 
-// TestWrapperCircuit_NonCanonicalCell checks that a public-input cell assigned
-// x+p instead of x cannot be packed: the wiop verifier only sees cells mod p,
-// so without the strict reduction this witness would solve and expose a
-// packed guest output the contract would never compute.
-func TestWrapperCircuit_NonCanonicalCell(t *testing.T) {
+// TestWrapperCircuit_IsSolved checks the wrapper without PLONK setup, by
+// solving the circuit: the honest witness solves and its public part is the two
+// packed values, guest output first; a tampered wiop proof does not solve; and
+// a non-canonical public-input cell does not solve.
+func TestWrapperCircuit_IsSolved(t *testing.T) {
 	modulus := ecc.BN254.ScalarField()
 
 	sys := newWrapperSystem(t)
@@ -166,26 +140,70 @@ func TestWrapperCircuit_NonCanonicalCell(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, ccs.IsSolved(honest), "the honest witness must solve")
 
-	// Guest-output byte 0 is wiop public input 0 and, as devmode declares its
-	// public-input cells first and in order, PublicInputsBase[0]. It is a byte,
-	// so x+p still fits the 31-bit emulated limb.
-	_, pos := sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
-	require.Equal(t, 0, pos)
-	p := new(big.Int).SetUint64(field.Modulus().Uint64())
-	x := new(big.Int).SetUint64(pub[0].AsBase().Uint64())
-	nonCanonical := new(big.Int).Add(x, p)
+	t.Run("public-witness", func(t *testing.T) {
+		// The public witness is exactly the two packed values, guest output
+		// first, and agrees with the devmode gnark circuit.
+		public, err := honest.Public()
+		require.NoError(t, err)
+		wantOut, wantVK := wantPacked(sys, pub)
+		vec, ok := public.Vector().(fr.Vector)
+		require.True(t, ok)
+		require.Len(t, vec, 2)
+		var e0, e1 fr.Element
+		e0.SetBigInt(wantOut)
+		e1.SetBigInt(wantVK)
+		require.Equal(t, e0, vec[0], "public input 0 is the packed guest output")
+		require.Equal(t, e1, vec[1], "public input 1 is the packed program VK")
+	})
 
-	bad := circ.AssignWrapperCircuit(proof, pub)
-	bad.Verifier.PublicInputsBase[0] = circuit.Element{EV: emulated.Element[emulated.KoalaBear]{
-		Limbs: []frontend.Variable{nonCanonical},
-	}}
-	// The packed value consistent with x+p: byte 0 has weight 2^(8*31).
-	shift := new(big.Int).Lsh(p, 8*31)
-	bad.GuestOutput = new(big.Int).Mod(new(big.Int).Add(bad.GuestOutput.(*big.Int), shift), modulus)
+	t.Run("tampered-proof", func(t *testing.T) {
+		// Tamper with the commitment of the first committed round. Picking the
+		// smallest ID keeps the test deterministic: map order is random.
+		bad := wiop.Proof{Cells: proof.Cells, Commitments: maps.Clone(proof.Commitments), PCSOpeningProof: proof.PCSOpeningProof}
+		require.NotEmpty(t, bad.Commitments)
+		id := slices.Min(slices.Collect(maps.Keys(bad.Commitments)))
+		c := bad.Commitments[id]
+		c[0].Add(&c[0], new(field.Element).SetOne())
+		bad.Commitments[id] = c
+		badW, err := frontend.NewWitness(circ.AssignWrapperCircuit(bad, pub), modulus)
+		require.NoError(t, err)
+		require.Error(t, ccs.IsSolved(badW), "a tampered wiop proof must not solve")
+	})
 
-	badW, err := frontend.NewWitness(bad, modulus)
-	require.NoError(t, err)
-	require.Error(t, ccs.IsSolved(badW), "a non-canonical public-input cell must be rejected")
+	t.Run("non-canonical-cell", func(t *testing.T) {
+		// A public-input cell assigned x+p instead of x cannot be packed: the
+		// wiop verifier only sees cells mod p, so without the strict reduction
+		// this witness would solve and expose a packed guest output the
+		// contract would never compute.
+
+		// Guest-output byte 0 is wiop public input 0 and, as devmode declares its
+		// public-input cells first and in order, PublicInputsBase[0]. It is a byte,
+		// so x+p still fits the 31-bit emulated limb.
+		_, pos := sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
+		require.Equal(t, 0, pos)
+		p := new(big.Int).SetUint64(field.Modulus().Uint64())
+		x := new(big.Int).SetUint64(pub[0].AsBase().Uint64())
+		nonCanonical := new(big.Int).Add(x, p)
+
+		bad := circ.AssignWrapperCircuit(proof, pub)
+		bad.Verifier.PublicInputsBase[0] = circuit.Element{EV: emulated.Element[emulated.KoalaBear]{
+			Limbs: []frontend.Variable{nonCanonical},
+		}}
+		// The packed value consistent with x+p: byte 0 has weight 2^(8*31).
+		shift := new(big.Int).Lsh(p, 8*31)
+		bad.GuestOutput = new(big.Int).Mod(new(big.Int).Add(bad.GuestOutput.(*big.Int), shift), modulus)
+
+		badW, err := frontend.NewWitness(bad, modulus)
+		require.NoError(t, err)
+		require.Error(t, ccs.IsSolved(badW), "a non-canonical public-input cell must be rejected")
+	})
+}
+
+// wantPacked returns the packed guest output and program VK of pub, computed
+// by devmode rather than by the wrapper.
+func wantPacked(sys *wiop.System, pub wiop.PublicInput) (out, vk *big.Int) {
+	programVK := risc5.GetProgramVK(sys, pub)
+	return devmode.PackGuestOutput(risc5.GetGuestPublicOutputs(sys, pub)), devmode.PackProgramVK(programVK[:])
 }
 
 // newWrapperSystem builds the devmode system without column elision, which
