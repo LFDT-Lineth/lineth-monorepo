@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(ROOT / "rollup_spec/src"))
 from rollup_spec import l2_execution_ssz, proof_io_v1, rollup_aggregation_ssz, rollup_ssz
 from rollup_spec import stateless_input as ref
+from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
 
 # The spec's reference l2-execution response: its public inputs are what the
 # guest output frame encodes.
@@ -26,6 +27,8 @@ ROLLUP_REQUEST = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-ge
 ROLLUP_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json"
 # The spec's reference aggregation request.
 AGGREGATION_REQUEST = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.request.json"
+# The spec's reference aggregation response.
+AGGREGATION_RESPONSE = ROOT / "rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.response.json"
 
 
 class EmptyExecutionRequests(Container):
@@ -115,6 +118,43 @@ def aggregation_inputs():
     return reference, offsets
 
 
+def aggregation_outputs():
+    # keccak256(frame) || frame, frame = 0x0007 || SSZ(finalization public
+    # inputs), for the public inputs of the reference response and for the
+    # same public inputs with messaging-block offsets.
+    pi = json.loads(AGGREGATION_RESPONSE.read_text())["publicInputs"]
+
+    def output(pi):
+        h = lambda v: bytes.fromhex(v[2:])
+        public_inputs = FinalizationPublicInput(
+            end_block_number=pi["endBlockNumber"],
+            end_block_timestamp=pi["endBlockTimestamp"],
+            end_l1_l2_bridge_rolling_hash=h(pi["endL1L2BridgeRollingHash"]),
+            end_l1_l2_bridge_rolling_hash_message_number=pi["endL1L2BridgeRollingHashMessageNumber"],
+            dynamic_chain_config_hash=h(pi["dynamicChainConfigHash"]),
+            parent_ftx_rolling_hash=h(pi["parentFtxRollingHash"]),
+            parent_ftx_number=pi["parentFtxNumber"],
+            end_ftx_rolling_hash=h(pi["endFtxRollingHash"]),
+            end_processed_ftx_number=pi["endProcessedFtxNumber"],
+            parent_data_rolling_hash=h(pi["parentDataRollingHash"]),
+            end_data_rolling_hash=h(pi["endDataRollingHash"]),
+            parent_block_hash=h(pi["parentBlockHash"]),
+            end_block_hash=h(pi["endBlockHash"]),
+            parent_shared_blob_carry_over_tail_bytes=pi["parentSharedBlobCarryOverTailBytes"],
+            final_shared_blob_carry_over_tail_bytes=pi["finalSharedBlobCarryOverTailBytes"],
+            l2_l1_tree_depth=pi["l2L1TreeDepth"],
+            l2_l1_roots=[h(v) for v in pi["l2L1Roots"]],
+            filtered_addresses=[h(v) for v in pi["filteredAddresses"]],
+            program_ids=[h(v) for v in pi["programIds"]],
+            l2_messaging_blocks_offsets=pi["l2MessagingBlocksOffsets"],
+        )
+        return rollup_aggregation_ssz.encode_aggregation_output(
+            FinalizationSubmission(public_inputs=public_inputs, proof=b"")
+        )
+
+    return output(pi), output({**pi, "l2MessagingBlocksOffsets": [1, 258]})
+
+
 if __name__ == "__main__":
     directory = Path(__file__).resolve().parent
     for name in ("payload0", "payload1", "full"):
@@ -131,6 +171,9 @@ if __name__ == "__main__":
     reference, offsets = aggregation_inputs()
     (directory / "aggregation_input.ssz").write_bytes(reference)
     (directory / "aggregation_input_offsets.ssz").write_bytes(offsets)
+    reference, offsets = aggregation_outputs()
+    (directory / "aggregation_output.ssz").write_bytes(reference)
+    (directory / "aggregation_output_offsets.ssz").write_bytes(offsets)
     (ROOT / "prover-ray/backend/jobadapter/testdata/rollup_request_guest_output.json").write_text(
         json.dumps(rollup_request_guest_output(), indent=2) + "\n"
     )

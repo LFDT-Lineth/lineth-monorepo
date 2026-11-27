@@ -121,6 +121,32 @@ type RollupPublicInputs struct {
 	L2MessagingBlocksOffsets              []uint16
 }
 
+// AggregationPublicInputs are the rollup-aggregation guest's public inputs
+// (0x0007 output), named as in the getZkRollupAggregationProofV1 response, in
+// SSZ order.
+type AggregationPublicInputs struct {
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	ParentDataRollingHash                 [32]byte
+	EndDataRollingHash                    [32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
+	L2L1TreeDepth                         uint64
+	L2L1Roots                             [][32]byte
+	FilteredAddresses                     [][20]byte
+	ProgramIDs                            [][32]byte
+	L2MessagingBlocksOffsets              []uint16
+}
+
 // Result is the backend's response for a completed [Job].
 type Result struct {
 	JobID  string
