@@ -436,6 +436,9 @@ pub const Options = struct {
     /// The dataRollingHash before the first chunk, which a range starting inside that chunk opens.
     parent_blob_data_rolling_hash: Hash = @splat(0x39),
     dynamic_chain_config_hash: Hash = @splat(0xc0),
+    /// The position of the first proof in the chain of forced-transaction states, which the proofs
+    /// of a request that continues another start from where the proofs of that one end.
+    first_ftx_index: usize = 0,
     /// One blob chunk owning the whole stream by default.
     chunks: []const ChunkSpec = &.{.{}},
     /// The proofs of the conflations in order; a missing one is the default `ProofSpec`.
@@ -548,7 +551,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     const proofs = try a.alloc(l2_execution_proof.VerifiableL2ExecutionProof, conflations_in.len);
     for (conflations_in, witnesses, proofs, 0..) |conflation, *witness, *proof, index| {
         witness.* = try sample_input.conflationOf(a, conflation.block_rlps);
-        proof.* = proofOf(conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
+        proof.* = proofOf(conflation, options.first_ftx_index + index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
     }
     try prove(a, proofs);
 

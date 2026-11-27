@@ -101,6 +101,26 @@ class RiscvRollupsPostgresDao(
     """
       .trimIndent()
 
+  // The last rollup of the same gap-free walk.
+  private val selectHighestConsecutiveSql =
+    """
+      with ordered as (select *,
+          lag(end_block_number) over (order by start_block_number) as previous_end_block_number
+        from $RollupsTableName
+        where start_block_number >= $1),
+      first_gap as (select min(start_block_number) as start_block_number
+        from ordered
+        where start_block_number > $1 and start_block_number != previous_end_block_number + 1)
+      select *
+      from ordered
+      where exists (select 1 from ordered where start_block_number = $1)
+        and ((select start_block_number from first_gap) is null
+          or start_block_number < (select start_block_number from first_gap))
+      order by start_block_number desc
+      limit 1
+    """
+      .trimIndent()
+
   private val selectByStartBlockNumberSql = "select * from $RollupsTableName where start_block_number = $1 limit 1"
   private val selectByEndBlockNumberSql = "select * from $RollupsTableName where end_block_number = $1 limit 1"
   private val existsSql =
@@ -127,6 +147,8 @@ class RiscvRollupsPostgresDao(
 
   private val insertQuery = connection.preparedQuery(insertSql)
   private val selectConsecutiveQuery = connection.preparedQuery(selectConsecutiveSql)
+  private val selectHighestConsecutiveQuery =
+    connection.preparedQuery(selectHighestConsecutiveSql)
   private val selectByStartBlockNumberQuery = connection.preparedQuery(selectByStartBlockNumberSql)
   private val selectByEndBlockNumberQuery = connection.preparedQuery(selectByEndBlockNumberSql)
   private val existsQuery = connection.preparedQuery(existsSql)
@@ -193,6 +215,15 @@ class RiscvRollupsPostgresDao(
       .toSafeFuture()
       .thenApply { rows -> rows.filter { endBlockTimestamp(it) < endBlockCreatedBefore } }
       .thenCompose(::toRecords)
+
+  override fun findHighestConsecutiveRollupFromBlockNumber(
+    startingBlockNumberInclusive: ULong,
+  ): SafeFuture<RiscvRollupRecord?> =
+    selectHighestConsecutiveQuery
+      .execute(Tuple.of(startingBlockNumberInclusive.toLong()))
+      .toSafeFuture()
+      .thenCompose { rows -> toRecords(rows.toList()) }
+      .thenApply { it.firstOrNull() }
 
   override fun findRollupByStartBlockNumber(startBlockNumber: ULong): SafeFuture<RiscvRollupRecord?> =
     selectByStartBlockNumberQuery

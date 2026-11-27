@@ -1,6 +1,6 @@
 package lineth.coordination.riscv.da
 
-import lineth.coordination.riscv.rollup.Keccak256DataRollingHashCalculator
+import lineth.coordination.riscv.da.FakeDaStream.Keccak256DataRollingHashCalculator
 import lineth.da.DaCodecVersion
 import lineth.da.DaConstants.BLOB_BYTES
 import lineth.da.DaConstants.BLOB_PAYLOAD_TERMINAL

@@ -136,11 +136,12 @@ func (e Gen) Div(b Gen) Gen {
 	return e.Mul(b.Inverse())
 }
 
-// RandomElemBase returns a cryptographically random base-field [Gen].
-func RandomElemBase() Gen { return ElemFromBase(RandomElement()) }
-
 // RandomElemExt returns a cryptographically random extension-field [Gen].
-func RandomElemExt() Gen { return ElemFromExt(RandomElementExt()) }
+func RandomElemExt() Gen {
+	var e Ext
+	e.MustSetRandom()
+	return ElemFromExt(e)
+}
 
 // PseudoRandElemBase returns a pseudo-random base-field [Gen] drawn from rng.
 func PseudoRandElemBase(rng *rand.Rand) Gen { return ElemFromBase(PseudoRand(rng)) }
