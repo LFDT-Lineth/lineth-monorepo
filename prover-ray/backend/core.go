@@ -45,10 +45,12 @@ const (
 	guestLogMemory    = "guest_log"
 )
 
-// Spec frame of the guest output: schema id 0x0003 (l2-execution) or 0x0005 (rollup).
+// Spec frame of the guest output: schema id 0x0003 (l2-execution), 0x0005
+// (rollup) or 0x0007 (rollup-aggregation).
 const (
 	l2ExecutionOutputSchemaID = 0x0003
 	rollupOutputSchemaID      = 0x0005
+	aggregationOutputSchemaID = 0x0007
 	guestOutputSchemaIDSize   = 2
 	guestOutputHashSize       = 32
 )
