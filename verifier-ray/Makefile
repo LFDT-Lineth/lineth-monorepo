@@ -33,9 +33,10 @@ ELF_TO_JSON = go -C ../arithmetization tool elf_to_json
 # The generated systems and proof images come from prover-ray HEAD
 # (`prover verifier-assets`). go -C runs in ../prover-ray, so pass absolute paths.
 VERIFIER_ASSETS = go -C ../prover-ray run ./cmd/prover verifier-assets
-# The prover-ray sources the devmode assets are generated from: every non-test Go file (the compilers
-# under wiop decide the compiled system too) and the embedded Zig templates of the codegen.
-DEVMODE_SYSTEM_INPUTS := $(shell find ../prover-ray -type f \( -name '*.go' -o -name '*.zig.tmpl' \) \
+# The prover-ray sources the generated assets (the devmode system and both proof images) come from:
+# every non-test Go file (the compilers under wiop decide the compiled system, proofserialization the
+# image encoding) and the embedded Zig templates of the codegen.
+PROVER_RAY_INPUTS := $(shell find ../prover-ray -type f \( -name '*.go' -o -name '*.zig.tmpl' \) \
 	-not -name '*_test.go' -not -path '*/testdata/*') ../prover-ray/go.mod ../prover-ray/go.sum
 
 ci: generate-testdata fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
@@ -136,16 +137,17 @@ generate-testdata:
 	$(MAKE) generate-devmode-system
 
 # The image belongs to the committed verify.zig (image_case_index and that case's system), so it is
-# rebuilt whenever verify.zig or its generator changes. `-image-only` writes only the image, and fails
-# unless the committed verify.zig is exactly what the generator produces now.
-$(FIXTURE_PROOF_IMAGE): testdata/generated/verify.zig $(wildcard cmd/generate-testdata/*.go)
+# rebuilt whenever verify.zig, its generator or the prover-ray code that proves and encodes it changes.
+# `-image-only` writes only the image, and fails unless the committed verify.zig is exactly what the
+# generator produces now.
+$(FIXTURE_PROOF_IMAGE): testdata/generated/verify.zig $(wildcard cmd/generate-testdata/*.go) $(PROVER_RAY_INPUTS)
 	go run ./cmd/generate-testdata -image-only
 
 generate-devmode-system:
 	$(VERIFIER_ASSETS) --system devmode \
 		--zig "$(abspath $(DEVMODE_SYSTEM))" --image "$(abspath $(DEVMODE_PROOF_IMAGE))"
 
-$(DEVMODE_SYSTEM) $(DEVMODE_PROOF_IMAGE) &: $(DEVMODE_SYSTEM_INPUTS)
+$(DEVMODE_SYSTEM) $(DEVMODE_PROOF_IMAGE) &: $(PROVER_RAY_INPUTS)
 	$(MAKE) generate-devmode-system
 
 verify-testdata: generate-testdata
