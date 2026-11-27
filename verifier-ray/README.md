@@ -16,23 +16,23 @@ The end-to-end fixtures are checked into git:
 testdata/generated/verify.zig
 ```
 
-The RISC-V and devmode systems and their proof images are generated, not
-committed (see `.gitignore`):
+The devmode system, its proof image and the proof image of one `verify.zig`
+case are generated, not committed (see `.gitignore`):
 
 ```text
-testdata/generated/riscv_system.zig
 testdata/generated/devmode_system.zig
-testdata/riscv_proof_image.bin
 testdata/devmode_proof_image.bin
+testdata/fixture_proof_image.bin
 ```
 
-The generator is in:
+`verify.zig` and the fixture image are written by `cmd/generate-testdata/`. The
+devmode system and its image are written by prover-ray's
+`prover verifier-assets --system devmode` command, from the code
+generator in `prover-ray/backend/verifiertarget/zig`, so a circuit change in prover-ray
+needs no change here.
 
-```text
-testdata/generate/
-```
-
-Regenerate all generated Zig fixtures from local prover-ray references with:
+Regenerate all generated Zig fixtures from the prover-ray checkout next to this
+directory with:
 
 ```bash
 make generate-testdata
@@ -46,11 +46,14 @@ Run the Zig test suite with:
 make test-zig
 ```
 
-Run Go codegen tests with:
+Run the Go tests (the proof ABI agreement check against the prover-ray encoder)
+with:
 
 ```bash
-make test-codegen
+make test-go
 ```
+
+The codegen tests run with prover-ray's tests.
 
 Run both with:
 
@@ -78,11 +81,15 @@ Build the Lineth R5 zkVM executable:
 make build-r5
 ```
 
-The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Binary smoke-test inputs live in:
+The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`, which verifies a proof of the devmode system. Binary smoke-test inputs live in:
 
 ```text
-testdata/riscv_proof_image.bin
+testdata/devmode_proof_image.bin
 ```
+
+verifier-ray only verifies the roots of the proving pipeline (the devmode system
+now, the recursion root next), never an R5 shard proof directly, so no RISC-V
+system is generated.
 
 ## Running Example Programs
 

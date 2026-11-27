@@ -25,7 +25,7 @@ on:
     paths:
       - "riscv-guests/**"
       - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
-      - "prover-ray/**" # verifier-ray builds against prover-ray HEAD (go.mod `replace`)
+      - "prover-ray/**" # the devmode system and prover are built from prover-ray HEAD
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
       - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
@@ -47,7 +47,7 @@ on:
     paths:
       - "riscv-guests/**"
       - "verifier-ray/**" # the rollup guest's recursive verifier and devmode prover
-      - "prover-ray/**" # verifier-ray builds against prover-ray HEAD (go.mod `replace`)
+      - "prover-ray/**" # the devmode system and prover are built from prover-ray HEAD
       - "arithmetization/src/main/riscv/**"
       - "arithmetization/src/main/common/**"
       - "arithmetization/src/main/lib/**"
@@ -113,7 +113,7 @@ jobs:
             guest:
               - "riscv-guests/**"
               - "verifier-ray/**"
-              - "prover-ray/**" # verifier-ray builds against prover-ray HEAD (go.mod `replace`)
+              - "prover-ray/**" # the devmode system and prover are built from prover-ray HEAD
               - "arithmetization/src/main/riscv/**"
               - "arithmetization/src/main/common/**"
               - "arithmetization/src/main/lib/**"

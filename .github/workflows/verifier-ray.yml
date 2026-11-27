@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - 'verifier-ray/**'
-      # verifier-ray builds against prover-ray HEAD (go.mod `replace`), so a
+      # verifier-ray's systems are generated from prover-ray HEAD, so a
       # prover-ray change can make the generated verifier assets stale;
       # `make verify-testdata` below fails on that.
       - 'prover-ray/**'
@@ -21,7 +21,7 @@ on:
       - main
     paths:
       - 'verifier-ray/**'
-      # verifier-ray builds against prover-ray HEAD (go.mod `replace`), so a
+      # verifier-ray's systems are generated from prover-ray HEAD, so a
       # prover-ray change can make the generated verifier assets stale;
       # `make verify-testdata` below fails on that.
       - 'prover-ray/**'

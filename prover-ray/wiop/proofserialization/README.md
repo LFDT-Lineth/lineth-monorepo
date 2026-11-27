@@ -65,7 +65,7 @@ dump that shape faithfully per §2. The Go maps disappear in the projection step
 which is why they were never an obstacle to the dump.
 
 That projection already exists and is already tested: it is what
-`verifier-ray/testdata/generate` does when it emits `verify.zig` golden vectors
+`verifier-ray/cmd/generate-testdata` does when it emits `verify.zig` golden vectors
 (`writeVerifyProof`, `pcsOpeningZigLiteral`). It renders the projected proof as
 **Zig source text** today; this work makes it render **bytes**. Reuse that code
 path rather than writing a second projection — two projections that must agree is

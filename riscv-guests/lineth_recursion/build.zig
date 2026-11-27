@@ -28,24 +28,19 @@ pub fn build(b: *std.Build) void {
     }, .{});
 }
 
-/// The generated devmode system of verifier-ray, relative to this package.
-const devmode_system_source = "../../verifier-ray/testdata/generated/devmode_system.zig";
-
 /// The verifier of the zkVM guest is built for the R5 target with its pure-Zig Poseidon2; every
-/// other target builds the verifier for the host. The riscv system option is the one the verifier
-/// package requires; the devmode system is the one this package verifies against.
+/// other target builds the verifier for the host. The devmode system this package verifies against
+/// is the verifier package's `devmode_system` module.
 fn verifierRay(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Dependency {
-    const devmode_system_path = b.pathFromRoot(devmode_system_source);
     if (target.result.cpu.arch == .riscv64) {
         return b.dependency("verifier_ray", .{
             .target = target,
             .optimize = optimize,
             .r5 = true,
             .@"disable-accelerators" = true,
-            .@"riscv-system" = devmode_system_path,
         });
     }
-    return b.dependency("verifier_ray", .{ .target = target, .optimize = optimize, .@"riscv-system" = devmode_system_path });
+    return b.dependency("verifier_ray", .{ .target = target, .optimize = optimize });
 }
 
 fn recursionModule(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) std.Build.Module.CreateOptions {
@@ -78,14 +73,14 @@ fn proverModule(
     };
 }
 
-/// The devmode prover of verifier-ray (`generate-devmode-system`, run with `-prove`) built for the
-/// host: the program the tests and tools hand the proofs they need to. `go` rebuilds it on every run
-/// and caches what did not change.
+/// The prover-ray command (`prover`, run as `prover devmode-prove`) built for the host: the program
+/// the tests and tools hand the devmode proofs they need to. `go` rebuilds it on every run and caches
+/// what did not change.
 fn addDevmodeProver(b: *std.Build) std.Build.LazyPath {
     const go = b.addSystemCommand(&.{ "go", "build", "-o" });
-    const binary = go.addOutputFileArg("generate-devmode-system");
-    go.addArg("./codegen/generate-devmode-system");
-    go.setCwd(b.path("../../verifier-ray"));
+    const binary = go.addOutputFileArg("prover");
+    go.addArg("./cmd/prover");
+    go.setCwd(b.path("../../prover-ray"));
     go.has_side_effects = true;
     return binary;
 }

@@ -1,0 +1,12 @@
+{{if .Options.EmitImport}}const grandproduct = {{.Options.GrandProductImport}};
+
+{{end}}{{range $q, $query := .System.Queries}}const system_{{$.Index}}_grandproduct_query_{{$q}}_zfinal_refs = [_]grandproduct.ScalarRef{
+{{range $query.ZFinalRefs}}    .{ .round = {{.Round}}, .index = {{.Index}} },
+{{end}}};
+
+{{end}}// grandproduct system: "{{zig .System.SourceName}}"
+const system_{{.Index}}_grandproduct_queries = [_]grandproduct.Query{
+{{range $q, $query := .System.Queries}}    .{ .z_final_refs = &system_{{$.Index}}_grandproduct_query_{{$q}}_zfinal_refs, .result_ref = .{ .round = {{$query.ResultRef.Round}}, .index = {{$query.ResultRef.Index}} }, .expected = {{if $query.HasExpected}}{{$query.Expected}}{{else}}null{{end}} }, // query: "{{zig $query.SourceName}}"
+{{end}}};
+
+const system_{{.Index}}_grandproduct = grandproduct.System{ .queries = &system_{{.Index}}_grandproduct_queries };

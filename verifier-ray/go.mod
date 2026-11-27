@@ -3,7 +3,6 @@ module github.com/consensys/linea-monorepo/verifier-ray
 go 1.27.1
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20261110120652-88fe45db48d1
 	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.12.1
 )
@@ -28,8 +27,7 @@ require (
 	golang.org/x/sys v0.49.0 // indirect
 )
 
-// verifier-ray builds against the prover-ray checked out next to it, not a
-// pinned pseudo-version: the generated verifier systems must track prover-ray
-// HEAD. arithmetization stays on prover-ray/go.mod's pin so the two cannot
-// drift.
+// verifier-ray's Go tools (cmd/generate-testdata, abicheck) build against the
+// prover-ray checked out next to it, not a pinned pseudo-version, so the
+// fixtures track prover-ray HEAD like the generated systems do.
 replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../prover-ray

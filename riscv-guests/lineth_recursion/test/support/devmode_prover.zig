@@ -1,5 +1,5 @@
-//! The devmode prover of the tests and tools: one child process of verifier-ray's
-//! `generate-devmode-system -prove`, spawned on first use and kept for the rest of the process, that
+//! The devmode prover of the tests and tools: one child process of prover-ray's
+//! `prover devmode-prove`, spawned on first use and kept for the rest of the process, that
 //! answers a public-input hash and a program VK with the proof image of the devmode system. It ends
 //! with the process: its input closes when this one exits.
 
@@ -23,7 +23,7 @@ fn start() !*Child {
     if (child == null) {
         threaded = .init(std.heap.page_allocator, .{});
         child = try std.process.spawn(io(), .{
-            .argv = &.{ paths.devmode_prove, "-prove" },
+            .argv = &.{ paths.devmode_prove, "devmode-prove" },
             .stdin = .pipe,
             .stdout = .pipe,
         });
