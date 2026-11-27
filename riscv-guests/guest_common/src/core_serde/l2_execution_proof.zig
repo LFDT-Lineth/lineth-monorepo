@@ -76,8 +76,6 @@ pub fn decodeVerifiableProof(alloc: std.mem.Allocator, bytes: []const u8) ssz.De
     return ssz.decode(VerifiableL2ExecutionProof, alloc, bytes);
 }
 
-// ── Senders commitment ──────────────────────────────────────────────────────
-
 /// The `tx_froms_hash` of `froms`: `keccak256(abi.encodePacked(address[]))`, each address
 /// left-padded to 32 bytes. The empty list hashes as `keccak256("")`.
 pub fn txFromsHash(alloc: std.mem.Allocator, froms: []const [20]u8) std.mem.Allocator.Error![32]u8 {
