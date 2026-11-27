@@ -129,8 +129,8 @@ object ConflationAppHelper {
     lastFinalizedBlock: ULong,
   ): SafeFuture<ULong> {
     return rollupsDao
-      .findHighestConsecutiveEndBlockNumberFromBlockNumber(lastFinalizedBlock + 1UL)
-      .thenApply { it ?: lastFinalizedBlock }
+      .findHighestConsecutiveRollupFromBlockNumber(lastFinalizedBlock + 1UL)
+      .thenApply { it?.endBlockNumber ?: lastFinalizedBlock }
   }
 
   /**
