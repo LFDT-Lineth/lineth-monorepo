@@ -136,8 +136,6 @@ func (pv *pcsVerifier) supported() error {
 	switch {
 	case pcs.MerkleHash(sys) != fri.MerkleHashKoalaBear:
 		return fmt.Errorf("the Merkle hash %v is not supported", pcs.MerkleHash(sys))
-	case pcs.FRIFixedDomain(sys):
-		return fmt.Errorf("a fixed FRI domain is not supported")
 	case plan.Params.MerkleCapHeight != 0:
 		return fmt.Errorf("the Merkle caps are not supported")
 	case plan.NumRounds < 1:
@@ -152,7 +150,7 @@ func (pv *pcsVerifier) supported() error {
 	case len(plan.Levels) == 0 || plan.Levels[0].Round != 0:
 		// The largest opened size is below 2^MinFoldedSizeLog2: restrictTo
 		// raises the top size, round 0 folds the zero codeword, and no input
-		// tree gives the query point. A fixed FRI domain has the same shape.
+		// tree gives the query point.
 		return fmt.Errorf("no level at the first FRI round (an opening whose columns are all below 2^%d rows)",
 			plan.Params.MinFoldedSizeLog2())
 	}

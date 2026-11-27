@@ -89,6 +89,9 @@ type OpenedColumn struct {
 // 2^MinSizeLog2) or too small for its shifts: their rules would differ from
 // the dynamic modules'.
 func (a *OpeningVerifierAction) Oblivious(sys *wiop.System) (*ObliviousOpening, error) {
+	if sys != a.sys {
+		return nil, fmt.Errorf("pcs: Oblivious: called with a System other than the action's")
+	}
 	c := a.c
 	if !c.moduleGroups || !c.fixedFRIDomain {
 		return nil, fmt.Errorf("pcs: the opening is not size-oblivious (WithSizeOblivious)")

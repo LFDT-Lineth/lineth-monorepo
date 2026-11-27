@@ -175,6 +175,10 @@ func TestObliviousOpening_Rejects(t *testing.T) {
 	_, err := openingAction(s.sys).Oblivious(s.sys)
 	require.ErrorContains(t, err, "not size-oblivious", "the default configuration")
 
+	other := newObliviousTestSystem(t)
+	_, err = openingAction(other.sys).Oblivious(newObliviousTestSystem(t).sys)
+	require.ErrorContains(t, err, "System other than the action's", "another System")
+
 	for name, size := range map[string]int{"unfolded": 1, "too small for its shifts": 2} {
 		sys := wiop.NewSystemf("pcs-oblivious-small")
 		r0, r1 := sys.NewRound(), sys.NewRound()
