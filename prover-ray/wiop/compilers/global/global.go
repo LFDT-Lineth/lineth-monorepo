@@ -785,6 +785,11 @@ func cachedDomain(n int, shift *field.Element) *fft.Domain {
 // cosetTableCache holds, per cached coset domain, its shift powers
 // s^0, …, s^{n-1} in bit-reversed order: the coset scaling of an FFT(DIT),
 // whose input is bit-reversed.
+//
+// fft.NewDomain already precomputes this table (cosetTableBitReversed, for
+// Cardinality ≤ 2^22), but gnark-crypto does not export it, so this keeps a
+// second copy. Drop the cache once an accessor such as
+// CosetTableBitReversed() is exported upstream.
 var cosetTableCache sync.Map // *fft.Domain -> []field.Element
 
 // bitReversedCosetTable returns d's shift powers in bit-reversed order,
