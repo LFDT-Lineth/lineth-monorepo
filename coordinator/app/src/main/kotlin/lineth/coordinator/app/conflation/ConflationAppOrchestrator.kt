@@ -45,7 +45,7 @@ class ConflationAppOrchestrator(
   private val clock: Clock,
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
-  private val riscvRollupsDao: RiscvRollupsDao,
+  private val riscvRollupsDao: RiscvRollupsDao?,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val lastFinalizedBlock: ULong,

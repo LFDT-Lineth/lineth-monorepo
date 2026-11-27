@@ -47,7 +47,7 @@ class L1FinalizationMonitorApp(
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
-  private val riscvRollupsDao: RiscvRollupsDao,
+  private val riscvRollupsDao: RiscvRollupsDao?,
   private val metricsFacade: MetricsFacade,
   private val l1FinalizationUpdateHandler: (blockNumber: Long) -> SafeFuture<Unit>,
   private val l2EthApiClient: EthApiClient = createEthApiClient(
