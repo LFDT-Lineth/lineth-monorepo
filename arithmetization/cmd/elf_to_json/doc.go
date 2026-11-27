@@ -10,7 +10,7 @@
 //
 // The positional arguments are the ELF executable, guest input, and an optional
 // decimal or 0x-prefixed guest memory address. When omitted, input-offset is
-// [elfmapping.DefaultInputOrigin]. Use -- before positional arguments when an
+// [predecoding.DefaultInputOrigin]. Use -- before positional arguments when an
 // argument itself begins with a hyphen.
 //
 // # Input forms
@@ -66,7 +66,6 @@
 // accepts decimal or 0x-prefixed unsigned integers and protects against very
 // large gaps between executable sections.
 //
-// ELF parsing and sparse encoding are implemented by gopkg/elfmapping.
-// Instruction classification and bit packing are implemented by
+// ELF parsing, instruction classification and bit packing are implemented by
 // gopkg/predecoding.
 package main

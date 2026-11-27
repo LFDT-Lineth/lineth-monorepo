@@ -9,12 +9,24 @@ import (
 	"math"
 	"sort"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 const (
-	DefaultMaxDecodedRecords uint64 = 2_000_000
+	// DefaultMaxDecodedRecords is the default cap on the number of records
+	// emitted by [Predecode]. The decoded table is dense: it holds one record
+	// for every four-byte word between the lowest and the highest executable
+	// address, gaps included. The cap turns an implausibly large span, typically
+	// executable sections placed far apart, into an error instead of a
+	// multi-gigabyte allocation and minutes of decoding: the 32-bit address
+	// space allows about 2^30 records, which at roughly half a microsecond per
+	// record would take several minutes and about 16 GiB.
+	//
+	// 16,000,000 records cover 64 MB of executable span and produce about
+	// 174 MB of decoded rows. For comparison, the l2_execution guest has
+	// 337,394 records (November 2026) and decodes in about 150 ms. Override the
+	// cap with [WithMaxDecodedRecords].
+	DefaultMaxDecodedRecords uint64 = 16_000_000
 	// BitsPerRowOfModuleDecoded determines the number of bits for a single row of the
 	// module "decoded" in the RISC-V interpreter.
 	BitsPerRowOfModuleDecoded uint = 87
@@ -32,7 +44,10 @@ const (
 	bType         = 4
 	uType         = 5
 	jType         = 6
-	miscMemType   = 7
+	// miscMemType is the type of the MISC-MEM opcode, which holds FENCE and
+	// FENCE.I. Both are no-ops on this VM, so every word with this opcode
+	// decodes to NO_OP, whatever its other fields.
+	miscMemType = 7
 )
 
 // RISC-V opcodes (low 7 bits), mirroring the Opcode constants in constants.zkc.
@@ -76,253 +91,192 @@ func instructionTypeFromOpcode(opcode uint32) uint32 {
 	}
 }
 
-// shouldUseNoOp reports whether a valid instruction with rd=x0 should emit
-// NO_OP at ELF time. Control-flow, side-effect, and syscall
-// instructions keep their semantic compute_op even when rd is x0.
-func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
+// checkNoOp folds the destination register into the already-unified compute op.
+// rd is the only field that changes the op after format decoding:
+//
+//   - rd != x0: the two link ops gain their writeback variant
+//     (JALR -> JALR_WB, JAL -> JAL_WB). Every other writeback op is already
+//     stored as its *_WB value, so it is returned unchanged.
+//   - rd == x0: architecturally inert writeback ops (loads, ALU imm/reg,
+//     LUI/AUIPC) collapse to NO_OP, since their only effect is writing
+//     registers[rd] and x0 is hardwired to zero. Control-flow, memory, syscall,
+//     and precompile ops keep their semantic op, and COMPUTE_INVALID stays
+//     invalid.
+func checkNoOp(instrType, op, rd uint32) uint32 {
 	if rd != 0 {
-		return false
+		switch op {
+		case itypeJalr:
+			return itypeJalrWB
+		case jtypeJal:
+			return jtypeJalWB
+		}
+		return op
 	}
+
+	// rd == x0: collapse inert writeback ops to NO_OP.
 	switch instrType {
 	case miscMemType:
-		return true
+		return computeNoOp
 	case iType:
-		if localOp == itypeInvalid {
-			return false
-		}
-		switch localOp {
-		case itypeJalr, itypeEcall, itypeEbreak:
-			return false
+		switch op {
+		case computeInvalid, itypeJalr, itypeEcall, itypeEbreak:
+			return op
 		default:
-			return true
+			return computeNoOp
 		}
 	case rType:
-		if localOp == rtypeInvalid {
-			return false
-		}
-		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2:
-			return false
+		switch op {
+		case computeInvalid, rtypeOpKeccak, rtypeOpPoseidon2:
+			return op
 		default:
-			return true
+			return computeNoOp
 		}
 	case uType:
-		return localOp != utypeInvalid
-	case jType:
-		return false
-	default:
-		return false
-	}
-}
-
-func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
-	op := unifiedComputeOp(instrType, localOp)
-	if op == computeInvalid {
-		return computeInvalid
-	}
-	if shouldUseNoOp(instrType, rd, localOp, opcode) {
+		if op == computeInvalid {
+			return op
+		}
 		return computeNoOp
+	default: // sType, bType, jType, undefined
+		return op
 	}
-	return op
 }
 
-// I-type semantic micro-op local indices. Unified value = computeITypeBase + index.
+// I-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc. WB means Write Back, when the result is written back
+// to the register file.
 const (
-	itypeRead8SgnWB   = 0
-	itypeRead16SgnWB  = 1
-	itypeRead32SgnWB  = 2
-	itypeRead64WB     = 3
-	itypeRead8ZextWB  = 4
-	itypeRead16ZextWB = 5
-	itypeRead32ZextWB = 6
-	itypeOpAddiWB     = 7
-	itypeOpSltiWB     = 8
-	itypeOpSltiuWB    = 9
-	itypeOpXoriWB     = 10
-	itypeOpOriWB      = 11
-	itypeOpAndiWB     = 12
-	itypeOpSlliWB     = 13
-	itypeOpSrliWB     = 14
-	itypeOpSraiWB     = 15
-	itypeOpAddiwWB    = 16
-	itypeOpSlliwWB    = 17
-	itypeOpSrliwWB    = 18
-	itypeOpSraiwWB    = 19
-	itypeJalr         = 20
-	itypeJalrWB       = 21
-	itypeEcall        = 22
-	itypeEbreak       = 23
-	itypeInvalid      = 63
+	itypeRead8SgnWB   = 1  // LB, read signed 8 bits, sign extend to 64 bits
+	itypeRead16SgnWB  = 2  // LH
+	itypeRead32SgnWB  = 3  // LW
+	itypeRead64WB     = 4  // LD
+	itypeRead8ZextWB  = 5  // LBU, read unsigned 8 bits, zero extend to 64 bits
+	itypeRead16ZextWB = 6  // LHU
+	itypeRead32ZextWB = 7  // LWU
+	itypeOpAddiWB     = 8  // ADDI
+	itypeOpSltiWB     = 9  // SLTI
+	itypeOpSltiuWB    = 10 // SLTIU
+	itypeOpXoriWB     = 11 // XORI
+	itypeOpOriWB      = 12 // ORI
+	itypeOpAndiWB     = 13 // ANDI
+	itypeOpSlliWB     = 14 // SLLI
+	itypeOpSrliWB     = 15 // SRLI
+	itypeOpSraiWB     = 16 // SRAI
+	itypeOpAddiwWB    = 17 // ADDIW
+	itypeOpSlliwWB    = 18 // SLLIW
+	itypeOpSrliwWB    = 19 // SRLIW
+	itypeOpSraiwWB    = 20 // SRAIW
+	itypeJalr         = 21 // JALR
+	itypeJalrWB       = 22 // JALR_WB
+	itypeEcall        = 23 // ECALL
+	itypeEbreak       = 24 // EBREAK
 )
 
-// itypeOpForRd selects ITYPE_JALR_WB when rd != x0; other ops already use *_WB indices.
-func itypeOpForRd(localOp, rd uint32) uint32 {
-	if rd == 0 || localOp == itypeEcall || localOp == itypeEbreak || localOp == itypeInvalid {
-		return localOp
-	}
-	if localOp == itypeJalr {
-		return itypeJalrWB
-	}
-	return localOp
-}
-
-// R-type semantic micro-op local indices. Unified value = computeRTypeBase + index.
+// R-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	rtypeOpAddWB     = 0
-	rtypeOpSubWB     = 1
-	rtypeOpSllWB     = 2
-	rtypeOpSltWB     = 3
-	rtypeOpSltuWB    = 4
-	rtypeOpXorWB     = 5
-	rtypeOpSrlWB     = 6
-	rtypeOpSraWB     = 7
-	rtypeOpOrWB      = 8
-	rtypeOpAndWB     = 9
-	rtypeOpMulWB     = 10
-	rtypeOpMulhWB    = 11
-	rtypeOpMulhsuWB  = 12
-	rtypeOpMulhuWB   = 13
-	rtypeOpDivWB     = 14
-	rtypeOpDivuWB    = 15
-	rtypeOpRemWB     = 16
-	rtypeOpRemuWB    = 17
-	rtypeOpAddwWB    = 18
-	rtypeOpSubwWB    = 19
-	rtypeOpSllwWB    = 20
-	rtypeOpSrlwWB    = 21
-	rtypeOpSrawWB    = 22
-	rtypeOpMulwWB    = 23
-	rtypeOpDivwWB    = 24
-	rtypeOpDivuwWB   = 25
-	rtypeOpRemwWB    = 26
-	rtypeOpRemuwWB   = 27
-	rtypeOpKeccak    = 28
-	rtypeOpPoseidon2 = 29
-	rtypeInvalid     = 63
+	rtypeOpAddWB     = 25
+	rtypeOpSubWB     = 26
+	rtypeOpSllWB     = 27
+	rtypeOpSltWB     = 28
+	rtypeOpSltuWB    = 29
+	rtypeOpXorWB     = 30
+	rtypeOpSrlWB     = 31
+	rtypeOpSraWB     = 32
+	rtypeOpOrWB      = 33
+	rtypeOpAndWB     = 34
+	rtypeOpMulWB     = 35
+	rtypeOpMulhWB    = 36
+	rtypeOpMulhsuWB  = 37
+	rtypeOpMulhuWB   = 38
+	rtypeOpDivWB     = 39
+	rtypeOpDivuWB    = 40
+	rtypeOpRemWB     = 41
+	rtypeOpRemuWB    = 42
+	rtypeOpAddwWB    = 43
+	rtypeOpSubwWB    = 44
+	rtypeOpSllwWB    = 45
+	rtypeOpSrlwWB    = 46
+	rtypeOpSrawWB    = 47
+	rtypeOpMulwWB    = 48
+	rtypeOpDivwWB    = 49
+	rtypeOpDivuwWB   = 50
+	rtypeOpRemwWB    = 51
+	rtypeOpRemuwWB   = 52
+	rtypeOpKeccak    = 53
+	rtypeOpPoseidon2 = 54
 )
 
-func rtypeOpForRd(localOp, rd uint32) uint32 {
-	return localOp
-}
-
-// S-type semantic micro-op constants. These MUST match constants.zkc.
+// S-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	stypeStore8  = 0
-	stypeStore16 = 1
-	stypeStore32 = 2
-	stypeStore64 = 3
-	stypeInvalid = 63
+	stypeStore8  = 56
+	stypeStore16 = 57
+	stypeStore32 = 58
+	stypeStore64 = 59
 )
 
-// B-type funct3 constants. Valid branch funct3 values are stored directly in
-// decoded_btype; BTYPE_INVALID (63) marks non-B slots and unrecognised funct3.
+// B-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc. COMPUTE_INVALID marks non-B slots and unrecognised
+// funct3 values.
 const (
-	btypeInvalid = 63
+	btypeBeq  = 60 // BEQ  (funct3 0b000)
+	btypeBne  = 61 // BNE  (funct3 0b001)
+	btypeBlt  = 62 // BLT  (funct3 0b100)
+	btypeBge  = 63 // BGE  (funct3 0b101)
+	btypeBltu = 64 // BLTU (funct3 0b110)
+	btypeBgeu = 65 // BGEU (funct3 0b111)
 )
 
-// J-type semantic micro-op constants. These MUST match constants.zkc.
+// J-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	jtypeJal     = 0
-	jtypeJalWB   = 1
-	jtypeInvalid = 63
+	jtypeJal   = 66
+	jtypeJalWB = 67
 )
 
-func jtypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == jtypeInvalid {
-		return baseOp
-	}
-	if baseOp == jtypeJal {
-		return jtypeJalWB
-	}
-	return baseOp
-}
-
-// U-type semantic micro-op local indices. Unified value = computeUTypeBase + index.
+// U-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	utypeLuiWB   = 0
-	utypeAuipcWB = 1
-	utypeInvalid = 63
+	utypeLuiWB   = 68
+	utypeAuipcWB = 69
 )
-
-func utypeOpForRd(localOp, rd uint32) uint32 {
-	return localOp
-}
 
 const (
 	funct12Ecall  = 0b000000000000
 	funct12Ebreak = 0b000000000001
 )
 
-// Unified compute_op bases. These MUST match the ComputeOp constants in
-// arithmetization/src/main/common/constants.zkc.
+// Unified compute_op sentinels. These MUST match the ComputeOp constants in
+// arithmetization/src/main/common/constants.zkc. All semantic ops are assigned
+// their unified ComputeOp value directly in the per-format const blocks above,
+// so the decoders already return unified codes.
 const (
-	computeNoOp      = 0
-	computeITypeBase = 1
-	computeRTypeBase = 25
-	computeSTypeBase = 56
-	computeBTypeBase = 60
-	computeJTypeBase = 66
-	computeUTypeBase = 68
-	computeInvalid   = 255
+	computeNoOp    = 0
+	computeInvalid = 255
 )
 
-var bTypeUnifiedIndex = map[uint32]uint32{
-	0b000: 0,
-	0b001: 1,
-	0b100: 2,
-	0b101: 3,
-	0b110: 4,
-	0b111: 5,
-}
+// imm12Funct6 extracts the funct6 field (imm12[11:6]) that validates RV64
+// immediate shifts (slli/srli/srai).
+func imm12Funct6(imm12 uint32) uint32 { return (imm12 >> 6) & 0x3f }
 
-func unifiedComputeOp(instrType, localOp uint32) uint32 {
-	switch instrType {
-	case miscMemType:
-		return computeNoOp
-	case iType:
-		if localOp == itypeInvalid {
-			return computeInvalid
-		}
-		return computeITypeBase + localOp
-	case rType:
-		if localOp == rtypeInvalid {
-			return computeInvalid
-		}
-		return computeRTypeBase + localOp
-	case sType:
-		if localOp == stypeInvalid {
-			return computeInvalid
-		}
-		return computeSTypeBase + localOp
-	case bType:
-		idx, ok := bTypeUnifiedIndex[localOp]
-		if !ok {
-			return computeInvalid
-		}
-		return computeBTypeBase + idx
-	case jType:
-		if localOp == jtypeInvalid {
-			return computeInvalid
-		}
-		return computeJTypeBase + localOp
-	case uType:
-		if localOp == utypeInvalid {
-			return computeInvalid
-		}
-		return computeUTypeBase + localOp
-	default:
-		return computeInvalid
-	}
-}
+// imm12Funct7 extracts the funct7 field (imm12[11:5]) that validates RV64 word
+// immediate shifts (slliw/srliw/sraiw).
+func imm12Funct7(imm12 uint32) uint32 { return (imm12 >> 5) & 0x7f }
 
-// decodeITypeSemantic maps a raw I-type encoding to a local op index and normalized immediate.
+// imm12Uimm6 extracts the 6-bit shift amount (imm12[5:0]) for RV64 shifts.
+func imm12Uimm6(imm12 uint32) uint32 { return imm12 & 0x3f }
+
+// imm12Uimm5 extracts the 5-bit shift amount (imm12[4:0]) for RV64 word shifts.
+func imm12Uimm5(imm12 uint32) uint32 { return imm12 & 0x1f }
+
+// decodeITypeSemantic maps a raw I-type encoding to a unified compute op and normalized immediate.
 // Shift amounts are stripped to their low uimm6/uimm5 bits; funct6/funct7
 // validation happens here.
 func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm12 uint32) {
-	funct6 := (imm12 >> 6) & 0x3f
-	funct7FromImm := (imm12 >> 5) & 0x7f
-	uimm6 := imm12 & 0x3f
-	uimm5 := imm12 & 0x1f
+	funct6 := imm12Funct6(imm12)
+	funct7FromImm := imm12Funct7(imm12)
+	uimm6 := imm12Uimm6(imm12)
+	uimm5 := imm12Uimm5(imm12)
 
 	switch opcode {
 	case opcodeLOAD:
@@ -342,7 +296,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 		case 0b110:
 			return itypeRead32ZextWB, imm12
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeOPIMM:
 		switch funct3 {
@@ -360,7 +314,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			return itypeOpAndiWB, imm12
 		case 0b001:
 			if funct6 != 0b000000 {
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 			return itypeOpSlliWB, uimm6
 		case 0b101:
@@ -370,10 +324,10 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case 0b010000:
 				return itypeOpSraiWB, uimm6
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeOPIMM32:
 		switch funct3 {
@@ -381,7 +335,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			return itypeOpAddiwWB, imm12
 		case 0b001:
 			if funct7FromImm != 0b0000000 {
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 			return itypeOpSlliwWB, uimm5
 		case 0b101:
@@ -391,14 +345,14 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case 0b0100000:
 				return itypeOpSraiwWB, uimm5
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeJALR:
 		if funct3 != 0b000 {
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 		return itypeJalr, imm12
 	case opcodeSYSTEM:
@@ -410,17 +364,17 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case funct12Ebreak:
 				return itypeEbreak, imm12
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	default:
-		return itypeInvalid, imm12
+		return computeInvalid, imm12
 	}
 }
 
-// decodeRTypeSemantic maps a raw R-type encoding to a local op index.
+// decodeRTypeSemantic maps a raw R-type encoding to a unified compute op.
 func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeOP:
@@ -471,7 +425,7 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 				return rtypeOpSraWB
 			}
 		}
-		return rtypeInvalid
+		return computeInvalid
 	case opcodeOP32:
 		switch funct7 {
 		case 0b0000001:
@@ -504,10 +458,10 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 				return rtypeOpSrawWB
 			}
 		}
-		return rtypeInvalid
+		return computeInvalid
 	case opcodeCUSTOM1:
 		if funct7 != 0b0000000 {
-			return rtypeInvalid
+			return computeInvalid
 		}
 		switch funct3 {
 		case 0b000:
@@ -515,10 +469,10 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		case 0b001:
 			return rtypeOpPoseidon2
 		default:
-			return rtypeInvalid
+			return computeInvalid
 		}
 	default:
-		return rtypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -534,17 +488,28 @@ func decodeSTypeSemantic(funct3 uint32) (computeOp uint32) {
 	case 0b011:
 		return stypeStore64
 	default:
-		return stypeInvalid
+		return computeInvalid
 	}
 }
 
-// decodeBTypeSemantic returns the branch funct3 when valid, otherwise BTYPE_INVALID.
+// decodeBTypeSemantic maps a branch funct3 to its unified compute op, or to
+// COMPUTE_INVALID when the funct3 is not a branch.
 func decodeBTypeSemantic(funct3 uint32) uint32 {
 	switch funct3 {
-	case 0b000, 0b001, 0b100, 0b101, 0b110, 0b111:
-		return funct3
+	case 0b000:
+		return btypeBeq
+	case 0b001:
+		return btypeBne
+	case 0b100:
+		return btypeBlt
+	case 0b101:
+		return btypeBge
+	case 0b110:
+		return btypeBltu
+	case 0b111:
+		return btypeBgeu
 	default:
-		return btypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -553,11 +518,11 @@ func decodeJTypeSemantic(opcode uint32) (computeOp uint32) {
 	if opcode == opcodeJAL {
 		return jtypeJal
 	}
-	return jtypeInvalid
+	return computeInvalid
 }
 
-// assembleJTypeImm reassembles the split J-type immediate from a raw instruction
-// word and sign-extends it to 64 bits for decoded_jtype.imm.
+// assembleJTypeImm reassembles the split J-type immediate and sign-extends it
+// to the 64-bit imm.
 func assembleJTypeImm(instr uint32) uint64 {
 	imm20 := (instr >> 31) & 0x1
 	imm10_1 := (instr >> 21) & 0x3ff
@@ -572,8 +537,8 @@ func signExtend21(x uint32) int64 {
 	return int64(int32(x<<11) >> 11)
 }
 
-// assembleBTypeImm reassembles the split B-type immediate from a raw instruction
-// word and sign-extends it to 64 bits for decoded_btype.imm.
+// assembleBTypeImm reassembles the split B-type immediate and sign-extends it
+// to the 64-bit imm.
 func assembleBTypeImm(instr uint32) uint64 {
 	immSign := (instr >> 31) & 0x1
 	imm10_5 := (instr >> 25) & 0x3f
@@ -588,15 +553,21 @@ func signExtend13(x uint32) int64 {
 	return int64(int32(x<<19) >> 19)
 }
 
-// assembleUTypeImm sign-extends the U-type upper immediate (imm[31:12]) to 64 bits.
+// assembleUTypeImm places the U-type upper immediate imm[31:12] into bits
+// [31:12] and sign-extends bit 31 to the 64-bit imm.
 func assembleUTypeImm(instr uint32) uint64 {
 	imm20 := (instr >> 12) & 0xfffff
 	word := uint32(imm20 << 12)
 	return uint64(int64(int32(word)))
 }
 
-// assembleSTypeImm sign-extends the reassembled 12-bit S-type store offset to 64 bits.
-func assembleSTypeImm(simm12 uint32) uint64 {
+// assembleSTypeImm reassembles the split S-type store offset, imm[11:5] from
+// instruction bits [31:25] and imm[4:0] from bits [11:7], and sign-extends it
+// to the 64-bit imm.
+func assembleSTypeImm(instr uint32) uint64 {
+	simm12 := (((instr >> 31) & 1) << 11) |
+		(((instr >> 25) & 0x3f) << 5) |
+		((instr >> 7) & 0x1f)
 	return uint64(signExtend12(simm12))
 }
 
@@ -605,12 +576,13 @@ func signExtend12(x uint32) int64 {
 	return int64(int32(x<<20) >> 20)
 }
 
-// assembleITypeImm sign-extends the normalized 12-bit I-type immediate to 64 bits.
+// assembleITypeImm sign-extends the normalized 12-bit I-type immediate to the
+// 64-bit imm.
 func assembleITypeImm(normImm12 uint32) uint64 {
-	return assembleSTypeImm(normImm12)
+	return uint64(signExtend12(normImm12))
 }
 
-// decodeUTypeSemantic maps a raw U-type opcode to a local op index.
+// decodeUTypeSemantic maps a raw U-type opcode to a unified compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeLUI:
@@ -618,28 +590,32 @@ func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	case opcodeAUIPC:
 		return utypeAuipcWB
 	default:
-		return utypeInvalid
+		return computeInvalid
 	}
 }
 
-// unifiedOperands packs pre-decoded operands into the decoded record layout:
-// record layout: imm, rs1, rs2, rd.
-func unifiedOperands(instrType uint32, normImm12, simm12 uint32, bImm, jImm, uImm uint64, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
+// unifiedOperands builds the four operand fields of one decoded row.
+// The immediate comes from the assemble function for that instruction type.
+// Registers the format does not use are zero.
+// Misc-mem and undefined types write zeros as they don't use operands.
+func unifiedOperands(instrType uint32, instruction, opcode, imm12, funct3, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
 	switch instrType {
 	case iType:
+		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		return assembleITypeImm(normImm12), uint64(rs1), 0, uint64(rd)
 	case rType:
 		return 0, uint64(rs1), uint64(rs2), uint64(rd)
 	case sType:
-		return assembleSTypeImm(simm12), uint64(rs1), uint64(rs2), 0
+		return assembleSTypeImm(instruction), uint64(rs1), uint64(rs2), 0
 	case bType:
-		return bImm, uint64(rs1), uint64(rs2), 0
+		return assembleBTypeImm(instruction), uint64(rs1), uint64(rs2), 0
 	case jType:
-		return jImm, 0, 0, uint64(rd)
+		return assembleJTypeImm(instruction), 0, 0, uint64(rd)
 	case uType:
-		return uImm, 0, 0, uint64(rd)
+		return assembleUTypeImm(instruction), 0, 0, uint64(rd)
 	default:
-		return assembleITypeImm(normImm12), uint64(rs1), uint64(rs2), uint64(rd)
+		// Misc-mem and undefined types don't use operands.
+		return 0, 0, 0, 0
 	}
 }
 
@@ -663,17 +639,23 @@ func (w *bitWriter) writeBits(val uint64, width int) {
 
 type config struct {
 	maxDecodedRecords uint64
-	mappingOptions    []elfmapping.Option
+	// maxDecodedRecordsSet is true when WithMaxDecodedRecords was given. Zero
+	// is a valid cap, so the value alone cannot tell.
+	maxDecodedRecordsSet bool
+	includeExecutable    bool
+	sectionsWriter       io.Writer
 }
 
 // Option configures predecoding.
 type Option func(*config) error
 
 // WithMaxDecodedRecords limits the aligned executable span decoded by
-// [Predecode]. A zero limit rejects every non-empty executable program.
+// [Predecode] and [PrepareInputs]. A zero limit rejects every non-empty
+// executable program.
 func WithMaxDecodedRecords(maximum uint64) Option {
 	return func(cfg *config) error {
 		cfg.maxDecodedRecords = maximum
+		cfg.maxDecodedRecordsSet = true
 		return nil
 	}
 }
@@ -682,10 +664,7 @@ func WithMaxDecodedRecords(maximum uint64) Option {
 // standalone predecoding proof in the map returned by [PrepareInputs].
 func WithIncludeExecutable() Option {
 	return func(cfg *config) error {
-		cfg.mappingOptions = append(
-			cfg.mappingOptions,
-			elfmapping.WithIncludeExecutable(),
-		)
+		cfg.includeExecutable = true
 		return nil
 	}
 }
@@ -697,27 +676,35 @@ func WithSectionsWriter(writer io.Writer) Option {
 		if writer == nil {
 			return fmt.Errorf("sections writer is nil")
 		}
-		cfg.mappingOptions = append(
-			cfg.mappingOptions,
-			elfmapping.WithSectionsWriter(writer),
-		)
+		cfg.sectionsWriter = writer
 		return nil
 	}
 }
 
 // PrepareInputs maps and predecodes a guest ELF and adds input data using the
-// length-prefixed guest convention. Call [Predecode] and the elfmapping APIs
+// length-prefixed guest convention. Call [Load], [Predecode] and [EncodeInputs]
 // separately for guests expecting raw input or when reusing the same ELF.
 func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
 	options ...Option,
 ) (map[string]bit.Array, error) {
+	return prepareInputs(elfBytes, inputData, DefaultInputOrigin, options...)
+}
+
+// prepareInputs is PrepareInputs with the address where the length-prefixed
+// input data is mapped.
+func prepareInputs(
+	elfBytes []byte,
+	inputData []byte,
+	inputOrigin uint64,
+	options ...Option,
+) (map[string]bit.Array, error) {
 	cfg, err := applyOptions(options)
 	if err != nil {
 		return nil, err
 	}
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	program, err := Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -725,19 +712,15 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	inputBlobs, err := elfmapping.NewData(
-		elfmapping.DefaultInputOrigin,
+	inputBlobs, err := NewData(
+		inputOrigin,
 		inputData,
-		elfmapping.WithLengthPrefix(),
+		WithLengthPrefix(),
 	)
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := elfmapping.EncodeInputs(
-		program,
-		inputBlobs,
-		cfg.mappingOptions...,
-	)
+	inputs, err := encodeInputs(program, inputBlobs, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -753,19 +736,28 @@ type DecodedProgram struct {
 
 // EncodeInputs returns fresh raw input bytes suitable for ZkC input loading.
 func (program DecodedProgram) EncodeInputs() map[string]bit.Array {
-	base := binary.BigEndian.AppendUint32(nil, uint32(program.InstructionBase))
-	decoded := append([]byte(nil), program.Decoded...)
-	// Each row is a fixed number of bits; discard the final byte's padding bits.
-	nbits := ((uint(len(decoded)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
 	return map[string]bit.Array{
-		InstructionBaseInput: elfmapping.BitArrayFromBytes(base...),
-		DecodedInput:         bit.NewArray(decoded, nbits, bit.BigEndian),
+		InstructionBaseInput: encodeInstructionBase(program.InstructionBase),
+		DecodedInput:         encodeDecodedRows(program.Decoded),
 	}
+}
+
+// encodeInstructionBase encodes the instruction base as a big-endian u32.
+func encodeInstructionBase(base uint64) bit.Array {
+	return BitArrayFromBytes(binary.BigEndian.AppendUint32(nil, uint32(base))...)
+}
+
+// encodeDecodedRows copies the decoded rows into a bit array. Each row is a
+// fixed number of bits, so the padding bits of the final byte are discarded.
+func encodeDecodedRows(decoded []byte) bit.Array {
+	rows := append([]byte(nil), decoded...)
+	nbits := ((uint(len(rows)) * 8) / BitsPerRowOfModuleDecoded) * BitsPerRowOfModuleDecoded
+	return bit.NewArray(rows, nbits, bit.BigEndian)
 }
 
 // Predecode creates one packed instruction row for every four-byte word in the
 // aligned span containing the program's executable blobs.
-func Predecode(program elfmapping.Program, options ...Option) (DecodedProgram, error) {
+func Predecode(program Program, options ...Option) (DecodedProgram, error) {
 	cfg, err := applyOptions(options)
 	if err != nil {
 		return DecodedProgram{}, err
@@ -786,7 +778,7 @@ func applyOptions(options []Option) (config, error) {
 	return cfg, nil
 }
 
-func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedProgram, error) {
+func predecode(program Program, maxDecodedRecords uint64) (DecodedProgram, error) {
 	base, image, records, err := executableImage(program.Blobs, maxDecodedRecords)
 	if err != nil {
 		return DecodedProgram{}, err
@@ -795,35 +787,40 @@ func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedPro
 	return DecodedProgram{InstructionBase: base, Decoded: decoded}, nil
 }
 
-func executableImage(
-	blobs []elfmapping.Blob,
-	maxRecords uint64,
-) (uint64, []byte, uint64, error) {
-	executable := make([]elfmapping.Blob, 0, len(blobs))
+// executableBlobs keeps the executable blobs and sorts them by address.
+func executableBlobs(blobs []Blob) ([]Blob, error) {
+	executable := make([]Blob, 0, len(blobs))
 	for _, blob := range blobs {
 		if blob.Executable {
 			executable = append(executable, blob)
 		}
 	}
 	if len(executable) == 0 {
-		return 0, nil, 0, fmt.Errorf("no executable blobs found for instruction decoding")
+		return nil, fmt.Errorf("no executable blobs found for instruction decoding")
 	}
 	sort.SliceStable(executable, func(i, j int) bool {
 		return executable[i].Address < executable[j].Address
 	})
+	return executable, nil
+}
 
-	base := executable[0].Address &^ uint64(3)
+// executableSpanEnd returns the highest end address of the blobs.
+// The blobs are in address order. A blob whose end wraps the address space,
+// or a non-empty blob that overlaps the previous one, is rejected. An empty
+// blob does not move the previous end. The end must fit in a 32-bit address
+// with room to round it up to a multiple of 4.
+func executableSpanEnd(blobs []Blob) (uint64, error) {
 	var previousEnd, maxEnd uint64
-	for i, blob := range executable {
+	for i, blob := range blobs {
 		end := blob.Address + uint64(len(blob.Data))
 		if end < blob.Address {
-			return 0, nil, 0, fmt.Errorf(
+			return 0, fmt.Errorf(
 				"executable blob at %#x overflows address space",
 				blob.Address,
 			)
 		}
 		if i != 0 && len(blob.Data) != 0 && blob.Address < previousEnd {
-			return 0, nil, 0, fmt.Errorf(
+			return 0, fmt.Errorf(
 				"executable blob at %#x overlaps preceding blob ending at %#x",
 				blob.Address,
 				previousEnd,
@@ -837,13 +834,22 @@ func executableImage(
 		}
 	}
 	if maxEnd > math.MaxUint32-3 {
-		return 0, nil, 0, fmt.Errorf("executable span end %#x is outside the 32-bit address space", maxEnd)
+		return 0, fmt.Errorf("executable span end %#x is outside the 32-bit address space", maxEnd)
 	}
+	return maxEnd, nil
+}
+
+// executableSpan rounds the blob range to 4-byte words. base is the first
+// address rounded down, and records is the number of words up to maxEnd
+// rounded up. The count must fit maxRecords and a Go slice.
+func executableSpan(firstAddress, maxEnd, maxRecords uint64) (base, records uint64, err error) {
+	base = firstAddress &^ uint64(3)
 	alignedEnd := (maxEnd + 3) &^ uint64(3)
-	records := (alignedEnd - base) / 4
+	records = (alignedEnd - base) / 4
 	if records > maxRecords {
-		return 0, nil, 0, fmt.Errorf(
-			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous",
+		return 0, 0, fmt.Errorf(
+			"decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous; "+
+				"override the cap with WithMaxDecodedRecords, or with ELF2JSON_MAX_DECODED_RECORDS for elf_to_json",
 			records,
 			maxRecords,
 			base,
@@ -852,15 +858,36 @@ func executableImage(
 	}
 	span := alignedEnd - base
 	if span > uint64(math.MaxInt) {
-		return 0, nil, 0, fmt.Errorf("executable span has unsupported size %d", span)
+		return 0, 0, fmt.Errorf("executable span has unsupported size %d", span)
 	}
-	image := make([]byte, int(span))
+	return base, records, nil
+}
+
+func executableImage(
+	blobs []Blob,
+	maxRecords uint64,
+) (uint64, []byte, uint64, error) {
+	executable, err := executableBlobs(blobs)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	maxEnd, err := executableSpanEnd(executable)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	base, records, err := executableSpan(executable[0].Address, maxEnd, maxRecords)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	image := make([]byte, int(records*4))
 	for _, blob := range executable {
 		copy(image[blob.Address-base:], blob.Data)
 	}
 	return base, image, records, nil
 }
 
+// decodeImage reads records consecutive little-endian instruction words from
+// image, one every four bytes, and appends one decoded row per word.
 func decodeImage(image []byte, records uint64) []byte {
 	var decoded bitWriter
 	for record := range records {
@@ -871,93 +898,99 @@ func decodeImage(image []byte, records uint64) []byte {
 	return decoded.buf
 }
 
-func decodeInstruction(decoded *bitWriter, instruction uint32) {
-	opcode := instruction & 0x7f
-	rd := (instruction >> 7) & 0x1f
-	funct3 := (instruction >> 12) & 0x7
-	rs1 := (instruction >> 15) & 0x1f
-	rs2 := (instruction >> 20) & 0x1f
-	imm12 := (instruction >> 20) & 0xfff
-	instructionType := instructionTypeFromOpcode(opcode)
-	simm12 := (((instruction >> 31) & 1) << 11) |
-		(((instruction >> 25) & 0x3f) << 5) |
-		((instruction >> 7) & 0x1f)
-	_, normalizedImm12 := decodeITypeSemantic(opcode, funct3, imm12)
-	if instructionType != iType {
-		normalizedImm12 = imm12
-	}
+// instructionFields holds the raw RISC-V fields sliced out of a 32-bit
+// instruction word.
+type instructionFields struct {
+	opcode uint32
+	rd     uint32
+	funct3 uint32
+	rs1    uint32
+	rs2    uint32
+	imm12  uint32
+	funct7 uint32
+}
 
-	decoded.writeBits(uint64(classifyInstruction(instruction)), 8)
+// extractFields slices the standard RISC-V fields out of a raw instruction word.
+// Each field is shifted down to bit 0 and masked to its width;
+//
+//	bit: 31       25 24    20 19    15 14   12 11    7 6         0
+//	    [  funct7  ][  rs2  ][  rs1  ][funct3][  rd  ][  opcode  ]  R-type view
+//	    [         imm12     ][  rs1  ][funct3][  rd  ][ opcode   ]  I-type view
+func extractFields(instruction uint32) instructionFields {
+	return instructionFields{
+		opcode: instruction & 0x7f,
+		rd:     (instruction >> 7) & 0x1f,
+		funct3: (instruction >> 12) & 0x7,
+		rs1:    (instruction >> 15) & 0x1f,
+		rs2:    (instruction >> 20) & 0x1f,
+		imm12:  (instruction >> 20) & 0xfff,
+		funct7: (instruction >> 25) & 0x7f,
+	}
+}
+
+// decodeInstruction writes the predecoded instruction to the bitWriter.
+// 87 bits :
+// - 8 bits: compute op
+// - 64 bits: immediate
+// - 5 bits: operand RS1
+// - 5 bits: operand RS2
+// - 5 bits: operand RD
+func decodeInstruction(decoded *bitWriter, instruction uint32) {
+
+	// Extract the fields from the instruction.
+	fields := extractFields(instruction)
+	opcode := fields.opcode
+	rd := fields.rd
+	funct3 := fields.funct3
+	rs1 := fields.rs1
+	rs2 := fields.rs2
+	imm12 := fields.imm12
+	funct7 := fields.funct7
+
+	// Classify the instruction and get the compute op.
+	instructionType := instructionTypeFromOpcode(opcode)
+	computeOp := classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)
+
+	// Get the operands depending on the instruction type.
 	imm, operandRS1, operandRS2, operandRD := unifiedOperands(
 		instructionType,
-		normalizedImm12,
-		simm12,
-		assembleBTypeImm(instruction),
-		assembleJTypeImm(instruction),
-		assembleUTypeImm(instruction),
+		instruction,
+		opcode,
+		imm12,
+		funct3,
 		rs1,
 		rs2,
 		rd,
 	)
+
+	// Write to the bitWriter
+	decoded.writeBits(uint64(computeOp), 8)
 	decoded.writeBits(imm, 64)
 	decoded.writeBits(operandRS1, 5)
 	decoded.writeBits(operandRS2, 5)
 	decoded.writeBits(operandRD, 5)
 }
 
-func classifyInstruction(instruction uint32) uint32 {
-	opcode := instruction & 0x7f
-	rd := (instruction >> 7) & 0x1f
-	funct3 := (instruction >> 12) & 0x7
-	imm12 := (instruction >> 20) & 0xfff
-	funct7 := (instruction >> 25) & 0x7f
-	instructionType := instructionTypeFromOpcode(opcode)
-
-	itypeOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
-	if instructionType != iType {
-		itypeOp = itypeInvalid
-	}
-	itypeOp = itypeOpForRd(itypeOp, rd)
-	rtypeOp := decodeRTypeSemantic(opcode, funct3, funct7)
-	if instructionType != rType {
-		rtypeOp = rtypeInvalid
-	}
-	rtypeOp = rtypeOpForRd(rtypeOp, rd)
-	stypeOp := decodeSTypeSemantic(funct3)
-	if instructionType != sType {
-		stypeOp = stypeInvalid
-	}
-	btypeOp := decodeBTypeSemantic(funct3)
-	if instructionType != bType {
-		btypeOp = btypeInvalid
-	}
-	jtypeOp := decodeJTypeSemantic(opcode)
-	if instructionType != jType {
-		jtypeOp = jtypeInvalid
-	}
-	jtypeOp = jtypeOpForRd(jtypeOp, rd)
-	utypeOp := decodeUTypeSemantic(opcode)
-	if instructionType != uType {
-		utypeOp = utypeInvalid
-	}
-	utypeOp = utypeOpForRd(utypeOp, rd)
-
-	localOp := uint32(itypeInvalid)
+func classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd uint32) uint32 {
+	var op uint32
 	switch instructionType {
 	case miscMemType:
-		localOp = 0
+		op = computeNoOp
 	case iType:
-		localOp = itypeOp
+		op, _ = decodeITypeSemantic(opcode, funct3, imm12)
 	case rType:
-		localOp = rtypeOp
+		op = decodeRTypeSemantic(opcode, funct3, funct7)
 	case sType:
-		localOp = stypeOp
+		op = decodeSTypeSemantic(funct3)
 	case bType:
-		localOp = btypeOp
+		op = decodeBTypeSemantic(funct3)
 	case jType:
-		localOp = jtypeOp
+		op = decodeJTypeSemantic(opcode)
 	case uType:
-		localOp = utypeOp
+		op = decodeUTypeSemantic(opcode)
+	default:
+		// undefinedType, and any type this switch does not handle.
+		op = computeInvalid
 	}
-	return finalizeComputeOp(instructionType, localOp, rd, opcode)
+	return checkNoOp(instructionType, op, rd)
 }

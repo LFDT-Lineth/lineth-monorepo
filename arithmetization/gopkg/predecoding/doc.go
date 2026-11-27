@@ -4,8 +4,9 @@
 // # Overview
 //
 // The R5 interpreter dispatches on a predecoded instruction table instead of
-// decoding opcode fields during every execution step. Predecode consumes an
-// elfmapping.Program and returns instruction_base plus the packed decoded table.
+// decoding opcode fields during every execution step. Predecode consumes a
+// Program returned by Load and returns instruction_base plus the packed decoded
+// table.
 //
 // Use PrepareInputs when the ELF is needed only once:
 //
@@ -13,10 +14,38 @@
 //
 // To reuse an ELF, cache the mapping and decoded program:
 //
-//	program, err := elfmapping.Load(elfReader)
+//	program, err := predecoding.Load(elfReader)
 //	decoded, err := predecoding.Predecode(program)
-//	mapped, err := elfmapping.EncodeInputs(program, jobInput)
+//	mapped, err := predecoding.EncodeInputs(program, jobInput)
 //	maps.Copy(mapped, decoded.EncodeInputs())
+//
+// # ELF mapping and R5 inputs
+//
+// Load reads allocated, file-backed sections contained in PT_LOAD segments.
+// Each section becomes a Blob at its ELF virtual address. SHT_NOBITS sections,
+// such as .bss, are omitted because R5 memory is initialized to zero. Blob data
+// is copied, so the returned Program remains valid after the reader is closed.
+//
+// EncodeInputs returns raw bytes for these public inputs:
+//
+//   - entry_point_and_blobs_count: a big-endian u32 entry point and u32 blob count;
+//   - blobs_offset_and_size: one big-endian u32 address and u32 size pair per blob;
+//   - blobs_data: all blob bytes concatenated in address order;
+//   - blobs_executable: an optional, MSB-first bit per blob.
+//
+// The combined blobs are stable-sorted without mutating caller-owned slices.
+// Overlapping and overflowing non-empty ranges are rejected. Returned input
+// bytes do not alias Blob data.
+//
+// NewData with WithLengthPrefix implements the length-prefixed ABI used by some
+// Lineth guests: an eight-byte little-endian payload length followed by the
+// payload. The interpreter itself does not impose this framing. Empty payloads
+// produce only the length blob.
+//
+// WithIncludeExecutable adds the bitmap used by the separate predecoding proof.
+// Executable bytes are always present in blobs_data; the option controls only
+// the bitmap. WithSectionsWriter writes the legacy diagnostic table of indexes,
+// addresses, sizes, executable flags, and section names.
 //
 // # Predecoding semantics
 //
@@ -55,8 +84,8 @@
 //   - `imm`, `rs1`, `rd` — operands (shift amounts are normalized at decode time;
 //     `imm` is the sign-extended 12-bit immediate)
 //
-// When `rd != x0`, `itypeOpForRd` selects the matching `*_WB` variant via
-// `finalizeComputeOp`. When `rd == x0`, inert paths map to `NO_OP`.
+// `checkNoOp` folds the destination register in: when `rd != x0` it promotes
+// `JALR` to its `*_WB` variant, and when `rd == x0` inert paths map to `NO_OP`.
 //
 // At runtime, the interpreter's flat `switch compute_op` handles these cases
 // directly. Paired cases share compute logic; `*_WB` arms additionally write
@@ -64,7 +93,7 @@
 //
 // Constants for `compute_op` live in `arithmetization/src/main/common/constants.zkc`
 // and are mirrored in `decode.go` (`itypeOpAddi`, `itypeOpAddiWB`, …). See
-// `decode_test.go` for `decodeITypeSemantic` and `itypeOpForRd` coverage.
+// `decode_test.go` for `decodeITypeSemantic` and `checkNoOp` coverage.
 //
 // # S-type semantic micro-ops (store width folded)
 //
@@ -84,7 +113,7 @@
 //
 // # J-type semantic micro-ops (compute + writeback folded)
 //
-// `decodeJTypeSemantic` maps JAL to base `JTYPE_JAL`; `jtypeOpForRd` selects
+// `decodeJTypeSemantic` maps JAL to base `JTYPE_JAL`; `checkNoOp` selects
 // `JTYPE_JAL_WB` when `rd != x0`. The 21-bit jump offset is reassembled and
 // sign-extended into `imm` at ELF time. At runtime, the interpreter's flat
 // `switch compute_op` has separate `JTYPE_JAL` and `JTYPE_JAL_WB` cases; the `_WB`
@@ -93,8 +122,8 @@
 //
 // # U-type semantic micro-ops (writeback folded)
 //
-// `decodeUTypeSemantic` maps LUI/AUIPC to local op indices; `finalizeComputeOp`
-// selects `UTYPE_*_WB` when `rd != x0` or `NO_OP` when `rd == x0`.
+// `decodeUTypeSemantic` maps LUI/AUIPC directly to their `UTYPE_*_WB` compute
+// ops; `checkNoOp` collapses them to `NO_OP` when `rd == x0`.
 // The upper immediate is sign-extended into `imm` at ELF time. At runtime, the
 // interpreter's flat `switch compute_op` handles `UTYPE_*_WB` cases. Invalid
 // opcodes (including `UTYPE_INVALID`) are handled by the `default` arm.
@@ -103,7 +132,7 @@
 //
 // For an R-type instruction, the `decoded` record does not replay raw `funct3` /
 // `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
-// to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
+// directly to its `RTYPE_*_WB` compute op; `checkNoOp` collapses it to
 // `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
 // keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`)
 // have no `_WB` variant and return early after the precompile side effects.
@@ -112,11 +141,11 @@
 //
 // Both use `funct7 = 0b0000000`. `decodeRTypeSemantic` discriminates on `funct3`:
 //
-//	funct3  Local operation          Unified compute_op     Runtime handler
-//	0b000   rtypeOpKeccak (28)       RTYPE_KECCAK (53)      keccak(...)
-//	0b001   rtypeOpPoseidon2 (29)    RTYPE_POSEIDON2 (54)   poseidon2(...)
+//	funct3  compute_op                    Runtime handler
+//	0b000   rtypeOpKeccak (RTYPE_KECCAK, 53)      keccak(...)
+//	0b001   rtypeOpPoseidon2 (RTYPE_POSEIDON2, 54) poseidon2(...)
 //
-// Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
+// Any other `(funct3, funct7)` pair on Custom-1 maps to `COMPUTE_INVALID`
 // (255) in the `decoded` table.
 //
 // At runtime, the interpreter's flat `switch compute_op` handles the base `RTYPE_*`
@@ -130,7 +159,7 @@
 // `FUNCT3_*` / `FUNCT7_*` constants are used by the pre-decoding verifier (see
 // below); redundant per-instruction `FUNCT7_*` aliases that duplicated
 // `FUNCT7_ADD` or `FUNCT7_MUL` have been removed from `constants.zkc`. See
-// `decode_test.go` for `decodeRTypeSemantic` and `rtypeOpForRd` coverage.
+// `decode_test.go` for `decodeRTypeSemantic` coverage.
 //
 // # rd=x0 → NO_OP
 //
@@ -152,21 +181,20 @@
 //   - `ecall` / `ebreak` — syscalls
 //   - any Custom-1 precompile (`KECCAK`, `POSEIDON2`) — memory side effects
 //
-// The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `decode.go`
-// (see `decode_test.go`).
+// This folding lives in `checkNoOp` in `decode.go` (see `decode_test.go`).
 //
 // # How the pre-decoding is done
 //
 // All of this happens in `Predecode`:
 //
 //  1. Find the code region. Scan executable blobs emitted by
-//     `elfmapping.Load` (allocated `SHF_ALLOC` sections inside `PT_LOAD`, with
+//     `Load` (allocated `SHF_ALLOC` sections inside `PT_LOAD`, with
 //     `SHF_EXECINSTR`), and compute the span `[base, end)` with `base` aligned down
 //     and `end` up to a 4-byte boundary. Non-loadable exec sections are excluded so
 //     pre-decoding matches `blobs_data` / `read_instruction_from_blobs`.
 //  2. OOM guard. The tables are *dense* (one record per 4-byte slot in the
 //     span), so an implausibly large / non-contiguous span is rejected. The cap is
-//     `DefaultMaxDecodedRecords` (2,000,000), overridable with
+//     `DefaultMaxDecodedRecords` (16,000,000), overridable with
 //     `WithMaxDecodedRecords`. The command maps `ELF2JSON_MAX_DECODED_RECORDS`
 //     to that option.
 //  3. Flatten to a byte image. Copy each executable blob into a zero-filled
@@ -174,8 +202,9 @@
 //  4. Decode each word. Read the little-endian 32-bit instruction and extract
 //     fields with shifts/masks. `classifyInstruction` in `decode.go` derives the
 //     instruction type (`instructionTypeFromOpcode`), applies the semantic
-//     `decode*Semantic` map, folds writeback (`*OpForRd`) and rd=`x0` no-ops into a
-//     single unified `compute_op`, and `unifiedOperands` packs the operands.
+//     `decode*Semantic` map, folds writeback promotion and rd=`x0` no-ops
+//     (`checkNoOp`) into a single unified `compute_op`, and `unifiedOperands`
+//     packs the operands.
 //  5. Bit-pack each record into the `decoded` stream (see below).
 //  6. Return a DecodedProgram containing InstructionBase and the packed Decoded
 //     bytes. EncodeInputs excludes final-byte padding from the logical bit length;

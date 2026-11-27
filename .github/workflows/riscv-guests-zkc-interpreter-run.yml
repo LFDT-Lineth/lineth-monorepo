@@ -31,7 +31,6 @@ on:
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
       - "arithmetization/src/test/Makefile" # elf-exec / elf-to-json / linker-script
       - "arithmetization/cmd/elf_to_json/**"
-      - "arithmetization/gopkg/elfmapping/**"
       - "arithmetization/gopkg/predecoding/**"
       - "arithmetization/go.mod"
       - "arithmetization/go.sum"
@@ -53,7 +52,6 @@ on:
       - "arithmetization/src/main/lib/**"
       - "arithmetization/src/test/Makefile"
       - "arithmetization/cmd/elf_to_json/**"
-      - "arithmetization/gopkg/elfmapping/**"
       - "arithmetization/gopkg/predecoding/**"
       - "arithmetization/go.mod"
       - "arithmetization/go.sum"
@@ -119,7 +117,6 @@ jobs:
               - "arithmetization/src/main/lib/**"
               - "arithmetization/src/test/Makefile"
               - "arithmetization/cmd/elf_to_json/**"
-              - "arithmetization/gopkg/elfmapping/**"
               - "arithmetization/gopkg/predecoding/**"
               - "arithmetization/go.mod"
               - "arithmetization/go.sum"

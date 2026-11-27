@@ -14,14 +14,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/bit"
 )
 
 type inputBytes struct {
 	data    []byte
-	options []elfmapping.DataOption
+	options []predecoding.DataOption
 }
 
 func main() {
@@ -71,7 +70,7 @@ Options:
 	if err != nil {
 		return fmt.Errorf("error opening ELF file: %w", err)
 	}
-	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	program, err := predecoding.Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ Options:
 			}
 		}()
 	}
-	inputs, err := elfmapping.EncodeInputs(program, additional, mappingOptions...)
+	inputs, err := predecoding.EncodeInputs(program, additional, mappingOptions...)
 	if err != nil {
 		return err
 	}
@@ -145,9 +144,9 @@ func parseInput(argument string) (inputBytes, error) {
 		case ".ssz":
 			return inputBytes{
 				data: data,
-				options: []elfmapping.DataOption{
-					elfmapping.WithName("ssz"),
-					elfmapping.WithLengthPrefix(),
+				options: []predecoding.DataOption{
+					predecoding.WithName("ssz"),
+					predecoding.WithLengthPrefix(),
 				},
 			}, nil
 		case ".bin":
@@ -173,13 +172,13 @@ func parseHexInput(argument string) ([]byte, error) {
 	return data, nil
 }
 
-func inputBlobs(offset uint64, input inputBytes) ([]elfmapping.Blob, error) {
-	return elfmapping.NewData(offset, input.data, input.options...)
+func inputBlobs(offset uint64, input inputBytes) ([]predecoding.Blob, error) {
+	return predecoding.NewData(offset, input.data, input.options...)
 }
 
 func parseInputOffset(arguments []string) (uint64, error) {
 	if len(arguments) == 2 {
-		return elfmapping.DefaultInputOrigin, nil
+		return predecoding.DefaultInputOrigin, nil
 	}
 	return strconv.ParseUint(arguments[2], 0, 64)
 }
@@ -196,7 +195,7 @@ func decodeOptionsFromEnv() ([]predecoding.Option, error) {
 	return []predecoding.Option{predecoding.WithMaxDecodedRecords(maximum)}, nil
 }
 
-func mappingOptionsFromEnv(elfPath string) ([]elfmapping.Option, *os.File, error) {
+func mappingOptionsFromEnv(elfPath string) ([]predecoding.Option, *os.File, error) {
 	includeExecutable, err := boolEnv("ELF2JSON_PREDECODING_PROOF")
 	if err != nil {
 		return nil, nil, err
@@ -205,9 +204,9 @@ func mappingOptionsFromEnv(elfPath string) ([]elfmapping.Option, *os.File, error
 	if err != nil {
 		return nil, nil, err
 	}
-	var options []elfmapping.Option
+	var options []predecoding.Option
 	if includeExecutable {
-		options = append(options, elfmapping.WithIncludeExecutable())
+		options = append(options, predecoding.WithIncludeExecutable())
 	}
 	if !writeSections {
 		return options, nil, nil
@@ -216,7 +215,7 @@ func mappingOptionsFromEnv(elfPath string) ([]elfmapping.Option, *os.File, error
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating ELF sections file: %w", err)
 	}
-	return append(options, elfmapping.WithSectionsWriter(file)), file, nil
+	return append(options, predecoding.WithSectionsWriter(file)), file, nil
 }
 
 func boolEnv(name string) (bool, error) {
@@ -232,9 +231,9 @@ func boolEnv(name string) (bool, error) {
 
 func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 	var (
-		entry              = inputs[elfmapping.EntryPointAndBlobsCountInput]
-		metadata           = inputs[elfmapping.BlobsOffsetAndSizeInput]
-		data               = inputs[elfmapping.BlobsDataInput]
+		entry              = inputs[predecoding.EntryPointAndBlobsCountInput]
+		metadata           = inputs[predecoding.BlobsOffsetAndSizeInput]
+		data               = inputs[predecoding.BlobsDataInput]
 		predecBaseInput    = inputs[predecoding.InstructionBaseInput]
 		predecDecodedInput = inputs[predecoding.DecodedInput]
 		//
@@ -254,18 +253,18 @@ func writeJSON(output io.Writer, inputs map[string]bit.Array) error {
 	if _, err := fmt.Fprintln(output, "{"); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s_%s\",\n", elfmapping.EntryPointAndBlobsCountInput, hex.EncodeToString(entryBytes[:4]), hex.EncodeToString(entryBytes[4:])); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s_%s\",\n", predecoding.EntryPointAndBlobsCountInput, hex.EncodeToString(entryBytes[:4]), hex.EncodeToString(entryBytes[4:])); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", elfmapping.BlobsOffsetAndSizeInput, strings.Join(metadataRecords, "____")); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.BlobsOffsetAndSizeInput, strings.Join(metadataRecords, "____")); err != nil {
 		return err
 	}
-	if executable, ok := inputs[elfmapping.BlobsExecutableInput]; ok {
-		if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", elfmapping.BlobsExecutableInput, hex.EncodeToString(executable.Bytes())); err != nil {
+	if executable, ok := inputs[predecoding.BlobsExecutableInput]; ok {
+		if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.BlobsExecutableInput, hex.EncodeToString(executable.Bytes())); err != nil {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", elfmapping.BlobsDataInput, strings.Join(dataRecords, "____")); err != nil {
+	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.BlobsDataInput, strings.Join(dataRecords, "____")); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(output, "\t%q: \"0x%s\",\n", predecoding.InstructionBaseInput, hex.EncodeToString(predecBaseInputBytes)); err != nil {
