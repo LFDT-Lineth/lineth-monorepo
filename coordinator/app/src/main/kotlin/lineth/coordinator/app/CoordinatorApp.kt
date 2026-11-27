@@ -35,6 +35,7 @@ import lineth.coordinator.extensions.CoordinatorContext
 import lineth.coordinator.extensions.CoordinatorExtensionFactory
 import lineth.persistence.DisabledForcedTransactionsDao
 import lineth.persistence.FeeHistoriesPostgresDao
+import lineth.persistence.RiscvRollupsDao
 import lineth.persistence.conflation.AggregationsRepositoryImpl
 import lineth.persistence.conflation.BatchesPostgresDao
 import lineth.persistence.conflation.BlobsPostgresDao
@@ -149,19 +150,24 @@ class CoordinatorApp(
       ),
     )
 
-  // RISC-V rollups and their blobs, in the riscv_rollups, riscv_blobs and riscv_rollup_blobs tables.
-  private val riscvRollupsDao =
-    RetryingRiscvRollupsPostgresDao(
-      delegate =
-      RiscvRollupsPostgresDao(
-        config =
-        RiscvRollupsPostgresDao.Config(
-          maxRollupProofsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
+  // RISC-V rollups and their blobs, in the riscv_rollups, riscv_blobs and riscv_rollup_blobs tables. Null on a schema
+  // without those tables: no rollup can exist there, so there is nothing to resume from or clean up.
+  private val riscvRollupsDao: RiscvRollupsDao? =
+    if (configs.database.schemaVersion >= RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION) {
+      RetryingRiscvRollupsPostgresDao(
+        delegate =
+        RiscvRollupsPostgresDao(
+          config =
+          RiscvRollupsPostgresDao.Config(
+            maxRollupProofsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
+          ),
+          connection = sqlClient,
         ),
-        connection = sqlClient,
-      ),
-      persistenceRetryer = persistenceRetryer,
-    )
+        persistenceRetryer = persistenceRetryer,
+      )
+    } else {
+      null
+    }
   private val aggregationsRepository =
     AggregationsRepositoryImpl(
       aggregationsDao =

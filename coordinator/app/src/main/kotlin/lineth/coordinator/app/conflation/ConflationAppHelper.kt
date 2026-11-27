@@ -191,12 +191,13 @@ object ConflationAppHelper {
    *   batches are kept;
    * - the rollup stage after the highest consecutive rollup row from the last finalized block + 1;
    * - aggregation at the last finalized block, as there is no RISC-V aggregation yet.
-   * Each falls back to the last finalized block when nothing follows it.
+   * Each falls back to the last finalized block when nothing follows it. [rollupsDao] is null on a DB schema without the
+   * rollup tables, where no rollup can exist.
    */
   fun getLastRiscvProcessedBlocks(
     lastFinalizedBlock: ULong,
     batchesRepository: BatchesRepository,
-    rollupsDao: RiscvRollupsDao,
+    rollupsDao: RiscvRollupsDao?,
     l2EthClient: EthApiClient,
   ): SafeFuture<RiscvLastProcessedBlocks> {
     val lastConflatedBlock = batchesRepository
@@ -218,12 +219,13 @@ object ConflationAppHelper {
 
   /**
    * End block of the last consecutive RISC-V rollup row from the last finalized block + 1, or the last finalized block
-   * if there is none.
+   * if there is none or there is no [rollupsDao].
    */
   internal fun resumeRiscvRollupFrom(
-    rollupsDao: RiscvRollupsDao,
+    rollupsDao: RiscvRollupsDao?,
     lastFinalizedBlock: ULong,
   ): SafeFuture<ULong> {
+    if (rollupsDao == null) return SafeFuture.completedFuture(lastFinalizedBlock)
     return rollupsDao
       .findHighestConsecutiveRollupFromBlockNumber(lastFinalizedBlock + 1UL)
       .thenApply { it?.endBlockNumber ?: lastFinalizedBlock }
@@ -231,14 +233,17 @@ object ConflationAppHelper {
 
   /**
    * Deletes what the RISC-V pipeline will rebuild: batches after [lastConflatedBlockNumber], rollup rows after
-   * [lastRollupEndBlockNumber] and aggregations after [lastAggregatedBlockNumber].
+   * [lastRollupEndBlockNumber] and aggregations after [lastAggregatedBlockNumber]. Each stage is built from the one
+   * before it, so this fails without deleting anything unless
+   * [lastAggregatedBlockNumber] <= [lastRollupEndBlockNumber] <= [lastConflatedBlockNumber]. Without a [rollupsDao]
+   * (a DB schema without the rollup tables) there are no rollup rows to delete.
    */
   fun cleanupRiscvDbDataAfterBlockNumbers(
     lastConflatedBlockNumber: ULong,
     lastRollupEndBlockNumber: ULong,
     lastAggregatedBlockNumber: ULong,
     batchesRepository: BatchesRepository,
-    rollupsDao: RiscvRollupsDao,
+    rollupsDao: RiscvRollupsDao?,
     aggregationsRepository: AggregationsRepository,
   ): SafeFuture<*> {
     if (lastRollupEndBlockNumber > lastConflatedBlockNumber) {
@@ -249,9 +254,17 @@ object ConflationAppHelper {
         ),
       )
     }
+    if (lastAggregatedBlockNumber > lastRollupEndBlockNumber) {
+      return SafeFuture.failedFuture<Unit>(
+        IllegalStateException(
+          "last aggregation ends at block $lastAggregatedBlockNumber, after the last rollup " +
+            "$lastRollupEndBlockNumber: aggregations are only built from persisted rollups",
+        ),
+      )
+    }
     return SafeFuture.allOf(
       batchesRepository.deleteBatchesAfterBlockNumber((lastConflatedBlockNumber + 1UL).toLong()),
-      rollupsDao.deleteRollupsAfterBlockNumber(lastRollupEndBlockNumber + 1UL),
+      rollupsDao?.deleteRollupsAfterBlockNumber(lastRollupEndBlockNumber + 1UL) ?: SafeFuture.completedFuture(0),
       aggregationsRepository.deleteAggregationsAfterBlockNumber((lastAggregatedBlockNumber + 1UL).toLong()),
     )
   }

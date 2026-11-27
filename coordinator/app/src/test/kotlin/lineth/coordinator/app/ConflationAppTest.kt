@@ -173,6 +173,35 @@ class ConflationAppTest {
   }
 
   @Test
+  fun `riscv pipeline without rollup tables resumes rollups at the finalized block and deletes no rollup rows`() {
+    val batchesRepository = mock<BatchesRepository>()
+    val aggregationsRepository = mock<AggregationsRepository>()
+    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(101L))
+      .thenReturn(SafeFuture.completedFuture(150L))
+    whenever(batchesRepository.deleteBatchesAfterBlockNumber(anyLong()))
+      .thenReturn(SafeFuture.completedFuture(0))
+    whenever(aggregationsRepository.deleteAggregationsAfterBlockNumber(anyLong()))
+      .thenReturn(SafeFuture.completedFuture(0))
+
+    val lastProcessedBlocks =
+      getLastRiscvProcessedBlocks(100uL, batchesRepository, rollupsDao = null, l2ClientReturningBlocks()).get()
+    assertThat(lastProcessedBlocks.lastConflatedBlock.number).isEqualTo(150uL)
+    assertThat(lastProcessedBlocks.lastRollupEndBlockNumber).isEqualTo(100uL)
+    assertThat(lastProcessedBlocks.lastAggregatedBlock.number).isEqualTo(100uL)
+
+    cleanupRiscvDbDataAfterBlockNumbers(
+      lastConflatedBlockNumber = 150uL,
+      lastRollupEndBlockNumber = 100uL,
+      lastAggregatedBlockNumber = 100uL,
+      batchesRepository = batchesRepository,
+      rollupsDao = null,
+      aggregationsRepository = aggregationsRepository,
+    ).get()
+    verify(batchesRepository).deleteBatchesAfterBlockNumber(151L)
+    verify(aggregationsRepository).deleteAggregationsAfterBlockNumber(101L)
+  }
+
+  @Test
   fun `riscv startup db cleanup fails when the last rollup ends after the last persisted batch`() {
     val batchesRepository = mock<BatchesRepository>()
 
@@ -187,6 +216,27 @@ class ConflationAppTest {
       ).get()
     }.hasMessageContaining("last rollup ends at block 160, after the last persisted batch 150")
     verify(batchesRepository, never()).deleteBatchesAfterBlockNumber(anyLong())
+  }
+
+  @Test
+  fun `riscv startup db cleanup fails when the last aggregation ends after the last rollup`() {
+    val batchesRepository = mock<BatchesRepository>()
+    val rollupsDao = rollupsDaoWith(101uL to 120uL, 121uL to 140uL)
+    val aggregationsRepository = mock<AggregationsRepository>()
+
+    assertThatThrownBy {
+      cleanupRiscvDbDataAfterBlockNumbers(
+        lastConflatedBlockNumber = 150uL,
+        lastRollupEndBlockNumber = 120uL,
+        lastAggregatedBlockNumber = 130uL,
+        batchesRepository = batchesRepository,
+        rollupsDao = rollupsDao,
+        aggregationsRepository = aggregationsRepository,
+      ).get()
+    }.hasMessageContaining("last aggregation ends at block 130, after the last rollup 120")
+    verify(batchesRepository, never()).deleteBatchesAfterBlockNumber(anyLong())
+    verify(aggregationsRepository, never()).deleteAggregationsAfterBlockNumber(anyLong())
+    assertThat(rollupsDao.rollups.keys).containsExactly(101uL, 121uL)
   }
 
   @Test

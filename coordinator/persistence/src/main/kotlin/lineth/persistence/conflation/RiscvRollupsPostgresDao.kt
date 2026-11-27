@@ -50,6 +50,9 @@ class RiscvRollupsPostgresDao(
     const val RollupsTableName = "riscv_rollups"
     const val BlobsTableName = "riscv_blobs"
     const val RollupBlobsTableName = "riscv_rollup_blobs"
+
+    /** The DB schema version whose migration creates the RISC-V rollup tables. */
+    const val MIN_DB_SCHEMA_VERSION = 5
   }
 
   private val queryLog = SQLQueryLogger(log)
