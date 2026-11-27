@@ -15,6 +15,15 @@ type PublicInputSystem struct {
 	// round i (all cells in sys.Rounds[i], including ones promoted to public
 	// inputs and therefore omitted from the proof's cell slices).
 	RoundCellCounts []int
+	// CellExtBits holds one bit per verifier-visible cell of the replayed
+	// rounds, in transcript order (round, then position in the round): bit i
+	// of the flat cell index is CellExtBits[i/64] >> (i%64) & 1, set when the
+	// cell is declared an extension-field value ([wiop.Cell.IsExtension]).
+	// prover-ray binds every cell to its declared field, and the field decides
+	// how many elements the cell absorbs into the transcript, so the Zig
+	// verifier rejects a cell whose wire tag differs: a base value re-sent in
+	// extension form would otherwise let a prover pick among transcripts.
+	CellExtBits []uint64
 	// Refs records where each registered public input re-enters the transcript
 	// cell stream. Entries are sorted by (Round, Index) so the Zig verifier can
 	// merge them into the proof rounds in one pass while still indexing the flat
@@ -35,9 +44,20 @@ func BuildPublicInputSystem(sys *wiop.System) (PublicInputSystem, error) {
 	out := PublicInputSystem{
 		RoundCellCounts: make([]int, max(len(sys.Rounds)-1, 0)),
 	}
+	flat := 0
 	for i, round := range sys.Rounds {
-		if i < len(sys.Rounds)-1 {
-			out.RoundCellCounts[i] = len(round.Cells)
+		if i == len(sys.Rounds)-1 {
+			break
+		}
+		out.RoundCellCounts[i] = len(round.Cells)
+		for _, cell := range round.Cells {
+			if flat%64 == 0 {
+				out.CellExtBits = append(out.CellExtBits, 0)
+			}
+			if cell.IsExtension() {
+				out.CellExtBits[flat/64] |= 1 << (flat % 64)
+			}
+			flat++
 		}
 	}
 

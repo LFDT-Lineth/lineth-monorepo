@@ -13,7 +13,7 @@ services:
       - ./config/coordinator/coordinator-config-v2.toml:/coordinator/coordinator-config-v2.toml:ro
 
   maru:
-    image: ${MARU_IMAGE_NAME:-consensys/maru}:${MARU_TAG:-1.6.0-20261119-51ebdc0}
+    image: ${MARU_IMAGE_NAME:-consensys/maru}:${MARU_TAG:-2.0.0-20261126-3c7bbcb}
     hostname: maru
     container_name: maru
     profiles: [ "l2", "l2-bc", "debug" ]
@@ -27,7 +27,7 @@ services:
       - -c
       - |
         set -- java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml \
-          -jar "$${LINETH_APP_JAR:-/opt/consensys/maru/maru.jar}" \
+          -jar "$${LINETH_APP_JAR:-/opt/lineth/maru/maru.jar}" \
           --genesis-file /initialization/genesis-maru.json \
           --config configs/config.toml \
           --config configs/config.stack.toml
@@ -37,12 +37,12 @@ services:
         exec "$$@"
 #    command: [ 'echo' , 'Forced exit to run in IntellIJ' ]
     volumes:
-      - ./config/maru/sequencer.config.toml:/opt/consensys/maru/configs/config.toml:ro
+      - ./config/maru/sequencer.config.toml:/opt/lineth/maru/configs/config.toml:ro
       # Stack-specific (zkevm / riscv) settings; compose-riscv.yml swaps in the RISC-V file.
-      - ./config/maru/sequencer.zkevm.config.overrides.toml:/opt/consensys/maru/configs/config.stack.toml:ro
-      - ./config/maru/sequencer.extra-followers.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
-      - ./config/maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
-      - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key
+      - ./config/maru/sequencer.zkevm.config.overrides.toml:/opt/lineth/maru/configs/config.stack.toml:ro
+      - ./config/maru/sequencer.extra-followers.config.overrides.toml:/opt/lineth/maru/configs/config.overrides.toml:ro
+      - ./config/maru/log4j.xml:/opt/lineth/maru/configs/log4j.xml:ro
+      - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key:ro
       - ./config/l2-genesis-initialization:/initialization/:ro
     ports:
       # Attach the IDE's remote java debugger to localhost:5005 to debug maru
@@ -62,7 +62,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.4.0-20261119-6467df6}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-3.0.0-20261126-1b20d71}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -150,7 +150,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.4.0-20261119-6467df6}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-3.0.0-20261126-1b20d71}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -247,7 +247,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-2.4.0-20261119-c5e1daa}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-3.0.0-20261126-20d2e5e}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -264,8 +264,14 @@ services:
 #        condition: service_started
     ports:
       - "9545:9545"
+    # The coordinator image (eclipse-temurin) has no curl; probe with bash /dev/tcp.
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9545/health || exit 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
+          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
       interval: 1s
       timeout: 1s
       retries: 120
@@ -292,15 +298,15 @@ services:
             -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json \
             -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml \
             $$CONFIG_OVERRIDE_OPTS \
-            -jar "$${LINETH_APP_JAR:-/opt/consensys/linea/coordinator/libs/coordinator.jar}" \
+            -jar "$${LINETH_APP_JAR:-/opt/lineth/coordinator/libs/coordinator.jar}" \
             --traces-limits-v5 config/traces-limits-v5.toml \
             --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml \
             $$COORDINATOR_CONFIG_FILES
         fi
     volumes:
-      - ./config/coordinator/coordinator-config-v2.toml:/opt/consensys/linea/coordinator/config/coordinator-config.toml:ro
-      - ./config/common/traces-limits-v5.toml:/opt/consensys/linea/coordinator/config/traces-limits-v5.toml:ro
-      - ./config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
+      - ./config/coordinator/coordinator-config-v2.toml:/opt/lineth/coordinator/config/coordinator-config.toml:ro
+      - ./config/common/traces-limits-v5.toml:/opt/lineth/coordinator/config/traces-limits-v5.toml:ro
+      - ./config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/lineth/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
       - ./config/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro
       - ./config/coordinator/log4j2-dev.xml:/var/lib/coordinator/log4j2-dev.xml:ro
       - ./config/coordinator/tls-files/:/tls-files/
@@ -482,7 +488,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${LINEA_TRANSACTION_EXCLUSION_API_TAG:-1.0.1-20261119-51ebdc0}
+    image: consensys/linea-transaction-exclusion-api:${LINEA_TRANSACTION_EXCLUSION_API_TAG:-2.0.0-20261126-3c7bbcb}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -492,9 +498,9 @@ services:
       - "8082:8080"
     command: [ 'java', '-Xmx384m', '-Dvertx.configurationFile=config/vertx-options.json', '-Dlog4j2.configurationFile=config/log4j2-dev.xml', '-jar', 'libs/transaction-exclusion-api.jar', 'config/transaction-exclusion-app-docker.config.toml', ]
     volumes:
-      - ./config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml:/opt/consensys/linea/transaction-exclusion-api/config/transaction-exclusion-app-docker.config.toml:ro
-      - ./config/transaction-exclusion-api/vertx-options.json:/opt/consensys/linea/transaction-exclusion-api/config/vertx-options.json:ro
-      - ./config/transaction-exclusion-api/log4j2-dev.xml:/opt/consensys/linea/transaction-exclusion-api/config/log4j2-dev.xml:ro
+      - ./config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml:/opt/lineth/transaction-exclusion-api/config/transaction-exclusion-app-docker.config.toml:ro
+      - ./config/transaction-exclusion-api/vertx-options.json:/opt/lineth/transaction-exclusion-api/config/vertx-options.json:ro
+      - ./config/transaction-exclusion-api/log4j2-dev.xml:/opt/lineth/transaction-exclusion-api/config/log4j2-dev.xml:ro
     deploy:
       resources:
         limits:
@@ -581,7 +587,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.4.0-20261119-6467df6}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-3.0.0-20261126-1b20d71}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]

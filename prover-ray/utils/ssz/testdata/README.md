@@ -39,6 +39,11 @@ the spec's reference request
 chunk in place of the blob (`rollup_input_calldata`). `backend/jobadapter` builds
 the input from each request and checks it against these bytes.
 
+It also writes `backend/jobadapter/testdata/rollup_request_guest_output.json`: the
+same reference request with each embedded proof carrying its `guestOutput`
+(`encode_l2_execution_output`) in place of its `publicInputs`.
+`backend/jobadapter` builds the same input as `rollup_input` from it.
+
 It also writes `rollup_output.ssz`: the rollup guest output
 (`keccak256(frame) || frame`, `frame = 0x0005 || SSZ(public inputs)`) for the
 public inputs of the spec's reference response

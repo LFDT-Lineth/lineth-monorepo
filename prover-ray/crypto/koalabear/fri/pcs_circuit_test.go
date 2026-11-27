@@ -51,10 +51,12 @@ type pcsVerifyCircuit struct {
 // compile time. VerifyGnark asserts instead of returning a verdict, so a bad
 // proof surfaces as an unsatisfiable constraint when the solver runs.
 func (c *pcsVerifyCircuit) Define(api frontend.API) error {
-	c.pcs.VerifyGnark(api, GnarkVerifyInputs{
+	plan, err := c.pcs.VerifierPlan(c.shapes, c.shifts)
+	if err != nil {
+		return err
+	}
+	plan.VerifyGnark(api, GnarkVerifyInputs{
 		Roots:          c.Roots,
-		Shapes:         c.shapes,
-		Shifts:         c.shifts,
 		ClaimedValues:  c.Claims,
 		Zeta:           c.Zeta,
 		FoldAlphas:     c.Alphas,

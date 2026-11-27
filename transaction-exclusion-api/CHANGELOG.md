@@ -1,4 +1,8 @@
-## [unreleased]
+## [2.0.0] - 2026-11-26
+
+### 🚀 Features
+
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### ⚙️ Miscellaneous Tasks
 
