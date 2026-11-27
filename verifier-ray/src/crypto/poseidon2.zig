@@ -161,30 +161,37 @@ pub fn permutation(comptime width: usize, state: *[width]field.Element) void {
     }
 }
 
+// The width-16 permutation in software, on u64 lanes with lazy reduction.
+//
+// KoalaBear's p is below 2^31, so a lane can hold a sum of many reduced values
+// before it must be reduced: the external matrix reduces each output once
+// (inputs < p, outputs < 35p), the internal matrix computes sum + D_i * x_i
+// with D_i folded into [0, p) (sum < 16p, product < p^2, total < 2^63), and the
+// S-box adds the round key and cubes with two reductions (x + k < 2p < 2^32, so
+// both products fit in 64 bits). Every lane is < p on entry to each round.
+// All rounds are unrolled with their keys as constants: under zkc each
+// instruction is a cycle, and the per-round calls and loops of a
+// straightforward version cost more than the arithmetic in partial rounds.
 fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
     if (width != constants.width) @compileError("Poseidon2 Koalabear verifier constants support width 16");
-    const round_keys = &constants.round_keys;
+    // The unrolled rounds are comptime loops: 27 rounds of up to 16 lanes.
+    @setEvalBranchQuota(20_000);
+    var s: [width]u64 = undefined;
+    inline for (0..width) |i| s[i] = state[i].value;
 
-    matMulExternalInPlace(width, state);
+    // Under zkc, a 32-bit round key built from immediates costs two
+    // instructions (lui + addi); a load from the key table costs one. The
+    // volatile view keeps the optimizer from folding the loads back into
+    // immediates. Natively the keys stay compile-time constants.
+    const keys: *const volatile [num_round_keys]u32 = if (comptime r5_config.is_r5_zkvm) round_key_ptr else undefined;
 
+    matMulExternal(&s);
     const half_full = full_rounds / 2;
-    for (0..half_full) |round| {
-        addRoundKey(width, state, round_keys, round, width);
-        sBoxAll(width, state);
-        matMulExternalInPlace(width, state);
-    }
+    inline for (0..half_full) |round| fullRound(&s, round, keys);
+    inline for (half_full..half_full + partial_rounds) |round| partialRound(&s, round, keys);
+    inline for (half_full + partial_rounds..total_rounds) |round| fullRound(&s, round, keys);
 
-    for (half_full..half_full + partial_rounds) |round| {
-        addRoundKey(width, state, round_keys, round, 1);
-        state[0] = cube(state[0]);
-        matMulInternalInPlace(width, state);
-    }
-
-    for (half_full + partial_rounds..total_rounds) |round| {
-        addRoundKey(width, state, round_keys, round, width);
-        sBoxAll(width, state);
-        matMulExternalInPlace(width, state);
-    }
+    inline for (0..width) |i| state[i] = .{ .value = @intCast(s[i]) };
 }
 
 // Delegate the width-16 permutation to the Lineth Poseidon2 accelerator opcode.
@@ -202,65 +209,6 @@ fn permutationAccel16(state: *[constants.width]field.Element) void {
     _ = lineth_accel.lineth_zkvm_poseidon2_permutation(buf, buf);
 }
 
-fn addRoundKey(
-    comptime width: usize,
-    state: *[width]field.Element,
-    round_keys: *const [total_rounds][width]field.Element,
-    round: usize,
-    key_len: usize,
-) void {
-    for (0..key_len) |i| {
-        state[i] = state[i].add(round_keys.*[round][i]);
-    }
-}
-
-fn sBoxAll(comptime width: usize, state: *[width]field.Element) void {
-    for (&state.*) |*limb| {
-        limb.* = cube(limb.*);
-    }
-}
-
-fn cube(value: field.Element) field.Element {
-    return value.square().mul(value);
-}
-
-fn matMulM4InPlace(comptime width: usize, state: *[width]field.Element) void {
-    inline for (0..width / 4) |chunk| {
-        const offset = 4 * chunk;
-        const t01 = state[offset].add(state[offset + 1]);
-        const t23 = state[offset + 2].add(state[offset + 3]);
-        const t0123 = t01.add(t23);
-        const t01123 = t0123.add(state[offset + 1]);
-        const t01233 = t0123.add(state[offset + 3]);
-
-        state[offset + 3] = state[offset].double().add(t01233);
-        state[offset + 1] = state[offset + 2].double().add(t01123);
-        state[offset] = t01.add(t01123);
-        state[offset + 2] = t23.add(t01233);
-    }
-}
-
-fn matMulExternalInPlace(comptime width: usize, state: *[width]field.Element) void {
-    matMulM4InPlace(width, state);
-
-    var sums: [4]field.Element = zeroArray(4);
-    inline for (0..width / 4) |chunk| {
-        const offset = 4 * chunk;
-        sums[0] = sums[0].add(state[offset]);
-        sums[1] = sums[1].add(state[offset + 1]);
-        sums[2] = sums[2].add(state[offset + 2]);
-        sums[3] = sums[3].add(state[offset + 3]);
-    }
-
-    inline for (0..width / 4) |chunk| {
-        const offset = 4 * chunk;
-        state[offset] = state[offset].add(sums[0]);
-        state[offset + 1] = state[offset + 1].add(sums[1]);
-        state[offset + 2] = state[offset + 2].add(sums[2]);
-        state[offset + 3] = state[offset + 3].add(sums[3]);
-    }
-}
-
 fn zeroArray(comptime len: usize) [len]field.Element {
     var out: [len]field.Element = undefined;
     for (&out) |*limb| {
@@ -269,60 +217,106 @@ fn zeroArray(comptime len: usize) [len]field.Element {
     return out;
 }
 
-// Precomputed 2^{-n} mod p for the KoalaBear field (p = 2_130_706_433 = 2^31 - 2^24 + 1).
-const inv2Exp1: field.Element = .{ .value = 1_065_353_217 };
-const inv2Exp2: field.Element = .{ .value = 1_598_029_825 };
-const inv2Exp3: field.Element = .{ .value = 1_864_368_129 };
-const inv2Exp4: field.Element = .{ .value = 1_997_537_281 };
-const inv2Exp5: field.Element = .{ .value = 2_064_121_857 };
-const inv2Exp6: field.Element = .{ .value = 2_097_414_145 };
-const inv2Exp7: field.Element = .{ .value = 2_114_060_289 };
-const inv2Exp8: field.Element = .{ .value = 2_122_383_361 };
-const inv2Exp9: field.Element = .{ .value = 2_126_544_897 };
-const inv2Exp24: field.Element = .{ .value = 2_130_706_306 };
+const p: u64 = field.modulus;
 
-fn matMulInternalInPlace(comptime width: usize, state: *[width]field.Element) void {
-    var sum = state[0];
-    inline for (1..width) |i| {
-        sum = sum.add(state[i]);
+// The round keys in the order the rounds use them: every lane of a full
+// round, lane 0 only of a partial round.
+const num_round_keys = full_rounds * constants.width + partial_rounds;
+const round_key_table: [num_round_keys]u32 = blk: {
+    var table: [num_round_keys]u32 = undefined;
+    var n: usize = 0;
+    for (0..total_rounds) |round| {
+        const lanes = if (isPartialRound(round)) 1 else constants.width;
+        for (0..lanes) |i| {
+            table[n] = constants.round_keys[round][i].value;
+            n += 1;
+        }
     }
+    break :blk table;
+};
 
-    state[0] = sum.sub(state[0].double());
-    state[1] = sum.add(state[1]);
-    state[2] = sum.add(state[2].double());
-    state[3] = sum.add(state[3].mul(inv2Exp1));
-    state[4] = sum.add(state[4].mul(.{ .value = 3 }));
-    state[5] = sum.add(state[5].double().double());
-    state[6] = sum.sub(state[6].mul(inv2Exp1));
-    state[7] = sum.sub(state[7].mul(.{ .value = 3 }));
-    state[8] = sum.sub(state[8].double().double());
-    state[9] = sum.add(state[9].mul(inv2Exp8));
+// A runtime pointer to the table: loads through a comptime-known pointer are
+// resolved at compile time, volatile or not.
+var round_key_ptr: *const volatile [num_round_keys]u32 = &round_key_table;
 
-    switch (width) {
-        16 => {
-            state[10] = sum.add(state[10].mul(inv2Exp3));
-            state[11] = sum.add(state[11].mul(inv2Exp24));
-            state[12] = sum.sub(state[12].mul(inv2Exp8));
-            state[13] = sum.sub(state[13].mul(inv2Exp3));
-            state[14] = sum.sub(state[14].mul(inv2Exp4));
-            state[15] = sum.sub(state[15].mul(inv2Exp24));
-        },
-        24 => {
-            state[10] = sum.add(state[10].mul(inv2Exp2));
-            state[11] = sum.add(state[11].mul(inv2Exp3));
-            state[12] = sum.add(state[12].mul(inv2Exp4));
-            state[13] = sum.add(state[13].mul(inv2Exp5));
-            state[14] = sum.add(state[14].mul(inv2Exp6));
-            state[15] = sum.add(state[15].mul(inv2Exp24));
-            state[16] = sum.sub(state[16].mul(inv2Exp8));
-            state[17] = sum.sub(state[17].mul(inv2Exp3));
-            state[18] = sum.sub(state[18].mul(inv2Exp4));
-            state[19] = sum.sub(state[19].mul(inv2Exp5));
-            state[20] = sum.sub(state[20].mul(inv2Exp6));
-            state[21] = sum.sub(state[21].mul(inv2Exp7));
-            state[22] = sum.sub(state[22].mul(inv2Exp9));
-            state[23] = sum.sub(state[23].mul(inv2Exp24));
-        },
-        else => unreachable,
+fn isPartialRound(round: usize) bool {
+    return round >= full_rounds / 2 and round < full_rounds / 2 + partial_rounds;
+}
+
+// Index of round `round`, lane `lane`'s key in `round_key_table`.
+fn roundKeyIndex(comptime round: usize, comptime lane: usize) usize {
+    var n: usize = 0;
+    for (0..round) |r| n += if (isPartialRound(r)) 1 else constants.width;
+    return n + lane;
+}
+
+inline fn roundKey(keys: *const volatile [num_round_keys]u32, comptime round: usize, comptime lane: usize) u64 {
+    if (comptime r5_config.is_r5_zkvm) return keys[comptime roundKeyIndex(round, lane)];
+    return constants.round_keys[round][lane].value;
+}
+
+// (x + key)^3 mod p, for x < p.
+inline fn sBox(x: u64, key: u64) u64 {
+    const t = x + key;
+    const t2 = (t * t) % p;
+    return (t2 * t) % p;
+}
+
+inline fn fullRound(s: *[constants.width]u64, comptime round: usize, keys: *const volatile [num_round_keys]u32) void {
+    inline for (0..constants.width) |i| s[i] = sBox(s[i], roundKey(keys, round, i));
+    matMulExternal(s);
+}
+
+inline fn partialRound(s: *[constants.width]u64, comptime round: usize, keys: *const volatile [num_round_keys]u32) void {
+    s[0] = sBox(s[0], roundKey(keys, round, 0));
+    matMulInternal(s);
+}
+
+// The external matrix: circ(2 M4, M4, M4, M4), as M4 on each block of four
+// followed by adding the four column sums. Lanes < p on entry and on exit.
+inline fn matMulExternal(s: *[constants.width]u64) void {
+    inline for (0..constants.width / 4) |chunk| {
+        const o = 4 * chunk;
+        const t01 = s[o] + s[o + 1];
+        const t23 = s[o + 2] + s[o + 3];
+        const t0123 = t01 + t23;
+        const t01123 = t0123 + s[o + 1];
+        const t01233 = t0123 + s[o + 3];
+        const x0 = s[o];
+        const x2 = s[o + 2];
+        s[o + 3] = 2 * x0 + t01233;
+        s[o + 1] = 2 * x2 + t01123;
+        s[o] = t01 + t01123;
+        s[o + 2] = t23 + t01233;
+    }
+    var sums: [4]u64 = .{ 0, 0, 0, 0 };
+    inline for (0..constants.width / 4) |chunk| {
+        inline for (0..4) |j| sums[j] += s[4 * chunk + j];
+    }
+    inline for (0..constants.width) |i| s[i] = (s[i] + sums[i % 4]) % p;
+}
+
+// Precomputed 2^{-n} mod p for the KoalaBear field (p = 2_130_706_433 = 2^31 - 2^24 + 1).
+const inv2Exp1: u64 = 1_065_353_217;
+const inv2Exp3: u64 = 1_864_368_129;
+const inv2Exp4: u64 = 1_997_537_281;
+const inv2Exp8: u64 = 2_122_383_361;
+const inv2Exp24: u64 = 2_130_706_306;
+
+// The internal matrix is 1 + diag(D): out_i = sum + D_i * x_i. D_i is
+// -2, 1, 2, 1/2, 3, 4, -1/2, -3, -4, 1/2^8, 1/8, 1/2^24, -1/2^8, -1/8, -1/16,
+// -1/2^24, each taken mod p so that subtraction becomes addition.
+const internal_diag = [constants.width]u64{
+    p - 2,        1,            2,            inv2Exp1,
+    3,            4,            p - inv2Exp1, p - 3,
+    p - 4,        inv2Exp8,     inv2Exp3,     inv2Exp24,
+    p - inv2Exp8, p - inv2Exp3, p - inv2Exp4, p - inv2Exp24,
+};
+
+inline fn matMulInternal(s: *[constants.width]u64) void {
+    var sum: u64 = 0;
+    inline for (0..constants.width) |i| sum += s[i];
+    inline for (0..constants.width) |i| {
+        s[i] = if (internal_diag[i] == 1) (sum + s[i]) % p else (sum + internal_diag[i] * s[i]) % p;
     }
 }
