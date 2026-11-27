@@ -18,6 +18,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/backend/plonk"
+	cs_bn254 "github.com/consensys/gnark/constraint/bn254"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/std/math/emulated"
@@ -69,8 +70,13 @@ func TestPackBigEndian(t *testing.T) {
 // TestWrapperCircuit_Misuse checks that allocation rejects a missing group.
 func TestWrapperCircuit_Misuse(t *testing.T) {
 	sys := newWrapperSystem(t)
-	require.Panics(t, func() { wiop.AllocateWrapperCircuit(sys, "Nope", risc5.ProgramVKPI) })
-	require.Panics(t, func() { wiop.AllocateWrapperCircuit(sys, risc5.ProgramVKPI, risc5.GuestPublicOutputsPI) },
+	require.PanicsWithValue(t,
+		"wiop: WrapperCircuit: 0 public inputs tagged Nope of 8 bits each, want 256 bits",
+		func() { wiop.AllocateWrapperCircuit(sys, "Nope", risc5.ProgramVKPI) },
+		"a missing group must be rejected")
+	require.PanicsWithValue(t,
+		"wiop: WrapperCircuit: 8 public inputs tagged ProgramVerificationKey of 8 bits each, want 256 bits",
+		func() { wiop.AllocateWrapperCircuit(sys, risc5.ProgramVKPI, risc5.GuestPublicOutputsPI) },
 		"swapped tags have the wrong number of cells for their width")
 }
 
@@ -117,7 +123,8 @@ func TestWrapperCircuit_PLONKProve(t *testing.T) {
 	} {
 		badPublic, err := frontend.NewWitness(changed, modulus, frontend.PublicOnly())
 		require.NoError(t, err)
-		require.Error(t, plonk.Verify(plonkProof, vk, badPublic), "changed public input %d must be rejected", i)
+		require.ErrorContains(t, plonk.Verify(plonkProof, vk, badPublic), "algebraic relation does not hold",
+			"changed public input %d must be rejected", i)
 	}
 }
 
@@ -147,8 +154,8 @@ func TestWrapperCircuit_IsSolved(t *testing.T) {
 		require.NoError(t, err)
 		wantOut, wantVK := wantPacked(sys, pub)
 		vec, ok := public.Vector().(fr.Vector)
-		require.True(t, ok)
-		require.Len(t, vec, 2)
+		require.True(t, ok, "the public witness must be a BN254 vector")
+		require.Len(t, vec, 2, "the public witness must be the two packed values")
 		var e0, e1 fr.Element
 		e0.SetBigInt(wantOut)
 		e1.SetBigInt(wantVK)
@@ -167,7 +174,7 @@ func TestWrapperCircuit_IsSolved(t *testing.T) {
 		bad.Commitments[id] = c
 		badW, err := frontend.NewWitness(circ.AssignWrapperCircuit(bad, pub), modulus)
 		require.NoError(t, err)
-		require.Error(t, ccs.IsSolved(badW), "a tampered wiop proof must not solve")
+		requireUnsatisfied(t, ccs.IsSolved(badW), "a tampered wiop proof must not solve")
 	})
 
 	t.Run("non-canonical-cell", func(t *testing.T) {
@@ -180,7 +187,7 @@ func TestWrapperCircuit_IsSolved(t *testing.T) {
 		// public-input cells first and in order, PublicInputsBase[0]. It is a byte,
 		// so x+p still fits the 31-bit emulated limb.
 		_, pos := sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
-		require.Equal(t, 0, pos)
+		require.Equal(t, 0, pos, "guest-output byte 0 must be wiop public input 0")
 		p := new(big.Int).SetUint64(field.Modulus().Uint64())
 		x := new(big.Int).SetUint64(pub[0].AsBase().Uint64())
 		nonCanonical := new(big.Int).Add(x, p)
@@ -195,7 +202,7 @@ func TestWrapperCircuit_IsSolved(t *testing.T) {
 
 		badW, err := frontend.NewWitness(bad, modulus)
 		require.NoError(t, err)
-		require.Error(t, ccs.IsSolved(badW), "a non-canonical public-input cell must be rejected")
+		requireUnsatisfied(t, ccs.IsSolved(badW), "a non-canonical public-input cell must be rejected")
 	})
 }
 
@@ -204,6 +211,14 @@ func TestWrapperCircuit_IsSolved(t *testing.T) {
 func wantPacked(sys *wiop.System, pub wiop.PublicInput) (out, vk *big.Int) {
 	programVK := risc5.GetProgramVK(sys, pub)
 	return devmode.PackGuestOutput(risc5.GetGuestPublicOutputs(sys, pub)), devmode.PackProgramVK(programVK[:])
+}
+
+// requireUnsatisfied requires err to be the solver rejecting a constraint, not
+// any other failure (a bad assignment, a missing value).
+func requireUnsatisfied(t *testing.T, err error, msg string) {
+	t.Helper()
+	var unsat *cs_bn254.UnsatisfiedConstraintError
+	require.ErrorAs(t, err, &unsat, msg)
 }
 
 // newWrapperSystem builds the devmode system without column elision, which

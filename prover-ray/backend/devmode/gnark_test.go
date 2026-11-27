@@ -115,7 +115,8 @@ func TestGnarkCircuit_PLONKProve(t *testing.T) {
 		}
 		badPublic, err := frontend.NewWitness(changed, modulus, frontend.PublicOnly())
 		require.NoError(t, err)
-		require.Error(t, plonk.Verify(proof, vk, badPublic), "changed public input %d must be rejected", i)
+		require.ErrorContains(t, plonk.Verify(proof, vk, badPublic), "algebraic relation does not hold",
+			"changed public input %d must be rejected", i)
 	}
 
 	// A wrong packed value cannot be proven.

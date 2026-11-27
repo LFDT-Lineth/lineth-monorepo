@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 	"github.com/consensys/gnark-crypto/ecc"
+	cs_bn254 "github.com/consensys/gnark/constraint/bn254"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/stretchr/testify/require"
@@ -54,7 +55,7 @@ func TestProgramVKChecker_Gnark(t *testing.T) {
 		rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
 	})
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
-	require.NotEqual(t, field.Octuplet{}, risc5.GetProgramVK(sys, pub))
+	require.NotEqual(t, field.Octuplet{}, risc5.GetProgramVK(sys, pub), "the program round must be committed")
 
 	// Compile the in-circuit verifier over BN254; the ProgramVKChecker runs
 	// through CheckGnark.
@@ -80,7 +81,7 @@ func TestProgramVKChecker_Gnark(t *testing.T) {
 	limb.SetUint64(limb.Uint64() ^ 1)
 	forged[pos] = field.ElemFromBase(limb)
 	require.ErrorIs(t, sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
-	require.Error(t, solve(forged), "forged VK must not satisfy the circuit")
+	requireUnsatisfied(t, solve(forged), "forged VK must not satisfy the circuit")
 }
 
 // TestProgramVKChecker_Gnark_NoTranscript isolates the in-circuit check: with
@@ -121,7 +122,15 @@ func TestProgramVKChecker_Gnark_NoTranscript(t *testing.T) {
 			forged := append(wiop.PublicInput(nil), pub...)
 			forged[pos] = field.ElemFromBase(field.One())
 			require.ErrorIs(t, sys.Verify(proof, forged), risc5.ErrProgramVKMismatch)
-			require.Error(t, solve(forged), "forged VK must not satisfy the circuit")
+			requireUnsatisfied(t, solve(forged), "forged VK must not satisfy the circuit")
 		})
 	}
+}
+
+// requireUnsatisfied requires err to be the solver rejecting a constraint, not
+// any other failure (a bad assignment, a missing value).
+func requireUnsatisfied(t *testing.T, err error, msg string) {
+	t.Helper()
+	var unsat *cs_bn254.UnsatisfiedConstraintError
+	require.ErrorAs(t, err, &unsat, msg)
 }
