@@ -7,6 +7,7 @@ import io.vertx.sqlclient.RowSet
 import linea.domain.createAggregation
 import linea.domain.createBatch
 import linea.domain.createBlobRecordFromBatches
+import linea.domain.createRiscvRollupRecord
 import linea.persistence.db.DbHelper
 import linea.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.finalization.FinalizationMonitor
@@ -14,6 +15,7 @@ import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.RiscvRollupsDao
 import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import lineth.persistence.ftx.PostgresForcedTransactionsDao
 import net.consensys.FakeFixedClock
@@ -38,6 +40,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
   private lateinit var blobsRepository: BlobsRepository
   private lateinit var aggregationsRepository: AggregationsRepository
   private lateinit var forcedTransactionsDao: ForcedTransactionsDao
+  private lateinit var riscvRollupsDao: RiscvRollupsDao
 
   private lateinit var recordsCleanupFinalizationHandler: RecordsCleanupFinalizationHandler
 
@@ -70,11 +73,17 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
       clock = fakeClock,
     )
 
+    riscvRollupsDao = RiscvRollupsPostgresDao(
+      config = RiscvRollupsPostgresDao.Config(maxRollupProofsToReturn = 10u),
+      connection = sqlClient,
+      clock = fakeClock,
+    )
     recordsCleanupFinalizationHandler = RecordsCleanupFinalizationHandler(
       batchesRepository,
       blobsRepository,
       aggregationsRepository,
       forcedTransactionsDao,
+      riscvRollupsDao,
     )
   }
 
@@ -187,5 +196,51 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val forcedTransactionsAfterCleanup = forcedTransactionsDao.list().get()
     Assertions.assertThat(forcedTransactionsAfterCleanup.map { it.ftxNumber })
       .isEqualTo(listOf(3UL, 4UL))
+  }
+
+  @Test
+  fun `cleanup after the RISC-V cutover keeps the rollup row ending at the finalized block and the rows after it`() {
+    val riscvBatches = (0L until 8L).map { createBatch(startBlockNumber = it * 5 + 1, endBlockNumber = it * 5 + 5) }
+    // Rollups ending inside a blob share it with the next one.
+    val rollups = listOf(
+      createRiscvRollupRecord(startBlockNumber = 1UL, endBlockNumber = 10UL, finalSharedBlobCarryOverTailBytes = 100u),
+      createRiscvRollupRecord(
+        startBlockNumber = 11UL,
+        endBlockNumber = 20UL,
+        parentSharedBlobCarryOverTailBytes = 100u,
+        finalSharedBlobCarryOverTailBytes = 200u,
+      ),
+      createRiscvRollupRecord(
+        startBlockNumber = 21UL,
+        endBlockNumber = 30UL,
+        parentSharedBlobCarryOverTailBytes = 200u,
+      ),
+      createRiscvRollupRecord(startBlockNumber = 31UL, endBlockNumber = 40UL),
+    )
+    riscvBatches.forEach { batchesRepository.saveNewBatch(it).get() }
+    rollups.forEach { riscvRollupsDao.saveRollupWithBlobs(it).get() }
+
+    recordsCleanupFinalizationHandler.handleUpdate(
+      FinalizationMonitor.FinalizationUpdate(
+        blockNumber = 20u,
+        blockHash = Bytes32.random(),
+        forcedTransactionNumber = 0UL,
+      ),
+    ).get()
+
+    // The resume anchor and every rollup after it survive.
+    Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(20UL).get()).isEqualTo(rollups[1])
+    Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(10UL).get()).isNull()
+    Assertions.assertThat(riscvRollupsDao.findHighestConsecutiveRollupFromBlockNumber(21UL).get()?.endBlockNumber)
+      .isEqualTo(40UL)
+    Assertions.assertThat(
+      sqlClient.preparedQuery("select count(*) as n from ${RiscvRollupsPostgresDao.RollupsTableName}")
+        .execute().get().first().getInteger("n"),
+    ).isEqualTo(3)
+    // Batches after the finalized block survive for conflation and rollup resume.
+    Assertions.assertThat(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(21L).get())
+      .isEqualTo(40L)
+    Assertions.assertThat(batchesContentQuery().execute().get().map { it.getLong("start_block_number") })
+      .containsExactlyInAnyOrder(21L, 26L, 31L, 36L)
   }
 }

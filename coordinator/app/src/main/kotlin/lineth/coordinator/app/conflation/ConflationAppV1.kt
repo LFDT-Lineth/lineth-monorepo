@@ -42,7 +42,6 @@ import lineth.coordination.conflation.ProofGeneratingConflationHandlerImpl
 import lineth.coordination.conflation.TracesConflationCoordinatorImpl
 import lineth.coordination.proofcreation.BatchProofHandlerImpl
 import lineth.coordination.proofcreation.ZkProofCreationCoordinatorImpl
-import lineth.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
@@ -426,13 +425,8 @@ class ConflationAppV1(
   )
 
   override fun start(): CompletableFuture<Unit> {
-    return cleanupDbDataAfterBlockNumbers(
-      lastProcessedBlockNumber = lastConflatedBlock.number,
-      lastConsecutiveAggregatedBlockNumber = lastAggregatedBlock.number,
-      batchesRepository = batchesRepository,
-      blobsRepository = blobsRepository,
-      aggregationsRepository = aggregationsRepository,
-    ).thenCompose { requestFileCleanup() }
+    // The DB is cleaned up by ConflationAppOrchestrator before this starts.
+    return requestFileCleanup()
       .thenCompose { proofGeneratingConflationHandlerImpl.start() }
       .thenCompose { proofAggregationCoordinatorService.start() }
       .thenCompose { conflationCalculators.service.start() }

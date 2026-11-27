@@ -35,6 +35,7 @@ import lineth.coordinator.extensions.CoordinatorContext
 import lineth.coordinator.extensions.CoordinatorExtensionFactory
 import lineth.persistence.DisabledForcedTransactionsDao
 import lineth.persistence.FeeHistoriesPostgresDao
+import lineth.persistence.RiscvRollupsDao
 import lineth.persistence.conflation.AggregationsRepositoryImpl
 import lineth.persistence.conflation.BatchesPostgresDao
 import lineth.persistence.conflation.BlobsPostgresDao
@@ -44,6 +45,8 @@ import lineth.persistence.conflation.PostgresBatchesRepository
 import lineth.persistence.conflation.RetryingBatchesPostgresDao
 import lineth.persistence.conflation.RetryingBlobsPostgresDao
 import lineth.persistence.conflation.RetryingPostgresAggregationsDao
+import lineth.persistence.conflation.RetryingRiscvRollupsPostgresDao
+import lineth.persistence.conflation.RiscvRollupsPostgresDao
 import lineth.persistence.ftx.PostgresForcedTransactionsDao
 import lineth.persistence.ftx.RetryingPostgresForcedTransactionsDao
 import net.consensys.linea.async.toSafeFuture
@@ -146,6 +149,25 @@ class CoordinatorApp(
         persistenceRetryer = persistenceRetryer,
       ),
     )
+
+  // RISC-V rollups and their blobs, in the riscv_rollups, riscv_blobs and riscv_rollup_blobs tables. Null on a schema
+  // without those tables: no rollup can exist there, so there is nothing to resume from or clean up.
+  private val riscvRollupsDao: RiscvRollupsDao? =
+    if (configs.database.schemaVersion >= RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION) {
+      RetryingRiscvRollupsPostgresDao(
+        delegate =
+        RiscvRollupsPostgresDao(
+          config =
+          RiscvRollupsPostgresDao.Config(
+            maxRollupProofsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
+          ),
+          connection = sqlClient,
+        ),
+        persistenceRetryer = persistenceRetryer,
+      )
+    } else {
+      null
+    }
   private val aggregationsRepository =
     AggregationsRepositoryImpl(
       aggregationsDao =
@@ -258,6 +280,7 @@ class CoordinatorApp(
     clock = clock,
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,
+    riscvRollupsDao = riscvRollupsDao,
     aggregationsRepository = aggregationsRepository,
     forcedTransactionsDao = forcedTransactionsDao,
     lastFinalizedBlock = lastFinalizedBlock,
@@ -280,6 +303,7 @@ class CoordinatorApp(
     blobsRepository = blobsRepository,
     aggregationsRepository = aggregationsRepository,
     forcedTransactionsDao = forcedTransactionsDao,
+    riscvRollupsDao = riscvRollupsDao,
     metricsFacade = micrometerMetricsFacade,
     l1FinalizationUpdateHandler = conflationAppOrchestrator::updateLatestL1FinalizedBlock,
   )
