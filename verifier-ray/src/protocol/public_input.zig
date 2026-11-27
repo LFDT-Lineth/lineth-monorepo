@@ -36,9 +36,9 @@ pub const Spec = struct {
     /// and the tag fixes how many elements the cell absorbs into the transcript
     /// (1 or 6), so `bindRoundMessagesInto` rejects a cell whose wire tag
     /// differs: re-sending a base value in extension form would otherwise give
-    /// the prover a choice of transcripts. Deliberately has no default: a spec
-    /// without it would silently skip the check.
-    cell_ext_bits: []const u64,
+    /// the prover a choice of transcripts. `validateSpec` rejects at comptime a
+    /// spec whose bit count does not match its cell count.
+    cell_ext_bits: []const u64 = &.{},
     /// Registered public inputs, emitted in transcript order (round/index) so
     /// `bindRoundMessages` can merge them into the proof's round cells in one
     /// pass. `statement_index` still points into the prover-ray registration
