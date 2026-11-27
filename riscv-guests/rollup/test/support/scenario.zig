@@ -40,18 +40,6 @@ pub fn keccak(bytes: []const u8) Hash {
     return hash;
 }
 
-/// `keccak256(abi.encodePacked(address[]))`.
-fn hashAddressList(addresses: []const Address) Hash {
-    var hasher = std.crypto.hash.sha3.Keccak256.init(.{});
-    for (addresses) |address| {
-        hasher.update(&([_]u8{0} ** 12));
-        hasher.update(&address);
-    }
-    var hash: Hash = undefined;
-    hasher.final(&hash);
-    return hash;
-}
-
 fn keccakPair(left: Hash, right: Hash) Hash {
     return keccak(&(left ++ right));
 }
@@ -560,7 +548,7 @@ pub fn build(a: Allocator, conflations_in: []const Conflation, options: Options)
     const proofs = try a.alloc(l2_execution_proof.VerifiableL2ExecutionProof, conflations_in.len);
     for (conflations_in, witnesses, proofs, 0..) |conflation, *witness, *proof, index| {
         witness.* = try sample_input.conflationOf(a, conflation.block_rlps);
-        proof.* = proofOf(conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
+        proof.* = try proofOf(a, conflation, index, if (index < options.proofs.len) options.proofs[index] else .{}, options.dynamic_chain_config_hash);
     }
     try prove(a, proofs);
 
@@ -602,7 +590,7 @@ pub fn ftxHash(index: usize) Hash {
     return keccak(&seed);
 }
 
-fn proofOf(conflation: Conflation, index: usize, spec: ProofSpec, chain_config_hash: Hash) l2_execution_proof.VerifiableL2ExecutionProof {
+fn proofOf(a: Allocator, conflation: Conflation, index: usize, spec: ProofSpec, chain_config_hash: Hash) Allocator.Error!l2_execution_proof.VerifiableL2ExecutionProof {
     return .{
         .program_vk = spec.program_vk,
         .proof = .{
@@ -620,7 +608,7 @@ fn proofOf(conflation: Conflation, index: usize, spec: ProofSpec, chain_config_h
                 .end_ftx_rolling_hash = ftxHash(index + 1),
                 .end_processed_ftx_number = 12 + 2 * index,
                 .filtered_addresses = .{ .items = spec.filtered_addresses },
-                .tx_froms_hash = hashAddressList(conflation.senders),
+                .tx_froms_hash = try l2_execution_proof.txFromsHash(a, conflation.senders),
                 .block_count = conflation.block_rlps.len,
                 .l2_messaging_blocks_offsets = .{ .items = spec.messaging_offsets },
             },

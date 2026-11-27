@@ -7,6 +7,7 @@
 
 const std = @import("std");
 const ssz = @import("guest_common").ssz;
+const zkvm_accelerators = @import("zkvm_accelerators");
 const output_frame = @import("output_frame.zig");
 
 pub const OUTPUT_SCHEMA_ID: u16 = 0x0003;
@@ -73,6 +74,22 @@ pub fn encodeVerifiableProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionP
 
 pub fn decodeVerifiableProof(alloc: std.mem.Allocator, bytes: []const u8) ssz.DecodeError!VerifiableL2ExecutionProof {
     return ssz.decode(VerifiableL2ExecutionProof, alloc, bytes);
+}
+
+// ── Senders commitment ──────────────────────────────────────────────────────
+
+/// The `tx_froms_hash` of `froms`: `keccak256(abi.encodePacked(address[]))`, each address
+/// left-padded to 32 bytes. The empty list hashes as `keccak256("")`.
+pub fn txFromsHash(alloc: std.mem.Allocator, froms: []const [20]u8) std.mem.Allocator.Error![32]u8 {
+    const buf = try alloc.alloc([32]u8, froms.len);
+    defer alloc.free(buf);
+    for (froms, buf) |from, *word| {
+        word.* = @splat(0);
+        @memcpy(word[12..], &from);
+    }
+    var digest: [32]u8 = undefined;
+    zkvm_accelerators.keccak256(std.mem.sliceAsBytes(buf), &digest);
+    return digest;
 }
 
 // ── Guest output ──────────────────────────────────────────────────────────────

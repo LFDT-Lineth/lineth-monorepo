@@ -143,15 +143,6 @@ fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
     return zkvm_accelerators.keccak256Digest(buf);
 }
 
-/// `keccak256(abi.encodePacked(address[]))`: each address is left-padded to 32 bytes.
-fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
-    const buf = try alloc.alloc(u8, values.len * 32);
-    defer alloc.free(buf);
-    @memset(buf, 0);
-    for (values, 0..) |v, i| @memcpy(buf[i * 32 + 12 ..][0..20], &v);
-    return zkvm_accelerators.keccak256Digest(buf);
-}
-
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
 //
 // Semantics must match Readme.md's specification exactly (state_transition.py is its reference implementation):
@@ -513,7 +504,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
         .end_ftx_rolling_hash = current_ftx_rolling_hash,
         .end_processed_ftx_number = current_last_processed_ftx_number,
         .filtered_addresses = .{ .items = try mergeFilteredAddresses(alloc, &filtered_addresses) },
-        .tx_froms_hash = try hashAddressList(alloc, tx_froms.items),
+        .tx_froms_hash = try l2_execution_proof.txFromsHash(alloc, tx_froms.items),
         .block_count = in.payloads.items.len,
         .l2_messaging_blocks_offsets = .{ .items = try messaging_offsets.toOwnedSlice(alloc) },
     };
@@ -532,7 +523,7 @@ pub const test_api = if (@import("builtin").is_test) struct {
     pub const zesuSystemContractsFn = zesuSystemContracts;
     pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
     pub const hashDigestListFn = hashDigestList;
-    pub const hashAddressListFn = hashAddressList;
+    pub const hashAddressListFn = l2_execution_proof.txFromsHash;
     pub const readAccountFn = readAccount;
     pub const scanL2MessageServiceLogsFn = scanL2MessageServiceLogs;
     pub const validateForcedTransactionsFn = validateForcedTransactions;

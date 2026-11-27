@@ -3,7 +3,6 @@
 
 const std = @import("std");
 const lineth_da = @import("lineth_da");
-const zkvm_accelerators = @import("zkvm_accelerators");
 const core_serde = @import("core_serde");
 const chain = @import("chain.zig");
 const rollup_ssz = @import("rollup_ssz.zig");
@@ -57,18 +56,13 @@ pub fn derive(
         sender_count += block.froms.len;
     }
 
-    // abi.encodePacked(address[]) pads each address to 32 bytes.
-    const senders = try allocator.alloc([32]u8, sender_count);
-    @memset(std.mem.sliceAsBytes(senders), 0);
+    const senders = try allocator.alloc(Address, sender_count);
     var next: usize = 0;
     for (truncated) |block| {
-        for (block.froms) |from| {
-            @memcpy(senders[next][12..], &from);
-            next += 1;
-        }
+        @memcpy(senders[next..][0..block.froms.len], block.froms);
+        next += block.froms.len;
     }
-    var senders_hash: Hash = undefined;
-    zkvm_accelerators.keccak256(std.mem.sliceAsBytes(senders), &senders_hash);
+    const senders_hash = try l2_execution_proof.txFromsHash(allocator, senders);
     if (!std.mem.eql(u8, &senders_hash, &proof.public_inputs.tx_froms_hash)) return error.SendersHashMismatch;
 
     const payload = try truncation.encodeBlocks(allocator, allocator, truncated);
