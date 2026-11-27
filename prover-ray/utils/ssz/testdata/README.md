@@ -58,6 +58,14 @@ request
 its first rollup proof (`aggregation_input_offsets`). `backend/jobadapter` builds
 the input from each request and checks it against these bytes.
 
+It also writes the rollup-aggregation guest output
+(`keccak256(frame) || frame`, `frame = 0x0007 || SSZ(finalization public inputs)`)
+for the public inputs of the spec's reference response
+`rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.response.json`
+(`aggregation_output`), and for the same public inputs with messaging-block
+offsets (`aggregation_output_offsets`). `backend` decodes them and checks them
+against that response.
+
 | Fixture | Bytes | SHA-256 |
 | --- | ---: | --- |
 | payload0 | 772 | `1c5f4c6d7824e006abfbc13bb5b766b78a7fc61efe2d1bb3e65912b274d2fe3e` |
@@ -69,6 +77,8 @@ the input from each request and checks it against these bytes.
 | rollup_output | 506 | `b08e14656ef197030ba190bac457ed5f0740d827e8ad0568acdba196a1cc30e6` |
 | aggregation_input | 1028 | `d0de18ebf6ec2d1848d4bd7b62be854e98c0476ee56abed14c185194c32ddac6` |
 | aggregation_input_offsets | 1032 | `232d4fb595b129ddb2a4b6e5e4bc9d78638924a9dcd769dc4e7c98aa527fe64b` |
+| aggregation_output | 486 | `6252e770ac0d47fade99951995979522d26b6a3c2a83baca8157370f28ab1173` |
+| aggregation_output_offsets | 490 | `6fdfaa0cf0ff7c10fe5d8ad86d898fe0f6e272166d4910fccd183c1defc70e68` |
 
 `payload0` and `payload1` cover single-block coordinator fixture inputs.
 `full` additionally covers withdrawals, versioned hashes, extra data, block access

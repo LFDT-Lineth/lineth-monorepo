@@ -162,6 +162,89 @@ func decodeRollupPublicInputs(framed []byte) (RollupPublicInputs, error) {
 	return pi, nil
 }
 
+// SSZ layout of the rollup-aggregation public inputs
+// (rollup_aggregation/src/rollup_aggregation_ssz.zig): a fixed head ending with
+// four list offsets. List bounds from rollup_spec/rollup_aggregation_ssz.py.
+const (
+	aggregationPublicInputsFixedSize = 336
+	maxAggregationL2L1Roots          = 1 << 16
+	maxAggregationFilteredAddresses  = 1 << 16
+	maxAggregationMessagingBlocks    = 1 << 16
+)
+
+// decodeAggregationPublicInputs decodes 0x0007 || SSZ(public inputs). It
+// accepts only the canonical encoding.
+func decodeAggregationPublicInputs(framed []byte) (AggregationPublicInputs, error) {
+	if len(framed) < guestOutputSchemaIDSize {
+		return AggregationPublicInputs{}, fmt.Errorf("%d bytes, shorter than the schema id", len(framed))
+	}
+	if id := binary.BigEndian.Uint16(framed); id != aggregationOutputSchemaID {
+		return AggregationPublicInputs{}, fmt.Errorf("schema id is 0x%04x, want 0x%04x", id, aggregationOutputSchemaID)
+	}
+	body := framed[guestOutputSchemaIDSize:]
+	if len(body) < aggregationPublicInputsFixedSize {
+		return AggregationPublicInputs{}, fmt.Errorf("public inputs are %d bytes, shorter than the %d-byte fixed head",
+			len(body), aggregationPublicInputsFixedSize)
+	}
+
+	var (
+		pi AggregationPublicInputs
+		r  = sszReader{buf: body}
+	)
+	pi.EndBlockNumber = r.u64()
+	pi.EndBlockTimestamp = r.u64()
+	pi.EndL1L2BridgeRollingHash = r.hash()
+	pi.EndL1L2BridgeRollingHashMessageNumber = r.u64()
+	pi.DynamicChainConfigHash = r.hash()
+	pi.ParentFtxRollingHash = r.hash()
+	pi.ParentFtxNumber = r.u64()
+	pi.EndFtxRollingHash = r.hash()
+	pi.EndProcessedFtxNumber = r.u64()
+	pi.ParentDataRollingHash = r.hash()
+	pi.EndDataRollingHash = r.hash()
+	pi.ParentBlockHash = r.hash()
+	pi.EndBlockHash = r.hash()
+	pi.ParentSharedBlobCarryOverTailBytes = r.u64()
+	pi.FinalSharedBlobCarryOverTailBytes = r.u64()
+	pi.L2L1TreeDepth = r.u64()
+	rootsStart := r.offset()
+	filteredStart := r.offset()
+	programIDsStart := r.offset()
+	blocksStart := r.offset()
+
+	// The first list starts right after the fixed head and each list ends
+	// where the next one starts.
+	if rootsStart != aggregationPublicInputsFixedSize {
+		return AggregationPublicInputs{}, fmt.Errorf("l2L1Roots offset is %d, want %d",
+			rootsStart, aggregationPublicInputsFixedSize)
+	}
+	if filteredStart < rootsStart || programIDsStart < filteredStart || blocksStart < programIDsStart ||
+		blocksStart > len(body) {
+		return AggregationPublicInputs{}, fmt.Errorf("list offsets out of order or past the end: %d, %d, %d, %d in %d bytes",
+			rootsStart, filteredStart, programIDsStart, blocksStart, len(body))
+	}
+
+	hash := func(b []byte) [32]byte { return [32]byte(b) }
+	var err error
+	if pi.L2L1Roots, err = decodeList(body[rootsStart:filteredStart], "l2L1Roots", 32,
+		maxAggregationL2L1Roots, hash); err != nil {
+		return AggregationPublicInputs{}, err
+	}
+	if pi.FilteredAddresses, err = decodeList(body[filteredStart:programIDsStart], "filteredAddresses", 20,
+		maxAggregationFilteredAddresses, func(b []byte) [20]byte { return [20]byte(b) }); err != nil {
+		return AggregationPublicInputs{}, err
+	}
+	if pi.ProgramIDs, err = decodeList(body[programIDsStart:blocksStart], "programIds", 32,
+		maxProgramVks, hash); err != nil {
+		return AggregationPublicInputs{}, err
+	}
+	if pi.L2MessagingBlocksOffsets, err = decodeList(body[blocksStart:], "l2MessagingBlocksOffsets", 2,
+		maxAggregationMessagingBlocks, binary.LittleEndian.Uint16); err != nil {
+		return AggregationPublicInputs{}, err
+	}
+	return pi, nil
+}
+
 // sszReader reads the fixed head of an SSZ container in order. The caller
 // checks the length first.
 type sszReader struct {
