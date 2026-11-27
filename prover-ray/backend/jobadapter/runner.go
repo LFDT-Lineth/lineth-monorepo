@@ -352,6 +352,21 @@ func buildRollupInput(req *RollupRequest) (ssz.RollupInput, error) {
 	}, nil
 }
 
+// buildAggregationInput assembles the ssz.AggregationInput from a decoded
+// aggregation request.
+func buildAggregationInput(req *AggregationRequest) ssz.AggregationInput {
+	proofs := make([]ssz.RollupProof, len(req.RollupProofs))
+	for i, p := range req.RollupProofs {
+		proofs[i] = ssz.RollupProof{
+			PublicInputs:     ssz.RollupPublicInputs(p.PublicInputs),
+			StartBlockNumber: p.StartBlockNumber,
+			Proof:            p.Proof,
+			ProgramVk:        [32]byte(p.ProgramVk),
+		}
+	}
+	return ssz.AggregationInput{RollupProofs: proofs}
+}
+
 // proverFailure maps a non-OK prover result to a failed run. A guestProgramId
 // with no guest ELF is a bad request; any other failure is internal.
 func proverFailure(id string, result backend.Result) RunResult {
