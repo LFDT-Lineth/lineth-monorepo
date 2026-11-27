@@ -491,8 +491,10 @@ type obGroupLoc struct {
 
 // prepare computes the layout of an opening proof at the proof's sizes, and
 // checks the proof's shape against it, as fri.PCS.Verify does before reading
-// it. The sizes are checked by sizeInputs first.
-func (ob *obliviousPCS) prepare(proof wiop.Proof) (*pcsInput, error) {
+// it. The sizes are checked by sizeInputs first. A sized module's size is
+// sys's: the verifier's system, or another of its structure, whose sizes the
+// verifier takes as cells.
+func (ob *obliviousPCS) prepare(sys *wiop.System, proof wiop.Proof) (*pcsInput, error) {
 	op, p := ob.op, proof.PCSOpeningProof
 	if p == nil {
 		return nil, fmt.Errorf("no PCS opening proof")
@@ -503,7 +505,7 @@ func (ob *obliviousPCS) prepare(proof wiop.Proof) (*pcsInput, error) {
 		if om.mod.IsDynamic() {
 			n = proof.DynamicSizes[om.index]
 		} else {
-			n = om.mod.Size()
+			n = sys.Modules[om.index].Size()
 		}
 		logs[k] = bits.Len(uint(utils.NextPowerOfTwo(n) - 1))
 		if logs[k] < op.MinSizeLog2 || logs[k] > op.MaxSizeLog2 {
