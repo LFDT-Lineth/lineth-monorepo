@@ -223,6 +223,9 @@ func TestGnarkVerifier_LocalVanishingScenarios(t *testing.T) {
 // constraints) and add no in-circuit check the edge cases miss. The nonnative
 // package's native tests keep every fixture.
 func TestGnarkVerifier_NonNativeScenarios(t *testing.T) {
+	if testing.Short() {
+		t.Skip("compiles and solves non-native verifier circuits")
+	}
 	for i, build := range wioptest.NonNativeEdgeCaseScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
