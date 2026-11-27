@@ -116,6 +116,61 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 	}, nil
 }
 
+// proofFixtureFromProof extracts the fixture data of a proof returned by
+// wiop.System.Prove (e.g. through recursion.Program.Prove), for callers that
+// prove through their own entry point rather than a raw assignment. It reads
+// the same transcript as extractVanishingProofView, from (proof, pub) instead
+// of the prover's runtime, as proofserialization.Project does.
+func proofFixtureFromProof(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput, source, name, label string) (proofFixture, error) {
+	if proof.PCSOpeningProof == nil {
+		return proofFixture{}, fmt.Errorf("pcs %s/%s: %s proof has no PCSOpeningProof", source, name, label)
+	}
+	if len(pub) != len(sys.PublicInputs) {
+		return proofFixture{}, fmt.Errorf("%s/%s: %s proof has %d public inputs, system declares %d",
+			source, name, label, len(pub), len(sys.PublicInputs))
+	}
+	publicInputByID := publicInputIndex(sys)
+
+	view := vanishingProofView{publicInputs: make([]runtimeTraceCell, len(pub))}
+	for i, v := range pub {
+		view.publicInputs[i] = traceCellOf(v)
+	}
+	for _, round := range sys.Rounds[:len(sys.Rounds)-1] {
+		var trace runtimeTraceRound
+		if round.HasCommitment {
+			root, ok := proof.Commitments[round.ID]
+			if !ok {
+				return proofFixture{}, fmt.Errorf("%s/%s: %s proof has no root for committed round %d",
+					source, name, label, round.ID)
+			}
+			trace.commitment = &root
+		}
+		for _, cell := range round.Cells {
+			if _, isPI := publicInputByID[cell.Context.ID]; isPI {
+				continue
+			}
+			if v, ok := proof.Cells[cell.Context.ID]; ok {
+				trace.cells = append(trace.cells, traceCellOf(v))
+			}
+		}
+		view.rounds = append(view.rounds, trace)
+	}
+	for k, m := range sys.Modules {
+		if m.IsDynamic() {
+			view.moduleSizes = append(view.moduleSizes, proof.DynamicSizes[k])
+		}
+	}
+	return proofFixture{view: view, opening: *proof.PCSOpeningProof}, nil
+}
+
+// traceCellOf records a cell value with its field tag.
+func traceCellOf(v field.Gen) runtimeTraceCell {
+	if v.IsBase() {
+		return baseTraceCell(v.AsBase())
+	}
+	return extTraceCell(v.AsExt())
+}
+
 // compileFullPipeline compiles sys through the canonical
 // compilers.CompileFull pipeline, shrinking the FRI query count to 4 for
 // fixtures: the production default (229) would emit ~229 Merkle branches per
@@ -458,6 +513,20 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil, nil, err
 	}
 
+	// Recursion-machine E6 public inputs: a recursion program exposing an E6
+	// value registers a recursion.E6Check, the only check binding that public
+	// input to its lane openings. The self-consistent failing proof forges the
+	// E6 public input through its cell's assigner, so PCS, vanishing and every
+	// other sub-verifier pass and only e6check.verify rejects.
+	{
+		tc, compiled, err := buildRecursionE6Case()
+		if err != nil {
+			return nil, nil, err
+		}
+		cases = append(cases, tc)
+		systems = append(systems, compiled)
+	}
+
 	// The same multi-size Fibonacci System at every non-default RS blowup, with
 	// the query count prover-ray pairs it with. Every other fixture uses the
 	// default blowup 2; these check that the verifier's domain sizing, its
@@ -565,7 +634,7 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 	}
 	one := elem(1)
 	var flipped field.Ext
-	field.AddByBase(&flipped, cell.extValue, &one)
+	flipped.AddElement(cell.extValue, &one)
 	return extTraceCell(flipped)
 }
 
@@ -1024,6 +1093,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out, "const shared_randomness = verifier_ray.query.shared_randomness;")
+	fmt.Fprintln(out, "const e6check = verifier_ray.query.e6check;")
 	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
 	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
@@ -1073,8 +1143,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
-		idx, idx, idx, idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .e6check = system_%d_e6check, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }

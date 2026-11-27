@@ -20,16 +20,25 @@ const hugePageSize = 2 << 20
 // transparent huge pages. It is a hint: it never fails, and has no effect on
 // buffers smaller than a huge page, on platforms without the advice, or on
 // pages already faulted in.
+//
+// The gain depends on the host's transparent huge page mode
+// (/sys/kernel/mm/transparent_hugepage/enabled): with "madvise" only advised
+// ranges get huge pages, with "always" every large enough range already does
+// and the advice changes nothing, and with "never" it is ignored. Each advised
+// range also becomes its own kernel memory area (VMA), splitting the area
+// around it; the number of areas this adds is bounded by the heap size over
+// 2 MiB.
 func Advise[T any](v []T) {
 	if len(v) == 0 {
 		return
 	}
-	start := uintptr(unsafe.Pointer(unsafe.SliceData(v)))
+	base := unsafe.Pointer(unsafe.SliceData(v))
+	start := uintptr(base)
 	end := start + uintptr(len(v))*unsafe.Sizeof(v[0])
 	lo := (start + hugePageSize - 1) &^ (hugePageSize - 1)
 	hi := end &^ (hugePageSize - 1)
 	if hi <= lo {
 		return
 	}
-	advise(lo, hi-lo)
+	advise(unsafe.Add(base, lo-start), hi-lo)
 }

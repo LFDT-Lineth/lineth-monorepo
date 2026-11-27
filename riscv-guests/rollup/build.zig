@@ -12,14 +12,13 @@ pub fn build(b: *std.Build) void {
     addGuestProgram(b, options);
     if (!options.host_tools) return;
 
+    const unit = Host.init(b, options.host_target, .Debug, null, .public);
     const crypto = common.HostCrypto.forTarget(b, options.host_target, options.crypto) orelse return;
-    const prover = addDevmodeProver(b);
-    const unit = Host.init(b, options.host_target, .Debug, null, prover);
     const tools = addHostTools(b, unit, crypto);
-    addHostTests(b, options, unit, crypto, prover);
+    addHostTests(b, options, unit, crypto);
     addFixtureStep(b, tools);
     addFetchBlocksStep(b, tools);
-    addZkcSmokeStep(b, tools);
+    common.addZkcSmokeStep(b, unit.native.target, unit.native.optimize);
 }
 
 /// Every `-D` option of this package, read once.
@@ -55,60 +54,40 @@ const Deps = struct {
     guest_common: *std.Build.Module,
     core_serde: *std.Build.Module,
     zkvm_accelerators: *std.Build.Module,
-    verifier_ray: *std.Build.Module,
     lineth_da: *std.Build.Dependency,
+    lineth_recursion: *std.Build.Dependency,
     /// Imports of the package module (`src/root.zig`).
     package: []const Import,
 
     /// `host_tools` also builds the test-side modules `lineth_da` exposes to its consumers.
-    /// `guest` builds the verifier for the zkVM, with its pure-Zig Poseidon2.
-    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, host_tools: bool, guest: bool) Deps {
+    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, host_tools: bool) Deps {
         const guest_common = b.dependency("guest_common", .{ .target = target, .optimize = optimize });
-        const lineth_da = if (host_tools)
-            b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = true })
-        else
-            b.dependency("lineth_da", .{ .target = target, .optimize = optimize });
+        const lineth_da = b.dependency("lineth_da", .{ .target = target, .optimize = optimize, .@"host-tools" = host_tools });
+        const lineth_recursion = b.dependency("lineth_recursion", .{ .target = target, .optimize = optimize, .@"host-tools" = host_tools });
         // The same instance `lineth_da` and `guest_common` import, so one compilation holds the module once.
         const zkvm_accelerators = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("zkvm_accelerators");
-        // The riscv system option is the one the verifier package requires; the devmode system is
-        // the one this package verifies against.
-        const devmode_system_path = b.pathFromRoot(devmode_system_source);
-        const verifier_ray = if (guest)
-            b.dependency("verifier_ray", .{
-                .target = target,
-                .optimize = optimize,
-                .r5 = true,
-                .@"disable-accelerators" = true,
-                .@"riscv-system" = devmode_system_path,
-            })
-        else
-            b.dependency("verifier_ray", .{ .target = target, .optimize = optimize, .@"riscv-system" = devmode_system_path });
         return .{
             .guest_common = guest_common.module("guest_common"),
             .core_serde = guest_common.module("core_serde"),
             .zkvm_accelerators = zkvm_accelerators,
-            .verifier_ray = verifier_ray.module("verifier_ray"),
             .lineth_da = lineth_da,
+            .lineth_recursion = lineth_recursion,
             .package = b.allocator.dupe(Import, &.{
                 .{ .name = "guest_common", .module = guest_common.module("guest_common") },
                 .{ .name = "core_serde", .module = guest_common.module("core_serde") },
                 .{ .name = "lineth_da", .module = lineth_da.module("lineth_da") },
                 .{ .name = "zkvm_accelerators", .module = zkvm_accelerators },
-                .{ .name = "verifier_ray", .module = verifier_ray.module("verifier_ray") },
-                .{ .name = "devmode_system", .module = verifier_ray.module("devmode_system") },
+                .{ .name = "lineth_recursion", .module = lineth_recursion.module("lineth_recursion") },
             }) catch @panic("OOM"),
         };
     }
 };
 
-/// The generated devmode system of verifier-ray, relative to this package.
-const devmode_system_source = "../../verifier-ray/testdata/generated/devmode_system.zig";
-
 /// The self-contained rv64im guest ELF (rollup statement, data-availability verification, crypto,
 /// input I/O).
 fn addGuestProgram(b: *std.Build, options: Options) void {
     const accelerators = common.acceleratorsDependency(b, options.target, options.optimize, options.crypto);
-    const deps = Deps.init(b, options.target, options.optimize, false, true);
+    const deps = Deps.init(b, options.target, options.optimize, false);
     const package = common.createPackageModule(b, options.target, options.optimize, deps.package);
     common.addGuest(b, .{
         .name = "rollup_guest",
@@ -123,26 +102,24 @@ fn addGuestProgram(b: *std.Build, options: Options) void {
     });
 }
 
-/// The devmode prover of verifier-ray (`generate-devmode-system`, run with `-prove`) built for the
-/// host: the program the tests and tools hand the proofs they need to. `go` rebuilds it on every run
-/// and caches what did not change.
-fn addDevmodeProver(b: *std.Build) std.Build.LazyPath {
-    const go = b.addSystemCommand(&.{ "go", "build", "-o" });
-    const binary = go.addOutputFileArg("generate-devmode-system");
-    go.addArg("./codegen/generate-devmode-system");
-    go.setCwd(b.path("../../verifier-ray"));
-    go.has_side_effects = true;
-    return binary;
-}
-
 /// What the native tests and tools of one optimize mode share: the modules they import.
 const Host = struct {
     native: common.NativeOptions,
 
+    /// A public host publishes its package as `rollup` and its test scenario as `scenario`, the
+    /// modules a dependent package builds rollup requests with.
+    const Visibility = enum { private, public };
+
     /// `fixtures` is the directory of the EF zkevm fixtures the `ef_fixtures` module names.
-    fn init(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, fixtures: ?std.Build.LazyPath, prover: std.Build.LazyPath) Host {
-        const deps = Deps.init(b, target, optimize, true, false);
-        const package = common.createPackageModule(b, target, optimize, deps.package);
+    fn init(
+        b: *std.Build,
+        target: std.Build.ResolvedTarget,
+        optimize: std.builtin.OptimizeMode,
+        fixtures: ?std.Build.LazyPath,
+        visibility: Visibility,
+    ) Host {
+        const deps = Deps.init(b, target, optimize, true);
+        const package = module(b, visibility, "rollup", common.packageModuleOptions(b, target, optimize, deps.package));
         const da_support = deps.lineth_da.module("support");
         const zstd_encoder = deps.lineth_da.module("zstd_encoder");
         const ef_blocks = deps.lineth_da.module("ef_blocks");
@@ -164,18 +141,7 @@ const Host = struct {
                 .{ .name = "guest_common", .module = deps.guest_common },
             },
         });
-        const prover_paths = b.addOptions();
-        prover_paths.addOptionPath("devmode_prove", prover);
-        const devmode_prover = b.createModule(.{
-            .root_source_file = b.path("test/support/devmode_prover.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "prover_paths", .module = prover_paths.createModule() },
-                .{ .name = "rollup", .module = package },
-                .{ .name = "verifier_ray", .module = deps.verifier_ray },
-            },
-        });
+        const devmode_prover = deps.lineth_recursion.module("devmode_prover");
         const incompressible_blocks = b.createModule(.{
             .root_source_file = b.path("test/support/incompressible_blocks.zig"),
             .target = target,
@@ -186,7 +152,7 @@ const Host = struct {
                 .{ .name = "zesu_executor", .module = deps.lineth_da.module("zesu_executor") },
             },
         });
-        const scenario = b.createModule(.{
+        const scenario = module(b, visibility, "scenario", .{
             .root_source_file = b.path("test/support/scenario.zig"),
             .target = target,
             .optimize = optimize,
@@ -227,20 +193,26 @@ const Host = struct {
     }
 };
 
+fn module(b: *std.Build, visibility: Host.Visibility, name: []const u8, options: std.Build.Module.CreateOptions) *std.Build.Module {
+    return switch (visibility) {
+        .public => b.addModule(name, options),
+        .private => b.createModule(options),
+    };
+}
+
 /// Every `tools/*.zig` executable. `gen_fixture` runs the statement and `fetch_blocks` recovers
 /// senders; both link the host crypto provider.
 fn addHostTools(b: *std.Build, host: Host, crypto: common.HostCrypto) Tools {
     const tools = common.addTools(b, host.native, .{});
     crypto.link(tools.get("gen_fixture").?);
     crypto.link(tools.get("fetch_blocks").?);
-    tools.get("zkc_smoke").?.root_module.addImport("zkc", common.zkcModule(b, host.native.target, host.native.optimize));
     return tools;
 }
 
 /// The `test/*_test.zig` suites, and with `-Dzkevm-fixtures` the `test/reference/*_test.zig` suites
 /// over the Amsterdam blocks of the EF zkevm fixtures. The reference suites are compiled optimized:
 /// the corpus is gigabytes of JSON.
-fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.HostCrypto, prover: std.Build.LazyPath) void {
+fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.HostCrypto) void {
     const test_step = b.step("test", "Run native Zig tests for the rollup guest");
     crypto.linkAll(common.addTests(b, test_step, unit.native, .{}));
 
@@ -248,7 +220,7 @@ fn addHostTests(b: *std.Build, options: Options, unit: Host, crypto: common.Host
         if (b.pkg_hash.len == 0) std.log.warn("test/reference skipped: pass -Dzkevm-fixtures=<dir> (`make test` does)", .{});
         return;
     };
-    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures, prover);
+    const reference = Host.init(b, options.host_target, .ReleaseSafe, fixtures, .private);
     crypto.linkAll(common.addTests(b, test_step, reference.native, .{ .dir = "test/reference" }));
 }
 
@@ -264,12 +236,4 @@ fn addFetchBlocksStep(b: *std.Build, tools: Tools) void {
     const fetch_blocks = b.addRunArtifact(tools.get("fetch_blocks").?);
     if (b.args) |args| fetch_blocks.addArgs(args);
     b.step("fetch-blocks", "Fetch a block window from a JSON-RPC endpoint into the dataset file given by the arguments after `--`").dependOn(&fetch_blocks.step);
-}
-
-/// Runs the guest ELF under zkc and compares its output with the native statement's; the options
-/// of `zkc_smoke` follow `--`.
-fn addZkcSmokeStep(b: *std.Build, tools: Tools) void {
-    const zkc_smoke = b.addRunArtifact(tools.get("zkc_smoke").?);
-    if (b.args) |args| zkc_smoke.addArgs(args);
-    b.step("zkc-smoke", "Run a guest ELF under zkc and compare its output with the native statement's").dependOn(&zkc_smoke.step);
 }

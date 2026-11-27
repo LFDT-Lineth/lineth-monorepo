@@ -57,6 +57,7 @@
 - *(coordinator)* Store RISC-V rollups and their blobs in separate tables (#4591)
 - *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 - *(coordinator)* Add the RISC-V rollup resume point (#4379)
+- *(coordinator)* Switch the RISC-V rollup coordinator to the DA stream (#4380)
 
 ### 🐛 Bug Fixes
 

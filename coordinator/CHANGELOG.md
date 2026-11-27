@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(coordinator)* Add the RISC-V rollup resume point (#4379)
+- *(coordinator)* Switch the RISC-V rollup coordinator to the DA stream (#4380)
 ## [3.0.0] - 2026-11-26
 
 ### 🚀 Features

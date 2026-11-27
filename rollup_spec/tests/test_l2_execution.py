@@ -26,6 +26,7 @@ from rollup_spec.l2_execution import (
     BRIDGE_ROLLING_HASH_UPDATED_TOPIC_0,
     ZERO_ADDRESS,
     ZERO_HASH,
+    hash_address_list,
     L2ExecutionProofPrivateInput,
     last_non_zero_pair,
     run_l2_execution_guest,
@@ -357,3 +358,9 @@ def test_run_l2_execution_guest_rejects_non_mainnet_fixed_system_contracts(field
     ext = replace(ext, chain_config=replace(ext.chain_config, system_contracts=system_contracts))
     with pytest.raises(Exception, match=message):
         run_l2_execution_guest(ext)
+
+
+def test_hash_address_list_matches_abi_encode_packed() -> None:
+    # keccak256(abi.encodePacked([0x0101..01, 0x0202..02])), checked against `cast`.
+    addresses = [Address(b"\x01" * 20), Address(b"\x02" * 20)]
+    assert hash_address_list(addresses).hex() == "4f7a234780a36156f0f234a09fb8a5710183e61947a2a2c9dea6f7a35e347cb9"

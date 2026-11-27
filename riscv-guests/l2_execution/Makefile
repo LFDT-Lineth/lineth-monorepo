@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace link-zkevm-fixtures clean compile exec debug require-input require-elf
+.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace zkc-smoke-trace-external link-zkevm-fixtures clean compile exec debug require-input require-elf
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -52,13 +52,23 @@ ZKEVM_FIXTURES_LINK ?= /tmp/execution-specs-json-fixtures/fixtures
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
 
-# Shared body for zkc-smoke-trace: pass the exact INPUT as the smoke operand.
-# $(1) = zkc makefile target (elf-trace)
-# $(2) = optional extra runner args (e.g. --zkc-flags "...")
+# The output the native runner computes for INPUT, which the guest has to print under zkc.
+EXPECTED_OUTPUT ?= $(MAKEFILE_DIR)zig-out/zkc-smoke.expected.ssz
+NATIVE_RUNNER   := $(MAKEFILE_DIR)zig-out/bin/l2_execution_runner
+
+# Runs ELF under zkc on INPUT and compares its output with EXPECTED_OUTPUT byte for byte.
+# $(1) = zkc makefile target (elf-exec or elf-trace)
+# $(2) = flags for that zkc run
 define zkc-smoke-run
-	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) $(if $(SECP256K1_BACKEND),-Dsecp256k1-backend=$(SECP256K1_BACKEND)) -- \
+	$(ZIG) build install-runner $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
+	$(NATIVE_RUNNER) "$(abspath $(INPUT))" --ssz > "$(EXPECTED_OUTPUT)"
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		--input "$(abspath $(INPUT))" \
+		--expected "$(abspath $(EXPECTED_OUTPUT))" \
+		--makefile "$(abspath $(ARITHMETIZATION_TESTING_MAKEFILE))" \
 		--zkc-target "$(1)" \
-		$(2)
+		$(if $(2),--zkc-flags "$(2)")
 endef
 
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
@@ -92,16 +102,17 @@ reference-test-zkc: fetch-host fetch-zkevm-fixtures
 zkc-smoke-exec: require-input compile
 	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
-# Smoke a prebuilt production ELF under ZkC and compare its result with the host machine.
+# Smoke a prebuilt production ELF under ZkC and compare its output with the native runner's.
 ELF ?=
 zkc-smoke-external: require-input require-elf fetch-host
-	$(ZIG) build zkc-smoke-external $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
-		--elf "$(abspath $(ELF))" \
-		"$(abspath $(INPUT))" \
-		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+	$(call zkc-smoke-run,elf-exec,$(ZKC_EXEC_FLAGS))
 
-zkc-smoke-trace: require-input fetch-host
-	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
+# The same comparison over a traced run of the local guest ELF.
+zkc-smoke-trace: require-input compile fetch-host
+	$(MAKE) zkc-smoke-trace-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)"
+
+zkc-smoke-trace-external: require-input require-elf
+	$(call zkc-smoke-run,elf-trace,$(ZKC_TRACE_FLAGS))
 
 link-zkevm-fixtures: fetch-zkevm-fixtures
 	mkdir -p "$(dir $(ZKEVM_FIXTURES_LINK))"

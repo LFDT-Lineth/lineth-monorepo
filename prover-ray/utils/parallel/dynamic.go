@@ -17,11 +17,11 @@ import (
 func ExecuteDynamic(nbItems int, work func(i int)) {
 	workers := max(1, min(runtime.GOMAXPROCS(0), nbItems))
 	var next atomic.Int64
-	Execute(workers, func(_, _ int) {
+	ExecuteWithNbTasks(workers, workers, func(_, _ int) {
 		for i := int(next.Add(1) - 1); i < nbItems; i = int(next.Add(1) - 1) {
 			work(i)
 		}
-	}, workers)
+	})
 }
 
 // OrderDesc returns the indices of costs sorted by decreasing cost, ties in
