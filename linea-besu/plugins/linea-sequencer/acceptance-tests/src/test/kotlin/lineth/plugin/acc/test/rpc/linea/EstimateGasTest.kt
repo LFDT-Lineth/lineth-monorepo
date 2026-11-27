@@ -236,6 +236,37 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
   }
 
   @Test
+  fun senderWhoCannotPayGasAtBaseFeeIsRejectedWithoutFeeFields() {
+    // linea_estimateGas asks eth_estimateGas for a strict estimate, so a call without fee fields
+    // is priced at the base fee and the sender has to pay for its gas, as in the line count
+    // simulation that follows
+    val sender = accounts.secondaryBenefactor
+
+    val callParams = CallParams(
+      chainId = null,
+      from = sender.address,
+      nonce = null,
+      to = sender.address,
+      value = null,
+      data = Bytes.EMPTY.toHexString(),
+      gas = "0",
+      gasPrice = null,
+      maxFeePerGas = null,
+      maxPriorityFeePerGas = null,
+    )
+
+    val zeroBalance = mapOf("balance" to Wei.ZERO.toHexString())
+
+    val stateOverrides = mapOf(sender.address to zeroBalance)
+
+    val reqLinea = LineaEstimateGasRequest(callParams, stateOverrides)
+    val respLinea = reqLinea.execute(minerNode.nodeRequests())
+    assertThat(respLinea.hasError()).isTrue()
+    assertThat(respLinea.error.code).isEqualTo(-32004)
+    assertThat(respLinea.error.message).startsWith("Insufficient funds for transfer")
+  }
+
+  @Test
   fun passingNonceWorks() {
     val sender = accounts.secondaryBenefactor
 

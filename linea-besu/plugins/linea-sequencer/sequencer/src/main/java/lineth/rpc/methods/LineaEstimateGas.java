@@ -205,14 +205,16 @@ public class LineaEstimateGas {
     }
   }
 
-  private Long getGasEstimation(
+  @VisibleForTesting
+  Long getGasEstimation(
       final CallParameter callParameter,
       final Optional<StateOverrideMap> maybeStateOverrides,
       final long logId) {
+    final var estimateGasCallParameter = withStrictByDefault(callParameter);
     final var params =
         maybeStateOverrides.isPresent()
-            ? new Object[] {callParameter, "pending", maybeStateOverrides.get()}
-            : new Object[] {callParameter, "pending"};
+            ? new Object[] {estimateGasCallParameter, "pending", maybeStateOverrides.get()}
+            : new Object[] {estimateGasCallParameter, "pending"};
 
     final var resp = rpcEndpointService.call("eth_estimateGas", params);
     if (!resp.getType().equals(RpcResponseType.SUCCESS)) {
@@ -229,6 +231,20 @@ public class LineaEstimateGas {
         .addArgument(gasEstimation)
         .log();
     return gasEstimation;
+  }
+
+  /**
+   * Sets {@code strict: true} on a call that does not set {@code strict}, so that eth_estimateGas
+   * prices the call and checks the sender's balance, like the line count simulation that follows.
+   * Without it, a Besu version that estimates a call without fee fields at zero fees, as Geth does,
+   * could return an estimate that the priced simulation then rejects. A {@code strict} value set by
+   * the caller is kept.
+   */
+  private static CallParameter withStrictByDefault(final CallParameter callParameter) {
+    if (callParameter.getStrict().isPresent()) {
+      return callParameter;
+    }
+    return ImmutableCallParameter.builder().from(callParameter).strict(true).build();
   }
 
   private Wei getEstimatedPriorityFee(
