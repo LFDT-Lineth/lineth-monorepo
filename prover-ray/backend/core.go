@@ -312,7 +312,7 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmodeProof(executedPublicInputs(out[:guestOutputHashSize]))
+	proofBytes, err := devmodeProof(job.Type, executedPublicInputs(out[:guestOutputHashSize]))
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -357,7 +357,7 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmodeProof(pub)
+	proofBytes, err := devmodeProof(job.Type, pub)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -426,11 +426,21 @@ func executedPublicInputs(hash []byte) wiop.PublicInput {
 	return out
 }
 
-// devmodeProof returns the image of a devmode proof of pub, for the guest base.
-func devmodeProof(pub wiop.PublicInput) ([]byte, error) {
+// devmodeProof returns a devmode proof of pub for a job of type t. An
+// aggregation proof is read by L1, so it is a gnark (BN254 PLONK) proof in the
+// layout of the gnark Solidity verifier. The other proofs are read by the
+// guests, so they are the image of a wiop devmode proof, for the guest base.
+func devmodeProof(t ProofType, pub wiop.PublicInput) ([]byte, error) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		return nil, fmt.Errorf("building the devmode system: %w", err)
+	}
+	if t == ProofTypeRollupAggregation {
+		proof, err := devmode.GnarkProve(sys, pub)
+		if err != nil {
+			return nil, err
+		}
+		return devmode.GnarkEncode(proof)
 	}
 	proof, pub, err := devmode.Prove(sys, pub)
 	if err != nil {
