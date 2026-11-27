@@ -1,4 +1,5 @@
-//! Builds Constantine static archives for the guest and host FFI tests.
+//! Builds Constantine static archives for the guest and host FFI tests, and names the include
+//! directory of its C headers.
 //! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
@@ -63,6 +64,7 @@ pub fn build(b: *std.Build) void {
     // Build the rv64 archive in place and the host archive into Zig output dirs.
     const tree = ctt.path(".");
 
+    b.addNamedLazyPath("include", ctt.path("include"));
     b.addNamedLazyPath("riscv_staticlib", buildRiscv(b, tc, tree));
     b.addNamedLazyPath("host_staticlib", buildHost(b, tc, tree));
 }
@@ -119,7 +121,9 @@ fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.L
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
     // The host archive embeds the full trusted setup and exposes the whole KZG API: verification,
     // commitments and proofs.
-    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
+    nim.addArgs(&.{ "-d:CTT_EMBEDDED_KZG", "-d:noSignalHandler" });
+    // Position-independent objects, so a Linux shared library can link the archive.
+    if (b.graph.host.result.os.tag == .linux) nim.addArg("--passC:-fPIC");
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
     _ = nimcache; // declared as a cache output

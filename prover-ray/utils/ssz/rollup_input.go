@@ -52,9 +52,12 @@ type L2ExecutionPublicInputs struct {
 	L2L1Messages                          [][32]byte
 }
 
-// L2ExecutionProof is an l2-execution proof the rollup guest verifies under ProgramVk.
+// L2ExecutionProof is an l2-execution proof the rollup guest verifies under
+// ProgramVk. PublicInputsSSZ, when set, is the SSZ of its public inputs and is
+// encoded as is, in place of PublicInputs.
 type L2ExecutionProof struct {
 	PublicInputs     L2ExecutionPublicInputs
+	PublicInputsSSZ  []byte
 	StartBlockNumber uint64
 	Proof            []byte
 	ProgramVk        [32]byte
@@ -141,9 +144,12 @@ func encodeChunkWitness(c ChunkWitness) ([]byte, error) {
 }
 
 func encodeL2ExecutionProof(p L2ExecutionProof) ([]byte, error) {
-	publicInputs, err := encodeL2ExecutionPublicInputs(p.PublicInputs)
-	if err != nil {
-		return nil, err
+	publicInputs := p.PublicInputsSSZ
+	if publicInputs == nil {
+		var err error
+		if publicInputs, err = encodeL2ExecutionPublicInputs(p.PublicInputs); err != nil {
+			return nil, err
+		}
 	}
 	proof, err := sszContainer(
 		variable(publicInputs),

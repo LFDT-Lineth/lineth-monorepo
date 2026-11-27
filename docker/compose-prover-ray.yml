@@ -8,7 +8,7 @@
 # and read responses from the matching responses/ folders. The prover-ray config
 # (config/prover-ray/prover-ray-config.toml) points each pipeline at those paths.
 #
-# Guest ELFs are mounted read-only at /opt/linea/prover-ray/guests,
+# Guest ELFs are mounted read-only at /opt/lineth/prover-ray/guests,
 # like the legacy prover-assets. Stage one with
 #   prover-ray/scripts/stage-guest.sh tmp/local/prover-ray/guests [assets dir]
 # and give the coordinator the Program ID it prints.
@@ -21,12 +21,12 @@ services:
     platform: linux/amd64
     profiles: [ "l2" ]
     environment:
-      CONFIG_FILE: "/opt/linea/prover-ray/config/config.toml"
+      CONFIG_FILE: "/opt/lineth/prover-ray/config/config.toml"
       WORKER_ID: prover-ray-0 # worker id for job claiming and crash recovery
     volumes:
       - ../tmp/local/:/data/
-      - ./config/prover-ray/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro
-      - ../tmp/local/prover-ray/guests:/opt/linea/prover-ray/guests:ro
+      - ./config/prover-ray/prover-ray-config.toml:/opt/lineth/prover-ray/config/config.toml:ro
+      - ../tmp/local/prover-ray/guests:/opt/lineth/prover-ray/guests:ro
     # No network entry: prover-ray only shares files via the /data bind mount and
     # logs to stdout, so nothing connects to it. Add `networks: [ linea ]` only if
     # your spec requires every service on that network.

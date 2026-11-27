@@ -231,7 +231,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     // The resume anchor and every rollup after it survive.
     Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(20UL).get()).isEqualTo(rollups[1])
     Assertions.assertThat(riscvRollupsDao.findRollupByEndBlockNumber(10UL).get()).isNull()
-    Assertions.assertThat(riscvRollupsDao.findHighestConsecutiveEndBlockNumberFromBlockNumber(21UL).get())
+    Assertions.assertThat(riscvRollupsDao.findHighestConsecutiveRollupFromBlockNumber(21UL).get()?.endBlockNumber)
       .isEqualTo(40UL)
     Assertions.assertThat(
       sqlClient.preparedQuery("select count(*) as n from ${RiscvRollupsPostgresDao.RollupsTableName}")

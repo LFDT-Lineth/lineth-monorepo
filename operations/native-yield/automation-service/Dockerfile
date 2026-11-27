@@ -1,12 +1,28 @@
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the digest-pinned node:slim base image; pinning would break the build
+# on base refresh for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=24.22.3
+# Digest of node:${NODE_VERSION}-slim, kept in sync with .nvmrc. If you override
+# NODE_VERSION at build time, override NODE_IMAGE_DIGEST to match.
+ARG NODE_IMAGE_DIGEST=sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS base
+
+# Fail the build if NODE_VERSION and NODE_IMAGE_DIGEST drift: CI passes
+# NODE_VERSION from .nvmrc but not the digest, and with tag@digest only the
+# digest selects content — a .nvmrc bump alone would silently build the old
+# Node under a new label.
+ARG NODE_VERSION
+RUN [ "$(node --version)" = "v${NODE_VERSION}" ]
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Temp fix for the corepack issue described in https://github.com/pnpm/pnpm/issues/9029
-RUN npm i -g corepack@latest
+# Use `npm install` (not the `i` alias): KICS only whitelists the literal word `install`.
+# Version pinned to 0.35.0; bump deliberately.
+RUN npm install -g corepack@0.35.0
 
 RUN corepack enable
 
@@ -27,6 +43,9 @@ COPY ./operations/native-yield/automation-service/package.json ./operations/nati
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
+# kics-scan ignore-line
+# Versions are pinned by pnpm-lock.yaml (--frozen-lockfile); this is a workspace
+# install from the lockfile, not a single-package add. KICS: NPM Install Without Pinned Version.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 COPY ./operations/native-yield/automation-service ./operations/native-yield/automation-service
@@ -37,7 +56,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --prefer-offline --filter=./operations/native-yield/automation-service --prod ./prod/operations/native-yield/automation-service
 
-FROM node:${NODE_VERSION}-slim AS production
+FROM node:${NODE_VERSION}-slim@${NODE_IMAGE_DIGEST} AS production
 
 ENV NODE_ENV=production
 
@@ -49,7 +68,8 @@ RUN mkdir -p /usr/src/app/ipfs-cache && \
     chown -R node:node /usr/src/app/ipfs-cache && \
     chmod 755 /usr/src/app/ipfs-cache
 
-USER node
+# Numeric uid:gid — Kubernetes cannot verify runAsNonRoot against a named user.
+USER 1000:1000
 
 COPY --from=builder /usr/src/app/prod/operations/native-yield/automation-service ./operations/native-yield/automation-service
 COPY LICENSE-APACHE LICENSE-MIT /licenses/
