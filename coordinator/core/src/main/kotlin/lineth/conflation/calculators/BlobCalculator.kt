@@ -1,9 +1,8 @@
 package lineth.conflation.calculators
 
-import linea.da.CompressedConflation
-import linea.da.SealedBlob
-import linea.da.SegmentEnd
 import linea.domain.BlocksConflation
+import lineth.da.SealedBlob
+import lineth.da.SegmentEnd
 
 /** Why a blob was flushed. Values are named and ordered as in [linea.domain.ConflationTrigger]. */
 enum class BlobTrigger {
@@ -44,11 +43,22 @@ interface BlobTriggerCalculator {
   fun reset()
 }
 
-/** A conflation together with the result of [linea.da.DaCompressor.compress] for it. */
+/** A conflation together with the frame [lineth.da.DaCompressor.compress] made of it. */
 data class CompressedBlocksConflation(
   val conflation: BlocksConflation,
-  val compressed: CompressedConflation,
-)
+  val frame: ByteArray,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is CompressedBlocksConflation) return false
+    return conflation == other.conflation && frame.contentEquals(other.frame)
+  }
+
+  override fun hashCode(): Int = 31 * conflation.hashCode() + frame.contentHashCode()
+
+  override fun toString(): String =
+    "CompressedBlocksConflation(conflation=${conflation.intervalString()}, frame.size=${frame.size})"
+}
 
 /** A compressed conflation together with where its segment ends in a sealed blob. */
 data class SealedConflation(

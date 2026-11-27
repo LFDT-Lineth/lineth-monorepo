@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Ci jvm test config fix (#4638)
 ## [3.0.0] - 2026-11-26
 
 ### 🚀 Features

@@ -19,7 +19,7 @@ dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:core:traces')
   // FIXME: the blob compressor interfaces shall be moved into dedicated interfaces module
-  api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  api project(':jvm-libs:linea:blob-compressor')
   api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
 
   implementation project(':jvm-libs:generic:extensions:kotlin')

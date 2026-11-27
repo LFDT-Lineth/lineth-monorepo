@@ -1,17 +1,17 @@
 package lineth.conflation.calculators
 
-import linea.da.DaConstants.BLOB_BYTES
-import linea.da.DaConstants.BLOB_PAYLOAD_CAPACITY
-import linea.da.DaConstants.KZG_POINT_BYTES
-import linea.da.DaStreamPosition
-import linea.da.SealedBlob
-import linea.da.SegmentEnd
 import linea.domain.BlocksConflation
 import lineth.conflation.calculators.DaTestConflations.conflation
 import lineth.conflation.calculators.DaTestConflations.encoder
 import lineth.conflation.calculators.DaTestConflations.genesisDataRollingHash
 import lineth.coordination.riscv.da.FakeDaCompressor
 import lineth.coordination.riscv.da.FakeDaStream
+import lineth.da.DaConstants.BLOB_BYTES
+import lineth.da.DaConstants.BLOB_PAYLOAD_CAPACITY
+import lineth.da.DaConstants.KZG_POINT_BYTES
+import lineth.da.DaStreamPosition
+import lineth.da.SealedBlob
+import lineth.da.SegmentEnd
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -24,7 +24,7 @@ class RollupDaAssemblerTest {
     val stream = FakeDaStream(DaStreamPosition.fresh(genesisDataRollingHash))
     val conflations = listOf(conflation(1UL, 40_000), conflation(2UL, 50_000), conflation(3UL, 60_000))
     val sealed = conflations.flatMap {
-      stream.append(compressor.compress(it.blocks.map(encoder::encode)))
+      stream.append(compressor.compress(it.blocks.map(encoder::encode)), it.endBlockNumber)
     }
     return sealed + stream.flush()!!
   }
@@ -48,7 +48,7 @@ class RollupDaAssemblerTest {
     }
     conflations.forEach {
       unsealed += it
-      stream.append(compressor.compress(it.blocks.map(encoder::encode))).forEach(::onBlob)
+      stream.append(compressor.compress(it.blocks.map(encoder::encode)), it.endBlockNumber).forEach(::onBlob)
     }
     stream.flush()?.let(::onBlob)
     return rollups

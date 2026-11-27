@@ -1,7 +1,7 @@
 package lineth.conflation.calculators
 
-import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.domain.BlocksConflation
+import lineth.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 
 /** Ends the rollup right after a conflation ending at a target block number (inclusive). */
 class RollupTriggerCalculatorByTargetBlockNumbers(
@@ -48,7 +48,7 @@ abstract class RollupTriggerCalculatorBySum(
 /** Ends the rollup before the next conflation if the rollup's DA bytes (its segments) would exceed [limit]. */
 class RollupTriggerCalculatorByDataLimit(limit: ULong) : RollupTriggerCalculatorBySum(limit, RollupTrigger.DATA_LIMIT) {
   override fun measure(conflation: CompressedBlocksConflation): ULong =
-    (SEGMENT_LENGTH_PREFIX_BYTES + conflation.compressed.compressedData.size).toULong()
+    (SEGMENT_LENGTH_PREFIX_BYTES + conflation.frame.size).toULong()
 }
 
 /** Ends the rollup before the next conflation if the rollup's gas used would exceed [limit]. */

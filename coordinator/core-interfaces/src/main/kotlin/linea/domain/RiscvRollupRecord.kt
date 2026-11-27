@@ -1,6 +1,6 @@
 package linea.domain
 
-import linea.da.DaConstants.MAX_TAIL_BYTES
+import lineth.da.DaConstants.MAX_TAIL_BYTES
 import kotlin.time.Instant
 
 /**

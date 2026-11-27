@@ -1,6 +1,5 @@
 package lineth.conflation.calculators
 
-import linea.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
@@ -9,6 +8,7 @@ import linea.domain.createBlock
 import linea.domain.toBesu
 import linea.rlp.RLP
 import lineth.coordination.riscv.da.FakeDaStream
+import lineth.da.DaConstants.SEGMENT_LENGTH_PREFIX_BYTES
 import lineth.encoding.BlockEncoder
 import net.consensys.linea.traces.TracesCountersV5
 import kotlin.time.Duration

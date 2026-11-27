@@ -1,11 +1,11 @@
 package lineth.coordination.riscv.rollup
 
-import linea.da.DaConstants
-import linea.da.DaStreamPosition
 import linea.da.RollupResumePoint
 import linea.domain.RiscvRollupRecord
 import linea.domain.createBlobData
 import linea.domain.createRiscvRollupRecord
+import lineth.da.DaConstants
+import lineth.da.DaStreamPosition
 import lineth.persistence.FakeRiscvRollupsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

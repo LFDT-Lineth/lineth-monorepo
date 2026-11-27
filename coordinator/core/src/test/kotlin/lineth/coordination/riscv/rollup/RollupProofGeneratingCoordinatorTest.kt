@@ -6,11 +6,6 @@ import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProofResponseV1
 import linea.clients.RollupProverClientV1
 import linea.clients.dummyRollupProofResponse
-import linea.da.DaCodecVersion
-import linea.da.DaConstants
-import linea.da.DaStreamErrorType
-import linea.da.DaStreamException
-import linea.da.DaStreamPosition
 import linea.da.RollupResumePoint
 import linea.domain.Batch
 import linea.domain.Block
@@ -28,9 +23,15 @@ import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
 import lineth.coordination.riscv.da.FakeDaCompressorFactory
 import lineth.coordination.riscv.da.FakeDaStream
 import lineth.coordination.riscv.da.FakeDaStreamFactory
+import lineth.da.DaCodecVersion
+import lineth.da.DaConstants
+import lineth.da.DaStreamErrorType
+import lineth.da.DaStreamException
+import lineth.da.DaStreamPosition
 import lineth.persistence.FakeBatchesRepository
 import lineth.vertx.vertxTestOptions
 import net.consensys.FakeFixedClock
+import net.consensys.linea.async.get
 import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -40,7 +41,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -99,7 +99,7 @@ class RollupProofGeneratingCoordinatorTest {
 
   @AfterEach
   fun tearDown() {
-    vertx.close().toCompletionStage().toCompletableFuture().get()
+    vertx.close().get()
   }
 
   private fun conflation(number: ULong, segmentSize: Int): BlocksConflation =
@@ -149,7 +149,7 @@ class RollupProofGeneratingCoordinatorTest {
       config = RollupProofGeneratingCoordinator.Config(
         pollingInterval = 1.seconds,
         daCodecVersion = DaCodecVersion.FAKE,
-        dictionaryPath = Path.of("unused"),
+        chainId = 1337UL,
         rollupDeadline = rollupDeadline,
       ),
       vertx = vertx,

@@ -17,6 +17,7 @@
 - *(riscv-guest)* Build script refactoring. Introducing a convention … (#4347)
 - *(riscv-guest, misc, prover-ray)* Riscv guest/shared zkevm fixtures (#4368)
 - *(riscv-guest)* Zesu update with some small breaking change (#4586)
+- *(riscv-guest)* Hash address lists as abi.encodePacked(address[]) (#4615)
 
 ### 🚜 Refactor
 

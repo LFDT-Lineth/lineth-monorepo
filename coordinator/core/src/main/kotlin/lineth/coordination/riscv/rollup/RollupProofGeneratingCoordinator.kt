@@ -5,11 +5,6 @@ import linea.clients.ChunkWitness
 import linea.clients.ConflationWitness
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProverClientV1
-import linea.da.DaCodecVersion
-import linea.da.DaCompressor
-import linea.da.DaCompressorFactory
-import linea.da.DaStream
-import linea.da.DaStreamFactory
 import linea.da.RollupResumePoint
 import linea.domain.Batch
 import linea.domain.BlobData
@@ -30,13 +25,17 @@ import lineth.conflation.calculators.RollupDaAssembler
 import lineth.conflation.calculators.RollupDaWitness
 import lineth.conflation.calculators.RollupHandler
 import lineth.conflation.calculators.RollupTriggerCalculator
+import lineth.da.DaCodecVersion
+import lineth.da.DaCompressor
+import lineth.da.DaCompressorFactory
+import lineth.da.DaStream
+import lineth.da.DaStreamFactory
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
 import net.consensys.linea.traces.TracesCountersV5
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -91,7 +90,7 @@ class RollupProofGeneratingCoordinator(
   data class Config(
     val pollingInterval: Duration,
     val daCodecVersion: DaCodecVersion,
-    val dictionaryPath: Path,
+    val chainId: ULong,
     val blobDeadline: Duration? = null,
     val rollupDeadline: Duration? = null,
     val maxConflationsToFeedPerTick: Int = 100,
@@ -161,7 +160,7 @@ class RollupProofGeneratingCoordinator(
   private fun initPipeline(resumePoint: RollupResumePoint) {
     if (pipeline != null) return
     val position = resumePoint.daPosition
-    val compressor = daCompressorFactory.create(config.daCodecVersion, config.dictionaryPath)
+    val compressor = daCompressorFactory.create(config.daCodecVersion, config.chainId)
     val daStream = daStreamFactory.open(config.daCodecVersion, position)
     lateinit var blobCalculator: GlobalBlobCalculator
     val rollupCalculator = GlobalRollupCalculator(

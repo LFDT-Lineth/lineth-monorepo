@@ -1,10 +1,10 @@
 package lineth.coordination.riscv.rollup
 
-import linea.da.DaStreamPosition
 import linea.da.RollupResumePoint
 import linea.da.RollupResumePointProvider
 import linea.domain.RiscvGenesisDataRollingHashProvider
 import linea.domain.RiscvRollupRecord
+import lineth.da.DaStreamPosition
 import lineth.persistence.RiscvRollupsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
