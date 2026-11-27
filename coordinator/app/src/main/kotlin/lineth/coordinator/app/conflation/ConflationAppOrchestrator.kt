@@ -85,6 +85,7 @@ class ConflationAppOrchestrator(
   init {
     ConflationAppHelper.validateRiscvRollupTransition(
       rollupConfigured = configs.conflation.rollup != null,
+      dbSchemaVersion = configs.database.schemaVersion,
       riscvCutoverConfigured = riscvCutoverTimestamp != null,
       riscvCutoverCrossed = riscvCutoverCrossed,
       waitTargetBlockL1Finalization = configs.conflation.proofAggregation.waitTargetBlockL1Finalization,
@@ -213,7 +214,8 @@ class ConflationAppOrchestrator(
   private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)? =
     configs.conflation.rollup?.let { rollupConfig ->
       val resumePointProvider = RiscvRollupsResumePointProvider(
-        rollupsDao = riscvRollupsDao,
+        // validateRiscvRollupTransition requires the schema with the rollup tables
+        rollupsDao = requireNotNull(riscvRollupsDao) { "conflation.rollup is set but there is no rollups DAO" },
         riscvCutoverTimestamp = riscvCutoverTimestamp!!,
         genesisDataRollingHashProvider = ConfigRiscvGenesisDataRollingHashProvider(rollupConfig.genesisDataRollingHash),
       )

@@ -23,6 +23,7 @@ import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.RiscvRollupsDao
+import lineth.persistence.conflation.RiscvRollupsPostgresDao
 import net.consensys.linea.async.AsyncRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
@@ -140,22 +141,35 @@ object ConflationAppHelper {
     }
 
   /**
-   * A rollup stage on a live pre-RISC-V to RISC-V transition requires ConflationAppV2 to pause at the cutover until L1
-   * has finalized every pre-RISC-V block. RISC-V and pre-RISC-V rows share the batches table, and the pre-RISC-V resume
-   * and cleanup would otherwise walk into RISC-V batches on a restart before that point.
+   * Checks the config a rollup stage needs; without a rollup stage there is nothing to check. A rollup stage requires:
+   * 1. DB schema [RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION] or later, which has the rollup tables and each
+   *    batch's proof index hash;
+   * 2. the RISC-V cutover timestamp;
+   * 3. before the cutover is crossed, ConflationAppV2 pausing at the cutover until L1 has finalized every pre-RISC-V
+   *    block, so no RISC-V rollup exists until then. A restart before that takes the pre-RISC-V path, whose cleanup
+   *    deletes RISC-V batches but not rollups, which would be left built on deleted batches.
    */
   fun validateRiscvRollupTransition(
     rollupConfigured: Boolean,
+    dbSchemaVersion: Int,
     riscvCutoverConfigured: Boolean,
     riscvCutoverCrossed: Boolean,
     waitTargetBlockL1Finalization: Boolean,
   ) {
-    require(!rollupConfigured || riscvCutoverConfigured) {
+    if (!rollupConfigured) return
+
+    require(dbSchemaVersion >= RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION) {
+      "conflation.rollup requires database.schema-version >= ${RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION}: " +
+        "the rollup tables and each batch's proof index hash are stored from that version on"
+    }
+    require(riscvCutoverConfigured) {
       "conflation.rollup requires conflation.riscv-starting-block-timestamp-inclusive"
     }
-    require(!rollupConfigured || riscvCutoverCrossed || waitTargetBlockL1Finalization) {
-      "conflation.rollup before the RISC-V cutover requires " +
-        "conflation.proof-aggregation.wait-target-block-l1-finalization=true"
+    if (!riscvCutoverCrossed) {
+      require(waitTargetBlockL1Finalization) {
+        "conflation.rollup before the RISC-V cutover requires " +
+          "conflation.proof-aggregation.wait-target-block-l1-finalization=true"
+      }
     }
   }
 

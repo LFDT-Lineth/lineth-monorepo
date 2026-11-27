@@ -75,7 +75,7 @@ class ConflationAppV2(
   private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
   private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val lastProcessedBlocks: LastProcessedBlocks,
-  private val riscvRollupsDao: RiscvRollupsDao,
+  private val riscvRollupsDao: RiscvRollupsDao?,
   private val rollupResumePointSupplier: (() -> SafeFuture<RollupResumePoint>)?,
 ) : LongRunningService {
 
@@ -170,10 +170,8 @@ class ConflationAppV2(
   }
 
   private val rollupStage: RollupStage? = configs.conflation.rollup?.let { rollupConfig ->
-    require(configs.database.schemaVersion >= ROLLUP_MIN_DB_SCHEMA_VERSION) {
-      "conflation.rollup requires database.schema-version >= $ROLLUP_MIN_DB_SCHEMA_VERSION: rollup requests carry " +
-        "each batch's proof index hash, stored from that version on"
-    }
+    // ConflationAppHelper.validateRiscvRollupTransition requires the schema with the rollup tables
+    val rollupsDao = requireNotNull(riscvRollupsDao) { "conflation.rollup is set but there is no rollups DAO" }
     val resumePointSupplier = requireNotNull(rollupResumePointSupplier) {
       "conflation.rollup is set but no rollup resume point supplier was provided"
     }
@@ -185,7 +183,7 @@ class ConflationAppV2(
     val rollupProverClient = proverClientFactory.rollupProverClient()
     val rollupProofPoller = RollupProofPoller(
       rollupProverClient = rollupProverClient,
-      rollupProofHandler = RollupProofPersistenceHandler(riscvRollupsDao),
+      rollupProofHandler = RollupProofPersistenceHandler(rollupsDao),
       vertx = vertx,
       config = RollupProofPoller.Config(pollingInterval = riscvProverConfig.rollup.pollingInterval),
       metricsFacade = metricsFacade,
@@ -319,11 +317,6 @@ class ConflationAppV2(
     val rollupStageStop = rollupStage?.stop() ?: SafeFuture.completedFuture(Unit)
     return SafeFuture.allOf(monitorStop, coordinatorStop, rollupStageStop)
       .thenApply { log.info("ConflationAppV2 stopped") }
-  }
-
-  companion object {
-    /** The first schema version with `batches.proof_index_hash`. */
-    const val ROLLUP_MIN_DB_SCHEMA_VERSION = 5
   }
 
   private class RollupStage(

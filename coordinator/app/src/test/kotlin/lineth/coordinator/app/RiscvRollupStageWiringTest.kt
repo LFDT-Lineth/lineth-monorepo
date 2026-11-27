@@ -100,21 +100,24 @@ class RiscvRollupStageWiringTest {
   }
 
   @Test
-  fun `a rollup stage requires the cutover config and, before the cutover, the L1 finalization wait`() {
+  fun `a rollup stage requires DB schema 5, the cutover config and, before the cutover, the L1 finalization wait`() {
     validateRiscvRollupTransition(
       rollupConfigured = false,
+      dbSchemaVersion = 5,
       riscvCutoverConfigured = false,
       riscvCutoverCrossed = false,
       waitTargetBlockL1Finalization = false,
     )
     validateRiscvRollupTransition(
       rollupConfigured = true,
+      dbSchemaVersion = 5,
       riscvCutoverConfigured = true,
       riscvCutoverCrossed = true,
       waitTargetBlockL1Finalization = false,
     )
     validateRiscvRollupTransition(
       rollupConfigured = true,
+      dbSchemaVersion = 5,
       riscvCutoverConfigured = true,
       riscvCutoverCrossed = false,
       waitTargetBlockL1Finalization = true,
@@ -123,6 +126,7 @@ class RiscvRollupStageWiringTest {
     assertThatThrownBy {
       validateRiscvRollupTransition(
         rollupConfigured = true,
+        dbSchemaVersion = 5,
         riscvCutoverConfigured = true,
         riscvCutoverCrossed = false,
         waitTargetBlockL1Finalization = false,
@@ -131,11 +135,28 @@ class RiscvRollupStageWiringTest {
     assertThatThrownBy {
       validateRiscvRollupTransition(
         rollupConfigured = true,
+        dbSchemaVersion = 5,
         riscvCutoverConfigured = false,
         riscvCutoverCrossed = false,
         waitTargetBlockL1Finalization = true,
       )
     }.hasMessageContaining("riscv-starting-block-timestamp-inclusive")
+    assertThatThrownBy {
+      validateRiscvRollupTransition(
+        rollupConfigured = true,
+        dbSchemaVersion = 4,
+        riscvCutoverConfigured = true,
+        riscvCutoverCrossed = true,
+        waitTargetBlockL1Finalization = false,
+      )
+    }.hasMessageContaining("conflation.rollup requires database.schema-version >= 5")
+    validateRiscvRollupTransition(
+      rollupConfigured = false,
+      dbSchemaVersion = 4,
+      riscvCutoverConfigured = true,
+      riscvCutoverCrossed = true,
+      waitTargetBlockL1Finalization = false,
+    )
   }
 
   @Test
