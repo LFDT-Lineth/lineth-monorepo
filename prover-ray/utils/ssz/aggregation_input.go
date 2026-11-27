@@ -38,9 +38,11 @@ type RollupPublicInputs struct {
 }
 
 // RollupProof is a rollup proof the aggregation guest verifies under
-// ProgramVk.
+// ProgramVk. PublicInputsSSZ, when set, is the SSZ of its public inputs and is
+// encoded as is, in place of PublicInputs.
 type RollupProof struct {
 	PublicInputs     RollupPublicInputs
+	PublicInputsSSZ  []byte
 	StartBlockNumber uint64
 	Proof            []byte
 	ProgramVk        [32]byte
@@ -66,9 +68,12 @@ func EncodeAggregationInput(in AggregationInput) ([]byte, error) {
 }
 
 func encodeRollupProof(p RollupProof) ([]byte, error) {
-	publicInputs, err := encodeRollupPublicInputs(p.PublicInputs)
-	if err != nil {
-		return nil, err
+	publicInputs := p.PublicInputsSSZ
+	if publicInputs == nil {
+		var err error
+		if publicInputs, err = encodeRollupPublicInputs(p.PublicInputs); err != nil {
+			return nil, err
+		}
 	}
 	proof, err := sszContainer(
 		variable(publicInputs),
