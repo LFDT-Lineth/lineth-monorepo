@@ -123,7 +123,7 @@ func (c *E6Check) Check(rt *wiop.Runtime) error {
 // CheckGnark implements [wiop.GnarkVerifierAction]: the in-circuit Check. A
 // lane the proof carries as an extension element is a shape the circuit cannot
 // bind to a base lane, so it panics; a value mismatch is unsatisfiable.
-func (c *E6Check) CheckGnark(api frontend.API, run *wiop.GnarkRuntime) {
+func (c *E6Check) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 	if len(c.Lanes) != KindE6 {
 		panic(fmt.Sprintf("recursion: E6Check of %q has %d lanes", c.Cell.Context.Path(), len(c.Lanes)))
 	}
