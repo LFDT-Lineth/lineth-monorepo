@@ -10,12 +10,13 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
-// TestExecuteLargeGuestOutput checks that the no-trace execution path returns a
-// guest output larger than 2^23 bytes, more than a trace module can hold. The
-// guest marks the first and last bytes of its output and writes the whole span
-// in one write_output call; the bytes in between are never written and are
-// expected to read as zero.
-func TestExecuteLargeGuestOutput(t *testing.T) {
+// TestExecuteLargeGuestLog checks that the no-trace execution path returns a
+// guest log larger than 2^23 bytes, more than a trace module can hold. The
+// guest_output itself is the 32-byte hash (u16-addressed), so the large
+// public data goes to guest_log. The guest marks the first and last bytes of
+// its log and writes the whole span in one write call on GUEST_LOG; the bytes
+// in between are never written and are expected to read as zero.
+func TestExecuteLargeGuestLog(t *testing.T) {
 	if testing.Short() {
 		t.Skip("executes a guest writing more than 2^23 output bytes")
 	}
@@ -32,7 +33,7 @@ func TestExecuteLargeGuestOutput(t *testing.T) {
 	a.add(t4, t1, t3)
 	a.addi(t2, zero, 'Z')
 	a.sb(t2, t4, -1) // last byte
-	a.writeOutput(t1, t3)
+	a.writeLog(t1, t3)
 	a.addi(a0, zero, 0)
 	a.addi(a7, zero, 93) // exit(0)
 	a.ecall()
@@ -53,13 +54,12 @@ func TestExecuteLargeGuestOutput(t *testing.T) {
 	}
 	t.Logf("executed in %v", time.Since(start))
 
-	got := outputs["guest_output"]
+	got := outputs["guest_log"]
 	gotBytes := got.Bytes()
-	//
 	if len(gotBytes) != size {
-		t.Fatalf("guest_output has %d bytes, want %d", len(gotBytes), size)
+		t.Fatalf("guest_log has %d bytes, want %d", len(gotBytes), size)
 	}
 	if gotBytes[0] != 'A' || gotBytes[size-1] != 'Z' {
-		t.Fatalf("guest_output first/last bytes = %q/%q, want 'A'/'Z'", gotBytes[0], gotBytes[size-1])
+		t.Fatalf("guest_log first/last bytes = %q/%q, want 'A'/'Z'", gotBytes[0], gotBytes[size-1])
 	}
 }
