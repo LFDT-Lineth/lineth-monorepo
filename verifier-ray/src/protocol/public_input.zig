@@ -38,6 +38,11 @@ pub const Spec = struct {
     /// differs: re-sending a base value in extension form would otherwise give
     /// the prover a choice of transcripts. `validateSpec` rejects at comptime a
     /// spec whose bit count does not match its cell count.
+    ///
+    /// CRUCIAL: the `&.{}` default is safe only because every reader of these
+    /// bits runs `validateSpec` first. A reader that skips it, such as a new
+    /// helper that calls `cellIsExt` directly, could accept a spec whose bits
+    /// do not cover its cells and let a wrong field tag through unchecked.
     cell_ext_bits: []const u64 = &.{},
     /// Registered public inputs, emitted in transcript order (round/index) so
     /// `bindRoundMessages` can merge them into the proof's round cells in one
@@ -164,6 +169,9 @@ pub fn bindRoundMessagesInto(
 
 /// Reports whether the cell at `flat_index` (see `Spec.cell_ext_bits`) is
 /// declared an extension-field value.
+///
+/// CRUCIAL: callers must have run `comptime validateSpec(spec)` first. Only
+/// that check ties `cell_ext_bits` to the spec's cell count.
 fn cellIsExt(comptime spec: Spec, flat_index: usize) bool {
     return (spec.cell_ext_bits[flat_index / 64] >> @intCast(flat_index % 64)) & 1 == 1;
 }
