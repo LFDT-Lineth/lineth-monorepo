@@ -1078,6 +1078,14 @@ func CommittedState(rt *wiop.Runtime, roundID int) (*fri.CommitterState, bool) {
 	return st, ok
 }
 
+// PrecomputedState returns the FRI committer state of the precomputed batch,
+// committed once at compile time, nil if the System has no precomputed
+// column: for opening provers written outside the package, as
+// [CommittedState].
+func (a *OpeningVerifierAction) PrecomputedState() *fri.CommitterState {
+	return a.c.precomputed
+}
+
 // IsOpeningProverAction reports whether a is the PCS's opening prover action,
 // which the last round of a compiled System runs: for callers replacing it
 // with another opening prover.
