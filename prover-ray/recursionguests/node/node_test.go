@@ -172,7 +172,7 @@ func TestNew_Aggregates(t *testing.T) {
 	key := tr.internal.Key()
 	proof, pub, err := tr.internal.ProveChildren(key, leaves...)
 	require.NoError(t, err, "an internal node over leaves")
-	box := tr.internal.Box()
+	box := tr.internal.KeyBox()
 	requirePubEqual(t, want(l, box, pubs(leaves)...), pub, "the internal node should combine the leaves")
 	internal := node.Child{Proof: proof, Pub: pub}
 
@@ -180,7 +180,7 @@ func TestNew_Aggregates(t *testing.T) {
 	_, pub, err = tr.internal.ProveChildren(key, children...)
 	require.NoError(t, err, "an internal node over an internal node and leaves")
 	requirePubEqual(t, want(l, box, pubs(children)...), pub, "the internal node should combine both kinds")
-	got, err := node.KeyOf(pub)
+	got, err := node.KeyBoxOf(pub)
 	require.NoError(t, err)
 	require.Equal(t, box, got, "the key box should be the internal program's")
 }
@@ -278,10 +278,20 @@ func TestNew_Rejects(t *testing.T) {
 		require.NoError(t, err)
 		product := pub[6].AsExt()
 		require.True(t, product.IsOne(), "the root should expose a balanced bus")
-		got, err := node.KeyOf(pub)
+		got, err := node.KeyBoxOf(pub)
 		require.NoError(t, err)
-		require.Equal(t, tr.internal.Box(), got, "the root should expose the internal program's box")
+		require.Equal(t, tr.internal.KeyBox(), got, "the root should expose the internal program's box")
 	})
+}
+
+// TestNewInternal_OtherChips checks that the internal program is not built
+// over a leaf program of other chips, whose proofs its verifier, also the
+// verifier of its own, could not verify.
+func TestNewInternal_OtherChips(t *testing.T) {
+	l := testLayout(0, false)
+	leaf := &node.Program{Program: &recursion.Program{Sys: stubSystem(l.WithKey(), shardKey)}, Kind: node.Leaf}
+	_, err := node.NewInternal(l, leaf, verifiertest.NewMock, testOpts...)
+	require.ErrorContains(t, err, "programs of 0 and")
 }
 
 // TestNew_KeyBox checks that the key box names the internal program's key
@@ -292,9 +302,7 @@ func TestNew_KeyBox(t *testing.T) {
 	r := rand.New(rand.NewPCG(13, 14))
 	l := testLayout(0, false) // no bus: the root checks the key box only
 	tr := newTree(t, l)
-	key, box := tr.internal.Key(), tr.internal.Box()
-	require.Equal(t, node.BoxOf(key, node.LogHeights(tr.internal.Sys)), box, "the box should be the digest of the key and heights")
-	require.NotEqual(t, node.BoxOf(key, node.LogHeights(tr.leaf.Sys)), box, "the box should name the heights")
+	key, box := tr.internal.Key(), tr.internal.KeyBox()
 
 	leaf := func() node.Child {
 		proof, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, shards(r, l, 1)...)
@@ -325,7 +333,7 @@ func TestNew_KeyBox(t *testing.T) {
 
 	other, err := proveWith(true, leaf())
 	require.NoError(t, err, "leaf children are verified under the leaf program's heights")
-	got, err := node.KeyOf(other.Pub)
+	got, err := node.KeyBoxOf(other.Pub)
 	require.NoError(t, err)
 	require.NotEqual(t, box, got, "another height should give another box")
 	_, _, err = tr.root.ProveChildren(key, other)
@@ -410,7 +418,7 @@ func TestNew_InvalidArguments(t *testing.T) {
 	require.ErrorContains(t, err, "no internal program")
 	_, err = node.NewLeaf(l.WithKey(), sys, verifiertest.NewMock, testOpts...)
 	require.ErrorContains(t, err, "has a key box")
-	_, err = node.KeyOf(childPub(r, l)[:3])
+	_, err = node.KeyBoxOf(childPub(r, l)[:3])
 	require.ErrorContains(t, err, "no key box")
 	shortSeed := append(testLayout(1, false), node.Role{Tag: "Seed", Index: 0, Op: node.OpSeed})
 	_, err = node.NewLeaf(shortSeed, sys, verifiertest.NewMock, testOpts...)

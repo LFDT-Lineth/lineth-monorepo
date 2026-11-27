@@ -109,7 +109,7 @@ func (m *RecursionMerger) children(children []Node) ([]node.Child, []uint, error
 // child checks the shape of a node's public inputs, the shard layout for a
 // shard proof and the node layout for a merged node, and lays it out as a
 // child: a merged node whose key box is empty is a leaf node, one carrying
-// the internal program's key an internal node; any other box is foreign.
+// the internal program's box an internal node; any other box is foreign.
 func (m *RecursionMerger) child(n Node) (node.Child, error) {
 	want := len(m.shard)
 	if n.Kind == Merged {
@@ -121,17 +121,17 @@ func (m *RecursionMerger) child(n Node) (node.Child, error) {
 	if n.Kind != Merged {
 		return node.Child{Proof: n.Proof, Pub: n.Pub}, nil
 	}
-	key, err := node.KeyOf(n.Pub)
+	box, err := node.KeyBoxOf(n.Pub)
 	if err != nil {
 		return node.Child{}, fmt.Errorf("node %v: %w", n.Coverage, err)
 	}
-	switch key {
+	switch box {
 	case field.Octuplet{}:
 		return node.Child{Proof: n.Proof, Pub: n.Pub, Leaf: true}, nil
-	case m.internal.Box():
+	case m.internal.KeyBox():
 		return node.Child{Proof: n.Proof, Pub: n.Pub}, nil
 	}
-	return node.Child{}, fmt.Errorf("node %v carries a foreign key box %v", n.Coverage, key)
+	return node.Child{}, fmt.Errorf("node %v carries a foreign key box %v", n.Coverage, box)
 }
 
 // checkAgree names the first propagated public input a and b differ on, so

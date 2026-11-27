@@ -71,10 +71,10 @@ func New(_ *wiop.System) (Verifier, error) {
 // order. With nil Heights, the sizes are those of the system the verifier was
 // built for.
 //
-// A size is part of what a key verifies: the setup commitment is the Merkle
-// root of the setup columns and does not hold their heights as values. A
-// program that takes the root from its prover takes the heights with it and
-// binds both together (the node programs' key box, see package node).
+// The heights go with the root because the root, the Merkle root of the setup
+// columns, does not hold them as values: a program that takes the root from
+// its prover takes the heights with it and binds both together (the node
+// programs' key box, see package node).
 type Key struct {
 	Root    int
 	Heights []int

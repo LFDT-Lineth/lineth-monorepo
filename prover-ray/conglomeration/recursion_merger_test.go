@@ -25,20 +25,20 @@ func newTestRecursionMerger(t *testing.T, sys *wiop.System) *RecursionMerger {
 // requireMerged checks that n is a merged node over sys covering coverage,
 // whose proof verifies under program (the leaf or internal program), whose
 // bus product is bus and whose key box is program's: empty for the leaf
-// program, the internal key otherwise.
+// program, the internal program's otherwise.
 func requireMerged(t *testing.T, merger *RecursionMerger, program *node.Program, n Node, coverage []uint, bus field.Gen) {
 	t.Helper()
 	require.Equal(t, Merged, n.Kind, "a merge should yield a merged node")
 	require.Equal(t, coverage, n.Coverage, "the node should cover every child")
 	require.NoError(t, program.Verify(n.Proof, n.Pub), "the node proof should verify")
 	requireElemEqual(t, bus, messagebus.GetProducts(merger.sys, n.Pub)[0], "the bus product should be multiplied")
-	key, err := node.KeyOf(n.Pub)
+	box, err := node.KeyBoxOf(n.Pub)
 	require.NoError(t, err)
 	want := field.Octuplet{}
 	if program != merger.leaf {
-		want = merger.internal.Box()
+		want = merger.internal.KeyBox()
 	}
-	require.Equal(t, want, key, "the key box should be the program's")
+	require.Equal(t, want, box, "the key box should be the program's")
 }
 
 // TestRecursionMerger_Merge checks the merges of shard proofs and merged
@@ -106,7 +106,7 @@ func TestRecursionMerger_Merge(t *testing.T) {
 		{name: "foreign key box", children: []Node{merged, foreign}, wantErr: "carries a foreign key box"},
 		// Proofs the verifier rejects in Go: a shard proof with a size for a
 		// module the shard system has not, a merged node carrying another
-		// node's proof, and a root, whose key box is the internal key but
+		// node's proof, and a root, whose key box is the internal one but
 		// whose proof is of the root program.
 		{name: "forged shard proof", children: []Node{forgedProof}, wantErr: errGoVerify},
 		{name: "merged node with another's proof", children: []Node{merged, stolen}, wantErr: errGoVerify},
@@ -166,9 +166,9 @@ func TestRecursionMerger_Finalize(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, merger.VerifyRoot(root), "the root proof should verify")
 			requireElemEqual(t, elem(1), messagebus.GetProducts(sys, root.Pub)[0], "the root should expose a balanced bus")
-			key, err := node.KeyOf(root.Pub)
+			box, err := node.KeyBoxOf(root.Pub)
 			require.NoError(t, err)
-			require.Equal(t, merger.internal.Box(), key, "the root should expose the internal program's box")
+			require.Equal(t, merger.internal.KeyBox(), box, "the root should expose the internal program's box")
 		})
 	}
 }
@@ -248,7 +248,7 @@ func TestRecursionMerger_Reduce(t *testing.T) {
 	requireElemEqual(t, elem(1), messagebus.GetProducts(sys, root.Pub)[0], "the root should expose a balanced bus")
 	require.Equal(t, sum, messagebus.GetSharedRandomnessContribution(sys, root.Pub), "the contributions should add up")
 	require.Equal(t, gamma, messagebus.GetSharedRandomnessSeed(sys, root.Pub), "the seed should be propagated")
-	key, err := node.KeyOf(root.Pub)
+	box, err := node.KeyBoxOf(root.Pub)
 	require.NoError(t, err)
-	require.Equal(t, merger.internal.Box(), key, "the root should expose the internal program's box")
+	require.Equal(t, merger.internal.KeyBox(), box, "the root should expose the internal program's box")
 }
