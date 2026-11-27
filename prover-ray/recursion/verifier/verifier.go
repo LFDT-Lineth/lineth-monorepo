@@ -65,6 +65,21 @@ func New(_ *wiop.System) (Verifier, error) {
 	return nil, ErrNotImplemented
 }
 
+// Key is what a proof is verified under, as cells of the program: Root, the
+// digest cell of the child system's setup commitment, and Heights, the scalar
+// cells of the log sizes of the child system's sized modules, in module
+// order. With nil Heights, the sizes are those of the system the verifier was
+// built for.
+//
+// A size is part of what a key verifies: the setup commitment is the Merkle
+// root of the setup columns and does not hold their heights as values. A
+// program that takes the root from its prover takes the heights with it and
+// binds both together (the node programs' key box, see package node).
+type Key struct {
+	Root    int
+	Heights []int
+}
+
 // ProofCells are the addresses of the input cells that hold one child proof,
 // in the order the verifier allocates them.
 type ProofCells []int
@@ -73,21 +88,23 @@ type ProofCells []int
 // shape.
 type Verifier interface {
 	// Allocate allocates on m the input cells of one whole child proof: its
-	// public inputs, round commitments, opened values and Merkle paths.
+	// public inputs, round commitments, opened values and Merkle paths. A
+	// verifier may leave some or all of them to Define: the cells of a proof
+	// are the inputs both allocate.
 	Allocate(m *recursion.Machine) ProofCells
 
 	// Define adds to m the child's wiop verifier, in machine instructions,
-	// on proof, under the key in the digest cell key: it replays the
-	// transcript to derive the coins, runs the verifier actions and checks
-	// the PCS openings. The transcript must absorb the key and the public
-	// inputs: a program may take the key from its prover (the node programs'
-	// key box). It returns the proof's public inputs as cells, in the child
-	// system's order.
-	Define(m *recursion.Machine, key int, proof ProofCells) []int
+	// on proof, under key: it replays the transcript to derive the coins,
+	// runs the verifier actions and checks the PCS openings. The transcript
+	// must absorb the key and the public inputs: a program may take the key
+	// from its prover (the node programs' key box). It returns the proof's
+	// public inputs as cells, in the child system's order.
+	Define(m *recursion.Machine, key Key, proof ProofCells) ([]int, error)
 
 	// Assign, for the host, turns a proof of sys and its public inputs into
-	// the values of the cells of Allocate. It only lays the proof out; the
-	// proof is verified by Define, inside the program, under sys's key.
+	// the values of the cells of Allocate and Define. It only lays the proof
+	// out; the proof is verified by Define, inside the program, under sys's
+	// key.
 	Assign(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) ([]recursion.Cell, error)
 }
 

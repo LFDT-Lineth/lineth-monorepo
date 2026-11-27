@@ -17,16 +17,22 @@
 // verification key of a program, [Program.Key]) serves every merge of a role
 // whatever the depth of the tree. The root program is the internal program
 // plus the root checks: every bus product is one, the key box is the internal
-// program's key and the shared randomness seed is the digest of the
+// program's and the shared randomness seed is the digest of the
 // contributions. Each program knows the child key, the key a child's proof is
 // verified under, of each child it accepts:
 //
 //	program   child          child key               known as
 //	leaf      shard proof    shard system's key      a constant
 //	internal  leaf node      leaf program's key      a constant
-//	internal  internal node  internal program's key  the key box
+//	internal  internal node  internal program's key  an input, named by the key box
 //	root      leaf node      leaf program's key      a constant
 //	root      internal node  internal program's key  a constant
+//
+// A node child is verified under its program's key and the heights of its
+// program's chips. The key is the setup commitment, the Merkle root of the
+// setup columns, which does not hold the heights as values, while the leaf
+// and internal programs differ in them: the heights are part of what a key
+// verifies, and follow the route the key follows.
 //
 // Neither key is the guest program VK (risc5.ProgramVKPI), a public input of
 // a shard proof naming the guest binary the zkVM ran: it is propagated like
@@ -37,22 +43,24 @@
 // but one: the internal program verifying a node of itself, whose child key
 // is its own program key, which it cannot hold as a constant since the key
 // commits to the program. The key box, [KeyPI], exists for that one case. The
-// internal program takes the key as an input, publishes it as a claim it
-// cannot check, and demands that every node child carries the same box, so
-// the value propagates unchanged to the root, which pins it once to the
-// internal program's key. A bogus key used anywhere in the tree would be the
-// box the root sees. A leaf node's box is empty: a leaf has no node child.
+// internal program takes the key and the heights as inputs, publishes their
+// digest ([BoxOf]) as a claim it cannot check, and demands that every node
+// child carries the same box, so the value propagates unchanged to the root,
+// which pins it once to the internal program's key and heights. A bogus key
+// or height used anywhere in the tree would be in the box the root sees. A
+// leaf node's box is empty: a leaf has no node child.
 //
 // A program has [Arity] slots, each with an active flag, one verifier and the
 // cells of one child's proof, so that one program serves every merge of 1 to
 // [Arity] children. An inactive slot holds a copy of the first child, whose
 // proof the verifier checks as any other, so that the verifier needs no gate;
 // its values are left out of the node's. The internal and root programs use a
-// slot's verifier for both kinds of child and select the child key with a
-// per-child leaf flag. The leaf and internal programs must then have the same
-// chips and columns; they are compiled size-oblivious, so that their heights
-// may differ (see package recursion/verifier, and issue #4405 for a
-// leaf program much larger than the internal one).
+// slot's verifier for both kinds of child and select the child key and
+// heights with a per-child leaf flag. The leaf and internal programs must then
+// have the same chips and columns, which [NewInternal] checks; they are
+// compiled size-oblivious, so that their heights may differ (see package
+// recursion/verifier, and issue #4405 for a leaf program much larger than the
+// internal one).
 //
 // A program verifies each child's proof with the in-machine verifier (package
 // recursion/verifier) under the child key and folds the public inputs
@@ -68,8 +76,10 @@ package node
 import (
 	"errors"
 	"fmt"
+	"math/bits"
 	"slices"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
@@ -83,9 +93,9 @@ import (
 const Arity = 6
 
 // KeyPI is the tag of the key box of a node proof, its last [NumKey] base
-// public inputs KeyPI_0 … KeyPI_7: the program key the node accepts its node
-// children under (see the package doc). Zero for a leaf node, the internal
-// program's key otherwise.
+// public inputs KeyPI_0 … KeyPI_7: the digest of the program key and chip
+// heights the node accepts its node children under (see the package doc and
+// [BoxOf]). Zero for a leaf node, the internal program's box otherwise.
 const KeyPI wiop.PublicInputTag = "NodeVerificationKey"
 
 // NumKey is the number of limbs of the key box: a [field.Octuplet].
@@ -232,12 +242,14 @@ type Program struct {
 	// under the key box instead: the internal program's system.
 	childSys, nodeSys *wiop.System
 	numProofCells     int // the cells the verifier allocates for one child
+	// box is the key box a root program publishes: the internal program's.
+	box field.Octuplet
 }
 
 // Child is one child of a node: its proof and public inputs and, for an
 // internal or root program, whether it is a leaf node, whose key box is empty
-// and whose proof is verified under the leaf program's key rather than the
-// key box. A leaf program ignores Leaf.
+// and whose proof is verified under the leaf program's key and heights rather
+// than the ones the key box names. A leaf program ignores Leaf.
 type Child struct {
 	Proof wiop.Proof
 	Pub   wiop.PublicInput
@@ -248,6 +260,59 @@ type Child struct {
 // a proof of it is verified under.
 func (p *Program) Key() field.Octuplet { return p.Sys.PrecomputedCommitment }
 
+// LogHeights returns the log sizes of the modules (the chips) of a compiled
+// program's system, in module order: with its key, what a proof of the
+// program is verified under.
+func LogHeights(sys *wiop.System) []int {
+	res := make([]int, len(sys.Modules))
+	for k, mod := range sys.Modules {
+		res[k] = bits.TrailingZeros(uint(mod.Size()))
+	}
+	return res
+}
+
+// BoxOf returns the key box of a program of the given key and heights: the
+// digest of the key's limbs followed by the heights, as the internal program
+// computes it from its inputs. A digest keeps the box at [NumKey] limbs
+// whatever the number of chips.
+func BoxOf(key field.Octuplet, logHeights []int) field.Octuplet {
+	h := poseidon2.NewMDHasher()
+	h.WriteElements(key[:]...)
+	for _, l := range logHeights {
+		h.WriteElements(field.NewElement(uint64(l)))
+	}
+	return h.SumDigest()
+}
+
+// Box returns the key box a node of the program publishes when its node
+// children are verified under the internal program's key and heights: empty
+// for a leaf, the internal program's box otherwise.
+func (p *Program) Box() field.Octuplet {
+	switch p.Kind {
+	case Leaf:
+		return field.Octuplet{}
+	case Internal:
+		return BoxOf(p.Key(), LogHeights(p.Sys))
+	}
+	return p.box
+}
+
+// sameChips checks that two compiled programs have the same modules and
+// columns, whatever their heights: what one verifier taking the heights as
+// data needs to verify the proofs of both.
+func sameChips(a, b *wiop.System) error {
+	if len(a.Modules) != len(b.Modules) {
+		return fmt.Errorf("node: programs of %d and %d chips", len(a.Modules), len(b.Modules))
+	}
+	for k, mod := range a.Modules {
+		if mod.Context.Path() != b.Modules[k].Context.Path() || len(mod.Columns) != len(b.Modules[k].Columns) {
+			return fmt.Errorf("node: chip %d is %s (%d columns) in one program, %s (%d columns) in the other",
+				k, mod.Context.Path(), len(mod.Columns), b.Modules[k].Context.Path(), len(b.Modules[k].Columns))
+		}
+	}
+	return nil
+}
+
 // NewLeaf builds and compiles the leaf program of the shard layout l, the
 // layout of shardSys, whose children are shard proofs: proofs of shardSys,
 // verified under its key, with the verifier newVerifier returns.
@@ -257,34 +322,39 @@ func NewLeaf(
 	if shardSys == nil {
 		return nil, errors.New("node: no shard system")
 	}
-	return build(l, Leaf, newVerifier, shardSys, field.Octuplet{}, opts...)
+	return build(l, Leaf, newVerifier, shardSys, nil, opts...)
 }
 
 // NewInternal builds and compiles the internal program of the shard layout
 // l over the leaf program, whose children are node proofs: a leaf child is
-// verified under the leaf program's key, a node child, a proof of the
-// internal program itself, under the key box, with the verifier newVerifier
-// returns.
+// verified under the leaf program's key and heights, a node child, a proof of
+// the internal program itself, under the key and heights the program takes as
+// inputs and names in its key box, with the verifier newVerifier returns. It
+// fails if the two programs do not have the same chips and columns.
 func NewInternal(
 	l Layout, leaf *Program, newVerifier verifier.Constructor, opts ...compilers.Option,
 ) (*Program, error) {
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
-	p, err := build(l, Internal, newVerifier, leaf.Sys, field.Octuplet{}, opts...)
+	p, err := build(l, Internal, newVerifier, leaf.Sys, nil, opts...)
 	if err != nil {
 		return nil, err
 	}
-	// The internal program verifies proofs of itself.
+	// The internal program verifies proofs of itself, with the verifier
+	// built for the leaf program's.
+	if err := sameChips(leaf.Sys, p.Sys); err != nil {
+		return nil, err
+	}
 	p.nodeSys = p.Sys
 	return p, nil
 }
 
 // NewRoot builds and compiles the root program of the shard layout l over
-// the leaf and internal programs: the internal program, pinning the key box
-// to the internal program's key, and checking every bus product is one and,
-// when l has a seed, that it is the digest of the contributions. It verifies
-// its children with the verifier newVerifier returns.
+// the leaf and internal programs: the internal program, with the internal
+// program's key and heights as constants, and checking every bus product is
+// one and, when l has a seed, that it is the digest of the contributions. It
+// verifies its children with the verifier newVerifier returns.
 func NewRoot(
 	l Layout, leaf, internal *Program, newVerifier verifier.Constructor, opts ...compilers.Option,
 ) (*Program, error) {
@@ -294,23 +364,24 @@ func NewRoot(
 	if internal == nil || internal.Kind != Internal {
 		return nil, errors.New("node: no internal program")
 	}
-	p, err := build(l, Root, newVerifier, leaf.Sys, internal.Key(), opts...)
+	p, err := build(l, Root, newVerifier, leaf.Sys, internal, opts...)
 	if err != nil {
 		return nil, err
 	}
 	p.nodeSys = internal.Sys
+	p.box = internal.Box()
 	return p, nil
 }
 
 // build builds the program of a kind over the verifier newVerifier returns
 // for childSys, the system of the children verified under the constant child
-// key, childSys's, pinning the key box to internalKey for the root. Its
+// key, childSys's; internal is the internal program, for the root. Its
 // inputs are laid out as [Program.Inputs] describes; the first child is
 // always active, and an inactive child contributes the neutral value of every
 // role.
 func build(
 	l Layout, kind Kind, newVerifier verifier.Constructor,
-	childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option,
+	childSys *wiop.System, internal *Program, opts ...compilers.Option,
 ) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
@@ -339,14 +410,39 @@ func build(
 	one := m.Const(recursion.ScalarCell(field.One()))
 	zero := m.Const(recursion.Cell{})
 
-	// The key box (see the package doc): an input, pinned by the root; a
-	// leaf's is empty.
-	box := zero
+	// The key box (see the package doc). A node child is verified under a
+	// key, vk, and the heights of its program's chips, nodeH: inputs of the
+	// internal program, which publishes their digest as its box; constants
+	// of the root, the internal program's, whose box it publishes. The root
+	// keeps vk as an input, pinned to the constant. A leaf's box is empty.
+	box, vk := zero, zero
+	var leafH, nodeH []int
 	if kind != Leaf {
-		box = m.InputDigest()
+		for _, mod := range childSys.Modules {
+			if mod.IsDynamic() {
+				return nil, fmt.Errorf("node: chip %s of the leaf program is dynamic", mod.Context.Path())
+			}
+		}
+		for _, lg := range LogHeights(childSys) {
+			leafH = append(leafH, m.Const(recursion.ScalarCell(field.NewElement(uint64(lg)))))
+		}
+		vk = m.InputDigest()
 	}
-	if kind == Root {
-		verifier.AssertEqDigest(m, box, m.Const(recursion.Cell(internalKey)))
+	switch kind {
+	case Internal:
+		items, kinds := []int{vk}, []int{recursion.KindDigest}
+		for range leafH {
+			h := m.InputScalar()
+			nodeH = append(nodeH, h)
+			items, kinds = append(items, h), append(kinds, recursion.KindScalar)
+		}
+		box = m.MDHash(m.Pack(items, kinds))
+	case Root:
+		verifier.AssertEqDigest(m, vk, m.Const(recursion.Cell(internal.Key())))
+		for _, lg := range LogHeights(internal.Sys) {
+			nodeH = append(nodeH, m.Const(recursion.ScalarCell(field.NewElement(uint64(lg)))))
+		}
+		box = m.Const(recursion.Cell(internal.Box()))
 	}
 	limbs := make([]int, NumKey)
 	for j := range limbs {
@@ -356,8 +452,9 @@ func build(
 		}
 	}
 
-	// Each child's proof is verified under the child key: the constant or,
-	// by the leaf flag, the key box.
+	// Each child's proof is verified under the child key: the constants of
+	// the leaf program (or of the shard system, for a leaf) or, by the leaf
+	// flag, the node key and heights.
 	constKey := m.Const(recursion.Cell(childSys.PrecomputedCommitment))
 	active := make([]int, Arity)
 	leaf := make([]int, Arity)
@@ -368,17 +465,24 @@ func build(
 		if kind != Leaf {
 			leaf[c] = m.InputScalar()
 		}
+		before := m.NumInputs()
 		proof := v.Allocate(m)
-		if c == 0 {
-			numProofCells = len(proof)
-		} else if len(proof) != numProofCells {
-			return nil, fmt.Errorf("node: the verifier allocates %d cells for a child, then %d", numProofCells, len(proof))
-		}
-		key := constKey
+		key := verifier.Key{Root: constKey}
 		if kind != Leaf {
-			key = m.Select(leaf[c], constKey, box)
+			key.Root = m.Select(leaf[c], constKey, vk)
+			key.Heights = make([]int, len(leafH))
+			for k := range leafH {
+				key.Heights[k] = m.Select(leaf[c], leafH[k], nodeH[k])
+			}
 		}
-		values[c] = v.Define(m, key, proof)
+		if values[c], err = v.Define(m, key, proof); err != nil {
+			return nil, fmt.Errorf("node: %w", err)
+		}
+		if n := m.NumInputs() - before; c == 0 {
+			numProofCells = n
+		} else if n != numProofCells {
+			return nil, fmt.Errorf("node: the verifier allocates %d cells for a child, then %d", numProofCells, n)
+		}
 		if len(values[c]) != len(child) {
 			return nil, fmt.Errorf("node: the verifier yields %d public inputs, want %d", len(values[c]), len(child))
 		}
@@ -486,9 +590,12 @@ func (p *Program) checkLayout() error {
 // then, for each of the [Arity] slots, an active flag (0 or 1), a leaf flag
 // (internal and root programs) and the cells of the child's proof as the
 // verifier assigns them; the given children fill the first slots, the other
-// slots are inactive copies of the first child. box is the node's key box,
-// the internal program's key; a leaf program ignores it. It fails on a child
-// whose proof the verifier does not accept.
+// slots are inactive copies of the first child. box is the key the node
+// verifies its node children under, the internal program's; a leaf program
+// ignores it. An internal program takes after it the heights of its own
+// chips, which it verifies its node children under too, and publishes the
+// digest of both as its key box (see [BoxOf]). It fails on a child whose proof
+// the verifier does not accept.
 func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cell, error) {
 	if len(children) < 1 || len(children) > Arity {
 		return nil, fmt.Errorf("node: %d children, want 1 to %d", len(children), Arity)
@@ -521,6 +628,12 @@ func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cel
 	cells := make([]recursion.Cell, 0, 1+Arity*(1+len(slots[0])))
 	if p.Kind != Leaf {
 		cells = append(cells, recursion.Cell(box))
+	}
+	if p.Kind == Internal {
+		// the heights its node children are verified under: its own
+		for _, lg := range LogHeights(p.Sys) {
+			cells = append(cells, recursion.ScalarCell(field.NewElement(uint64(lg))))
+		}
 	}
 	for c := range Arity {
 		var active field.Element

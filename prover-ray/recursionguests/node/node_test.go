@@ -172,16 +172,17 @@ func TestNew_Aggregates(t *testing.T) {
 	key := tr.internal.Key()
 	proof, pub, err := tr.internal.ProveChildren(key, leaves...)
 	require.NoError(t, err, "an internal node over leaves")
-	requirePubEqual(t, want(l, key, pubs(leaves)...), pub, "the internal node should combine the leaves")
+	box := tr.internal.Box()
+	requirePubEqual(t, want(l, box, pubs(leaves)...), pub, "the internal node should combine the leaves")
 	internal := node.Child{Proof: proof, Pub: pub}
 
 	children := append([]node.Child{internal}, leaves...)
 	_, pub, err = tr.internal.ProveChildren(key, children...)
 	require.NoError(t, err, "an internal node over an internal node and leaves")
-	requirePubEqual(t, want(l, key, pubs(children)...), pub, "the internal node should combine both kinds")
+	requirePubEqual(t, want(l, box, pubs(children)...), pub, "the internal node should combine both kinds")
 	got, err := node.KeyOf(pub)
 	require.NoError(t, err)
-	require.Equal(t, key, got, "the key box should be the internal key")
+	require.Equal(t, box, got, "the key box should be the internal program's")
 }
 
 // TestNew_SizeOblivious checks that the leaf and internal programs have the
@@ -279,8 +280,56 @@ func TestNew_Rejects(t *testing.T) {
 		require.True(t, product.IsOne(), "the root should expose a balanced bus")
 		got, err := node.KeyOf(pub)
 		require.NoError(t, err)
-		require.Equal(t, key, got, "the root should expose the internal key")
+		require.Equal(t, tr.internal.Box(), got, "the root should expose the internal program's box")
 	})
+}
+
+// TestNew_KeyBox checks that the key box names the internal program's key
+// and the heights of its chips: a height changed in the internal program's
+// inputs fails a node child, verified under it, and over leaf children gives a
+// node of another box, which the root rejects.
+func TestNew_KeyBox(t *testing.T) {
+	r := rand.New(rand.NewPCG(13, 14))
+	l := testLayout(0, false) // no bus: the root checks the key box only
+	tr := newTree(t, l)
+	key, box := tr.internal.Key(), tr.internal.Box()
+	require.Equal(t, node.BoxOf(key, node.LogHeights(tr.internal.Sys)), box, "the box should be the digest of the key and heights")
+	require.NotEqual(t, node.BoxOf(key, node.LogHeights(tr.leaf.Sys)), box, "the box should name the heights")
+
+	leaf := func() node.Child {
+		proof, pub, err := tr.leaf.ProveChildren(field.Octuplet{}, shards(r, l, 1)...)
+		require.NoError(t, err)
+		return node.Child{Proof: proof, Pub: pub, Leaf: true}
+	}
+	// proveWith proves an internal node over children, its first height
+	// input changed if tamper is set: the cell after the key.
+	proveWith := func(tamper bool, children ...node.Child) (node.Child, error) {
+		cells, err := tr.internal.Inputs(key, children...)
+		require.NoError(t, err)
+		if tamper {
+			cells[1][0].Add(&cells[1][0], new(field.Element).SetOne())
+		}
+		run, err := tr.internal.Execute(cells)
+		require.NoError(t, err)
+		proof, pub := tr.internal.Prove(run)
+		return node.Child{Proof: proof, Pub: pub}, tr.internal.Verify(proof, pub)
+	}
+
+	honest, err := proveWith(false, leaf())
+	require.NoError(t, err, "an internal node over a leaf node")
+	_, _, err = tr.root.ProveChildren(key, honest)
+	require.NoError(t, err, "the root should accept a node of the internal program's box")
+
+	_, err = proveWith(true, honest)
+	require.Error(t, err, "a node child should not verify under another height")
+
+	other, err := proveWith(true, leaf())
+	require.NoError(t, err, "leaf children are verified under the leaf program's heights")
+	got, err := node.KeyOf(other.Pub)
+	require.NoError(t, err)
+	require.NotEqual(t, box, got, "another height should give another box")
+	_, _, err = tr.root.ProveChildren(key, other)
+	require.ErrorContains(t, err, "verifying the node proof", "the root should reject a node of another box")
 }
 
 // TestNew_Seed checks that the root accepts the seed that is the digest of

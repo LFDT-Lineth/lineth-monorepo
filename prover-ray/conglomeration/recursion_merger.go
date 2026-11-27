@@ -128,7 +128,7 @@ func (m *RecursionMerger) child(n Node) (node.Child, error) {
 	switch key {
 	case field.Octuplet{}:
 		return node.Child{Proof: n.Proof, Pub: n.Pub, Leaf: true}, nil
-	case m.internal.Key():
+	case m.internal.Box():
 		return node.Child{Proof: n.Proof, Pub: n.Pub}, nil
 	}
 	return node.Child{}, fmt.Errorf("node %v carries a foreign key box %v", n.Coverage, key)
