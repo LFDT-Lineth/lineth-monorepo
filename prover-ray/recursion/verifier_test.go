@@ -268,7 +268,7 @@ type outer struct {
 func newOuter(t *testing.T, sys *wiop.System) outer {
 	t.Helper()
 	m := &Machine{}
-	v, err := newVerifier(m, sys, true)
+	v, err := newVerifier(m, sys, VerifierOptions{}, true)
 	require.NoError(t, err)
 	p, err := m.Compile(testPCSOpts...)
 	require.NoError(t, err)
@@ -391,7 +391,7 @@ func TestVerifierRejects(t *testing.T) {
 // cells' declarations, or misses one.
 func TestVerifierInputs(t *testing.T) {
 	c := mixedInner(t)
-	v, err := newVerifier(&Machine{}, c.sys, true)
+	v, err := newVerifier(&Machine{}, c.sys, VerifierOptions{}, true)
 	require.NoError(t, err)
 	_, err = v.Inputs(c.proof, c.pub)
 	require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestVerifierUnsupported(t *testing.T) {
 	require.NoError(t, compilers.CompileFull(sys, compilers.ConfigurePCS(pcs.WithFRINumQueries(2))))
 	_, err := NewVerifier(&Machine{}, sys)
 	require.ErrorContains(t, err, "dynamic", "the PCS opening of a dynamic module")
-	_, err = newVerifier(&Machine{}, sys, true)
+	_, err = newVerifier(&Machine{}, sys, VerifierOptions{}, true)
 	require.NoError(t, err, "a dynamic module, the PCS skipped")
 
 	// Without a PCS, nothing binds the proof's values to the columns.
@@ -447,7 +447,7 @@ func TestVerifierUnsupported(t *testing.T) {
 	mNoPCS.NewVanishing(noPCS.Context.Childf("v"), wiop.Mul(cNoPCS.View(), cNoPCS.View()))
 	_, err = NewVerifier(&Machine{}, noPCS)
 	require.ErrorContains(t, err, "PCS", "an uncompiled system")
-	_, err = newVerifier(&Machine{}, noPCS, true)
+	_, err = newVerifier(&Machine{}, noPCS, VerifierOptions{}, true)
 	require.ErrorContains(t, err, "unreduced", "an uncompiled system, the PCS skipped")
 	require.NoError(t, compilers.CompileFull(noPCS, compilers.WithoutPCS()))
 	_, err = NewVerifier(&Machine{}, noPCS)
@@ -456,7 +456,7 @@ func TestVerifierUnsupported(t *testing.T) {
 	// No coin is drawn before the first round.
 	early := wiop.NewSystemf("early-coin")
 	early.NewRound().NewCoinField(early.Context.Childf("coin"))
-	_, err = newVerifier(&Machine{}, early, true)
+	_, err = newVerifier(&Machine{}, early, VerifierOptions{}, true)
 	require.ErrorContains(t, err, "round 0")
 }
 

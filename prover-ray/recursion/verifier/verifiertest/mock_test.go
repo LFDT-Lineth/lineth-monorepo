@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier/verifiertest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -43,7 +44,8 @@ func TestMock(t *testing.T) {
 	// inputs are published.
 	m := &recursion.Machine{}
 	proof := v.Allocate(m)
-	pubs := v.Define(m, m.Const(recursion.Cell(key)), proof)
+	pubs, err := v.Define(m, verifier.Key{Root: m.Const(recursion.Cell(key))}, proof)
+	require.NoError(t, err)
 	require.Len(t, pubs, 3)
 	for pos, kind := range kinds {
 		m.Public(pubs[pos], kind, "Out", pos)

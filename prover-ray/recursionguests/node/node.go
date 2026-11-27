@@ -68,8 +68,10 @@ package node
 import (
 	"errors"
 	"fmt"
+	"math/bits"
 	"slices"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/recursion/verifier"
@@ -232,6 +234,8 @@ type Program struct {
 	// under the key box instead: the internal program's system.
 	childSys, nodeSys *wiop.System
 	numProofCells     int // the cells the verifier allocates for one child
+	// box is the key box a root program publishes: the internal program's.
+	box field.Octuplet
 }
 
 // Child is one child of a node: its proof and public inputs and, for an
@@ -248,6 +252,59 @@ type Child struct {
 // a proof of it is verified under.
 func (p *Program) Key() field.Octuplet { return p.Sys.PrecomputedCommitment }
 
+// LogHeights returns the log sizes of the modules (the chips) of a compiled
+// program's system, in module order: with its key, what a proof of the
+// program is verified under.
+func LogHeights(sys *wiop.System) []int {
+	res := make([]int, len(sys.Modules))
+	for k, mod := range sys.Modules {
+		res[k] = bits.TrailingZeros(uint(mod.Size()))
+	}
+	return res
+}
+
+// BoxOf returns the key box of a program of the given key and heights: the
+// digest of the key's limbs followed by the heights, as the internal program
+// computes it from its inputs (PROTOTYPE, #4405: "heights with the key", the
+// hash sub-option).
+func BoxOf(key field.Octuplet, logHeights []int) field.Octuplet {
+	h := poseidon2.NewMDHasher()
+	h.WriteElements(key[:]...)
+	for _, l := range logHeights {
+		h.WriteElements(field.NewElement(uint64(l)))
+	}
+	return h.SumDigest()
+}
+
+// Box returns the key box a node of the program publishes when its node
+// children are verified under the internal program's key and heights: empty
+// for a leaf, the internal program's box otherwise.
+func (p *Program) Box() field.Octuplet {
+	switch p.Kind {
+	case Leaf:
+		return field.Octuplet{}
+	case Internal:
+		return BoxOf(p.Key(), LogHeights(p.Sys))
+	}
+	return p.box
+}
+
+// sameChips checks that two compiled programs have the same modules and
+// columns, whatever their heights: what one verifier taking the heights as
+// data needs to verify the proofs of both.
+func sameChips(a, b *wiop.System) error {
+	if len(a.Modules) != len(b.Modules) {
+		return fmt.Errorf("node: programs of %d and %d chips", len(a.Modules), len(b.Modules))
+	}
+	for k, mod := range a.Modules {
+		if mod.Context.Path() != b.Modules[k].Context.Path() || len(mod.Columns) != len(b.Modules[k].Columns) {
+			return fmt.Errorf("node: chip %d is %s (%d columns) in one program, %s (%d columns) in the other",
+				k, mod.Context.Path(), len(mod.Columns), b.Modules[k].Context.Path(), len(b.Modules[k].Columns))
+		}
+	}
+	return nil
+}
+
 // NewLeaf builds and compiles the leaf program of the shard layout l, the
 // layout of shardSys, whose children are shard proofs: proofs of shardSys,
 // verified under its key, with the verifier newVerifier returns.
@@ -257,7 +314,7 @@ func NewLeaf(
 	if shardSys == nil {
 		return nil, errors.New("node: no shard system")
 	}
-	return build(l, Leaf, newVerifier, shardSys, field.Octuplet{}, opts...)
+	return build(l, Leaf, newVerifier, shardSys, nil, opts...)
 }
 
 // NewInternal builds and compiles the internal program of the shard layout
@@ -271,11 +328,15 @@ func NewInternal(
 	if leaf == nil || leaf.Kind != Leaf {
 		return nil, errors.New("node: no leaf program")
 	}
-	p, err := build(l, Internal, newVerifier, leaf.Sys, field.Octuplet{}, opts...)
+	p, err := build(l, Internal, newVerifier, leaf.Sys, nil, opts...)
 	if err != nil {
 		return nil, err
 	}
-	// The internal program verifies proofs of itself.
+	// The internal program verifies proofs of itself, with the verifier
+	// built for the leaf program's.
+	if err := sameChips(leaf.Sys, p.Sys); err != nil {
+		return nil, err
+	}
 	p.nodeSys = p.Sys
 	return p, nil
 }
@@ -294,11 +355,12 @@ func NewRoot(
 	if internal == nil || internal.Kind != Internal {
 		return nil, errors.New("node: no internal program")
 	}
-	p, err := build(l, Root, newVerifier, leaf.Sys, internal.Key(), opts...)
+	p, err := build(l, Root, newVerifier, leaf.Sys, internal, opts...)
 	if err != nil {
 		return nil, err
 	}
 	p.nodeSys = internal.Sys
+	p.box = internal.Box()
 	return p, nil
 }
 
@@ -310,7 +372,7 @@ func NewRoot(
 // role.
 func build(
 	l Layout, kind Kind, newVerifier verifier.Constructor,
-	childSys *wiop.System, internalKey field.Octuplet, opts ...compilers.Option,
+	childSys *wiop.System, internal *Program, opts ...compilers.Option,
 ) (*Program, error) {
 	if len(l) == 0 {
 		return nil, errors.New("node: empty layout")
@@ -339,14 +401,39 @@ func build(
 	one := m.Const(recursion.ScalarCell(field.One()))
 	zero := m.Const(recursion.Cell{})
 
-	// The key box (see the package doc): an input, pinned by the root; a
-	// leaf's is empty.
-	box := zero
+	// The key box (see the package doc). A node child is verified under a
+	// key, vk, and the heights of its program's chips, nodeH: inputs of the
+	// internal program, which publishes their digest as its box; constants
+	// of the root, the internal program's, whose box it publishes. The root
+	// keeps vk as an input, pinned to the constant. A leaf's box is empty.
+	box, vk := zero, zero
+	var leafH, nodeH []int
 	if kind != Leaf {
-		box = m.InputDigest()
+		for _, mod := range childSys.Modules {
+			if mod.IsDynamic() {
+				return nil, fmt.Errorf("node: chip %s of the leaf program is dynamic", mod.Context.Path())
+			}
+		}
+		for _, lg := range LogHeights(childSys) {
+			leafH = append(leafH, m.Const(recursion.ScalarCell(field.NewElement(uint64(lg)))))
+		}
+		vk = m.InputDigest()
 	}
-	if kind == Root {
-		verifier.AssertEqDigest(m, box, m.Const(recursion.Cell(internalKey)))
+	switch kind {
+	case Internal:
+		items, kinds := []int{vk}, []int{recursion.KindDigest}
+		for range leafH {
+			h := m.InputScalar()
+			nodeH = append(nodeH, h)
+			items, kinds = append(items, h), append(kinds, recursion.KindScalar)
+		}
+		box = m.MDHash(m.Pack(items, kinds))
+	case Root:
+		verifier.AssertEqDigest(m, vk, m.Const(recursion.Cell(internal.Key())))
+		for _, lg := range LogHeights(internal.Sys) {
+			nodeH = append(nodeH, m.Const(recursion.ScalarCell(field.NewElement(uint64(lg)))))
+		}
+		box = m.Const(recursion.Cell(internal.Box()))
 	}
 	limbs := make([]int, NumKey)
 	for j := range limbs {
@@ -356,8 +443,9 @@ func build(
 		}
 	}
 
-	// Each child's proof is verified under the child key: the constant or,
-	// by the leaf flag, the key box.
+	// Each child's proof is verified under the child key: the constants of
+	// the leaf program (or of the shard system, for a leaf) or, by the leaf
+	// flag, the node key and heights.
 	constKey := m.Const(recursion.Cell(childSys.PrecomputedCommitment))
 	active := make([]int, Arity)
 	leaf := make([]int, Arity)
@@ -368,17 +456,24 @@ func build(
 		if kind != Leaf {
 			leaf[c] = m.InputScalar()
 		}
+		before := m.NumInputs()
 		proof := v.Allocate(m)
-		if c == 0 {
-			numProofCells = len(proof)
-		} else if len(proof) != numProofCells {
-			return nil, fmt.Errorf("node: the verifier allocates %d cells for a child, then %d", numProofCells, len(proof))
-		}
-		key := constKey
+		key := verifier.Key{Root: constKey}
 		if kind != Leaf {
-			key = m.Select(leaf[c], constKey, box)
+			key.Root = m.Select(leaf[c], constKey, vk)
+			key.Heights = make([]int, len(leafH))
+			for k := range leafH {
+				key.Heights[k] = m.Select(leaf[c], leafH[k], nodeH[k])
+			}
 		}
-		values[c] = v.Define(m, key, proof)
+		if values[c], err = v.Define(m, key, proof); err != nil {
+			return nil, fmt.Errorf("node: %w", err)
+		}
+		if n := m.NumInputs() - before; c == 0 {
+			numProofCells = n
+		} else if n != numProofCells {
+			return nil, fmt.Errorf("node: the verifier allocates %d cells for a child, then %d", numProofCells, n)
+		}
 		if len(values[c]) != len(child) {
 			return nil, fmt.Errorf("node: the verifier yields %d public inputs, want %d", len(values[c]), len(child))
 		}
@@ -486,9 +581,12 @@ func (p *Program) checkLayout() error {
 // then, for each of the [Arity] slots, an active flag (0 or 1), a leaf flag
 // (internal and root programs) and the cells of the child's proof as the
 // verifier assigns them; the given children fill the first slots, the other
-// slots are inactive copies of the first child. box is the node's key box,
-// the internal program's key; a leaf program ignores it. It fails on a child
-// whose proof the verifier does not accept.
+// slots are inactive copies of the first child. box is the key the node
+// verifies its node children under, the internal program's; a leaf program
+// ignores it. An internal program takes after it the heights of its own
+// chips, which it verifies its node children under too, and publishes the
+// digest of both as its key box (see [BoxOf]). It fails on a child whose proof
+// the verifier does not accept.
 func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cell, error) {
 	if len(children) < 1 || len(children) > Arity {
 		return nil, fmt.Errorf("node: %d children, want 1 to %d", len(children), Arity)
@@ -521,6 +619,12 @@ func (p *Program) Inputs(box field.Octuplet, children ...Child) ([]recursion.Cel
 	cells := make([]recursion.Cell, 0, 1+Arity*(1+len(slots[0])))
 	if p.Kind != Leaf {
 		cells = append(cells, recursion.Cell(box))
+	}
+	if p.Kind == Internal {
+		// the heights its node children are verified under: its own
+		for _, lg := range LogHeights(p.Sys) {
+			cells = append(cells, recursion.ScalarCell(field.NewElement(uint64(lg))))
+		}
 	}
 	for c := range Arity {
 		var active field.Element

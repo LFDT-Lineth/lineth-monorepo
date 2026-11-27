@@ -205,6 +205,7 @@ func (a cheatingOpening) Run(rt *wiop.Runtime) {
 	if err != nil {
 		panic(err)
 	}
+	p.FixedDomain = pcs.FRIFixedDomain(sys)
 	for i, b := range batches {
 		st, ok := pcs.CommittedState(rt, b.Round.ID)
 		if b.IsPrecomp || !ok {

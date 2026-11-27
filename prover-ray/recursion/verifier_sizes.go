@@ -24,10 +24,23 @@ type dynSize struct {
 
 // allocSizes allocates the input of every dynamic module's size, in module
 // order, and derives its size cell.
+//
+// With VerifierOptions.Heights, a sized module's size is data too: its log is
+// the given cell, not an input, and it is not absorbed in the transcript (the
+// prover of a sized module absorbs no size). Its lower bound is the module's
+// MinRuntimeSize, from which its openings have one shape.
 func (v *Verifier) allocSizes() {
 	mins := v.sys.MinRuntimeSizes()
+	sized := 0
 	for k, mod := range v.sys.Modules {
 		if !mod.IsDynamic() {
+			if v.opts.Heights != nil {
+				minLog := bits.TrailingZeros(uint(mod.MinRuntimeSize()))
+				d := &dynSize{mod: mod, log: v.opts.Heights[sized], minLog: minLog, inputID: -1}
+				d.n = v.sizeConstFrom(d, minLog, "size", func(n int) field.Element { return field.NewElement(uint64(n)) })
+				v.data[mod] = d
+			}
+			sized++
 			continue
 		}
 		minLog := bits.TrailingZeros(uint(mins[k]))
@@ -35,6 +48,7 @@ func (v *Verifier) allocSizes() {
 		v.inputs = append(v.inputs, verifierInput{module: mod, pub: -1})
 		d.n = v.sizeConstFrom(d, minLog, "size", func(n int) field.Element { return field.NewElement(uint64(n)) })
 		v.sizes[k] = d
+		v.data[mod] = d
 		v.sizeOrder = append(v.sizeOrder, k)
 	}
 }
@@ -48,17 +62,16 @@ func (v *Verifier) size(mod *wiop.Module) int {
 	return v.scalarInt(mod.Size())
 }
 
-// dyn returns the size of a dynamic module, nil for a sized one.
+// dyn returns the size of a module whose size is data (a dynamic module, or a
+// sized one with VerifierOptions.Heights), nil for a module of constant size.
 func (v *Verifier) dyn(mod *wiop.Module) *dynSize {
-	if !mod.IsDynamic() {
-		return nil
+	if d, ok := v.data[mod]; ok {
+		return d
 	}
-	for _, k := range v.sizeOrder {
-		if d := v.sizes[k]; d.mod == mod {
-			return d
-		}
+	if mod.IsDynamic() {
+		panic(fmt.Sprintf("recursion: dynamic module %q has no size input", mod.Context.Path()))
 	}
-	panic(fmt.Sprintf("recursion: dynamic module %q has no size input", mod.Context.Path()))
+	return nil
 }
 
 // sizeConstAtLeast returns the cell of f(n), n the module's size, for a
