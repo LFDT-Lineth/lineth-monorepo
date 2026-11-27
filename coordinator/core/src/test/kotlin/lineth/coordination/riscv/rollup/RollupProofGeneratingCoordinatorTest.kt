@@ -31,6 +31,7 @@ import lineth.coordination.riscv.da.FakeDaStreamFactory
 import lineth.persistence.FakeBatchesRepository
 import lineth.vertx.vertxTestOptions
 import net.consensys.FakeFixedClock
+import net.consensys.linea.async.get
 import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -99,7 +100,7 @@ class RollupProofGeneratingCoordinatorTest {
 
   @AfterEach
   fun tearDown() {
-    vertx.close().toCompletionStage().toCompletableFuture().get()
+    vertx.close().get()
   }
 
   private fun conflation(number: ULong, segmentSize: Int): BlocksConflation =

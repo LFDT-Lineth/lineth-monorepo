@@ -18,20 +18,11 @@ tasks.register("compileAll") {
 // instead of deleting and re-adding code all the time
 def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 
-// download.eclipse.org is unreliable, so fetch the Groovy-Eclipse formatter from a mirror
-def greclipseP2Mirrors = [
-  "https://download.eclipse.org/": "https://mirrors.dotsrc.org/eclipse/",
-  "https://groovy.jfrog.io/": "https://groovy.jfrog.io/",
-]
-
 spotless {
   predeclareDeps()
 }
 
 spotlessPredeclare {
-  groovyGradle {
-    greclipse("4.35").withP2Mirrors(greclipseP2Mirrors)
-  }
   java {
     removeUnusedImports()
     googleJavaFormat(libs.versions.googleJavaFormat.get())
@@ -223,7 +214,8 @@ allprojects {
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
     systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
-    maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
+    // nCpu / 2, clamped to [1, 8]
+    maxParallelForks = Math.max(1, Math.min((Runtime.runtime.availableProcessors() / 2).toInteger(), 8))
   }
 
   afterEvaluate { subproject ->
@@ -245,11 +237,13 @@ allprojects {
                 ])
           }
         }
-        // spotless check applied to build.gradle (groovy) files
+        // spotless check applied to build.gradle (groovy) files.
+        // Deliberately no greclipse: it needs Eclipse P2 downloads (~130 MB per cold CI job, no retry),
+        // which made :spotlessInternalRegisterDependencies fail intermittently ("Failed to provision P2 dependencies").
         groovyGradle {
           target '*.gradle'
-          greclipse("4.35").withP2Mirrors(greclipseP2Mirrors)
           leadingTabsToSpaces(2)
+          trimTrailingWhitespace()
           endWithNewline()
         }
 

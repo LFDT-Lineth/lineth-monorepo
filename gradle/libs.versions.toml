@@ -2,7 +2,7 @@
 docker = { id = "com.avast.gradle.docker-compose", version = "0.17.21" }
 web3j = { id = "org.web3j", version.ref = "web3jPlugin" }
 web3jSolidity = { id = "org.web3j.solidity", version = "0.5.0" }
-spotless = { id = "com.diffplug.spotless", version = "8.2.1" }
+spotless = { id = "com.diffplug.spotless", version = "8.12.0" }
 jreleaser = {id = "org.jreleaser", version = "1.23.0"}
 dependencyLicenseReport = { id = "com.github.jk1.dependency-license-report", version = "3.1.4" }
 lombok = { id = "io.freefair.lombok", version = "9.7.0" }
@@ -83,6 +83,6 @@ pktsCore = "3.0.10"
 rocksdbjni = "9.7.3"
 
 # Other
-googleJavaFormat = "1.27.0"
+googleJavaFormat = "1.30.0"
 dependencyLicenseReport = "3.1.4"
 web3jSokt = "0.4.0"
