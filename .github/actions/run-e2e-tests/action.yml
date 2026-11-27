@@ -136,6 +136,8 @@ runs:
       env:
         E2E_STACK: ${{ inputs.stack }}
         E2E_IMAGE_TAG: ${{ inputs.image_tag }}
+        # riscv downloads the guest ELF from its GitHub release.
+        GH_TOKEN: ${{ github.token }}
       run: make e2e-ci-build-images
 
     - name: Spin up fresh environment with retry

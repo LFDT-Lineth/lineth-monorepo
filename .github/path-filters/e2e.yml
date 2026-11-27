@@ -34,4 +34,3 @@ zkevm:
 riscv:
   - *shared
   - 'prover-ray/**'
-  - 'riscv-guests/**'

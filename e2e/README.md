@@ -84,4 +84,10 @@ make -C prover-ray docker-build IMAGE_TAG=local
 LINEA_PROVER_RAY_TAG=local RISCV_PROVER_MODE=dev-zkvm make start-env-with-riscv
 ```
 
-CI runs this suite on pushes to `main` only, in dev-zkvm with prover-ray and the guest built from the commit.
+CI runs this suite on pushes to `main` only, in dev-zkvm with prover-ray built from the commit and the latest released l2-execution guest, as in production.
+To run against a released guest locally, download it and point `RISCV_GUEST_ARTIFACTS` at the folder:
+
+```bash
+prover-ray/scripts/download-guest.sh tmp/guest-release   # GUEST_VERSION=<version> pins one
+LINEA_PROVER_RAY_TAG=local RISCV_PROVER_MODE=dev-zkvm RISCV_GUEST_ARTIFACTS=$PWD/tmp/guest-release make start-env-with-riscv
+```
