@@ -346,7 +346,7 @@ class RollupProofGeneratingCoordinatorTest {
     assertThat(fetchedRanges).`as`("the stopped stage reads nothing more").isEmpty()
   }
 
-  /** The resume point the persisted row of [context] gives, as BlobsRepositoryV2RollupResumePointProvider builds it. */
+  /** The resume point the persisted row of [context] gives, as RiscvRollupsResumePointProvider builds it. */
   private fun resumePointAfter(context: RollupProofPoller.ProofContext): RollupResumePoint {
     val tail = context.finalSharedBlobCarryOverTailBytes
     val lastBlob = context.blobsData.last()
