@@ -8,6 +8,7 @@
 - *(prover-ray)* Ensuring that gnark wrapper does not need proof templates (#4465)
 - *(prover-ray)* Add in-circuit E6Check for the gnark verifier (#4629)
 - *(prover-ray)* Gnark wrapper and devmode circuit (#4637)
+- *(prover-ray)* Gnark proofs from dev gnark circuit (#4647)
 
 ### 🐛 Bug Fixes
 
