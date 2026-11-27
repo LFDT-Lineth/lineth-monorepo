@@ -95,9 +95,11 @@ func (c *WrapperCircuit) Define(api frontend.API) error {
 	// Bind each public input to its group: canonicalCells strictly reduces the
 	// cells the verifier used (rejecting x+p), then they are packed big-endian mod r.
 	// Guest output: 32 cells, one byte each.
-	api.AssertIsEqual(c.GuestOutput, PackBigEndianCircuit(api, c.canonicalCells(kb, c.guestOutputPos), GuestOutputBitsPerCell))
+	guestOutputCells := c.canonicalCells(kb, c.guestOutputPos)
+	api.AssertIsEqual(c.GuestOutput, PackBigEndianCircuit(api, guestOutputCells, GuestOutputBitsPerCell))
 	// Program VK: 8 cells, one 4-byte limb each.
-	api.AssertIsEqual(c.ProgramVK, PackBigEndianCircuit(api, c.canonicalCells(kb, c.programVKPos), ProgramVKBitsPerCell))
+	programVKCells := c.canonicalCells(kb, c.programVKPos)
+	api.AssertIsEqual(c.ProgramVK, PackBigEndianCircuit(api, programVKCells, ProgramVKBitsPerCell))
 	return nil
 }
 
