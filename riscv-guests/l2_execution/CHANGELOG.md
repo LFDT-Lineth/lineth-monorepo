@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(riscv-guest)* Hash address lists as abi.encodePacked(address[]) (#4615)
 ## [0.1.0] - 2026-11-27
 
 ### 🚀 Features
