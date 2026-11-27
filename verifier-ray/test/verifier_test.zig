@@ -213,7 +213,7 @@ test "verify rejects proof with wrong round count" {
         .total_round_coins = 1,
     };
     const systems = verifier.Systems{
-        .public_input = .{ .round_cell_counts = &[_]usize{0}, .cell_ext_bits = &.{} },
+        .public_input = .{ .round_cell_counts = &[_]usize{0} },
         .vanishing = vanishing.System{ .modules = &.{} },
         .pcs = empty_pcs_system,
     };
