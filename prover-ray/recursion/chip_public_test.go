@@ -122,21 +122,25 @@ func TestPublic_KindPanics(t *testing.T) {
 
 // TestPublic_Gnark checks that the gnark verifier circuit of a program with
 // public inputs can be built from its system, accepts an honest proof, and
-// rejects a forged E6 public input in E6Check's CheckGnark, the only check
+// rejects a forgery of each lane of an E6 public input in E6Check's CheckGnark, the only check
 // binding it to the proof.
 func TestPublic_Gnark(t *testing.T) {
-	// One honest run and one forged run, each on a freshly compiled program,
-	// since forging patches the system's assigner.
-	for _, forge := range []bool{false, true} {
+	// One honest run (forged < 0) and one run per forged lane, each on a
+	// freshly compiled program, since forging patches the system's assigner.
+	for forged := -1; forged < KindE6; forged++ {
 		m, _ := publicProgram()
 		p, err := m.Compile(testPCSOpts...)
 		require.NoError(t, err)
-		// Forge Y through its cell's assigner, so the transcript absorbs the
-		// forged value and only E6Check can tell it from the lanes.
-		if forge {
+		// Forge one lane of Y through its cell's assigner, so the transcript
+		// absorbs the forged value and only E6Check can tell it from the lanes.
+		if forged >= 0 {
 			cell, _ := p.Sys.LookupPublicInputByTag("Y", 0)
 			honest := cell.Assigner
-			cell.Assigner = func(rt *wiop.Runtime) field.Gen { return honest(rt).Add(field.ElemOne()) }
+			cell.Assigner = func(rt *wiop.Runtime) field.Gen {
+				c := E6Cell(honest(rt).AsExt())
+				c[forged].Add(&c[forged], new(field.Element).SetOne())
+				return field.ElemFromExt(CellE6(c))
+			}
 		}
 		r, err := p.Execute(publicInputs())
 		require.NoError(t, err)
@@ -148,13 +152,13 @@ func TestPublic_Gnark(t *testing.T) {
 		// system because its errors carry the stack of the failing assertion.
 		assignment := wiop.AllocateVerifierCircuit(p.Sys).AssignVerifierCircuit(proof, pub)
 		err = test.IsSolved(wiop.AllocateVerifierCircuit(p.Sys), assignment, ecc.BN254.ScalarField())
-		if !forge {
+		if forged < 0 {
 			require.NoError(t, err, "an honest proof should satisfy the circuit")
 			continue
 		}
-		require.Error(t, err, "a forged E6 public input should not satisfy the circuit")
+		require.Error(t, err, "lane %d: a forged E6 public input should not satisfy the circuit", forged)
 		// The failing assertion must be E6Check's, not some other check that
 		// happens to reject the proof.
-		require.Contains(t, err.Error(), "recursion.(*E6Check).CheckGnark", "it should be rejected by E6Check")
+		require.Contains(t, err.Error(), "recursion.(*E6Check).CheckGnark", "lane %d: it should be rejected by E6Check", forged)
 	}
 }
