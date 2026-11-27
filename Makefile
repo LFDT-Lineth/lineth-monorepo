@@ -75,9 +75,8 @@ E2E_TEST_SCRIPT := test:riscv:local
 E2E_TEST_TIMEOUT := 40m
 # Empty: keep the image tags pinned in docker/compose-riscv.yml.
 E2E_FALLBACK_IMAGE_TAG :=
-# CI always runs dev-zkvm with prover-ray built from this commit, so the suite never
-# runs against a stale prover-ray, and the latest released guest, as in production
-# (see e2e-ci-build-images).
+# CI runs dev-zkvm with prover-ray built from this commit (never stale) and the
+# latest released guest, as in production (see e2e-ci-build-images).
 export RISCV_PROVER_MODE := dev-zkvm
 export LINEA_PROVER_RAY_TAG := $(E2E_IMAGE_TAG)
 E2E_GUEST_ARTIFACTS := tmp/e2e-guest-artifacts

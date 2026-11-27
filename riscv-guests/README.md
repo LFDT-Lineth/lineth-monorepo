@@ -110,8 +110,8 @@ Guest ELFs are not bundled in the prover-ray image: put the released `.elf` in p
 folder. The folder can hold several guests, e.g. both sides of a fork. The prover-ray release gate
 and the local e2e stack build the ELF from the same commit with `make docker-artifacts GUEST=<guest>`
 (Docker, linux/amd64, pinned Zig), at version `0.0.0-dev`. The CI e2e suite instead downloads the
-latest published l2-execution release (`prover-ray/scripts/download-guest.sh`), so it needs one
-that is not a draft.
+latest published l2-execution release that is not a pre-release
+(`prover-ray/scripts/download-guest.sh`).
 
 ## Continuous Integration
 
