@@ -116,7 +116,12 @@ func (c *WrapperCircuit) byteCells(api frontend.API, positions []int) []frontend
 	rc := rangecheck.New(api)
 	out := make([]frontend.Variable, len(positions))
 	for i, pos := range positions {
-		// KoalaBear fits one 31-bit limb, so Limbs[0] is the whole value.
+		// The emulated KoalaBear field uses a single limb (p < 2^31), so the
+		// element's integer value is exactly Limbs[0], a native variable. No
+		// recombination or reduction is needed to read it out. The limb is not
+		// guaranteed to be reduced mod p (it may hold x+p), but the 8-bit
+		// range check below forces Limbs[0] < 2^8 < p, which pins it to the
+		// canonical value and makes a separate ReduceStrict unnecessary.
 		out[i] = c.publicCell(pos).Limbs[0]
 		rc.Check(out[i], GuestOutputBitsPerCell)
 	}
