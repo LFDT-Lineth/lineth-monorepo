@@ -7,7 +7,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -65,7 +64,7 @@ func PackGuestOutput(cells []field.Element) *big.Int {
 	if len(cells) != NumGuestOutputCells {
 		panic(fmt.Sprintf("devmode: PackGuestOutput: got %d cells, want %d", len(cells), NumGuestOutputCells))
 	}
-	return packNative(cells, 8)
+	return wiop.PackBigEndian(cells, wiop.GuestOutputBitsPerCell)
 }
 
 // PackProgramVK writes the program-VK limbs big-endian, 4 bytes each (limb i
@@ -75,38 +74,17 @@ func PackProgramVK(limbs []field.Element) *big.Int {
 	if len(limbs) != NumProgramVKCells {
 		panic(fmt.Sprintf("devmode: PackProgramVK: got %d limbs, want %d", len(limbs), NumProgramVKCells))
 	}
-	return packNative(limbs, 32)
+	return wiop.PackBigEndian(limbs, wiop.ProgramVKBitsPerCell)
 }
 
 // PackGuestOutputCircuit is the in-circuit counterpart of [PackGuestOutput].
 // The cells are not range-checked.
 func PackGuestOutputCircuit(api frontend.API, cells []frontend.Variable) frontend.Variable {
-	return packCircuit(api, cells, 8)
+	return wiop.PackBigEndianCircuit(api, cells, wiop.GuestOutputBitsPerCell)
 }
 
 // PackProgramVKCircuit is the in-circuit counterpart of [PackProgramVK].
 // The limbs are not range-checked.
 func PackProgramVKCircuit(api frontend.API, limbs []frontend.Variable) frontend.Variable {
-	return packCircuit(api, limbs, 32)
-}
-
-// packNative returns sum_i cells[i] * 2^(bits*(n-1-i)) mod r.
-func packNative(cells []field.Element, bits uint) *big.Int {
-	acc := new(big.Int)
-	for _, c := range cells {
-		acc.Lsh(acc, bits)
-		acc.Add(acc, new(big.Int).SetUint64(c.Uint64()))
-	}
-	return acc.Mod(acc, ecc.BN254.ScalarField())
-}
-
-// packCircuit is the in-circuit Horner evaluation of [packNative]; the
-// reduction mod r is the native field arithmetic of the circuit.
-func packCircuit(api frontend.API, cells []frontend.Variable, bits uint) frontend.Variable {
-	shift := new(big.Int).Lsh(big.NewInt(1), bits)
-	var acc frontend.Variable = 0
-	for _, c := range cells {
-		acc = api.Add(api.Mul(acc, shift), c)
-	}
-	return acc
+	return wiop.PackBigEndianCircuit(api, limbs, wiop.ProgramVKBitsPerCell)
 }
