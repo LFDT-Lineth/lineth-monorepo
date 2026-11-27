@@ -25,6 +25,17 @@ riscv-rollup:
   - 'riscv-guests/Makefile'
   - 'riscv-guests/Dockerfile'
   - 'riscv-guests/.dockerignore'
+riscv-rollup-aggregation:
+  - 'riscv-guests/rollup_aggregation/**'
+  - 'riscv-guests/lineth_recursion/**'
+  - 'riscv-guests/guest_common/**'
+  - 'riscv-guests/build_common/**'
+  - 'riscv-guests/release/**'
+  - 'riscv-guests/lineth_accelerators/**'
+  - 'riscv-guests/.zigversion'
+  - 'riscv-guests/Makefile'
+  - 'riscv-guests/Dockerfile'
+  - 'riscv-guests/.dockerignore'
 riscv-lineth-da:
   - 'riscv-guests/lineth_da/**'
   - 'riscv-guests/guest_common/**'

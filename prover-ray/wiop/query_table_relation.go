@@ -432,9 +432,8 @@ func (k LookupKind) String() string {
 //     equal. A fragment without a selector participates with all its rows.
 //     Reduced via the grand-product argument (see the grandproduct compiler).
 //
-// TableRelationQuery does not implement [GnarkCheckableQuery]: neither predicate can
-// be verified inside a gnark circuit. A compiler pass must reduce it before
-// gnark verification.
+// Neither predicate can be verified inside a gnark circuit: a compiler pass
+// must reduce a TableRelationQuery before gnark verification.
 type TableRelationQuery struct {
 	baseQuery
 	// Kind selects the relational predicate (Inclusion or Permutation).

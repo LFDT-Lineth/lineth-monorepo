@@ -46,6 +46,8 @@ runs:
               dest_folder="riscv-guests/l2_execution"
             elif [ "${dest_folder}" = "riscv-rollup" ]; then
               dest_folder="riscv-guests/rollup"
+            elif [ "${dest_folder}" = "riscv-rollup-aggregation" ]; then
+              dest_folder="riscv-guests/rollup_aggregation"
             elif [ "${dest_folder}" = "riscv-lineth-da" ]; then
               dest_folder="riscv-guests/lineth_da"
             elif [ "${dest_folder}" = "linea" ]; then

@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const ssz = @import("guest_common").ssz;
 const rollup_proof = @import("core_serde").rollup_proof;
 
 fn repeat32(byte: u8) [32]u8 {
@@ -88,6 +89,27 @@ test "public inputs decode to what was encoded, including empty lists" {
         const bytes = try rollup_proof.encodePublicInputs(alloc, pi);
         try expectPublicInputsEqual(pi, try rollup_proof.decodePublicInputs(alloc, bytes));
     }
+}
+
+test "a verifiable proof decodes to what was encoded" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const verifiable: rollup_proof.VerifiableRollupProof = .{
+        .proof = .{
+            .public_inputs = samplePublicInputs(),
+            .start_block_number = 1000501,
+            .proof = .{ .bytes = "proof image" },
+        },
+        .program_vk = repeat32(0x77),
+    };
+    const bytes = try ssz.encode(rollup_proof.VerifiableRollupProof, alloc, verifiable);
+    const decoded = try ssz.decode(rollup_proof.VerifiableRollupProof, alloc, bytes);
+    try expectPublicInputsEqual(verifiable.proof.public_inputs, decoded.proof.public_inputs);
+    try std.testing.expectEqual(verifiable.proof.start_block_number, decoded.proof.start_block_number);
+    try std.testing.expectEqualSlices(u8, verifiable.proof.proof.bytes, decoded.proof.proof.bytes);
+    try std.testing.expectEqualSlices(u8, &verifiable.program_vk, &decoded.program_vk);
 }
 
 test "output is the commitment to its frame followed by the frame: the rollup output schema id and the public inputs" {

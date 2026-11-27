@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.1.0] - 2026-11-27
 
 ### 🚀 Features
 
@@ -8,6 +8,8 @@
 - *(riscv-guest)* RiscV guests release workflow (#4102)
 - *(riscv-guest)* Setting up the release workflow (#4119)
 - *(riscv-guest)* Refactoring to enable further Rollup GP development (#4342)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
+- *(riscv-guest)* Refactoring for the Aggregation guest program (#4630)
 
 ### 🐛 Bug Fixes
 

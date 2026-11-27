@@ -1,9 +1,10 @@
-## [unreleased]
+## [2.0.0] - 2026-11-26
 
 ### 🚀 Features
 
 - *(coordinator, maru, docker)* Keep nested libs layout in images (#4543)
 - *(maru)* Add and use native Engine API JSON-RPC client (#4397)
+- *(docker,misc)* [**breaking**] Harden Dockerfiles — non-root users, digest pinning, re-enable KICS (#4471)
 
 ### ⚙️ Miscellaneous Tasks
 

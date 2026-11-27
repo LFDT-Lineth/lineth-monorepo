@@ -52,12 +52,12 @@ func TestCanonicalOrderExhaustive(t *testing.T) {
 		return res
 	}
 	for _, hs := range tuples(G, H+1) {
-		canonical := canonicalOrder(hs)
+		want := canonical(hs)
 		for _, order := range tuples(G, G) {
 			r, err := p.Execute(orderInputs(hs, order))
 			require.NoError(t, err)
 			err = proveAndVerify(p, r)
-			if slices.Equal(order, canonical) {
+			if slices.Equal(order, want) {
 				require.NoError(t, err, "heights %v, order %v", hs, order)
 			} else {
 				require.Error(t, err, "heights %v, order %v accepted", hs, order)
@@ -89,7 +89,7 @@ func TestCanonicalOrder(t *testing.T) {
 		t.Run(fmt.Sprint(tc.heights), func(t *testing.T) {
 			p, err := orderCircuit(tc.G, tc.H).Compile(testPCSOpts...)
 			require.NoError(t, err)
-			r, err := p.Execute(orderInputs(tc.heights, canonicalOrder(tc.heights)))
+			r, err := p.Execute(orderInputs(tc.heights, canonical(tc.heights)))
 			require.NoError(t, err)
 			require.NoError(t, proveAndVerify(p, r))
 		})

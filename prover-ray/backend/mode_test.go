@@ -43,6 +43,18 @@ func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {
 		"only the batch end block is set; other public inputs stay zero")
 }
 
+// TestProve_DevMock_RollupEndBlock checks that dev-mock sets the end block of
+// a rollup job in the rollup public inputs, which a rollup response carries.
+func TestProve_DevMock_RollupEndBlock(t *testing.T) {
+	c, err := New(Config{Mode: ProverModeDevMock})
+	require.NoError(t, err)
+
+	result := c.Prove(context.Background(), Job{ID: "job-1", Type: ProofTypeRollup, StartBlock: 10, EndBlock: 14})
+	require.NoError(t, result.Err)
+	assert.Equal(t, RollupPublicInputs{EndBlockNumber: 14}, result.RollupPublicInputs,
+		"only the batch end block is set; other public inputs stay zero")
+}
+
 func TestProverMode_Helpers(t *testing.T) {
 	assert.True(t, ProverModeDevMock.IsDev())
 	assert.True(t, ProverModeDevZkVM.IsDev())

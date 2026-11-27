@@ -52,10 +52,10 @@ fn guestMain() callconv(.c) noreturn {
         // exposes logging that doesn't alias the output commitment).
         const name = @errorName(err);
         zkvm_log(0, name.ptr, name.len);
-        exit(guest_errors.exitCode(err));
+        lineth_accel.zkvm_exit(@intFromEnum(guest_errors.exitCode(err)));
     };
     lineth_accel.write_output(out.ptr, out.len);
-    exit(.success);
+    lineth_accel.zkvm_exit(@intFromEnum(guest_errors.ExitCode.success));
 }
 
 /// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one `catch`
@@ -80,20 +80,4 @@ comptime {
         // Pull in the precompile providers for the freestanding guest.
         _ = @import("zkvm_provide");
     }
-}
-
-fn exit(code: guest_errors.ExitCode) noreturn {
-    const raw: u64 = @intCast(@intFromEnum(code));
-    if (builtin.cpu.arch == .riscv64) {
-        asm volatile (
-            \\mv a0, %[code]
-            \\li a7, 93
-            \\ecall
-            :
-            : [code] "r" (raw),
-            : .{ .x10 = true, .x17 = true });
-        unreachable;
-    }
-
-    std.debug.panic("guest exit({d})", .{raw});
 }

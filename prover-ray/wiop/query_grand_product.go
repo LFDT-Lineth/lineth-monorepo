@@ -26,8 +26,8 @@ import (
 // irrelevant to the semantics. The grandproduct compiler regroups them by
 // module when it builds the running-product Z columns.
 //
-// GrandProduct implements [AssignableQuery] but not [GnarkCheckableQuery]: a
-// compiler pass must reduce it before gnark verification.
+// GrandProduct implements [AssignableQuery]. A compiler pass must reduce it
+// before gnark verification.
 //
 // Use [System.NewGrandProduct] to construct and register an instance.
 type GrandProduct struct {

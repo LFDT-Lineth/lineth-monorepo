@@ -27,7 +27,7 @@ fn guestMain() callconv(.c) noreturn {
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
     zkvm_provide.setAllocator(allocator);
-    if (!zkvm_provide.initKzg()) exit(guest_errors.exitCode(error.OutOfMemory));
+    if (!zkvm_provide.initKzg()) zkvm_io.zkvm_exit(guest_errors.exitCode(error.OutOfMemory));
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
@@ -35,10 +35,10 @@ fn guestMain() callconv(.c) noreturn {
     const raw_input = buf_ptr[0..buf_size];
 
     const out = rollup.runFramed(allocator, raw_input) catch |err| {
-        exit(guest_errors.exitCode(err));
+        zkvm_io.zkvm_exit(guest_errors.exitCode(err));
     };
     zkvm_io.write_output(out.ptr, out.len);
-    exit(0);
+    zkvm_io.zkvm_exit(0);
 }
 
 comptime {
@@ -49,19 +49,4 @@ comptime {
         // Pull in the precompile providers for the freestanding guest.
         _ = zkvm_provide;
     }
-}
-
-fn exit(code: u64) noreturn {
-    if (builtin.cpu.arch == .riscv64) {
-        asm volatile (
-            \\mv a0, %[code]
-            \\li a7, 93
-            \\ecall
-            :
-            : [code] "r" (code),
-            : .{ .x10 = true, .x17 = true });
-        unreachable;
-    }
-
-    std.debug.panic("guest exit({d})", .{code});
 }

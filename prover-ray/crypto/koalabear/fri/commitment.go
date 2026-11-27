@@ -252,11 +252,7 @@ func hashPairLeaves(hash MerkleHash, groups []SizedTable, leaves []field.Octuple
 	digests := make([]field.Octuplet, len(leaves))
 	for _, group := range groups[1:] {
 		hashSizedLeaves(hash, group, true, digests)
-		parallel.Execute(len(leaves), func(start, end int) {
-			for j := start; j < end; j++ {
-				leaves[j] = hash.compress(leaves[j], digests[j])
-			}
-		})
+		compressInto(hash, leaves, digests)
 	}
 }
 

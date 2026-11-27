@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     const host = Host.init(b, options) orelse return;
     const tools = addHostTools(b, host);
     addWrapSteps(b, tools);
-    addZkcSmokeSteps(b, tools, options);
+    common.addZkcSmokeStep(b, host.native.target, host.native.optimize);
     addRunnerSteps(b, tools);
     addHostTests(b, host, options);
     addReferenceSteps(b, tools, options);
@@ -28,7 +28,6 @@ const Options = struct {
     crypto: common.CryptoOptions,
     /// Directory holding the EF zkevm fixtures; its `blockchain_tests/` is the corpus.
     zkevm_fixtures: ?std.Build.LazyPath,
-    zkc_smoke_input: []const u8,
     host_tools: bool,
 
     fn parse(b: *std.Build) Options {
@@ -37,14 +36,12 @@ const Options = struct {
         // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
         const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
         const zkevm_fixtures = b.option(std.Build.LazyPath, "zkevm-fixtures", "Directory holding the EF zkevm fixtures; enables the corpus suites and reference steps");
-        const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
         const host_tools = b.option(bool, "host-tools", "Build native test and helper targets") orelse false;
         return .{
             .target = target,
             .optimize = optimize,
             .crypto = common.CryptoOptions.parse(b),
             .zkevm_fixtures = zkevm_fixtures,
-            .zkc_smoke_input = zkc_smoke_input,
             .host_tools = host_tools,
         };
     }
@@ -181,24 +178,6 @@ fn addWrapSteps(b: *std.Build, tools: Tools) void {
     addRunStep(b, wrap, "l2-execution-wrap", "Run the native l2_execution_wrap tool (vanilla .ssz -> extended .ssz)");
 }
 
-/// Installs `zkc_reference_runner` and adds the `zkc-smoke` steps: one extended SSZ input under
-/// ZkC, checked against the host machine. They need zkc and go on PATH; the Makefile sets
-/// `-Dzkc-smoke-input` from INPUT.
-fn addZkcSmokeSteps(b: *std.Build, tools: Tools, options: Options) void {
-    const runner = tools.get("zkc_reference_runner").?;
-    b.installArtifact(runner);
-
-    const smoke = b.addRunArtifact(runner);
-    smoke.addArg(options.zkc_smoke_input);
-    finishZkcRun(b, smoke, true);
-    b.step("zkc-smoke", "Run testdata .ssz under ZkC and compare it with the host machine").dependOn(&smoke.step);
-
-    // An externally prepared production ELF.
-    const external = b.addRunArtifact(runner);
-    finishZkcRun(b, external, false);
-    b.step("zkc-smoke-external", "Run an external guest ELF under ZkC and compare it with the host machine").dependOn(&external.step);
-}
-
 /// Adds `install-runner` (the native runner for the prover image, also part of the default install)
 /// and the `l2-execution-runner` run step. The runner takes an arbitrary extended-input file, so it
 /// does not depend on the EF fixtures.
@@ -215,19 +194,6 @@ fn addRunStep(b: *std.Build, exe: *Compile, name: []const u8, description: []con
     const run = b.addRunArtifact(exe);
     if (b.args) |extra| run.addArgs(extra);
     b.step(name, description).dependOn(&run.step);
-}
-
-/// Completes a zkc runner invocation with the arithmetization Makefile (which defines the zkc run)
-/// and the arguments after `--`; `installed_elf` runs the ELF from the install prefix.
-fn finishZkcRun(b: *std.Build, run: *std.Build.Step.Run, installed_elf: bool) void {
-    if (installed_elf) {
-        run.addArg("--install-prefix");
-        run.addArg(b.install_prefix);
-    }
-    run.addArg("--makefile");
-    run.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
-    if (b.args) |extra| run.addArgs(extra);
-    if (installed_elf) run.step.dependOn(b.getInstallStep());
 }
 
 /// The `test/*_test.zig` suites and the support root's own tests, with the corpus fixtures they embed.
@@ -300,7 +266,12 @@ fn addReferenceSteps(b: *std.Build, tools: Tools, options: Options) void {
     // The corpus through the installed guest ELF under zkc (needs zkc and go on PATH).
     const zkc = b.addRunArtifact(tools.get("zkc_reference_runner").?);
     zkc.addDirectoryArg(corpus);
-    finishZkcRun(b, zkc, true);
+    zkc.addArg("--install-prefix");
+    zkc.addArg(b.install_prefix);
+    zkc.addArg("--makefile");
+    zkc.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+    if (b.args) |extra| zkc.addArgs(extra);
+    zkc.step.dependOn(b.getInstallStep());
     zkc_step.dependOn(&zkc.step);
 }
 
