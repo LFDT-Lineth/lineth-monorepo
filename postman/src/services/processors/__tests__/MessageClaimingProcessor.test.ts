@@ -211,6 +211,7 @@ describe("TestMessageClaimingProcessor", () => {
         ...testUnderpricedAnchoredMessage,
         claimGasEstimationThreshold: 10,
         status: MessageStatus.FEE_UNDERPRICED,
+        claimLastRetriedAt: mockedDate,
         updatedAt: mockedDate,
       });
 
@@ -242,14 +243,16 @@ describe("TestMessageClaimingProcessor", () => {
       const expectedLoggingMessage = new Message({
         ...testAnchoredMessage,
         claimGasEstimationThreshold: 10000000000,
+        claimLastRetriedAt: mockedDate,
         updatedAt: mockedDate,
       });
 
       await messageClaimingProcessor.process();
 
       expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
-      expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
-      expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
+      // Second save sets claimLastRetriedAt so the next poll skips this message for retryDelay.
+      expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
+      expect(messageRepositorySaveSpy).toHaveBeenLastCalledWith(expectedLoggingMessage);
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         "Rate limit exceeded for this message. It will be reprocessed later.",
@@ -343,6 +346,9 @@ describe("TestMessageClaimingProcessor", () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith("Message is underpriced, will retry later.", {
         messageHash: underpricedMsg.messageHash,
       });
+      expect(messageRepository.updateMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: MessageStatus.FEE_UNDERPRICED, claimLastRetriedAt: mockedDate }),
+      );
     });
 
     it("Should set message as NON_EXECUTABLE when error is not retryable", async () => {

@@ -88,7 +88,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         (await this.handleUnderpriced(nextMessageToClaim, isUnderPriced, estimatedGasLimit, claimTxFees.maxFeePerGas))
       )
         return;
-      if (this.handleRateLimitExceeded(nextMessageToClaim, isRateLimitExceeded)) return;
+      if (await this.handleRateLimitExceeded(nextMessageToClaim, isRateLimitExceeded)) return;
 
       nonce = await this.nonceManager.acquireNonce();
 
@@ -200,21 +200,24 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
           transactionGasLimit: estimatedGasLimit?.toString(),
           maxFeePerGas: maxFeePerGas.toString(),
         });
-        message.edit({ status: MessageStatus.FEE_UNDERPRICED });
-        await this.messageRepository.updateMessage(message);
       } else {
         this.logger.warn("Message is underpriced, will retry later.", { messageHash: message.messageHash });
       }
+      // claimLastRetriedAt holds the message back for retryDelay so the next message can be claimed.
+      message.edit({ status: MessageStatus.FEE_UNDERPRICED, claimLastRetriedAt: new Date() });
+      await this.messageRepository.updateMessage(message);
       return true;
     }
     return false;
   }
 
-  private handleRateLimitExceeded(message: Message, isRateLimitExceeded: boolean): boolean {
+  private async handleRateLimitExceeded(message: Message, isRateLimitExceeded: boolean): Promise<boolean> {
     if (isRateLimitExceeded) {
       this.logger.warn("Rate limit exceeded for this message. It will be reprocessed later.", {
         messageHash: message.messageHash,
       });
+      message.edit({ claimLastRetriedAt: new Date() });
+      await this.messageRepository.updateMessage(message);
       return true;
     }
     return false;

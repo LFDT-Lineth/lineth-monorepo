@@ -154,16 +154,18 @@ describe("TransactionLifecycleManager", () => {
       );
     });
 
-    it("should return null and not throw when retryWithHigherFee rejects", async () => {
+    it("should return null and count the attempt when retryWithHigherFee rejects", async () => {
       const message = makePendingMessage();
 
       messageServiceContract.getMessageStatus.mockResolvedValue(OnChainMessageStatus.UNKNOWN);
       transactionRetrier.retryWithHigherFee.mockRejectedValue(new Error("replacement underpriced"));
+      const retriesBefore = message.claimNumberOfRetry;
 
       const result = await manager.retryWithBump(message);
 
       expect(result).toBeNull();
-      expect(messageRepository.updateMessage).not.toHaveBeenCalled();
+      expect(messageRepository.updateMessage).toHaveBeenCalledTimes(1);
+      expect(message.claimNumberOfRetry).toBe(retriesBefore + 1);
     });
 
     it("should return null and not throw when getMessageStatus rejects", async () => {
@@ -275,16 +277,38 @@ describe("TransactionLifecycleManager", () => {
       expect(result).toBeNull();
     });
 
-    it("should return null and not throw when cancelTransaction rejects", async () => {
+    it("should return null and count the cycle when cancelTransaction rejects", async () => {
       const message = makePendingMessage();
 
       messageServiceContract.getMessageStatus.mockResolvedValue(OnChainMessageStatus.UNKNOWN);
       transactionRetrier.cancelTransaction.mockRejectedValue(new Error("nonce too low"));
+      const cyclesBefore = message.claimCycleCount;
 
       const result = await manager.cancelAndResetMessage(message);
 
       expect(result).toBeNull();
-      expect(messageRepository.updateMessage).not.toHaveBeenCalled();
+      expect(messageRepository.updateMessage).toHaveBeenCalledTimes(1);
+      expect(message.claimCycleCount).toBe(cyclesBefore + 1);
+      expect(message.status).toBe(MessageStatus.PENDING);
+    });
+
+    it("should count the cycle and refresh updatedAt when the cancel receipt poll times out", async () => {
+      const message = makePendingMessage();
+      const staleUpdatedAt = new Date(0);
+      message.updatedAt = staleUpdatedAt;
+
+      messageServiceContract.getMessageStatus.mockResolvedValue(OnChainMessageStatus.UNKNOWN);
+      transactionRetrier.cancelTransaction.mockResolvedValue(CANCEL_TX_HASH);
+      receiptPoller.poll.mockRejectedValue(new Error("Transaction receipt not found after polling."));
+      const cyclesBefore = message.claimCycleCount;
+
+      const result = await manager.cancelAndResetMessage(message);
+
+      expect(result).toBeNull();
+      expect(messageRepository.updateMessage).toHaveBeenCalledTimes(1);
+      expect(message.claimCycleCount).toBe(cyclesBefore + 1);
+      expect(message.status).toBe(MessageStatus.PENDING);
+      expect(message.updatedAt!.getTime()).toBeGreaterThan(staleUpdatedAt.getTime());
     });
 
     it("should return null and not throw when getMessageStatus rejects", async () => {

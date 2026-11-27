@@ -32,8 +32,10 @@ export const mapMessageEntityToMessage = (entity: MessageEntity): Message => {
     status: entity.status,
     claimTxCreationDate: entity.claimTxCreationDate,
     claimTxGasLimit: entity.claimTxGasLimit,
-    claimTxMaxFeePerGas: entity.claimTxMaxFeePerGas,
-    claimTxMaxPriorityFeePerGas: entity.claimTxMaxPriorityFeePerGas,
+    // pg returns bigint columns as strings
+    claimTxMaxFeePerGas: entity.claimTxMaxFeePerGas == null ? undefined : BigInt(entity.claimTxMaxFeePerGas),
+    claimTxMaxPriorityFeePerGas:
+      entity.claimTxMaxPriorityFeePerGas == null ? undefined : BigInt(entity.claimTxMaxPriorityFeePerGas),
     claimTxNonce: entity.claimTxNonce,
     claimTxHash: entity.claimTxHash as Hash | undefined,
     claimNumberOfRetry: entity.claimNumberOfRetry,

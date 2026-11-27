@@ -239,6 +239,7 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
+      // Claimed on-chain, receipt not in yet: wait, do not burn a retry.
       expect(messageRepositoryUpdateSpy).toHaveBeenCalledTimes(0);
     });
 
@@ -263,7 +264,7 @@ describe("TestMessageClaimingPersister", () => {
       expect(messageRepositoryUpdateSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({ claimNumberOfRetry: 1 }));
     });
 
-    it("Should return null when retry tx throws error", async () => {
+    it("Should count the attempt when retry tx throws error", async () => {
       const ctx = createPersister({ messageSubmissionTimeout: 0, maxBumpsPerCycle: 5, maxCycles: 2 });
       messageClaimingPersister = ctx.persister;
       provider = ctx.provider;
@@ -279,7 +280,30 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
-      expect(databaseService.updateMessage).not.toHaveBeenCalled();
+      expect(databaseService.updateMessage).toHaveBeenCalledTimes(1);
+      expect(databaseService.updateMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ claimNumberOfRetry: 1, status: MessageStatus.PENDING }),
+      );
+    });
+
+    it("Should reach NEEDS_MANUAL_INTERVENTION when every bump and cancel fails", async () => {
+      const ctx = createPersister({ messageSubmissionTimeout: 0, maxBumpsPerCycle: 5, maxCycles: 2 });
+      const pendingMsg = new Message({ ...testPendingMessage, claimTxNonce: 42 });
+      jest.spyOn(ctx.databaseService, "getFirstPendingMessage").mockResolvedValue(pendingMsg);
+      jest.spyOn(ctx.provider, "getTransactionReceipt").mockResolvedValue(null);
+      jest.spyOn(ctx.messageServiceContract, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(ctx.transactionRetrier, "retryWithHigherFee").mockRejectedValue(new Error("replacement underpriced"));
+      jest.spyOn(ctx.transactionRetrier, "cancelTransaction").mockRejectedValue(new Error("replacement underpriced"));
+
+      // 5 failed bumps, 2 failed cancels, then the max-cycles check.
+      for (let i = 0; i < 8; i++) {
+        jest.setSystemTime(Date.now() + 1000);
+        await ctx.persister.process();
+      }
+
+      expect(ctx.transactionRetrier.retryWithHigherFee).toHaveBeenCalledTimes(5);
+      expect(ctx.transactionRetrier.cancelTransaction).toHaveBeenCalledTimes(2);
+      expect(pendingMsg.status).toBe(MessageStatus.NEEDS_MANUAL_INTERVENTION);
     });
 
     it("Should cancel and reset message when max bumps per cycle exceeded", async () => {
@@ -449,6 +473,7 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
+      // Claimed on-chain, receipt not in yet: wait, do not burn a cycle.
       expect(messageRepositoryUpdateSpy).not.toHaveBeenCalled();
     });
 
@@ -495,6 +520,7 @@ describe("TestMessageClaimingPersister", () => {
 
       await messageClaimingPersister.process();
 
+      // RPC error before any cancel was sent: retried next poll, not counted.
       expect(databaseService.updateMessage).not.toHaveBeenCalled();
     });
 

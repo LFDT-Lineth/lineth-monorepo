@@ -56,10 +56,17 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
       for (const message of messages) {
         this.logger.debug("Checking on-chain status.", { messageHash: message.messageHash });
 
-        const messageStatus = await this.contractClient.getMessageStatus({
-          messageHash: message.messageHash,
-          messageBlockNumber: message.sentBlockNumber,
-        });
+        let messageStatus: OnChainMessageStatus;
+        try {
+          messageStatus = await this.contractClient.getMessageStatus({
+            messageHash: message.messageHash,
+            messageBlockNumber: message.sentBlockNumber,
+          });
+        } catch (e) {
+          // One failing message must not discard the statuses already resolved in this batch.
+          this.logger.error("Error fetching on-chain message status.", { messageHash: message.messageHash, error: e });
+          continue;
+        }
 
         this.logger.debug("Fetched on-chain message status.", {
           messageHash: message.messageHash,
