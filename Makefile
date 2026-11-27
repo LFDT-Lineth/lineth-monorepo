@@ -75,8 +75,8 @@ E2E_TEST_SCRIPT := test:riscv:local
 E2E_TEST_TIMEOUT := 40m
 # Empty: keep the image tags pinned in docker/compose-riscv.yml.
 E2E_FALLBACK_IMAGE_TAG :=
-# CI always runs dev-zkvm with prover-ray and the guest built from this commit
-# (see e2e-ci-build-images), so the suite never runs against a stale prover-ray.
+# CI runs dev-zkvm with prover-ray built from this commit (never stale) and the
+# latest released guest, as in production (see e2e-ci-build-images).
 export RISCV_PROVER_MODE := dev-zkvm
 export LINEA_PROVER_RAY_TAG := $(E2E_IMAGE_TAG)
 E2E_GUEST_ARTIFACTS := tmp/e2e-guest-artifacts
@@ -109,10 +109,10 @@ endif
 e2e-ci-build-images:
 ifeq ($(E2E_STACK),riscv)
 	$(MAKE) -C prover-ray docker-build IMAGE_TAG="$(E2E_IMAGE_TAG)"
-	# Built once here, outside tmp/local, which env retries wipe. Cleared first: the
-	# export merges, so a stale Program-ID-named ELF would make staging ambiguous.
+	# Downloaded once here, outside tmp/local, which env retries wipe. Cleared first:
+	# a stale Program-ID-named ELF would make staging ambiguous.
 	rm -rf "$(CURDIR)/$(E2E_GUEST_ARTIFACTS)"
-	$(MAKE) -C riscv-guests docker-artifacts GUEST=l2-execution OUT="$(CURDIR)/$(E2E_GUEST_ARTIFACTS)"
+	GUEST=l2-execution prover-ray/scripts/download-guest.sh "$(CURDIR)/$(E2E_GUEST_ARTIFACTS)"
 else
 	@echo "No local images to build for E2E_STACK=$(E2E_STACK)"
 endif
