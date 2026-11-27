@@ -9,6 +9,10 @@
 - *(prover-ray)* Add in-circuit E6Check for the gnark verifier (#4629)
 - *(prover-ray)* Gnark wrapper and devmode circuit (#4637)
 
+### 🐛 Bug Fixes
+
+- *(prover-ray)* Fix the test on large log (#4644)
+
 ### ⚡ Performance
 
 - *(prover-ray)* Batch the chaining of group digests into pair leaves (#4623)
