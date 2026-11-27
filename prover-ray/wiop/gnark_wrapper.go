@@ -28,6 +28,16 @@ const (
 // way the contract turns a keccak hash into a public input. The guest output
 // has one byte per cell; the program VK has one 4-byte limb per cell, limb i in
 // bytes 4i to 4i+4. See [PackBigEndian].
+//
+// The cells are not range-checked against their width: guest-output cells are
+// assumed to be bytes, as the arithmetization guarantees, and program-VK limbs
+// are below p < 2^32. They are strictly reduced mod p in canonicalCells, a separate
+// check: it stops a prover from assigning x+p, which the wiop verifier accepts.
+//
+// The packed values are only defined mod r: 32 bytes can exceed r, so two
+// groups whose 256-bit values differ by r pack to the same public input. This
+// matches the contract, which reduces the same way; exploiting it would need a
+// keccak or Poseidon2 output equal to a chosen value mod r.
 type WrapperCircuit struct {
 	// GuestOutput is the packed guest output.
 	GuestOutput frontend.Variable `gnark:",public"`
