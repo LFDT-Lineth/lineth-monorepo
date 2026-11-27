@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
+	"github.com/consensys/gnark/std/rangecheck"
 )
 
 const (
@@ -29,10 +30,12 @@ const (
 // has one byte per cell; the program VK has one 4-byte limb per cell, limb i in
 // bytes 4i to 4i+4. See [PackBigEndian].
 //
-// The cells are not range-checked against their width: guest-output cells are
-// assumed to be bytes, as the arithmetization guarantees, and program-VK limbs
-// are below p < 2^32. They are strictly reduced mod p in canonicalCells, a separate
-// check: it stops a prover from assigning x+p, which the wiop verifier accepts.
+// The wiop verifier only sees each cell mod p, so a prover could assign x+p
+// for x and change the packed value. Each group rules this out with the
+// cheapest check that does it: guest-output cells are range-checked to 8 bits
+// (x+p >= p > 2^8 fails it, and a cell wider than a byte, which would overlap
+// its neighbour in the packing, is rejected too); program-VK limbs can be any
+// value below p, so they are strictly reduced mod p instead.
 //
 // The packed values are only defined mod r: 32 bytes can exceed r, so two
 // groups whose 256-bit values differ by r pack to the same public input. This
@@ -92,15 +95,32 @@ func (c *WrapperCircuit) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
-	// Bind each public input to its group: canonicalCells strictly reduces the
-	// cells the verifier used (rejecting x+p), then they are packed big-endian mod r.
-	// Guest output: 32 cells, one byte each.
-	guestOutputCells := c.canonicalCells(kb, c.guestOutputPos)
+	// Bind each public input to its group: take the cells the verifier used,
+	// make sure each is the canonical value (rejecting x+p), then pack them
+	// big-endian mod r.
+	// Guest output: 32 cells, one byte each. An 8-bit range check both rejects
+	// x+p and enforces the byte width, more cheaply than a strict reduction.
+	guestOutputCells := c.byteCells(api, c.guestOutputPos)
 	api.AssertIsEqual(c.GuestOutput, PackBigEndianCircuit(api, guestOutputCells, GuestOutputBitsPerCell))
-	// Program VK: 8 cells, one 4-byte limb each.
+	// Program VK: 8 cells, one 4-byte limb each. A limb can be any value below
+	// p, so a range check cannot replace the strict reduction.
 	programVKCells := c.canonicalCells(kb, c.programVKPos)
 	api.AssertIsEqual(c.ProgramVK, PackBigEndianCircuit(api, programVKCells, ProgramVKBitsPerCell))
 	return nil
+}
+
+// byteCells returns the native values of the public-input cells at the given
+// positions, each range-checked to 8 bits. A byte below 2^8 is canonical, so
+// this also rejects x+p, which is at least p.
+func (c *WrapperCircuit) byteCells(api frontend.API, positions []int) []frontend.Variable {
+	rc := rangecheck.New(api)
+	out := make([]frontend.Variable, len(positions))
+	for i, pos := range positions {
+		// KoalaBear fits one 31-bit limb, so Limbs[0] is the whole value.
+		out[i] = c.publicCell(pos).Limbs[0]
+		rc.Check(out[i], GuestOutputBitsPerCell)
+	}
+	return out
 }
 
 // canonicalCells returns the native values of the public-input cells at the
@@ -108,17 +128,21 @@ func (c *WrapperCircuit) Define(api frontend.API) error {
 // only defined mod p, so without it a prover could pack x+p for x, which the
 // wiop verifier accepts but which changes the packed value.
 func (c *WrapperCircuit) canonicalCells(kb *emulated.Field[emulated.KoalaBear], positions []int) []frontend.Variable {
-	sys := c.Verifier.spec
 	out := make([]frontend.Variable, len(positions))
 	for i, pos := range positions {
-		// Map the wiop public-input position to the verifier's witness slot.
-		slot := c.Verifier.layout.cells[sys.PublicInputs[pos].Context.ID]
 		// Reduce to [0, p) and assert it, so x+p cannot stand in for x.
-		e := kb.ReduceStrict(&c.Verifier.PublicInputsBase[slot.index].EV)
+		e := kb.ReduceStrict(c.publicCell(pos))
 		// KoalaBear fits one 31-bit limb, so Limbs[0] is the canonical value.
 		out[i] = e.Limbs[0]
 	}
 	return out
+}
+
+// publicCell returns the emulated element the verifier holds for the wiop
+// public input at position pos, mapped to its witness slot.
+func (c *WrapperCircuit) publicCell(pos int) *emulated.Element[emulated.KoalaBear] {
+	slot := c.Verifier.layout.cells[c.Verifier.spec.PublicInputs[pos].Context.ID]
+	return &c.Verifier.PublicInputsBase[slot.index].EV
 }
 
 // groupPositions returns the positions of the cells registered under tag_0,

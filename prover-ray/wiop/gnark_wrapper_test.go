@@ -221,6 +221,32 @@ func requireUnsatisfied(t *testing.T, err error, msg string) {
 	require.ErrorAs(t, err, &unsat, msg)
 }
 
+// TestWrapperCircuit_GuestOutputNotByte checks that a guest-output cell wider
+// than a byte is rejected. The wiop proof is valid, since devmode does not
+// constrain the guest output to bytes, so only the wrapper's 8-bit range check
+// can reject it.
+func TestWrapperCircuit_GuestOutputNotByte(t *testing.T) {
+	modulus := ecc.BN254.ScalarField()
+
+	sys := newWrapperSystem(t)
+	in := wrapperPub()
+	_, pos := sys.LookupPublicInputByTag(risc5.GuestPublicOutputsPI, 0)
+	in[pos] = field.ElemFromBase(field.NewElement(300))
+	proof, pub, err := devmode.Prove(sys, in)
+	require.NoError(t, err)
+	require.NoError(t, devmode.Verify(sys, proof, pub), "the wiop proof itself must be valid")
+
+	circ := wiop.AllocateWrapperCircuit(sys, risc5.GuestPublicOutputsPI, risc5.ProgramVKPI)
+	ccs, err := frontend.Compile(modulus, scs.NewBuilder, circ)
+	require.NoError(t, err)
+	w, err := frontend.NewWitness(circ.AssignWrapperCircuit(proof, pub), modulus)
+	require.NoError(t, err)
+	// gnark's lookup-based range check reports an out-of-range value from its
+	// solving hint, not as an unsatisfied constraint.
+	require.ErrorContains(t, ccs.IsSolved(w), "query element not in table",
+		"a guest-output cell of 300 must be rejected by the range check")
+}
+
 // newWrapperSystem builds the devmode system without column elision, which
 // the in-circuit verifier does not support.
 func newWrapperSystem(t *testing.T) *wiop.System {
