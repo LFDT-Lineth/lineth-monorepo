@@ -442,6 +442,146 @@
         "deprecated": false,
         "replacement": null
       },
+      "conflation.rollup": {
+        "type": "RollupToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "RISC-V rollup stage: the DA stream, blob and rollup cut-offs, and rollup proof requests. Omit to disable it.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.blob-deadline": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum time, from the first block's timestamp, a blob stays open before it is flushed. Batches reach the DA stream only once their execution proof is persisted, so set it well above the execution proving time, or every blob holds a single conflation. Omit to disable.",
+        "example": "PT10M",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.blob-target-end-blocks": {
+        "type": "List<ULong>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 block numbers that must end a blob. Omit for none.",
+        "example": "[]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.conflations-limit": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of conflations in a rollup. Omit for no limit.",
+        "example": "10",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.da-codec": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "fake-v1",
+        "description": "DA stream codec version.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.data-limit": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum DA bytes in a rollup: the conflations' segments, length prefixes included. Omit for no limit.",
+        "example": "786432",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.deadline": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum time, from the first block's timestamp, a rollup stays open before it is ended. Batches reach the DA stream only once their execution proof is persisted, so set it well above the execution proving time, or every rollup holds a single conflation. Omit to disable.",
+        "example": "PT30M",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.dictionary-path": {
+        "type": "Path?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Compression dictionary for the DA codec. Omit for codecs that do not use one.",
+        "example": "/opt/consensys/linea/coordinator/dictionary.bin",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.gas-limit": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum gas used in a rollup. Omit for no limit.",
+        "example": "300000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.genesis-data-rolling-hash": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Data rolling hash the RISC-V DA stream starts from at the cutover (32-byte hex).",
+        "example": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.max-conflations-to-feed-per-tick": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "100",
+        "description": "Maximum number of persisted batches fed into the DA stream per tick.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Interval between rollup stage ticks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.target-end-blocks": {
+        "type": "List<ULong>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 block numbers that must end a rollup. Omit for none.",
+        "example": "[]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.rollup.tx-count-limit": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of transactions in a rollup. Omit for no limit.",
+        "example": "10000",
+        "deprecated": false,
+        "replacement": null
+      },
       "database": {
         "type": "DatabaseToml",
         "section": true,

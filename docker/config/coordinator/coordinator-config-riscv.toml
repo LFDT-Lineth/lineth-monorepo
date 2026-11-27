@@ -4,6 +4,15 @@ contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 [conflation]
 riscv-starting-block-timestamp-inclusive = 0
 
+# RISC-V rollup stage with the fake DA codec. The genesis data rolling hash is a placeholder until the spec defines
+# the migration. The deadlines count from block timestamps and must stay well above the execution proving time.
+[conflation.rollup]
+genesis-data-rolling-hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+da-codec = "fake-v1"
+blob-deadline = "PT2M"
+conflations-limit = 5
+deadline = "PT5M"
+
 # Execution program-id is set through Compose.
 [prover]
 type = "riscv"
@@ -21,6 +30,10 @@ fs-responses-directory = "/data/prover/riscv/rollup/responses"
 program-id = "0x0000000000000000000000000000000000000000000000000000000000000000"
 fs-requests-directory = "/data/prover/riscv/aggregation/requests"
 fs-responses-directory = "/data/prover/riscv/aggregation/responses"
+
+# The rollup stage reads each batch's proof index hash, stored from schema version 5.
+[database]
+schema-version = 5
 
 [l1-submission.blob]
 disabled = true

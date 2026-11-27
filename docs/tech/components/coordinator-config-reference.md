@@ -58,6 +58,19 @@ Block conflation, blob compression, and proof aggregation settings.
 | `conflation.proof-aggregation.wait-for-no-l2-activity-to-trigger-aggregation` | Whether to wait for a period of no L2 activity before triggering an aggregation. | `Boolean` | no | `false` | active |
 | `conflation.proof-aggregation.wait-target-block-l1-finalization` | Whether to wait for the target block to be finalized on L1 before aggregating. | `Boolean` | no | `false` | active |
 | `conflation.riscv-starting-block-timestamp-inclusive` | RISC-V starting block timestamp (inclusive). Example: `2027-01-01T00:00:00Z`. | `Instant?` | no | - | active |
+| `conflation.rollup.blob-deadline` | Maximum time, from the first block's timestamp, a blob stays open before it is flushed. Batches reach the DA stream only once their execution proof is persisted, so set it well above the execution proving time, or every blob holds a single conflation. Omit to disable. Example: `PT10M`. | `Duration?` | no | - | active |
+| `conflation.rollup.blob-target-end-blocks` | L2 block numbers that must end a blob. Omit for none. Example: `[]`. | `List<ULong>` | no | - | active |
+| `conflation.rollup.conflations-limit` | Maximum number of conflations in a rollup. Omit for no limit. Example: `10`. | `UInt?` | no | - | active |
+| `conflation.rollup.da-codec` | DA stream codec version. | `String` | no | `fake-v1` | active |
+| `conflation.rollup.data-limit` | Maximum DA bytes in a rollup: the conflations' segments, length prefixes included. Omit for no limit. Example: `786432`. | `ULong?` | no | - | active |
+| `conflation.rollup.deadline` | Maximum time, from the first block's timestamp, a rollup stays open before it is ended. Batches reach the DA stream only once their execution proof is persisted, so set it well above the execution proving time, or every rollup holds a single conflation. Omit to disable. Example: `PT30M`. | `Duration?` | no | - | active |
+| `conflation.rollup.dictionary-path` | Compression dictionary for the DA codec. Omit for codecs that do not use one. Example: `/opt/consensys/linea/coordinator/dictionary.bin`. | `Path?` | no | - | active |
+| `conflation.rollup.gas-limit` | Maximum gas used in a rollup. Omit for no limit. Example: `300000000`. | `ULong?` | no | - | active |
+| `conflation.rollup.genesis-data-rolling-hash` | Data rolling hash the RISC-V DA stream starts from at the cutover (32-byte hex). Example: `0x0000000000000000000000000000000000000000000000000000000000000000`. | `ByteArray` | yes | - | active |
+| `conflation.rollup.max-conflations-to-feed-per-tick` | Maximum number of persisted batches fed into the DA stream per tick. | `UInt` | no | `100` | active |
+| `conflation.rollup.polling-interval` | Interval between rollup stage ticks. | `Duration` | no | `PT1S` | active |
+| `conflation.rollup.target-end-blocks` | L2 block numbers that must end a rollup. Omit for none. Example: `[]`. | `List<ULong>` | no | - | active |
+| `conflation.rollup.tx-count-limit` | Maximum number of transactions in a rollup. Omit for no limit. Example: `10000`. | `ULong?` | no | - | active |
 
 ### `database`
 

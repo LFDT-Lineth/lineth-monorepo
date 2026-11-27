@@ -34,7 +34,49 @@ data class ConflationConfig(
   val tracesLimits: TracesCounters,
   val backtestingDirectory: Path? = null,
   val riscvStartingBlockTimestampInclusive: Instant? = null,
+  val rollup: Rollup? = null,
 ) : FeatureToggle {
+  /** RISC-V rollup stage: the DA stream, blob and rollup cut-offs, and rollup proof requests. */
+  data class Rollup(
+    val genesisDataRollingHash: ByteArray,
+    val daCodec: String = "fake-v1",
+    val dictionaryPath: Path? = null,
+    val pollingInterval: Duration = 1.seconds,
+    val maxConflationsToFeedPerTick: UInt = 100u,
+    val blobDeadline: Duration? = null,
+    val blobTargetEndBlocks: Set<ULong> = emptySet(),
+    val conflationsLimit: UInt? = null,
+    val targetEndBlocks: Set<ULong> = emptySet(),
+    val deadline: Duration? = null,
+    val dataLimit: ULong? = null,
+    val gasLimit: ULong? = null,
+    val txCountLimit: ULong? = null,
+  ) {
+    init {
+      require(genesisDataRollingHash.size == 32) {
+        "genesisDataRollingHash must be 32 bytes, got ${genesisDataRollingHash.size}"
+      }
+      require(maxConflationsToFeedPerTick > 0u) { "maxConflationsToFeedPerTick must be > 0" }
+      require(conflationsLimit == null || conflationsLimit > 0u) { "conflationsLimit must be > 0" }
+    }
+
+    override fun equals(other: Any?): Boolean =
+      this === other ||
+        (
+          other is Rollup &&
+            genesisDataRollingHash.contentEquals(other.genesisDataRollingHash) &&
+            fields() == other.fields()
+          )
+
+    override fun hashCode(): Int = 31 * genesisDataRollingHash.contentHashCode() + fields().hashCode()
+
+    private fun fields(): List<Any?> =
+      listOf(
+        daCodec, dictionaryPath, pollingInterval, maxConflationsToFeedPerTick, blobDeadline, blobTargetEndBlocks,
+        conflationsLimit, targetEndBlocks, deadline, dataLimit, gasLimit, txCountLimit,
+      )
+  }
+
   data class BlobCompression(
     val blobSizeLimit: UInt = 102400u,
     val handlerPollingInterval: Duration = 1.seconds,

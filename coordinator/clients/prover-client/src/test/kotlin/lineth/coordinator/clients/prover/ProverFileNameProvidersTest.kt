@@ -52,4 +52,27 @@ class ProverFileNameProvidersTest {
 
     Assertions.assertEquals(31L, fileNameProvider.getFileNameStartBlockNumber(fileName))
   }
+
+  @Test
+  fun `rollup and aggregation file names carry the method names the prover routes on`() {
+    val proofIndex = BlockIntervalProofIndex(
+      startBlockNumber = 1u,
+      endBlockNumber = 10u,
+      startBlockTimestamp = Instant.fromEpochSeconds(0),
+      hash = "ab".decodeHex(),
+    )
+
+    Assertions.assertEquals(
+      "1-10-ab-getZkRollupProofV1.json",
+      RollupProofFileNameProvider.getFileName(proofIndex),
+    )
+    Assertions.assertEquals(
+      "1-10-ab-getZkRollupAggregationProofV1.json",
+      RollupAggregationProofFileNameProvider.getFileName(proofIndex),
+    )
+    Assertions.assertEquals(
+      "1-10-ab-getZkL2ExecutionProof.json",
+      L2ExecutionProofFileNameProvider.getFileName(proofIndex),
+    )
+  }
 }

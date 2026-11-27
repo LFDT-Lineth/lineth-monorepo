@@ -140,7 +140,13 @@ class ConflationServiceImpl(
     }
   }
 
+  private var listenerSet = false
+
+  /** Sets the single handler of conflated batches; a second call fails instead of silently replacing the first. */
+  @Synchronized
   override fun onConflatedBatch(consumer: ConflationHandler) {
+    check(!listenerSet) { "a conflated batch handler is already set" }
     this.listener = consumer
+    listenerSet = true
   }
 }

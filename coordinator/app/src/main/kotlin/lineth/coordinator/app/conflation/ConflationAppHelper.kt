@@ -1,17 +1,33 @@
 package lineth.coordinator.app.conflation
 
+import io.vertx.core.Vertx
 import linea.clients.L2ExecutionProverClientV1
 import linea.clients.RollupAggregationProverClientV1
 import linea.clients.RollupProverClientV1
+import linea.domain.BlockWithTxHashes
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
+import linea.kotlin.toInstantFromEpochSeconds
+import lineth.conflation.calculators.BlobTriggerCalculator
+import lineth.conflation.calculators.BlobTriggerCalculatorByTargetBlockNumbers
+import lineth.conflation.calculators.RollupTriggerCalculator
+import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
+import lineth.conflation.calculators.RollupTriggerCalculatorByDataLimit
+import lineth.conflation.calculators.RollupTriggerCalculatorByGas
+import lineth.conflation.calculators.RollupTriggerCalculatorByTargetBlockNumbers
+import lineth.conflation.calculators.RollupTriggerCalculatorByTxCount
+import lineth.coordinator.config.v2.ConflationConfig
 import lineth.coordinator.config.v2.ForcedTransactionsConfig
 import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.RiscvRollupsDao
+import lineth.persistence.conflation.RiscvRollupsPostgresDao
+import net.consensys.linea.async.AsyncRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 object ConflationAppHelper {
   /**
@@ -88,6 +104,100 @@ object ConflationAppHelper {
         LastProcessedBlocks(lastConflatedBlock = blocks.first(), lastAggregatedBlock = blocks.last())
       }
   }
+
+  /**
+   * Whether L1 has finalized every pre-RISC-V block, so only the RISC-V pipeline has work left: the last finalized
+   * block is at or after the cutover, or it is the last pre-RISC-V block (the next block is at or after the cutover).
+   */
+  fun isRiscvCutoverFinalized(
+    lastFinalizedBlock: ULong,
+    lastFinalizedBlockTimestamp: Instant,
+    riscvCutoverTimestamp: Instant,
+    l2EthClient: EthApiClient,
+  ): SafeFuture<Boolean> {
+    if (lastFinalizedBlockTimestamp >= riscvCutoverTimestamp) return SafeFuture.completedFuture(true)
+    return l2EthClient.ethFindBlockByNumberTxHashes((lastFinalizedBlock + 1UL).toBlockParameter())
+      .thenApply { next -> next != null && next.timestamp.toInstantFromEpochSeconds() >= riscvCutoverTimestamp }
+  }
+
+  /** Blob cut-offs of the rollup stage, besides the blob deadline. */
+  fun rollupBlobTriggers(config: ConflationConfig.Rollup): List<BlobTriggerCalculator> =
+    buildList {
+      if (config.blobTargetEndBlocks.isNotEmpty()) {
+        add(
+          BlobTriggerCalculatorByTargetBlockNumbers(config.blobTargetEndBlocks),
+        )
+      }
+    }
+
+  /** Rollup cut-offs of the rollup stage, besides the rollup deadline. */
+  fun rollupTriggers(config: ConflationConfig.Rollup): List<RollupTriggerCalculator> =
+    buildList {
+      config.conflationsLimit?.let { add(RollupTriggerCalculatorByConflationCount(it.toInt())) }
+      if (config.targetEndBlocks.isNotEmpty()) add(RollupTriggerCalculatorByTargetBlockNumbers(config.targetEndBlocks))
+      config.dataLimit?.let { add(RollupTriggerCalculatorByDataLimit(it)) }
+      config.gasLimit?.let { add(RollupTriggerCalculatorByGas(it)) }
+      config.txCountLimit?.let { add(RollupTriggerCalculatorByTxCount(it)) }
+    }
+
+  /**
+   * Checks the config a rollup stage needs; without a rollup stage there is nothing to check. A rollup stage requires:
+   * 1. DB schema [RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION] or later, which has the rollup tables and each
+   *    batch's proof index hash;
+   * 2. the RISC-V cutover timestamp;
+   * 3. before the cutover is crossed, ConflationAppV2 pausing at the cutover until L1 has finalized every pre-RISC-V
+   *    block, so no RISC-V rollup exists until then. A restart before that takes the pre-RISC-V path, whose cleanup
+   *    deletes RISC-V batches but not rollups, which would be left built on deleted batches.
+   */
+  fun validateRiscvRollupTransition(
+    rollupConfigured: Boolean,
+    dbSchemaVersion: Int,
+    riscvCutoverConfigured: Boolean,
+    riscvCutoverCrossed: Boolean,
+    waitTargetBlockL1Finalization: Boolean,
+  ) {
+    if (!rollupConfigured) return
+
+    require(dbSchemaVersion >= RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION) {
+      "conflation.rollup requires database.schema-version >= ${RiscvRollupsPostgresDao.MIN_DB_SCHEMA_VERSION}: " +
+        "the rollup tables and each batch's proof index hash are stored from that version on"
+    }
+    require(riscvCutoverConfigured) {
+      "conflation.rollup requires conflation.riscv-starting-block-timestamp-inclusive"
+    }
+    if (!riscvCutoverCrossed) {
+      require(waitTargetBlockL1Finalization) {
+        "conflation.rollup before the RISC-V cutover requires " +
+          "conflation.proof-aggregation.wait-target-block-l1-finalization=true"
+      }
+    }
+  }
+
+  /**
+   * Completes with the last L1 finalized block once L1 has finalized every pre-RISC-V block (see
+   * [isRiscvCutoverFinalized]), polling [latestL1FinalizedBlock] every [pollingInterval].
+   */
+  fun awaitRiscvCutoverFinalized(
+    vertx: Vertx,
+    pollingInterval: Duration,
+    riscvCutoverTimestamp: Instant,
+    latestL1FinalizedBlock: () -> ULong,
+    l2EthClient: EthApiClient,
+  ): SafeFuture<BlockWithTxHashes> =
+    AsyncRetryer.retry<BlockWithTxHashes?>(
+      vertx = vertx,
+      backoffDelay = pollingInterval,
+      stopRetriesPredicate = { it != null },
+    ) {
+      l2EthClient.ethGetBlockByNumberTxHashes(latestL1FinalizedBlock().toBlockParameter()).thenCompose { finalized ->
+        isRiscvCutoverFinalized(
+          lastFinalizedBlock = finalized.number,
+          lastFinalizedBlockTimestamp = finalized.timestamp.toInstantFromEpochSeconds(),
+          riscvCutoverTimestamp = riscvCutoverTimestamp,
+          l2EthClient = l2EthClient,
+        ).thenApply { done -> finalized.takeIf { done } }
+      }
+    }.thenApply { it!! }
 
   /**
    * Where the RISC-V pipeline resumes after the cutover, all from the same last finalized block:

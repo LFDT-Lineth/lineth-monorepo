@@ -18,10 +18,12 @@ import kotlin.time.Instant
  * 2. If the walk finds rollups, resume after the last one: the next rollup starts at its end block + 1, and the DA
  *    stream reopens where it ended, inside its last blob if it left unused bytes there, else on a fresh blob.
  * 3. If no persisted rollup starts at F + 1, resume right after F, with the DA stream position at F:
- *    - F before the RISC-V cutover: no RISC-V rollup exists yet, so the stream starts fresh from the genesis data
- *      rolling hash. This assumes the pre-RISC-V flow has finalized every pre-RISC-V block, so F is the last one.
- *    - F at or after the cutover: the position is read from the persisted rollup ending at F, which finalization
- *      cleanup keeps for this. If it is missing, this fails.
+ *    - F before the RISC-V cutover, or F the genesis block: no RISC-V rollup is finalized yet, so the stream starts
+ *      fresh from the genesis data rolling hash. Before the cutover, this assumes the pre-RISC-V flow has finalized
+ *      every pre-RISC-V block, so F is the last one. The genesis block is never in a rollup, so a chain that is
+ *      RISC-V from genesis starts there.
+ *    - Otherwise: the position is read from the persisted rollup ending at F, which finalization cleanup keeps for
+ *      this. If it is missing, this fails.
  */
 class RiscvRollupsResumePointProvider(
   private val rollupsDao: RiscvRollupsDao,
@@ -38,7 +40,7 @@ class RiscvRollupsResumePointProvider(
         when {
           lastRollup != null -> SafeFuture.completedFuture(resumePointAfter(lastRollup))
 
-          lastFinalizedBlockTimestamp < riscvCutoverTimestamp ->
+          lastFinalizedBlock == 0UL || lastFinalizedBlockTimestamp < riscvCutoverTimestamp ->
             genesisDataRollingHashProvider.getGenesisDataRollingHash()
               .thenApply { RollupResumePoint(lastFinalizedBlock, DaStreamPosition.fresh(it)) }
 
