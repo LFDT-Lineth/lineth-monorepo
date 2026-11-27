@@ -3,9 +3,9 @@ package field
 import (
 	"fmt"
 	"math/rand/v2"
-	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -81,21 +81,16 @@ func mustEqualLen2(res, a int) {
 // base field. All slices must have equal length.
 func VecAddBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	koalabear.Vector(res).Add(a, b)
 }
 
 // VecAddExtBase sets res[i] = a[i] + b[i] where a is an extension vector and
-// b is a base vector. Only the first coordinate of each a[i] is updated; the
-// remaining five are copied unchanged. Cost: 1 base addition per element.
-// All slices must have equal length.
+// b is a base vector, using gnark-crypto's VectorE6.AddElement (only the
+// first coordinate of each a[i] changes). All slices must have equal length;
+// res may alias a.
 func VecAddExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i] = a[i]
-		res[i].B0.A0.Add(&res[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(res).AddElement(a, b)
 }
 
 // VecAddBaseExt sets res[i] = a[i] + b[i] where a is a base vector and b is
@@ -105,13 +100,12 @@ func VecAddBaseExt(res []Ext, a []Element, b []Ext) {
 	VecAddExtBase(res, b, a)
 }
 
-// VecAddExtExt sets res[i] = a[i] + b[i] over the extension field.
-// Cost: 6 base additions per element. All slices must have equal length.
+// VecAddExtExt sets res[i] = a[i] + b[i] over the extension field, using
+// gnark-crypto's VectorE6.Add (6 base additions per element, vectorised over
+// the coordinates). All slices must have equal length; res may alias a or b.
 func VecAddExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Add(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).Add(a, b)
 }
 
 // VecAddInto sets res[i] = a[i] + b[i] for all i, dispatching to the typed
@@ -140,44 +134,33 @@ func VecAddInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecSubBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	koalabear.Vector(res).Sub(a, b)
 }
 
 // VecSubExtBase sets res[i] = a[i] - b[i] where a is an extension vector and
-// b is a base vector. Only the first coordinate of each a[i] is updated.
-// Cost: 1 base subtraction per element. All slices must have equal length.
+// b is a base vector, using gnark-crypto's VectorE6.SubElement (only the
+// first coordinate of each a[i] changes). All slices must have equal length;
+// res may alias a.
 func VecSubExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i] = a[i]
-		res[i].B0.A0.Sub(&res[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(res).SubElement(a, b)
 }
 
 // VecSubBaseExt sets res[i] = a[i] - b[i] where a is a base vector and b is
-// an extension vector. Note that subtraction is not commutative, so this
-// cannot simply delegate to VecSubExtBase.
-// Cost: 6 base negations + 1 base addition per element.
-// All slices must have equal length.
+// an extension vector, using gnark-crypto's VectorE6.SubFromElement. All
+// slices must have equal length; res may alias b.
 func VecSubBaseExt(res []Ext, a []Element, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		// Compute Lift(a[i]) - b[i] without allocating:
-		// negate all six components of b[i], then add a[i] to the first.
-		res[i].Neg(&b[i])
-		res[i].B0.A0.Add(&res[i].B0.A0, &a[i])
-	}
+	extensions.VectorE6(res).SubFromElement(a, b)
 }
 
-// VecSubExtExt sets res[i] = a[i] - b[i] over the extension field.
-// Cost: 6 base subtractions per element. All slices must have equal length.
+// VecSubExtExt sets res[i] = a[i] - b[i] over the extension field, using
+// gnark-crypto's VectorE6.Sub (6 base subtractions per element, vectorised
+// over the coordinates). All slices must have equal length; res may alias a
+// or b.
 func VecSubExtExt(res, a, b []Ext) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Sub(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).Sub(a, b)
 }
 
 // VecSubInto sets res[i] = a[i] - b[i] for all i, dispatching to the typed
@@ -207,9 +190,7 @@ func VecSubInto(res, a, b Vec) {
 // All slices must have equal length.
 func VecMulBaseBase(res, a, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].Mul(&a[i], &b[i])
-	}
+	koalabear.Vector(res).Mul(a, b)
 }
 
 // VecMulExtBase sets res[i] = a[i] * b[i] where a is an extension vector and
@@ -219,9 +200,7 @@ func VecMulBaseBase(res, a, b []Element) {
 // All slices must have equal length.
 func VecMulExtBase(res []Ext, a []Ext, b []Element) {
 	mustEqualLen(len(res), len(a), len(b))
-	for i := range res {
-		res[i].MulByElement(&a[i], &b[i])
-	}
+	extensions.VectorE6(res).MulByElement(a, b)
 }
 
 // VecMulBaseExt sets res[i] = a[i] * b[i] where a is a base vector and b is
@@ -270,22 +249,18 @@ func VecMulInto(res, a, b Vec) {
 // Neg
 // ---------------------------------------------------------------------------
 
-// VecNegBase sets res[i] = -a[i] over the base field.
-// All slices must have equal length.
+// VecNegBase sets res[i] = -a[i] over the base field, using gnark-crypto's
+// vectorised Vector.Neg. All slices must have equal length; res may alias a.
 func VecNegBase(res, a []Element) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	koalabear.Vector(res).Neg(a)
 }
 
-// VecNegExt sets res[i] = -a[i] over the extension field.
-// All slices must have equal length.
+// VecNegExt sets res[i] = -a[i] over the extension field, using gnark-crypto's
+// vectorised VectorE6.Neg. All slices must have equal length; res may alias a.
 func VecNegExt(res, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Neg(&a[i])
-	}
+	extensions.VectorE6(res).Neg(a)
 }
 
 // VecNegInto sets res[i] = -a[i] for all i, dispatching on the field type of
@@ -301,42 +276,6 @@ func VecNegInto(res, a Vec) {
 // ---------------------------------------------------------------------------
 // Scale (scalar × vector)
 // ---------------------------------------------------------------------------
-//
-// For each variant, the naming convention is VecScale{ScalarType}{VecType}
-// where ScalarType and VecType are "Base" or "Ext".
-
-// VecScaleBaseBase sets res[i] = s * a[i] where s and a are both base-field.
-// Cost: 1 base multiplication per element.
-// res and a must have equal length.
-func VecScaleBaseBase(res []Element, s Element, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Mul(&s, &a[i])
-	}
-}
-
-// VecScaleBaseExt sets res[i] = s * a[i] where s is a base scalar and a is an
-// extension vector. Uses [Ext.MulByElement] to exploit the base structure of s.
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleBaseExt(res []Ext, s Element, a []Ext) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&a[i], &s)
-	}
-}
-
-// VecScaleExtBase sets res[i] = s * a[i] where s is an extension scalar and a
-// is a base vector. Uses [Ext.MulByElement] to exploit the base structure of
-// each a[i].
-// Cost: 6 base multiplications per element.
-// res and a must have equal length.
-func VecScaleExtBase(res []Ext, s Ext, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].MulByElement(&s, &a[i])
-	}
-}
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
 // Cost: ~24 base multiplications per element; AVX-512 vectorized (gnark-crypto
@@ -347,51 +286,24 @@ func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	extensions.VectorE6(res).ScalarMul(extensions.VectorE6(a), &s)
 }
 
-// VecScaleInto sets res[i] = s * v[i] for all i, dispatching to the typed
-// variant that matches the field types of s and v.
-//
-// res must be pre-allocated; its field type (IsBase) must be true iff both s
-// and v are base. res and v must have equal length. Panics otherwise.
-func VecScaleInto(res Vec, s Gen, v Vec) {
-	switch {
-	case res.IsBase():
-		VecScaleBaseBase(res.base, s.B0.A0, v.base)
-	case s.isBase && !v.IsBase():
-		VecScaleBaseExt(res.ext, s.B0.A0, v.ext)
-	case !s.isBase && v.IsBase():
-		VecScaleExtBase(res.ext, s.Ext, v.base)
-	default:
-		VecScaleExtExt(res.ext, s.Ext, v.ext)
-	}
-}
-
 // ---------------------------------------------------------------------------
-// ScaleAdd (fused Horner step: acc = acc·s + b)
+// ScaleAdd (Horner step: acc = acc·s + b)
 // ---------------------------------------------------------------------------
 
-// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector,
-// in a single pass over memory (one fused Horner fold step instead of a
-// scale pass followed by an add pass).
-// Cost: ~24 base multiplications + 1 base addition per element.
+// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector:
+// one Horner step, run as gnark-crypto's fused VectorE6.ScalarMulAddBase.
 // acc and b must have equal length.
 func VecScaleAddExtBase(acc []Ext, s Ext, b []Element) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].B0.A0.Add(&acc[i].B0.A0, &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMulAddBase(b, &s)
 }
 
-// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field,
-// in a single pass over memory.
-// Cost: ~24 base multiplications + 6 base additions per element.
-// acc and b must have equal length.
+// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field:
+// one Horner step, run as gnark-crypto's fused VectorE6.ScalarMulAdd. acc and
+// b must have equal length; acc may alias b.
 func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 	mustEqualLen2(len(acc), len(b))
-	for i := range acc {
-		acc[i].Mul(&acc[i], &s)
-		acc[i].Add(&acc[i], &b[i])
-	}
+	extensions.VectorE6(acc).ScalarMulAdd(b, &s)
 }
 
 // ---------------------------------------------------------------------------
@@ -399,19 +311,18 @@ func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
 // ---------------------------------------------------------------------------
 
 // VecBatchInvBase sets res[i] = 1/a[i] for all i over the base field, using
-// the Montgomery batch-inversion trick (one inversion + n multiplications).
-// Zeroes map to zero. res and a must have equal length.
+// the Montgomery batch-inversion trick (one inversion + n multiplications)
+// without allocating; see [BatchInvertInto]. Zeroes map to zero. res and a
+// must have equal length; res may alias a.
 func VecBatchInvBase(res, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	tmp := BatchInvert(a)
-	copy(res, tmp)
+	BatchInvertInto(res, a)
 }
 
 // VecBatchInvExt sets res[i] = 1/a[i] for all i over the extension field,
 // using the batch-inversion trick. Zeroes map to zero. res and a must have
 // equal length; res may alias a.
 func VecBatchInvExt(res, a []Ext) {
-	BatchInvertExtInto(a, res)
+	BatchInvertExtInto(res, a)
 }
 
 // VecBatchInvInto sets res[i] = 1/a[i] for all i, dispatching on the field
@@ -426,87 +337,14 @@ func VecBatchInvInto(res, a Vec) {
 }
 
 // ---------------------------------------------------------------------------
-// Prettify
-// ---------------------------------------------------------------------------
-
-// VecPrettifyBase returns a human-readable string representation of a base-field
-// vector, e.g. "[1, 2, 3]".
-func VecPrettifyBase(a []Element) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// VecPrettifyExt returns a human-readable string representation of an
-// extension-field vector.
-func VecPrettifyExt(a []Ext) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i := range a {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(a[i].String())
-	}
-	b.WriteByte(']')
-	return b.String()
-}
-
-// ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
-
-// VecFromInts allocates a []Element from a list of integer literals.
-// Each integer is converted via SetInt64. Useful in tests.
-func VecFromInts(xs ...int) []Element {
-	res := make([]Element, len(xs))
-	for i, x := range xs {
-		res[i].SetInt64(int64(x))
-	}
-	return res
-}
 
 // VecRepeatBase allocates a []Element of length n where every entry equals x.
 func VecRepeatBase(x Element, n int) []Element {
 	res := make([]Element, n)
 	for i := range res {
 		res[i] = x
-	}
-	return res
-}
-
-// VecRepeatExt allocates a []Ext of length n where every entry equals x.
-func VecRepeatExt(x Ext, n int) []Ext {
-	res := make([]Ext, n)
-	for i := range res {
-		res[i] = x
-	}
-	return res
-}
-
-// VecRandomBase allocates a []Element of length size filled with
-// cryptographically random base-field elements.
-func VecRandomBase(size int) []Element {
-	res := make([]Element, size)
-	for i := range res {
-		res[i] = RandomElement()
-	}
-	return res
-}
-
-// VecRandomExt allocates a []Ext of length size filled with
-// cryptographically random extension-field elements.
-func VecRandomExt(size int) []Ext {
-	res := make([]Ext, size)
-	for i := range res {
-		res[i] = RandomElementExt()
 	}
 	return res
 }
@@ -531,24 +369,6 @@ func VecPseudoRandExt(rng *rand.Rand, size int) []Ext {
 	return res
 }
 
-// VecPowerBase allocates and returns [x^0, x^1, ..., x^{n-1}].
-// Panics if x is zero or n is negative.
-func VecPowerBase(x Element, n int) []Element {
-	var zero Element
-	if x == zero {
-		panic("field: VecPowerBase called with x=0")
-	}
-	if n == 0 {
-		return []Element{}
-	}
-	res := make([]Element, n)
-	res[0].SetOne()
-	for i := 1; i < n; i++ {
-		res[i].Mul(&res[i-1], &x)
-	}
-	return res
-}
-
 // ---------------------------------------------------------------------------
 // In-place mutation
 // ---------------------------------------------------------------------------
@@ -567,118 +387,51 @@ func VecFillExt(v []Ext, val Ext) {
 	}
 }
 
-// VecReverseBase reverses v in-place.
-func VecReverseBase(v []Element) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
-// VecReverseExt reverses v in-place.
-func VecReverseExt(v []Ext) {
-	for i, j := 0, len(v)-1; i < j; i, j = i+1, j-1 {
-		v[i], v[j] = v[j], v[i]
-	}
-}
-
 // ---------------------------------------------------------------------------
-// Comparison
+// Prefix scans
 // ---------------------------------------------------------------------------
 
-// VecEqualBase reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualBase(a, b []Element) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// VecEqualExt reports whether a and b contain the same values.
-// Panics if a and b have different lengths.
-func VecEqualExt(a, b []Ext) bool {
-	mustEqualLen2(len(a), len(b))
-	for i := range a {
-		if !a[i].Equal(&b[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// prefixScanMinChunk is the smallest number of elements a worker of
-// [VecPrefixSumExt] or [VecPrefixProductExt] scans: below it, splitting costs
-// more than it saves.
-const prefixScanMinChunk = 4096
+// prefixSumMinChunk is the smallest number of elements a worker of
+// [VecPrefixSumExt] scans: below it, splitting costs more than it saves.
+const prefixSumMinChunk = 4096
 
 // VecPrefixSumExt replaces z by its running sum, z[i] = Σ_{k≤i} z[k], on at
 // most workers goroutines. Field addition is exact, so the result does not
-// depend on workers.
-func VecPrefixSumExt(z []Ext, workers int) { prefixScanExt(z, workers, false) }
-
-// VecPrefixProductExt replaces z by its running product, z[i] = ∏_{k≤i} z[k],
-// on at most workers goroutines. Field multiplication is exact, so the result
-// does not depend on workers.
-func VecPrefixProductExt(z []Ext, workers int) { prefixScanExt(z, workers, true) }
-
-// prefixScanExt is a two-pass chunked scan: each chunk is scanned from the
-// identity, then every chunk but the first is combined with the totals of the
-// chunks before it.
-func prefixScanExt(z []Ext, workers int, mul bool) {
-	// scan replaces v[i] by acc ∘ v[0] ∘ … ∘ v[i] and returns the last one;
-	// shift replaces v[i] by v[i] ∘ offset.
+// depend on workers. (Running products use gnark-crypto's
+// VectorE6.PrefixProduct; it has no prefix sum.)
+//
+// It is a two-pass chunked scan: each chunk is summed from zero, then every
+// chunk but the first is shifted by the total of the chunks before it.
+func VecPrefixSumExt(z []Ext, workers int) {
+	// scan replaces v[i] by acc + v[0] + … + v[i] and returns the last one.
 	scan := func(v []Ext, acc Ext) Ext {
-		if mul {
-			for i := range v {
-				acc.Mul(&acc, &v[i])
-				v[i] = acc
-			}
-		} else {
-			for i := range v {
-				acc.Add(&acc, &v[i])
-				v[i] = acc
-			}
+		for i := range v {
+			acc.Add(&acc, &v[i])
+			v[i] = acc
 		}
 		return acc
 	}
-	shift := func(v []Ext, offset *Ext) {
-		if mul {
-			for i := range v {
-				v[i].Mul(&v[i], offset)
-			}
-		} else {
-			for i := range v {
-				v[i].Add(&v[i], offset)
-			}
-		}
-	}
-	var identity Ext
-	if mul {
-		identity.SetOne()
-	}
 
 	n := len(z)
-	size := max(prefixScanMinChunk, (n+workers-1)/max(1, workers))
+	size := max(prefixSumMinChunk, (n+workers-1)/max(1, workers))
 	nbChunks := (n + size - 1) / size
 	chunk := func(c int) []Ext { return z[c*size : min((c+1)*size, n)] }
 	offsets := make([]Ext, nbChunks)
-	parallel.Execute(nbChunks, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks, workers, func(start, end int) {
 		for c := start; c < end; c++ {
-			offsets[c] = scan(chunk(c), identity)
+			offsets[c] = scan(chunk(c), Ext{})
 		}
-	}, workers)
+	})
 	if nbChunks < 2 {
 		return
 	}
-	// offsets[c] becomes the combination of the totals of chunks 0..c-1.
-	scan(offsets[:nbChunks-1], identity)
+	// offsets[c] becomes the sum of the totals of chunks 0..c-1.
+	scan(offsets[:nbChunks-1], Ext{})
 	copy(offsets[1:], offsets[:nbChunks-1])
-	parallel.Execute(nbChunks-1, func(start, end int) {
+	parallel.ExecuteWithNbTasks(nbChunks-1, workers, func(start, end int) {
 		for c := start + 1; c < end+1; c++ {
-			shift(chunk(c), &offsets[c])
+			v := chunk(c)
+			extensions.VectorE6(v).ScalarAdd(v, &offsets[c])
 		}
-	}, workers)
+	})
 }

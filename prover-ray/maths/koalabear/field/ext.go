@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"math/bits"
 	"math/rand/v2"
 	"reflect"
-	"runtime"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -27,19 +24,26 @@ type Ext = extensions.E6
 // tower. The first triple encodes v^3 = u + 1, the trailing 3 encodes u^2 = 3.
 var RootPowers = []int{1, 1, 0, 3}
 
-// BatchInvertExt compute the inverses of all elements in the provided slice
-// using the Montgommery trick. Zeroes are ignored.
+// BatchInvertExt returns the inverses of the elements of a, using the
+// Montgomery trick; zeroes map to zero.
 func BatchInvertExt(a []Ext) []Ext {
-	return extensions.BatchInvertE6(a)
+	return extensions.VectorE6(a).BatchInvert()
 }
 
 // BatchInvertExtInto computes the inverses of all elements in a and writes
-// the result into res; zeroes map to zero. res may alias a.
-func BatchInvertExtInto(a, res []Ext) {
-	if len(a) != len(res) {
-		panic("input and output slices must have the same length")
-	}
-	extensions.BatchInvertE6Into(res, a)
+// the result into res; zeroes map to zero. res and a must have the same
+// length; res may be a itself but must not otherwise overlap it. In place,
+// its scratch comes from gnark-crypto's pool; see [BatchInvertExtScratch] to
+// pass it.
+func BatchInvertExtInto(res, a []Ext) {
+	extensions.VectorE6(res).BatchInvertInto(a)
+}
+
+// BatchInvertExtScratch is [BatchInvertExtInto] with caller-provided scratch:
+// it allocates nothing. scratch must hold at least len(a) elements, is
+// overwritten, and must overlap neither res nor a.
+func BatchInvertExtScratch(res, a, scratch []Ext) {
+	extensions.VectorE6(res).BatchInvertIntoScratch(a, scratch)
 }
 
 // NewExtFromString only sets the first coordinate of the field extension
@@ -78,42 +82,6 @@ func GetBase(z *Ext) (Element, bool) {
 	return Element{}, false
 }
 
-// AddByBase implements mixed addition of a base field element.
-func AddByBase(z *Ext, first *Ext, second *Element) *Ext {
-	z.Set(first)
-	z.B0.A0.Add(&z.B0.A0, second)
-	return z
-}
-
-// SubByBase implements mixed addition of a base field element.
-func SubByBase(z *Ext, first *Ext, second *Element) *Ext {
-	z.Set(first)
-	z.B0.A0.Sub(&z.B0.A0, second)
-	return z
-}
-
-// MulByBase implements element-wise multiplication by a base field scalar.
-func MulByBase(z *Ext, first *Ext, second *Element) *Ext {
-	z.B0.A0.Mul(&first.B0.A0, second)
-	z.B0.A1.Mul(&first.B0.A1, second)
-	z.B1.A0.Mul(&first.B1.A0, second)
-	z.B1.A1.Mul(&first.B1.A1, second)
-	z.B2.A0.Mul(&first.B2.A0, second)
-	z.B2.A1.Mul(&first.B2.A1, second)
-	return z
-}
-
-// DivByBase implements a division by a base field element.
-func DivByBase(z *Ext, first *Ext, second *Element) *Ext {
-	z.B0.A0.Div(&first.B0.A0, second)
-	z.B0.A1.Div(&first.B0.A1, second)
-	z.B1.A0.Div(&first.B1.A0, second)
-	z.B1.A1.Div(&first.B1.A1, second)
-	z.B2.A0.Div(&first.B2.A0, second)
-	z.B2.A1.Div(&first.B2.A1, second)
-	return z
-}
-
 // SetInterface is a generic purpose function to set a field element from an
 // interface{}
 func SetInterface(z *Ext, i1 interface{}) (*Ext, error) {
@@ -130,32 +98,32 @@ func SetInterface(z *Ext, i1 interface{}) (*Ext, error) {
 		}
 		return z.Set(c1), nil
 	case Element:
-		return SetExtFromBase(z, &c1), nil
+		return z.SetElement(&c1), nil
 	case *Element:
 		if c1 == nil {
 			return nil, errors.New("can't set fext.Element with <nil>")
 		}
-		return SetExtFromBase(z, c1), nil
+		return z.SetElement(c1), nil
 	case uint8:
-		return SetExtFromUInt(z, uint64(c1)), nil
+		return z.SetUint64(uint64(c1)), nil
 	case uint16:
-		return SetExtFromUInt(z, uint64(c1)), nil
+		return z.SetUint64(uint64(c1)), nil
 	case uint32:
-		return SetExtFromUInt(z, uint64(c1)), nil
+		return z.SetUint64(uint64(c1)), nil
 	case uint:
-		return SetExtFromUInt(z, uint64(c1)), nil
+		return z.SetUint64(uint64(c1)), nil
 	case uint64:
-		return SetExtFromUInt(z, c1), nil
+		return z.SetUint64(c1), nil
 	case int8:
-		return SetExtFromInt(z, int64(c1)), nil
+		return z.SetInt64(int64(c1)), nil
 	case int16:
-		return SetExtFromInt(z, int64(c1)), nil
+		return z.SetInt64(int64(c1)), nil
 	case int32:
-		return SetExtFromInt(z, int64(c1)), nil
+		return z.SetInt64(int64(c1)), nil
 	case int64:
-		return SetExtFromInt(z, c1), nil
+		return z.SetInt64(c1), nil
 	case int:
-		return SetExtFromInt(z, int64(c1)), nil
+		return z.SetInt64(int64(c1)), nil
 	case string:
 		if _, err := z.B0.A0.SetString(c1); err != nil {
 			return nil, err
@@ -202,21 +170,6 @@ func ExtToText(z *Ext, base int) string {
 		z.B2.A0.Text(base), z.B2.A1.Text(base))
 }
 
-// ParBatchInvertExt computes inverses of all elements in a in parallel using numCPU goroutines.
-func ParBatchInvertExt(a []Ext, numCPU int) []Ext {
-
-	if numCPU == 0 {
-		numCPU = runtime.GOMAXPROCS(0)
-	}
-
-	res := make([]Ext, len(a))
-	parallel.Execute(len(a), func(start, stop int) {
-		BatchInvertExtInto(a[start:stop], res[start:stop])
-	}, numCPU)
-
-	return res
-}
-
 // MulRInvExt multiplies the extension field element by R^-1, where R is the Montgomery constant.
 func MulRInvExt(x Ext) Ext {
 	var res Ext
@@ -247,44 +200,11 @@ func ExtToUint64s(z *Ext) (uint64, uint64, uint64, uint64, uint64, uint64) {
 		uint64(z.B2.A1.Bits()[0])
 }
 
-// SetExtFromUInt sets z to v and returns z. After conversion, z is in the base
-// field and can safely be converted into an [Element].
-func SetExtFromUInt(z *Ext, v uint64) *Ext {
-	//  sets z LSB to v (non-Montgomery form) and convert z to Montgomery form
-	z.B0.A0.SetUint64(v)
-	z.B0.A1.SetZero()
-	z.B1.SetZero()
-	z.B2.SetZero()
-	return z
-}
-
-// SetExtFromInt sets z to v and returns z. After conversion, z is in the base
-// field and can safely be converted into an [Element].
-func SetExtFromInt(z *Ext, v int64) *Ext {
-	z.B0.A0.SetInt64(v)
-	z.B0.A1.SetZero()
-	z.B1.SetZero()
-	z.B2.SetZero()
-	return z
-}
-
-// SetExtFromBase sets z to v and returns z. After conversion, z is in the base
-// field and can safely be converted into an [Element].
-func SetExtFromBase(z *Ext, x *Element) *Ext {
-	z.B0.A0[0] = x[0]
-	z.B0.A1[0] = 0
-	z.B1.A0[0] = 0
-	z.B1.A1[0] = 0
-	z.B2.A0[0] = 0
-	z.B2.A1[0] = 0
-	return z
-}
-
 // Uint64ToExt constructs a field extension from a uint64. The returned element
 // is convertible into a base field element.
 func Uint64ToExt(b uint64) Ext {
 	var res Ext
-	res.B0.A0.SetUint64(b)
+	res.SetUint64(b)
 	return res
 }
 
@@ -315,40 +235,8 @@ func IntsToExt(v1, v2, v3, v4, v5, v6 int64) Ext {
 // Lift embeds a base field element into the extension field.
 func Lift(v Element) Ext {
 	var res Ext
-	res.B0.A0.Set(&v)
+	res.SetElement(&v)
 	return res
-}
-
-// RandomElementExt returns a cryptographically random extension field element.
-func RandomElementExt() Ext {
-	var res Ext
-	if _, err := res.SetRandom(); err != nil {
-		panic(err)
-	}
-	return res
-}
-
-// ExpByIntExt sets z = x^k and returns z.
-func ExpByIntExt(z *Ext, x Ext, k int) *Ext {
-	if k == 0 {
-		return z.SetOne()
-	}
-
-	if k < 0 {
-		x.Inverse(&x)
-		k = -k
-	}
-
-	z.Set(&x)
-
-	for i := bits.Len(uint(k)) - 2; i >= 0; i-- {
-		z.Square(z)
-		if (k>>i)&1 == 1 {
-			z.Mul(z, &x)
-		}
-	}
-
-	return z
 }
 
 // ExtToBytes returns the value of z as a big-endian byte array (one block per
