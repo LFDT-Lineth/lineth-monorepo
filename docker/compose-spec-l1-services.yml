@@ -46,7 +46,7 @@ services:
   l1-cl-node:
     container_name: l1-cl-node
     hostname: l1-cl-node
-    image: consensys/teku:26.10.2
+    image: consensys/teku:26.11.0
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-el-node:
