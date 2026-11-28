@@ -1,0 +1,13 @@
+# Bench config for scripts/bench: the aggregation pipeline in dev-zkvm, with the
+# guests staged in /tmp/aggregation-bench/guests. For dev-partial, set
+# aggregation.prover_mode = "dev-partial"; shard_size is needed for a real input.
+version = "0.0.0-bench"
+log_level = 4
+guests_dir = "/tmp/aggregation-bench/guests"
+shard_size = 500000
+
+[execution]
+prover_mode = "dev-mock"
+
+[aggregation]
+prover_mode = "dev-zkvm"
