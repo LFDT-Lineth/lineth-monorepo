@@ -20,17 +20,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// ParentShnarfPreimage fabricates a self-consistent parent-shnarf preimage for
+// the given state root, by crafting a throwaway blob submission response —
+// reusing the same blob-crafting machinery (blobsubmission.CraftResponse)
+// already used to manufacture the current aggregation's own blob shnarf,
+// rather than hand-rolling a new one. blob is any validly-compressed blob
+// (e.g. one already generated for the aggregation under test); its content is
+// irrelevant here since nothing in this circuit verifies this shnarf's
+// decompression proof, only its opening.
+func ParentShnarfPreimage(
+	t require.TestingT, blob []byte, parentStateRootHashHex string,
+) (prevShnarfHex string, grandparentHex string, preimage public_input.ShnarfPreimage) {
+	req := blobsubmission.Request{
+		Eip4844Enabled:      true,
+		CompressedData:      base64.StdEncoding.EncodeToString(blob),
+		ParentStateRootHash: utils.FmtIntHex32Bytes(29), // arbitrary; irrelevant beyond this shnarf's own opening
+		FinalStateRootHash:  parentStateRootHashHex,
+		PrevShnarf:          utils.FmtIntHex32Bytes(30), // arbitrary grandparent shnarf digest
+	}
+
+	resp, err := blobsubmission.CraftResponse(&req)
+	assert.NoError(t, err)
+
+	return resp.ExpectedShnarf, resp.PrevShnarf, public_input.ShnarfPreimage{
+		SnarkHash: resp.SnarkHash,
+		X:         resp.ExpectedX,
+		Y:         resp.ExpectedY,
+	}
+}
+
 func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 	blob := blobtesting.SingleBlockBlob(t)
 
 	finalStateRootHash := internal.Uint64To32Bytes(2)
+
+	prevShnarf, grandparentShnarf, parentShnarfPreimg := ParentShnarfPreimage(t, blob, utils.FmtIntHex32Bytes(1))
 
 	blobReq := blobsubmission.Request{
 		Eip4844Enabled:      true,
 		CompressedData:      base64.StdEncoding.EncodeToString(blob),
 		ParentStateRootHash: utils.FmtIntHex32Bytes(1),
 		FinalStateRootHash:  utils.HexEncodeToString(finalStateRootHash[:]),
-		PrevShnarf:          utils.FmtIntHex32Bytes(3),
+		PrevShnarf:          prevShnarf,
 	}
 
 	blobResp, err := blobsubmission.CraftResponse(&blobReq)
@@ -79,6 +110,8 @@ func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 		FinalShnarf:                             blobResp.ExpectedShnarf,
 		ParentAggregationFinalShnarf:            blobReq.PrevShnarf,
 		ParentStateRootHash:                     blobReq.ParentStateRootHash,
+		GrandparentShnarf:                       grandparentShnarf,
+		ParentShnarf:                            parentShnarfPreimg,
 		ParentAggregationLastBlockTimestamp:     6,
 		FinalTimestamp:                          uint(execReq.FinalBlockTimestamp),
 		LastFinalizedBlockNumber:                5,
@@ -114,12 +147,14 @@ func AssignSingleBlockBlobNoInvalidity(t require.TestingT) pi_interconnection.Re
 
 	finalStateRootHash := internal.Uint64To32Bytes(2)
 
+	prevShnarf, grandparentShnarf, parentShnarfPreimg := ParentShnarfPreimage(t, blob, utils.FmtIntHex32Bytes(1))
+
 	blobReq := blobsubmission.Request{
 		Eip4844Enabled:      true,
 		CompressedData:      base64.StdEncoding.EncodeToString(blob),
 		ParentStateRootHash: utils.FmtIntHex32Bytes(1),
 		FinalStateRootHash:  utils.HexEncodeToString(finalStateRootHash[:]),
-		PrevShnarf:          utils.FmtIntHex32Bytes(3),
+		PrevShnarf:          prevShnarf,
 	}
 
 	blobResp, err := blobsubmission.CraftResponse(&blobReq)
@@ -146,6 +181,8 @@ func AssignSingleBlockBlobNoInvalidity(t require.TestingT) pi_interconnection.Re
 		FinalShnarf:                             blobResp.ExpectedShnarf,
 		ParentAggregationFinalShnarf:            blobReq.PrevShnarf,
 		ParentStateRootHash:                     blobReq.ParentStateRootHash,
+		GrandparentShnarf:                       grandparentShnarf,
+		ParentShnarf:                            parentShnarfPreimg,
 		ParentAggregationLastBlockTimestamp:     6,
 		FinalTimestamp:                          uint(execReq.FinalBlockTimestamp),
 		LastFinalizedBlockNumber:                5,

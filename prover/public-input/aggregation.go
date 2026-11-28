@@ -21,12 +21,24 @@ const (
 	NbAggregationFPI = 18 // hardcoded constant, the number of functional public inputs used in the keccak hash.
 )
 
+type ShnarfPreimage struct {
+	SnarkHash string `json:"snarkHash"`
+	X         string `json:"x"`
+	Y         string `json:"y"`
+}
+
 // Aggregation collects all the fields that are used to construct the public
 // input of the finalization proof.
 type Aggregation struct {
-	FinalShnarf                             string
-	ParentAggregationFinalShnarf            string
-	ParentStateRootHash                     string
+	FinalShnarf                  string
+	ParentAggregationFinalShnarf string
+	ParentStateRootHash          string
+
+	// Remaining components of ParentAggregationFinalShnarf's keccak preimage
+	// (its state root is ParentStateRootHash), letting the circuit open it.
+	GrandparentShnarf string
+	ParentShnarf      ShnarfPreimage
+
 	ParentAggregationLastBlockTimestamp     uint
 	FinalTimestamp                          uint
 	LastFinalizedBlockNumber                uint
@@ -173,12 +185,8 @@ func (pi *AggregationFPI) ToSnarkType(maxNbFilteredAddresses int) AggregationFPI
 			LastFinalizedRollingHashNumber: pi.LastFinalizedRollingHashMsgNumber,
 			LastFinalizedFtxRollingHash:    pi.LastFinalizedFtxRollingHash[:],
 			LastFinalizedFtxNumber:         pi.LastFinalizedFtxNumber,
-			InitialStateRootHash: [2]frontend.Variable{
-				pi.InitialStateRootHash[:16],
-				pi.InitialStateRootHash[16:],
-			},
-			NbDataAvailability: pi.NbDecompression,
-			NbInvalidity:       pi.NbInvalidity,
+			NbDataAvailability:             pi.NbDecompression,
+			NbInvalidity:                   pi.NbInvalidity,
 			ChainConfigurationFPISnark: ChainConfigurationFPISnark{
 				ChainID:                 pi.ChainID,
 				BaseFee:                 pi.BaseFee,
@@ -224,7 +232,6 @@ type AggregationFPIQSnark struct {
 	ParentShnarf                   [32]frontend.Variable
 	NbDataAvailability             frontend.Variable
 	NbInvalidity                   frontend.Variable
-	InitialStateRootHash           [2]frontend.Variable
 	LastFinalizedBlockNumber       frontend.Variable
 	LastFinalizedBlockTimestamp    frontend.Variable
 	LastFinalizedRollingHash       [32]frontend.Variable
