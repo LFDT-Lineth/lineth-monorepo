@@ -159,6 +159,7 @@ func TestProveDevZkVM(t *testing.T) {
 	})
 
 	testProveRollup(t, ProverModeDevZkVM)
+	testProveAggregation(t, ProverModeDevZkVM)
 }
 
 // testProveRollup runs mode on a guest that writes the reference rollup output.
@@ -188,11 +189,34 @@ func testProveRollup(t *testing.T, mode ProverMode) {
 		assert.Equal(t, ResultStatusFailed, result.Status)
 		assert.ErrorContains(t, result.Err, "schema id is 0x0005, want 0x0003")
 	})
+}
 
-	t.Run("aggregation has no guest output format yet", func(t *testing.T) {
+// testProveAggregation runs mode on a guest that writes the reference
+// aggregation output.
+func testProveAggregation(t *testing.T, mode ProverMode) {
+	t.Helper()
+	hash, framed := aggregationFrame(t, referenceAggregationOutput)
+	dir := t.TempDir()
+	aggregation := writeGuest(t, dir, minimal_elf.OutputAndLogELF(hash, framed))
+	c, err := New(Config{Mode: mode, GuestsDir: dir})
+	require.NoError(t, err)
+	prove := func(proofType ProofType) Result {
+		return c.Prove(context.Background(), Job{ID: string(mode), Type: proofType, GuestProgramID: aggregation})
+	}
+
+	t.Run("aggregation output", func(t *testing.T) {
 		result := prove(ProofTypeRollupAggregation)
+		require.Equal(t, ResultStatusOK, result.Status, "prove err: %v", result.Err)
+		assert.Equal(t, referenceAggregationPublicInputs(t), result.AggregationPublicInputs,
+			"the aggregation public inputs should be decoded from the guest output")
+		assert.Equal(t, slices.Concat(hash, framed), result.GuestOutput)
+		assert.Len(t, result.ProofBytes, solidityPLONKProofSize, "the proof should be a gnark PLONK proof for L1")
+	})
+
+	t.Run("aggregation output on a rollup job", func(t *testing.T) {
+		result := prove(ProofTypeRollup)
 		assert.Equal(t, ResultStatusFailed, result.Status)
-		assert.ErrorIs(t, result.Err, ErrNotImplemented)
+		assert.ErrorContains(t, result.Err, "schema id is 0x0007, want 0x0005")
 	})
 }
 

@@ -121,6 +121,32 @@ type RollupPublicInputs struct {
 	L2MessagingBlocksOffsets              []uint16
 }
 
+// AggregationPublicInputs are the rollup-aggregation guest's public inputs
+// (0x0007 output), named as in the getZkRollupAggregationProofV1 response, in
+// SSZ order.
+type AggregationPublicInputs struct {
+	EndBlockNumber                        uint64
+	EndBlockTimestamp                     uint64
+	EndL1L2BridgeRollingHash              [32]byte
+	EndL1L2BridgeRollingHashMessageNumber uint64
+	DynamicChainConfigHash                [32]byte
+	ParentFtxRollingHash                  [32]byte
+	ParentFtxNumber                       uint64
+	EndFtxRollingHash                     [32]byte
+	EndProcessedFtxNumber                 uint64
+	ParentDataRollingHash                 [32]byte
+	EndDataRollingHash                    [32]byte
+	ParentBlockHash                       [32]byte
+	EndBlockHash                          [32]byte
+	ParentSharedBlobCarryOverTailBytes    uint64
+	FinalSharedBlobCarryOverTailBytes     uint64
+	L2L1TreeDepth                         uint64
+	L2L1Roots                             [][32]byte
+	FilteredAddresses                     [][20]byte
+	ProgramIDs                            [][32]byte
+	L2MessagingBlocksOffsets              []uint16
+}
+
 // Result is the backend's response for a completed [Job].
 type Result struct {
 	JobID  string
@@ -128,13 +154,17 @@ type Result struct {
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
 	// wiop.Proof (wire format not yet decided); for dev-zkvm and dev-partial it
-	// is the image of a devmode proof of the guest output hash; for dev-mock it
-	// is the mode's marker. nil when Status is not ResultStatusOK.
+	// is a devmode proof of the guest output hash: a gnark PLONK proof in the
+	// Solidity layout for an aggregation job, the image of a wiop devmode proof
+	// otherwise; for dev-mock it is the mode's marker. nil when Status is not
+	// ResultStatusOK.
 	ProofBytes []byte
 
-	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job.
-	PublicInputs       PublicInputs
-	RollupPublicInputs RollupPublicInputs
+	// PublicInputs for an l2-execution job, RollupPublicInputs for a rollup job,
+	// AggregationPublicInputs for an aggregation job.
+	PublicInputs            PublicInputs
+	RollupPublicInputs      RollupPublicInputs
+	AggregationPublicInputs AggregationPublicInputs
 
 	// GuestOutput is the guest's output (hash || frame) in dev-zkvm and
 	// dev-partial, for the response and the runner's native runner check. nil

@@ -28,19 +28,18 @@ type layers struct{ execution, rollup, aggregation bool }
 //
 //	mode                 execution  rollup  aggregation
 //	dev-mock             true       true    true
-//	dev-zkvm             true       true    false
-//	dev-partial          true       true    false
+//	dev-zkvm             true       true    true
+//	dev-partial          true       true    true
 //	full                 true       true    true
 //	dev-full-dummy-wrap  false      false   true         (planned)
 //
-// It follows the "Status per layer" table of docs/prover-modes.md: aggregation
-// has no guest input format yet, so dev-zkvm and dev-partial cannot run there.
-// full is not ready on any layer, but stays allowed while it is being built.
+// It follows the "Status per layer" table of docs/prover-modes.md. full is not
+// ready on any layer, but stays allowed while it is being built.
 // Change a false to true when the mode starts to work on that layer.
 var modeLayers = map[backend.ProverMode]layers{
 	backend.ProverModeDevMock:    {execution: true, rollup: true, aggregation: true},
-	backend.ProverModeDevZkVM:    {execution: true, rollup: true, aggregation: false},
-	backend.ProverModeDevPartial: {execution: true, rollup: true, aggregation: false},
+	backend.ProverModeDevZkVM:    {execution: true, rollup: true, aggregation: true},
+	backend.ProverModeDevPartial: {execution: true, rollup: true, aggregation: true},
 	backend.ProverModeFull:       {execution: true, rollup: true, aggregation: true},
 	// Planned, not a mode yet: real proofs, but a dummy BN254 proof for L1.
 	// backend.ProverModeDevFullDummyWrap: {execution: false, rollup: false, aggregation: true},

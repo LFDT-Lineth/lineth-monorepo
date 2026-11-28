@@ -234,13 +234,26 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	startBlock := req.RollupProofs[0].StartBlockNumber
 	endBlock := req.RollupProofs[len(req.RollupProofs)-1].PublicInputs.EndBlockNumber
 
+	// dev-zkvm and dev-partial run the aggregation guest on this input; the
+	// other modes get none.
+	var payload []byte
+	if r.mode == backend.ProverModeDevZkVM || r.mode == backend.ProverModeDevPartial {
+		in, err := buildAggregationInput(req)
+		if err == nil {
+			payload, err = ssz.EncodeAggregationInput(in)
+		}
+		if err != nil {
+			return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
+		}
+	}
+
 	result := r.prover.Prove(ctx, backend.Job{
 		ID:             runReq.ID,
 		Type:           runReq.Type,
 		GuestProgramID: [32]byte(req.ProgramVk),
 		StartBlock:     startBlock,
 		EndBlock:       endBlock,
-		Payload:        nil, // recursion guest input format undecided; mock passes no payload
+		Payload:        payload,
 	})
 	if result.Status != backend.ResultStatusOK {
 		return proverFailure(runReq.ID, result)
@@ -350,6 +363,29 @@ func buildRollupInput(req *RollupRequest) (ssz.RollupInput, error) {
 		L2ExecutionProofs:                  proofs,
 		ParentBlobDataRollingHash:          req.ParentBlobDataRollingHash,
 	}, nil
+}
+
+// buildAggregationInput assembles the ssz.AggregationInput from a decoded
+// aggregation request. The guestOutput of an embedded proof must be a rollup
+// guest output; its public inputs are passed as they are.
+func buildAggregationInput(req *AggregationRequest) (ssz.AggregationInput, error) {
+	proofs := make([]ssz.RollupProof, len(req.RollupProofs))
+	for i, p := range req.RollupProofs {
+		proofs[i] = ssz.RollupProof{
+			PublicInputs:     ssz.RollupPublicInputs(p.PublicInputs),
+			StartBlockNumber: p.StartBlockNumber,
+			Proof:            p.Proof,
+			ProgramVk:        [32]byte(p.ProgramVk),
+		}
+		if p.GuestOutput != nil {
+			pi, err := backend.GuestOutputPublicInputs(p.GuestOutput, backend.ProofTypeRollup)
+			if err != nil {
+				return ssz.AggregationInput{}, fmt.Errorf("%s[%d].%s: %w", rollupProofsKey, i, guestOutputKey, err)
+			}
+			proofs[i].PublicInputsSSZ = pi
+		}
+	}
+	return ssz.AggregationInput{RollupProofs: proofs}, nil
 }
 
 // proverFailure maps a non-OK prover result to a failed run. A guestProgramId

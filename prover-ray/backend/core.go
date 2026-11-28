@@ -45,10 +45,12 @@ const (
 	guestLogMemory    = "guest_log"
 )
 
-// Spec frame of the guest output: schema id 0x0003 (l2-execution) or 0x0005 (rollup).
+// Spec frame of the guest output: schema id 0x0003 (l2-execution), 0x0005
+// (rollup) or 0x0007 (rollup-aggregation).
 const (
 	l2ExecutionOutputSchemaID = 0x0003
 	rollupOutputSchemaID      = 0x0005
+	aggregationOutputSchemaID = 0x0007
 	guestOutputSchemaIDSize   = 2
 	guestOutputHashSize       = 32
 )
@@ -60,6 +62,8 @@ func outputSchemaID(t ProofType) (uint16, error) {
 		return l2ExecutionOutputSchemaID, nil
 	case ProofTypeRollup:
 		return rollupOutputSchemaID, nil
+	case ProofTypeRollupAggregation:
+		return aggregationOutputSchemaID, nil
 	}
 	return 0, fmt.Errorf("no guest output format for proof type %q: %w", t, ErrNotImplemented)
 }
@@ -287,8 +291,11 @@ func (c *Core) proveDevMock(job Job) Result {
 		ProofBytes:   DevMarkerProof(ProverModeDevMock),
 		PublicInputs: PublicInputs{EndBlockNumber: job.EndBlock},
 	}
-	if job.Type == ProofTypeRollup {
+	switch job.Type {
+	case ProofTypeRollup:
 		result.RollupPublicInputs.EndBlockNumber = job.EndBlock
+	case ProofTypeRollupAggregation:
+		result.AggregationPublicInputs.EndBlockNumber = job.EndBlock
 	}
 	return result
 }
@@ -296,8 +303,9 @@ func (c *Core) proveDevMock(job Job) Result {
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
 // decoded from its output, the output itself for the runner's native runner
 // check, and a devmode proof of the output hash, the same proof format as
-// dev-partial but with no trace check. Payload is the whole
-// extended (0x0002) input, the same bytes the native runner consumes.
+// dev-partial but with no trace check. Payload is the guest input: the
+// extended (0x0002) input, the same bytes the native runner consumes, or the
+// rollup (0x0004) or aggregation (0x0006) input.
 func (c *Core) proveDevZkVM(job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
@@ -312,25 +320,26 @@ func (c *Core) proveDevZkVM(job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmodeProof(executedPublicInputs(out[:guestOutputHashSize]))
+	proofBytes, err := devmodeProof(job.Type, executedPublicInputs(out[:guestOutputHashSize]))
 	if err != nil {
 		return failResult(job.ID, err)
 	}
 
 	return Result{
-		JobID:              job.ID,
-		Status:             ResultStatusOK,
-		ProofBytes:         proofBytes,
-		PublicInputs:       pi.execution,
-		RollupPublicInputs: pi.rollup,
-		GuestOutput:        out,
+		JobID:                   job.ID,
+		Status:                  ResultStatusOK,
+		ProofBytes:              proofBytes,
+		PublicInputs:            pi.execution,
+		RollupPublicInputs:      pi.rollup,
+		AggregationPublicInputs: pi.aggregation,
+		GuestOutput:             out,
 	}
 }
 
 // proveDevPartial runs the guest, checks its trace against the constraints, and
 // returns the public inputs decoded from its output, with a devmode proof of
-// the output hash in place of a real proof. Payload is the whole extended
-// (0x0002) input, as in dev-zkvm.
+// the output hash in place of a real proof. Payload is the guest input, as in
+// dev-zkvm.
 func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
@@ -357,19 +366,20 @@ func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	if err != nil {
 		return failResult(job.ID, err)
 	}
-	proofBytes, err := devmodeProof(pub)
+	proofBytes, err := devmodeProof(job.Type, pub)
 	if err != nil {
 		return failResult(job.ID, err)
 	}
 
 	return Result{
-		JobID:              job.ID,
-		Status:             ResultStatusOK,
-		ProofBytes:         proofBytes,
-		PublicInputs:       pi.execution,
-		RollupPublicInputs: pi.rollup,
-		GuestOutput:        out,
-		ProgramVK:          c.programVK(root.Pub),
+		JobID:                   job.ID,
+		Status:                  ResultStatusOK,
+		ProofBytes:              proofBytes,
+		PublicInputs:            pi.execution,
+		RollupPublicInputs:      pi.rollup,
+		AggregationPublicInputs: pi.aggregation,
+		GuestOutput:             out,
+		ProgramVK:               c.programVK(root.Pub),
 	}
 }
 
@@ -426,11 +436,21 @@ func executedPublicInputs(hash []byte) wiop.PublicInput {
 	return out
 }
 
-// devmodeProof returns the image of a devmode proof of pub, for the guest base.
-func devmodeProof(pub wiop.PublicInput) ([]byte, error) {
+// devmodeProof returns a devmode proof of pub for a job of type t. An
+// aggregation proof is read by L1, so it is a gnark (BN254 PLONK) proof in the
+// layout of the gnark Solidity verifier. The other proofs are read by the
+// guests, so they are the image of a wiop devmode proof, for the guest base.
+func devmodeProof(t ProofType, pub wiop.PublicInput) ([]byte, error) {
 	sys, err := devmode.NewSystem()
 	if err != nil {
 		return nil, fmt.Errorf("building the devmode system: %w", err)
+	}
+	if t == ProofTypeRollupAggregation {
+		proof, err := devmode.GnarkProve(sys, pub)
+		if err != nil {
+			return nil, err
+		}
+		return devmode.GnarkEncode(proof)
 	}
 	proof, pub, err := devmode.Prove(sys, pub)
 	if err != nil {
@@ -458,10 +478,12 @@ func executeGuest(
 	return classifyGuestOutput(output, errs, schema)
 }
 
-// guestPublicInputs holds the l2-execution or the rollup public inputs, by proof type.
+// guestPublicInputs holds the l2-execution, the rollup or the aggregation public
+// inputs, by proof type.
 type guestPublicInputs struct {
-	execution PublicInputs
-	rollup    RollupPublicInputs
+	execution   PublicInputs
+	rollup      RollupPublicInputs
+	aggregation AggregationPublicInputs
 }
 
 // executeGuestPublicInputs runs the guest under zkc Execute and returns its
@@ -478,9 +500,12 @@ func executeGuestPublicInputs(
 		return nil, pi, err
 	}
 	out = guestOutput.Bytes()
-	if schema == rollupOutputSchemaID {
+	switch schema {
+	case rollupOutputSchemaID:
 		pi.rollup, err = decodeRollupPublicInputs(out[guestOutputHashSize:])
-	} else {
+	case aggregationOutputSchemaID:
+		pi.aggregation, err = decodeAggregationPublicInputs(out[guestOutputHashSize:])
+	default:
 		pi.execution, err = decodeGuestPublicInputs(out[guestOutputHashSize:])
 	}
 	if err != nil {

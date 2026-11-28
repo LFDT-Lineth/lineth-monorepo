@@ -114,7 +114,10 @@ func TestRunner_RunRollup_ProverFailure(t *testing.T) {
 
 func TestRunner_RunAggregation(t *testing.T) {
 	mock := &mockProver{result: func(job backend.Job) backend.Result {
-		return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xab, 0xcd}}
+		return backend.Result{
+			JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xab, 0xcd},
+			AggregationPublicInputs: backend.AggregationPublicInputs{EndBlockNumber: 18, L2L1TreeDepth: 5},
+		}
 	}}
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
@@ -138,6 +141,68 @@ func TestRunner_RunAggregation(t *testing.T) {
 	assert.Equal(t, testProverVersion, resp.ProverVersion)
 	assert.Equal(t, "0xabcd", resp.ProofHex)
 	assert.Equal(t, uint64(10), resp.StartBlockNumber)
+	assert.Equal(t, uint64(18), resp.PublicInputs.EndBlockNumber, "the public inputs should come from the result")
+	assert.Equal(t, uint64(5), resp.PublicInputs.L2L1TreeDepth, "the public inputs should come from the result")
+}
+
+// TestRunner_RunAggregation_GuestInput checks that the modes that run the
+// aggregation guest pass it the input built from the request, and that
+// dev-mock passes none.
+func TestRunner_RunAggregation_GuestInput(t *testing.T) {
+	golden, err := os.ReadFile("../../utils/ssz/testdata/aggregation_input.ssz")
+	require.NoError(t, err)
+
+	for mode, want := range map[backend.ProverMode][]byte{
+		backend.ProverModeDevZkVM:    golden,
+		backend.ProverModeDevPartial: golden,
+		backend.ProverModeDevMock:    nil,
+	} {
+		t.Run(string(mode), func(t *testing.T) {
+			mock := &mockProver{}
+			runner, err := NewRunner(mock, testProverVersion, WithMode(mode))
+			require.NoError(t, err)
+
+			result := runner.Run(context.Background(), RunRequest{
+				ID: "aggregation-input", Type: backend.ProofTypeRollupAggregation,
+				Body: readSpecFixture(t, referenceAggregationRequest),
+			})
+
+			require.Equal(t, RunStatusSuccess, result.Status, "error: %v", result.Err)
+			require.Len(t, mock.jobs, 1)
+			assert.Equal(t, want, mock.jobs[0].Payload, "the payload should be the spec's encoding of the request")
+		})
+	}
+}
+
+// TestRunner_RunAggregation_InvalidGuestOutput checks that the modes that run
+// the aggregation guest reject an embedded guestOutput that is not a rollup
+// guest output, and that dev-mock, which builds no input, accepts it.
+func TestRunner_RunAggregation_InvalidGuestOutput(t *testing.T) {
+	l2ExecutionOutput, err := os.ReadFile("../../utils/ssz/testdata/l2_execution_output.ssz")
+	require.NoError(t, err)
+	obj := unmarshalObject(t, readSpecFixture(t, referenceAggregationRequest))
+	proof := obj[proofRequestKey].(map[string]any)[rollupProofsKey].([]any)[0].(map[string]any)
+	delete(proof, publicInputsKey)
+	proof[guestOutputKey] = hexBytes(l2ExecutionOutput)
+	body := marshal(t, obj)
+
+	for mode, wantStatus := range map[backend.ProverMode]RunStatus{
+		backend.ProverModeDevZkVM:    RunStatusFailed,
+		backend.ProverModeDevPartial: RunStatusFailed,
+		backend.ProverModeDevMock:    RunStatusSuccess,
+	} {
+		runner, err := NewRunner(&mockProver{}, testProverVersion, WithMode(mode))
+		require.NoError(t, err)
+
+		result := runner.Run(context.Background(),
+			RunRequest{ID: "aggregation", Type: backend.ProofTypeRollupAggregation, Body: body})
+
+		require.Equal(t, wantStatus, result.Status, "%s: %v", mode, result.Err)
+		if wantStatus == RunStatusFailed {
+			assert.Equal(t, FailureCodeInvalidInput, result.FailureCode, mode)
+			assert.ErrorContains(t, result.Err, "rollupProofs[0].guestOutput", mode)
+		}
+	}
 }
 
 func TestRunner_RunAggregation_Malformed(t *testing.T) {

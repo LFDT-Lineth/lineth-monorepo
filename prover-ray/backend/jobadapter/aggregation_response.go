@@ -4,8 +4,7 @@ import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 
 // aggregationResponse is the getZkRollupAggregationProofV1 success body. Unlike
 // the rollup response it has no top-level programVk (the combined programIds set
-// lives in publicInputs). Public inputs and proof are placeholders until the
-// guest lands.
+// lives in publicInputs).
 type aggregationResponse struct {
 	ProverVersion    string                          `json:"proverVersion"`
 	ProofHex         string                          `json:"proof"`
@@ -44,26 +43,32 @@ func newAggregationResponse(
 		ProverVersion:    proverVersion,
 		ProofHex:         hexBytes(result.ProofBytes),
 		StartBlockNumber: startBlockNumber,
-		PublicInputs:     placeholderAggregationPublicInputs(),
+		PublicInputs:     aggregationPublicInputs(result.AggregationPublicInputs),
 	}
 }
 
-// placeholderAggregationPublicInputs is a zero-valued but schema-valid
-// aggregation PI. Populated from backend.Result once extraction exists.
-func placeholderAggregationPublicInputs() aggregationResponsePublicInputs {
-	zero := hexHash([32]byte{})
+func aggregationPublicInputs(pi backend.AggregationPublicInputs) aggregationResponsePublicInputs {
 	return aggregationResponsePublicInputs{
-		EndL1L2BridgeRollingHash: zero,
-		DynamicChainConfigHash:   zero,
-		ParentFtxRollingHash:     zero,
-		EndFtxRollingHash:        zero,
-		ParentDataRollingHash:    zero,
-		EndDataRollingHash:       zero,
-		ParentBlockHash:          zero,
-		EndBlockHash:             zero,
-		L2L1Roots:                []string{},
-		FilteredAddresses:        []string{},
-		ProgramIDs:               []string{},
-		L2MessagingBlocksOffsets: []uint16{},
+		EndBlockNumber:                        pi.EndBlockNumber,
+		EndBlockTimestamp:                     pi.EndBlockTimestamp,
+		EndL1L2BridgeRollingHash:              hexHash(pi.EndL1L2BridgeRollingHash),
+		EndL1L2BridgeRollingHashMessageNumber: pi.EndL1L2BridgeRollingHashMessageNumber,
+		DynamicChainConfigHash:                hexHash(pi.DynamicChainConfigHash),
+		ParentFtxRollingHash:                  hexHash(pi.ParentFtxRollingHash),
+		ParentFtxNumber:                       pi.ParentFtxNumber,
+		EndFtxRollingHash:                     hexHash(pi.EndFtxRollingHash),
+		EndProcessedFtxNumber:                 pi.EndProcessedFtxNumber,
+		ParentDataRollingHash:                 hexHash(pi.ParentDataRollingHash),
+		EndDataRollingHash:                    hexHash(pi.EndDataRollingHash),
+		ParentBlockHash:                       hexHash(pi.ParentBlockHash),
+		EndBlockHash:                          hexHash(pi.EndBlockHash),
+		ParentSharedBlobCarryOverTailBytes:    pi.ParentSharedBlobCarryOverTailBytes,
+		FinalSharedBlobCarryOverTailBytes:     pi.FinalSharedBlobCarryOverTailBytes,
+		L2L1TreeDepth:                         pi.L2L1TreeDepth,
+		L2L1Roots:                             hexHashList(pi.L2L1Roots),
+		FilteredAddresses:                     hexAddressList(pi.FilteredAddresses),
+		ProgramIDs:                            hexHashList(pi.ProgramIDs),
+		// non-nil so an empty list marshals to [] not null.
+		L2MessagingBlocksOffsets: append([]uint16{}, pi.L2MessagingBlocksOffsets...),
 	}
 }

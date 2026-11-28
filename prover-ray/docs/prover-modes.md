@@ -17,14 +17,14 @@ The guest is the RISC-V program whose run is proven: the `l2_execution` guest fo
 | Mode | Execution | Rollup | Aggregation |
 |---|---|---|---|
 | `dev-mock` | ready | ready | ready |
-| `dev-zkvm` | ready | ready | not yet |
-| `dev-partial` | ready | ready | not yet |
+| `dev-zkvm` | ready | ready | ready |
+| `dev-partial` | ready | ready | ready |
 | `dev-full-dummy-wrap` | n/a | n/a | not yet |
 | `full` | not yet | not yet | not yet |
 
-For aggregation, the modes other than `dev-mock` need the guest input format (not decided yet) and a guest that verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. The rollup guest verifies the devmode proofs of the l2-execution responses in `dev-zkvm` and `dev-partial`. In every dev mode, aggregation will send a dummy BN254 proof to L1; today `dev-mock` sends marker bytes.
+Each guest verifies the proof type of the layer below: a devmode proof below `dev-zkvm` and `dev-partial`, a real proof below `full`. In `dev-zkvm` and `dev-partial`, the rollup guest verifies the devmode proofs of the l2-execution responses, and the aggregation guest those of the rollup responses. The aggregation proof goes to L1, so in these two modes it is a gnark (BN254 PLONK) proof of the devmode statement; `dev-mock` sends marker bytes.
 
-The prover does not start when `dev-zkvm` or `dev-partial` is set for aggregation: every job would fail. `full` is not ready either, but the prover still starts in it, as it is being built.
+`full` is not ready on any layer, but the prover still starts in it, as it is being built.
 
 ## Modes
 
@@ -62,6 +62,7 @@ The prover does not start when `dev-zkvm` or `dev-partial` is set for aggregatio
   - a real wiop proof that the next layer can verify;
   - but anyone can make one, so it proves nothing;
   - its program VK is zero, as nothing is committed.
+- For aggregation, the proof is a gnark (BN254 PLONK) proof of the same statement, in the layout of the gnark Solidity verifier, which L1 reads. Anyone can make one too.
 - Needs a lot of memory: more than 50 GB for the small test block.
 - If a native runner is set, the guest output must also be equal to its output (temporary, see below).
 
