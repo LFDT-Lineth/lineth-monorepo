@@ -303,8 +303,9 @@ func (c *Core) proveDevMock(job Job) Result {
 // proveDevZkVM runs the guest under ZkC Execute and returns the public inputs
 // decoded from its output, the output itself for the runner's native runner
 // check, and a devmode proof of the output hash, the same proof format as
-// dev-partial but with no trace check. Payload is the whole
-// extended (0x0002) input, the same bytes the native runner consumes.
+// dev-partial but with no trace check. Payload is the guest input: the
+// extended (0x0002) input, the same bytes the native runner consumes, or the
+// rollup (0x0004) or aggregation (0x0006) input.
 func (c *Core) proveDevZkVM(job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
@@ -337,8 +338,8 @@ func (c *Core) proveDevZkVM(job Job) Result {
 
 // proveDevPartial runs the guest, checks its trace against the constraints, and
 // returns the public inputs decoded from its output, with a devmode proof of
-// the output hash in place of a real proof. Payload is the whole extended
-// (0x0002) input, as in dev-zkvm.
+// the output hash in place of a real proof. Payload is the guest input, as in
+// dev-zkvm.
 func (c *Core) proveDevPartial(ctx context.Context, job Job) Result {
 	g, err := c.loadGuest(job.GuestProgramID)
 	if err != nil {
