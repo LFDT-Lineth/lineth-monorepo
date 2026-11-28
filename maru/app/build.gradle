@@ -142,7 +142,8 @@ tasks.register('integrationTest',  Test) {
   // The concurrency cap lives at the process level, so methods within a fork run sequentially
   // (same_thread) unless maruItMethodParallel > 1.
   maxParallelForks = maxForksOverride > 0 ?
-      maxForksOverride : Math.min(Runtime.runtime.availableProcessors(), 9)
+      // nCpu / 2, clamped to [1, 8]
+      maxForksOverride : Math.max(1, Math.min((Runtime.runtime.availableProcessors() / 2).toInteger(), 8))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"
   if (methodParallel > 1) {
